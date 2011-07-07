@@ -2,10 +2,12 @@
 #define SimplePlanarDigiProcessor_h 1
 
 #include "marlin/Processor.h"
+
 #include "lcio.h"
+
 #include <string>
 #include <vector>
-//#include <map>
+
 #include <gsl/gsl_rng.h>
 
 // STUFF needed for GEAR
@@ -101,7 +103,6 @@ class SimplePlanarDigiProcessor : public Processor {
 
   gsl_rng * _rng ;
 
-  //  std::map<std::string, std::string> _mapNameToPath;
 
 } ;
 
