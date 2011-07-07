@@ -306,7 +306,10 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
       cellid_encoder[ ILDCellIDEncoding::Fields::subdet ] = ILDCellIDEncoding::DetID::VXD ;
       cellid_encoder[ ILDCellIDEncoding::Fields::layer  ] = layerNumber ;
       cellid_encoder[ ILDCellIDEncoding::Fields::module ] = ladderNumber ;
-      cellid_encoder[ ILDCellIDEncoding::Fields::side   ] = side ;
+
+      //SJA:FIXME: for now don't use side
+      //  (*_cellid_encoder)[ ILDCellIDEncoding::Fields::side   ] = side ;
+      cellid_encoder[ ILDCellIDEncoding::Fields::side   ] = 0 ;
 
       cellid_encoder.setCellID( trkHit ) ;
 
