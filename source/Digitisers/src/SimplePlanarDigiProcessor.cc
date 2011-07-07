@@ -16,7 +16,7 @@
 #include "marlin/ProcessorEventSeeder.h"
 
 //#include <kaldet/ILDDetectorIDs.h>
-#include <MarlinTrk/ILDCellIDEncoding.h>
+#include <ILDCellIDEncoding.h>
 //#include <ILDPlanarHitExt.h>
 
 #include "CLHEP/Vector/TwoVector.h"
