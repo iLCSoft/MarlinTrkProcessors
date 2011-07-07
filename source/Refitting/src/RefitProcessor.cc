@@ -156,7 +156,6 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
 	for( it = trkHits.begin() ; it != trkHits.end() ; ++it )
 	  {
 	    
-	    EVENT::TrackerHit* trkhit = (*it);
 	    marlin_trk->addHit(*it);
 	    
 	  }
@@ -175,7 +174,6 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
 	  for( it = trkHits.begin() ; it != trkHits.end() ; ++it )
 	    {
 	      
-	      EVENT::TrackerHit* trkhit = (*it);
 	      refittedTrack->addHit(*it);
 	      
 	    }
