@@ -7,17 +7,12 @@
 #include <EVENT/SimTrackerHit.h>
 #include <IMPL/TrackerHitPlaneImpl.h>
 #include <EVENT/MCParticle.h>
-
 #include <UTIL/CellIDEncoder.h>
-
-//#include"TGeoManager.h"
 
 #include <gsl/gsl_randist.h>
 #include "marlin/ProcessorEventSeeder.h"
 
-//#include <kaldet/ILDDetectorIDs.h>
 #include <ILDCellIDEncoding.h>
-//#include <ILDPlanarHitExt.h>
 
 #include "CLHEP/Vector/TwoVector.h"
 
@@ -104,19 +99,6 @@ void SimplePlanarDigiProcessor::init() {
   _rng = gsl_rng_alloc(gsl_rng_ranlxs2);
   Global::EVENTSEEDER->registerProcessor(this);
 
-//   TGeoManager::Import("World.gdml") ;
-//
-//   gGeoManager->Print();
-//
-//   //Fill map
-//   gGeoManager->CdTop();
-//   fillMapTVolumeChildren(gGeoManager->GetTopVolume());
-//  
-//   streamlog_out( DEBUG ) << "map size =  " << _mapNameToPath.size() << std::endl;
-   
-//   std::stringstream name ;
-//   name << "VXD_LadderPhys_1_10x1db26380" ;
-//   TGeoVolume* vol = gGeoManager->FindVolumeFast(name.str().c_str()) ;
 
 }
 
@@ -164,9 +146,7 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
       
       SimTrackerHit* SimTHit = dynamic_cast<SimTrackerHit*>( STHcol->getElementAt( i ) ) ;
       
-      //      const int celId = SimTHit->getCellID() ;
       const int celId = SimTHit->getCellID0() ;
-      //const int celId = 0;
 
       const double *pos ;
       pos =  SimTHit->getPosition() ;  
@@ -186,7 +166,6 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
       else{
         layerNumber = celId  - 1 ;
       }
-
 
       float edep = SimTHit->getEDep() ;
       
@@ -231,8 +210,8 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
 
       double PhiInLocal = hitvec.phi() - ladderPhi;;
 
-      //      double u = (hitvec.rho() * sin(PhiInLocal) - sensitive_offset );
-      double u = (hitvec.rho() * sin(PhiInLocal) );
+      double u = (hitvec.rho() * sin(PhiInLocal) - sensitive_offset );
+      //double u = (hitvec.rho() * sin(PhiInLocal) );
 
       streamlog_out(DEBUG) << "Hit = "<< i << " has celId " << celId << " layer number = " << layerNumber << " ladderNumber = " << ladderNumber << endl;
       
@@ -282,8 +261,8 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
 
           rPhiSmear  = gsl_ran_gaussian(_rng, _pointResoRPhi);
           
-          //          if( (u+rPhiSmear) < sensitive_width * 0.5 && (u+rPhiSmear) > -sensitive_width * 0.5)
-          if( true )
+          if( (u+rPhiSmear) < sensitive_width * 0.5 && (u+rPhiSmear) > -sensitive_width * 0.5)
+            //          if( true )
             {
               accept_hit =true;
               zSmear  = gsl_ran_gaussian(_rng, _pointResoZ);
@@ -294,13 +273,6 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
               smearedPos[1] = hitvec.y() + rPhiSmear * sin(ladder_incline); 
               smearedPos[2] = hitvec.z() + zSmear;
               
-              //SJA:HACK: turnoff smearing
-//              smearedPos[0] = hitvec.x() ;
-//              smearedPos[1] = hitvec.y() ;
-//              smearedPos[2] = hitvec.z() ;
-              //SJA:HACK:END
-
-
               break;
               
             }
@@ -364,9 +336,9 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
       if( mcp != 0 )  {
         trkHit->rawHits().push_back( SimTHit ) ;
       }
-      //else{
-      //  streamlog_out( DEBUG ) << " ignore simhit pointer as MCParticle pointer is NULL ! " << std::endl ;
-      //}
+      else{
+        streamlog_out( DEBUG0 ) << " ignore simhit pointer as MCParticle pointer is NULL ! " << std::endl ;
+      }
       
 
       trkhitVec->addElement( trkHit ) ; 
@@ -417,22 +389,3 @@ double SimplePlanarDigiProcessor::correctPhiRange( double Phi ) const {
 } // function correctPhiRange
 
 
-//void SimplePlanarDigiProcessor::fillMapTVolumeChildren(TGeoVolume* volume)
-//{
-//
-//  streamlog_out(DEBUG) << "-------------------------------------------------------" << std::endl; 
-//
-//  //Fill current path
-//  string currPath = gGeoManager->GetPath();
-//  string currName = volume->GetName();
-//  _mapNameToPath.insert(make_pair(currName,currPath));
-//
-//  streamlog_out(DEBUG) << "currPath = " << currPath << " currName = " << currName << std::endl; 
-//
-//  int nDaughter = volume->GetNdaughters();
-//  for (int iDaughter=0; iDaughter<nDaughter; ++iDaughter) {
-//    gGeoManager->cd(currPath.c_str());
-//    gGeoManager->CdDown(iDaughter);
-//    fillMapTVolumeChildren(volume->GetNode(iDaughter)->GetVolume());
-//  }
-//}
