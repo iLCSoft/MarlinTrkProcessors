@@ -19,8 +19,6 @@
 #include "marlin/Global.h"
 #include "gear/GEAR.h"
 
-//#include <kaldet/ILDDetectorIDs.h>
-
 
 #include "MarlinTrk/Factory.h"
 #include "MarlinTrk/IMarlinTrack.h"
@@ -88,8 +86,6 @@ void RefitProcessor::init() {
   printParameters() ;
 
   // set up the geometery needed by KalTest
-  //  _trksystem = new MarlinKalTest( *marlin::Global::GEAR, _MSOn, _ElossOn) ;
-  
   //FIXME: for now do KalTest only - make this a steering parameter to use other fitters
   _trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( "KalTest" , marlin::Global::GEAR , "" ) ;
   
