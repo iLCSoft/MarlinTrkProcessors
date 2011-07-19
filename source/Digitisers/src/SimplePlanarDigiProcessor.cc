@@ -320,8 +320,8 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
       u_direction[1] = 0.0 ;
 
       float v_direction[2] ;
-      u_direction[0] = 0.0 ;
-      u_direction[1] = 0.0 ;
+      v_direction[0] = 0.0 ;
+      v_direction[1] = 0.0 ;
 
       trkHit->setU( u_direction ) ;
       trkHit->setV( v_direction ) ;
