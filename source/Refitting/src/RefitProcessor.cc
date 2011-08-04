@@ -144,7 +144,6 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
       
 	Track* track = dynamic_cast<Track*>( input_track_col->getElementAt( i ) ) ;
 		
-	//	MarlinTrk::IMarlinTrack* marlin_trk = new MarlinKalTestTrack(track, _trksystem) ;
 	MarlinTrk::IMarlinTrack* marlin_trk = _trksystem->createTrack();
 
 	EVENT::TrackerHitVec trkHits = track->getTrackerHits() ;	
@@ -160,53 +159,60 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
 	    
 	  }
 
-	bool fit_success = marlin_trk->fit( false ) ; // SJA:FIXME: false means from out to in here i.e. backwards. This would be better if had a more meaningful name perhaps fit_fwd and fit_rev
+	int fit_status = marlin_trk->fit( false ) ; // SJA:FIXME: false means from out to in here i.e. backwards. This would be better if had a more meaningful name perhaps fit_fwd and fit_rev
 
-	if( fit_success ){ 
+	if( fit_status == 0 ){ 
 
-	  TrackStateImpl* trkState = marlin_trk->propagateToIP() ;
+	  TrackStateImpl* trkState = new TrackStateImpl() ;
 
-	  IMPL::TrackImpl* refittedTrack = new IMPL::TrackImpl();
+          const gear::Vector3D point(0.,0.,0.); // nominal IP
+	  int return_code = marlin_trk->propagate(point, *trkState) ;
+
+	  if ( return_code == 0 ) {
+	    IMPL::TrackImpl* refittedTrack = new IMPL::TrackImpl();
+	    
+	    refittedTrack->addTrackState(trkState);
+
+
+	    for( it = trkHits.begin() ; it != trkHits.end() ; ++it )
+	      {
+		
+		refittedTrack->addHit(*it);
+		
+	      }
+	    
+	    
+	    // assign the relations previously assigned to the input tracks  
+	    LCObjectVec objVec = input_track_rels->getRelatedToObjects( track );
+	    FloatVec weights   = input_track_rels->getRelatedToWeights( track ); 
+	    
+	    for( unsigned int irel=0 ; irel < objVec.size() ; ++irel )
+	      {
+		LCRelationImpl* rel = new LCRelationImpl ;
+		rel->setFrom (refittedTrack) ;
+		rel->setTo ( objVec[irel] ) ;
+		rel->setWeight(weights[irel]) ; 
+		trackRelVec->addElement( rel );
+	      }
 	  
-	  refittedTrack->addTrackState(trkState);
-
-
-	  for( it = trkHits.begin() ; it != trkHits.end() ; ++it )
-	    {
-	      
-	      refittedTrack->addHit(*it);
-	      
-	    }
-
-
-	  // assign the relations previously assigned to the input tracks  
-	  LCObjectVec objVec = input_track_rels->getRelatedToObjects( track );
-	  FloatVec weights   = input_track_rels->getRelatedToWeights( track ); 
-	  
-	  for( unsigned int irel=0 ; irel < objVec.size() ; ++irel )
-	    {
-	      LCRelationImpl* rel = new LCRelationImpl ;
-	      rel->setFrom (refittedTrack) ;
-	      rel->setTo ( objVec[irel] ) ;
-	      rel->setWeight(weights[irel]) ; 
-	      trackRelVec->addElement( rel );
-	    }
-	  
-	  //	//SJA:FIXME: This has to go away. The use of hardcoded number here is completely error prone ...
-	  refittedTrack->subdetectorHitNumbers().resize(12);
-	  for ( unsigned int detIndex = 0 ;  detIndex < refittedTrack->subdetectorHitNumbers().size() ; detIndex++ ) 
-	    {
-	      refittedTrack->subdetectorHitNumbers()[detIndex] = track->getSubdetectorHitNumbers()[detIndex] ;
+	    //	//SJA:FIXME: This has to go away. The use of hardcoded number here is completely error prone ...
+	    refittedTrack->subdetectorHitNumbers().resize(12);
+	    for ( unsigned int detIndex = 0 ;  detIndex < refittedTrack->subdetectorHitNumbers().size() ; detIndex++ ) 
+	      {
+		refittedTrack->subdetectorHitNumbers()[detIndex] = track->getSubdetectorHitNumbers()[detIndex] ;
+	      }
+	    
+	    trackVec->addElement( refittedTrack );
 	  }
-	  
-	  trackVec->addElement( refittedTrack );
 	}
-
+	
 	delete marlin_trk;
 	
       } 
+
     evt->addCollection( trackVec , _output_track_col_name) ;
     evt->addCollection( trackRelVec , _output_track_rel_name) ;
+    
   }  
   ++_n_evt ;
 }
