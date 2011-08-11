@@ -163,16 +163,24 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
 
 	if( fit_status == 0 ){ 
 
-	  TrackStateImpl* trkState = new TrackStateImpl() ;
+	  gear::Vector3D xing_point ; 
+	  marlin_trk->intersectionWithLayer( true, 3843, xing_point); // 3843 is a TPC layer
+	   
 
-          const gear::Vector3D point(0.,0.,0.); // nominal IP
-	  int return_code = marlin_trk->propagate(point, *trkState) ;
+	  const gear::Vector3D point(0.,0.,0.); // nominal IP
+
+	  // use extrapolate, i.e. do not include material during propagation of the cov matrix 
+	  TrackStateImpl trkState_extrapolated;
+	  int return_code = marlin_trk->extrapolate(point, trkState_extrapolated) ;	  
+
+	  // use propagate, i.e. include material during propagation of the cov matrix 
+	  TrackStateImpl* trkState = new TrackStateImpl() ;
+	  return_code = marlin_trk->propagate(point, *trkState) ;
 
 	  if ( return_code == 0 ) {
 	    IMPL::TrackImpl* refittedTrack = new IMPL::TrackImpl();
 	    
 	    refittedTrack->addTrackState(trkState);
-
 
 	    for( it = trkHits.begin() ; it != trkHits.end() ; ++it )
 	      {
