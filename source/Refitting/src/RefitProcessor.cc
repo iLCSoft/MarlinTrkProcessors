@@ -158,14 +158,32 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
 	    marlin_trk->addHit(*it);
 	    
 	  }
-
+	
+	bool direction = false ;
+	marlin_trk->initialise( direction ) ;
 	int fit_status = marlin_trk->fit( false ) ; // SJA:FIXME: false means from out to in here i.e. backwards. This would be better if had a more meaningful name perhaps fit_fwd and fit_rev
 
 	if( fit_status == 0 ){ 
 
 	  gear::Vector3D xing_point ; 
 	  marlin_trk->intersectionWithLayer( true, 3843, xing_point); // 3843 is a TPC layer
-	   
+
+	  marlin_trk->intersectionWithLayer( true, 1, xing_point); // 1 is first VXD layer	  
+
+	  marlin_trk->intersectionWithLayer( true, 65, xing_point); // 65 is second VXD layer	  
+
+	  marlin_trk->intersectionWithLayer( true, 129, xing_point); // 129 is third VXD layer	  
+
+	  
+	  // get track state at the first and last measurement sites
+	  TrackStateImpl trkState_at_end;	  
+
+	  marlin_trk->getTrackState( trkState_at_end ) ;
+
+	  TrackStateImpl trkState_at_start;
+
+	  marlin_trk->getTrackState( NULL, trkState_at_start ) ;	  
+
 
 	  const gear::Vector3D point(0.,0.,0.); // nominal IP
 
