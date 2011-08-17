@@ -161,7 +161,7 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
 	
 	bool direction = false ;
 	marlin_trk->initialise( direction ) ;
-	int fit_status = marlin_trk->fit( false ) ; // SJA:FIXME: false means from out to in here i.e. backwards. This would be better if had a more meaningful name perhaps fit_fwd and fit_rev
+	int fit_status = marlin_trk->fit( direction ) ; // SJA:FIXME: false means from out to in here i.e. backwards. This would be better if had a more meaningful name perhaps fit_fwd and fit_rev
 
 	if( fit_status == 0 ){ 
 
