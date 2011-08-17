@@ -208,7 +208,7 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
       double ladderPhi = correctPhiRange( layerVXD.getPhi0( layerNumber ) + ladderNumber*deltaPhi ) ;
       double ladder_incline = correctPhiRange( (M_PI/2.0 ) + ladderPhi );
 
-      double PhiInLocal = hitvec.phi() - ladderPhi;;
+      double PhiInLocal = hitvec.phi() - ladderPhi;
 
       double u = (hitvec.rho() * sin(PhiInLocal) - sensitive_offset );
       //double u = (hitvec.rho() * sin(PhiInLocal) );
