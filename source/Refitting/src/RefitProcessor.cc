@@ -176,14 +176,13 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
 
 	  
 	  // get track state at the first and last measurement sites
-	  TrackStateImpl trkState_at_end;	  
+	  TrackStateImpl trkState_at_begin;	  
 
-	  marlin_trk->getTrackState( trkState_at_end ) ;
+	  marlin_trk->getTrackState( trkState_at_begin ) ;
 
-	  TrackStateImpl trkState_at_start;
+	  TrackStateImpl trkState_at_end;
 
-	  marlin_trk->getTrackState( NULL, trkState_at_start ) ;	  
-
+	  marlin_trk->getTrackState(  trkHits.back(), trkState_at_end ) ;	  
 
 	  const gear::Vector3D point(0.,0.,0.); // nominal IP
 
