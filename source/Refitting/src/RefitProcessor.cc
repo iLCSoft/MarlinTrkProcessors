@@ -166,13 +166,13 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
 	if( fit_status == 0 ){ 
 
 	  gear::Vector3D xing_point ; 
-	  marlin_trk->intersectionWithLayer( true, 3843, xing_point); // 3843 is a TPC layer
+	  marlin_trk->intersectionWithLayer( true, 3332, xing_point); // 3332 is a TPC layer
 
 	  marlin_trk->intersectionWithLayer( true, 1, xing_point); // 1 is first VXD layer	  
 
-	  marlin_trk->intersectionWithLayer( true, 65, xing_point); // 65 is second VXD layer	  
-
-	  marlin_trk->intersectionWithLayer( true, 129, xing_point); // 129 is third VXD layer	  
+	  marlin_trk->intersectionWithLayer( true, 129, xing_point); // 129 is second VXD layer	  
+	  
+	  marlin_trk->intersectionWithLayer( true, 257, xing_point); // 257 is third VXD layer	  
 
 	  
 	  // get track state at the first and last measurement sites

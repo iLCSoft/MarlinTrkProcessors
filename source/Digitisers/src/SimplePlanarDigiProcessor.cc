@@ -12,7 +12,7 @@
 #include <gsl/gsl_randist.h>
 #include "marlin/ProcessorEventSeeder.h"
 
-#include <ILDCellIDEncoding.h>
+#include "UTIL/ILDConf.h"
 
 #include "CLHEP/Vector/TwoVector.h"
 
@@ -124,7 +124,7 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
     LCCollectionVec* trkhitVec = new LCCollectionVec( LCIO::TRACKERHIT )  ;
 
 
-    CellIDEncoder<TrackerHitPlaneImpl> cellid_encoder( ILDCellIDEncoding::encoder_string , trkhitVec ) ;
+    CellIDEncoder<TrackerHitPlaneImpl> cellid_encoder( ILDCellID0::encoder_string , trkhitVec ) ;
 
     
     int nSimHits = STHcol->getNumberOfElements()  ;
@@ -174,7 +174,7 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
       
       //phi between each ladder
       double deltaPhi = ( 2 * M_PI ) / layerVXD.getNLadders(layerNumber) ;
-      double sensitive_length  = layerVXD.getSensitiveLength(layerNumber);
+      //      double sensitive_length  = layerVXD.getSensitiveLength(layerNumber);
       double sensitive_width  = layerVXD.getSensitiveWidth(layerNumber);
       double sensitive_offset = layerVXD.getSensitiveOffset(layerNumber);
       double ladder_r         = layerVXD.getSensitiveDistance(layerNumber);
@@ -303,13 +303,13 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
 
       if( smearedPos[2] < 0.0 ) side = 1 ;
 
-      cellid_encoder[ ILDCellIDEncoding::Fields::subdet ] = ILDCellIDEncoding::DetID::VXD ;
-      cellid_encoder[ ILDCellIDEncoding::Fields::layer  ] = layerNumber ;
-      cellid_encoder[ ILDCellIDEncoding::Fields::module ] = ladderNumber ;
+      cellid_encoder[ ILDCellID0::subdet ] = ILDDetID::VXD ;
+      cellid_encoder[ ILDCellID0::layer  ] = layerNumber ;
+      cellid_encoder[ ILDCellID0::module ] = ladderNumber ;
 
       //SJA:FIXME: for now don't use side
-      //  (*_cellid_encoder)[ ILDCellIDEncoding::Fields::side   ] = side ;
-      cellid_encoder[ ILDCellIDEncoding::Fields::side   ] = 0 ;
+      //  (*_cellid_encoder)[ ILDCellID0::Fields::side   ] = side ;
+      cellid_encoder[ ILDCellID0::side   ] = 0 ;
 
       cellid_encoder.setCellID( trkHit ) ;
 
