@@ -12,6 +12,10 @@
 #include <IMPL/LCRelationImpl.h>
 #include <UTIL/LCRelationNavigator.h>
 
+#include <UTIL/BitField64.h>
+#include <UTIL/ILDConf.h>
+
+
 // ----- include for verbosity dependend logging ---------
 #include "marlin/VerbosityLevels.h"
 
@@ -166,13 +170,37 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
 	if( fit_status == 0 ){ 
 
 	  gear::Vector3D xing_point ; 
-	  marlin_trk->intersectionWithLayer( true, 3332, xing_point); // 3332 is a TPC layer
 
-	  marlin_trk->intersectionWithLayer( true, 1, xing_point); // 1 is first VXD layer	  
-
-	  marlin_trk->intersectionWithLayer( true, 129, xing_point); // 129 is second VXD layer	  
+	  UTIL::BitField64 encoder( ILDCellID0::encoder_string ) ; 
+	
+	  encoder.reset() ;  // reset to 0
 	  
-	  marlin_trk->intersectionWithLayer( true, 257, xing_point); // 257 is third VXD layer	  
+	  encoder[ILDCellID0::subdet] = ILDDetID::TPC ;
+	  encoder[ILDCellID0::side] = 0 ;
+	  encoder[ILDCellID0::layer]  = 200 ;
+	  encoder[ILDCellID0::module] = 0 ;
+	  encoder[ILDCellID0::sensor] = 0 ;
+	  
+	  int layerID = encoder.lowWord() ;  
+	  marlin_trk->intersectionWithLayer( true, layerID, xing_point); 
+
+	  encoder[ILDCellID0::subdet] = ILDDetID::VXD ;
+	  encoder[ILDCellID0::layer]  = 0 ;
+	  layerID = encoder.lowWord() ;  
+
+	  // note the last hit to be added and filtered will probably be the first VXD hit so that is where the track state will be 
+	  // this means it is not clear if the track will be considered to be backwards or forwards from here
+	  // instead of a bool perhaps int with values -1,0,1 would be better ... 
+	  marlin_trk->intersectionWithLayer( true, layerID, xing_point); // first VXD layer	  
+	  marlin_trk->intersectionWithLayer( false, layerID, xing_point); // first VXD layer	  
+
+	  encoder[ILDCellID0::layer]  = 1 ;
+	  layerID = encoder.lowWord() ;  
+	  marlin_trk->intersectionWithLayer( true, layerID, xing_point); // second VXD layer	  
+
+	  encoder[ILDCellID0::layer]  = 2 ;
+	  layerID = encoder.lowWord() ;  
+	  marlin_trk->intersectionWithLayer( true, layerID, xing_point); // third VXD layer	  
 
 	  
 	  // get track state at the first and last measurement sites
