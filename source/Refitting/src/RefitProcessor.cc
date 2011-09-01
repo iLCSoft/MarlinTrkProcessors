@@ -180,9 +180,13 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
 	  encoder[ILDCellID0::layer]  = 200 ;
 	  encoder[ILDCellID0::module] = 0 ;
 	  encoder[ILDCellID0::sensor] = 0 ;
+
+	  // direction is in time 
+	  bool forwards = true ;
+	  bool backwards = false ;
 	  
 	  int layerID = encoder.lowWord() ;  
-	  marlin_trk->intersectionWithLayer( true, layerID, xing_point); 
+	  marlin_trk->intersectionWithLayer( forwards, layerID, xing_point); 
 
 	  encoder[ILDCellID0::subdet] = ILDDetID::VXD ;
 	  encoder[ILDCellID0::layer]  = 0 ;
@@ -191,25 +195,25 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
 	  // note the last hit to be added and filtered will probably be the first VXD hit so that is where the track state will be 
 	  // this means it is not clear if the track will be considered to be backwards or forwards from here
 	  // instead of a bool perhaps int with values -1,0,1 would be better ... 
-	  marlin_trk->intersectionWithLayer( true, layerID, xing_point); // first VXD layer	  
-	  marlin_trk->intersectionWithLayer( false, layerID, xing_point); // first VXD layer	  
+	  marlin_trk->intersectionWithLayer( forwards, layerID, xing_point); // first VXD layer	  
+	  marlin_trk->intersectionWithLayer( backwards, layerID, xing_point); // first VXD layer	  
 
 	  encoder[ILDCellID0::layer]  = 1 ;
 	  layerID = encoder.lowWord() ;  
-	  marlin_trk->intersectionWithLayer( true, layerID, xing_point); // second VXD layer	  
+	  marlin_trk->intersectionWithLayer( forwards, layerID, xing_point); // second VXD layer	  
 
 	  encoder[ILDCellID0::layer]  = 2 ;
 	  layerID = encoder.lowWord() ;  
-	  marlin_trk->intersectionWithLayer( true, layerID, xing_point); // third VXD layer	  
+	  marlin_trk->intersectionWithLayer( forwards, layerID, xing_point); // third VXD layer	  
 
 	  // get track state at VXD layer 3 
 	  TrackStateImpl trkState_at_vxd3;	  
-	  marlin_trk->extrapolateToLayer( true, layerID, trkState_at_vxd3); 
+	  marlin_trk->extrapolateToLayer( forwards, layerID, trkState_at_vxd3); 
 
 	  encoder[ILDCellID0::subdet] = ILDDetID::SIT ;
 	  encoder[ILDCellID0::layer]  = 0 ;
 	  layerID = encoder.lowWord() ;  
-	  marlin_trk->intersectionWithLayer( true, layerID, xing_point); // first SIT layer	  
+	  marlin_trk->intersectionWithLayer( backwards, layerID, xing_point); // first SIT layer	  
 
 
 	  // get track state at the first and last measurement sites
