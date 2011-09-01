@@ -202,7 +202,10 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
 	  layerID = encoder.lowWord() ;  
 	  marlin_trk->intersectionWithLayer( true, layerID, xing_point); // third VXD layer	  
 
-	  
+	  // get track state at VXD layer 3 
+	  TrackStateImpl trkState_at_vxd3;	  
+	  marlin_trk->extrapolateToLayer( true, layerID, trkState_at_vxd3); 
+
 	  // get track state at the first and last measurement sites
 	  TrackStateImpl trkState_at_begin;	  
 
