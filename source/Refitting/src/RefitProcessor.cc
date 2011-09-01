@@ -206,6 +206,12 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
 	  TrackStateImpl trkState_at_vxd3;	  
 	  marlin_trk->extrapolateToLayer( true, layerID, trkState_at_vxd3); 
 
+	  encoder[ILDCellID0::subdet] = ILDDetID::SIT ;
+	  encoder[ILDCellID0::layer]  = 0 ;
+	  layerID = encoder.lowWord() ;  
+	  marlin_trk->intersectionWithLayer( true, layerID, xing_point); // first SIT layer	  
+
+
 	  // get track state at the first and last measurement sites
 	  TrackStateImpl trkState_at_begin;	  
 
