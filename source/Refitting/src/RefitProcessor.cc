@@ -206,15 +206,14 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
 	  layerID = encoder.lowWord() ;  
 	  marlin_trk->intersectionWithLayer( forwards, layerID, xing_point); // third VXD layer	  
 
-	  // get track state at VXD layer 3 
-	  TrackStateImpl trkState_at_vxd3;	  
-	  marlin_trk->extrapolateToLayer( forwards, layerID, trkState_at_vxd3); 
-
 	  encoder[ILDCellID0::subdet] = ILDDetID::SIT ;
-	  encoder[ILDCellID0::layer]  = 0 ;
+	  encoder[ILDCellID0::layer]  = 1 ;
 	  layerID = encoder.lowWord() ;  
 	  marlin_trk->intersectionWithLayer( backwards, layerID, xing_point); // first SIT layer	  
 
+	  // get track state at SIT outer  layer  
+	  TrackStateImpl trkState_at_sit;	  
+	  marlin_trk->extrapolateToLayer( backwards, layerID, trkState_at_sit); 
 
 	  // get track state at the first and last measurement sites
 	  TrackStateImpl trkState_at_begin;	  
