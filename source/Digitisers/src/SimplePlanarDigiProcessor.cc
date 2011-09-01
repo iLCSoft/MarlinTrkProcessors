@@ -8,7 +8,15 @@
 #include <IMPL/TrackerHitPlaneImpl.h>
 #include <EVENT/MCParticle.h>
 #include <UTIL/CellIDEncoder.h>
+#include <UTIL/ILDConf.h>
 
+// STUFF needed for GEAR
+#include <marlin/Global.h>
+#include <gear/GEAR.h>
+#include <gear/ZPlanarParameters.h>
+#include <gear/ZPlanarLayerLayout.h>
+
+#include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
 #include "marlin/ProcessorEventSeeder.h"
 
@@ -30,60 +38,51 @@ SimplePlanarDigiProcessor aSimplePlanarDigiProcessor ;
 SimplePlanarDigiProcessor::SimplePlanarDigiProcessor() : Processor("SimplePlanarDigiProcessor") {
   
   // modify processor description
-  _description = "SimplePlanarDigiProcessor should create VTX and SIT TrackerHits from SimTrackerHits" ;
+  _description = "SimplePlanarDigiProcessor creates TrackerHits from SimTrackerHits, smearing them according to the input parameters. The plannar geometry should be either VXD, SIT or SET described using ZPlannarLayout" ;
   
 
   // register steering parameters: name, description, class-variable, default value
 
-  registerProcessorParameter( "PointResolutionRPhi_Inner" ,
-                              "R-Phi Resolution in the Inner Layers"  ,
-                              _pointResoRPhi_Inner ,
+  registerProcessorParameter( "PointResolutionRPhi" ,
+                              "R-Phi Resolution"  ,
+                              _pointResoRPhi ,
                               float(0.0040)) ;
 	
-  registerProcessorParameter( "PointResolutionZ_Inner" , 
-                              "Z Resolution in the Inner Layers" ,
-                              _pointResoZ_Inner ,
+  registerProcessorParameter( "PointResolutionZ" , 
+                              "Z Resolution" ,
+                              _pointResoZ ,
                               float(0.0040));
-
-  registerProcessorParameter( "PointResolutionRPhi_Outer" ,
-                              "R-Phi Resolution in the Outer Layers"  ,
-                              _pointResoRPhi_Outer ,
-                              float(0.010)) ;
-	
-  registerProcessorParameter( "PointResolutionZ_Outer" , 
-                              "Z Resolution in the Outer Layers" ,
-                              _pointResoZ_Outer ,
-                              float(0.010));
-
-
-  registerProcessorParameter( "Last_Inner_Layer" , 
-                              "Layer Number counting from 0 of the last Inner Layer" ,
-                              _last_inner_layer ,
-                              int(6));
 
   registerProcessorParameter( "Ladder_Number_encoded_in_cellID" , 
                               "Mokka has encoded the ladder number in the cellID" ,
                               _ladder_Number_encoded_in_cellID ,
                               bool(false));
 
+  registerProcessorParameter( "Sub_Detector_ID" , 
+                              "ID of Sub-Detector using UTIL/ILDConf.h from lcio. Either VXD, SIT or SET" ,
+                              _sub_det_id ,
+                              int(ILDDetID::VXD));
 
 
   // Input collections
   registerInputCollection( LCIO::SIMTRACKERHIT,
-                           "VTXCollectionName" , 
-                           "Name of the VTX SimTrackerHit collection"  ,
-                           _colNameVTX ,
+                           "SimTrackHitCollectionName" , 
+                           "Name of the Input SimTrackerHit collection"  ,
+                           _inColName ,
                            std::string("VXDCollection") ) ;
   
   
   // Output collections
   registerOutputCollection( LCIO::TRACKERHIT,
-                            "VTXHitCollection" , 
-                            "Name of the vxd TrackerHit output collection"  ,
-                            _outColNameVTX ,
+                            "TrackerHitCollectionName" , 
+                            "Name of the TrackerHit output collection"  ,
+                            _outColName ,
                             std::string("VTXTrackerHits") ) ;
   
-  
+ 
+  // setup the list of supported detectors
+
+ 
 }
 
 
@@ -103,7 +102,7 @@ void SimplePlanarDigiProcessor::init() {
 }
 
 void SimplePlanarDigiProcessor::processRunHeader( LCRunHeader* run) { 
-  _nRun++ ;
+  ++_nRun ;
 } 
 
 void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) { 
@@ -113,10 +112,10 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
 
   LCCollection* STHcol = 0 ;
   try{
-    STHcol = evt->getCollection( _colNameVTX ) ;
+    STHcol = evt->getCollection( _inColName ) ;
   }
   catch(DataNotAvailableException &e){
-    streamlog_out(DEBUG) << "Collection " << _colNameVTX.c_str() << " is unavailable in event " << _nEvt << std::endl;
+    streamlog_out(DEBUG) << "Collection " << _inColName.c_str() << " is unavailable in event " << _nEvt << std::endl;
   }
   
   if( STHcol != 0 ){    
@@ -129,25 +128,42 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
     
     int nSimHits = STHcol->getNumberOfElements()  ;
     
+    
+    //get geometry info
 
-    //VXD smearing
-    streamlog_out( DEBUG ) << " processing collection " << _colNameVTX 
+    const gear::ZPlanarParameters* gearDet = NULL ;
+
+
+    int det_id_for_type = 0 ;
+    if( _sub_det_id == ILDDetID::VXD ) {      
+      gearDet = &(Global::GEAR->getVXDParameters()) ;
+      det_id_for_type = 100 ;
+    }
+    else if(_sub_det_id == ILDDetID::SIT) {
+      gearDet = &(Global::GEAR->getSITParameters()) ;
+      det_id_for_type = 400 ;
+    }
+    else if(_sub_det_id == ILDDetID::SET) {
+      gearDet = &(Global::GEAR->getSETParameters()) ;
+    }
+    else{
+      streamlog_out( DEBUG ) << "unknown detector ID" << std::endl;
+    }
+
+    //smearing
+    streamlog_out( DEBUG4 ) << " processing collection " << _inColName 
                            << " with " <<  nSimHits  << " hits ... " << std::endl ;
 
-    _pointResoRPhi = _pointResoRPhi_Inner;
-    _pointResoZ = _pointResoZ_Inner;               
-    
 
-    //get VXD geometry info
-    const gear::VXDParameters& gearVXD = Global::GEAR->getVXDParameters() ;
-    const gear::VXDLayerLayout& layerVXD = gearVXD.getVXDLayerLayout() ; 
+    const gear::ZPlanarLayerLayout& layerLayout = gearDet->getZPlanarLayerLayout() ;
+
     
     for(int i=0; i< nSimHits; ++i){
       
       SimTrackerHit* SimTHit = dynamic_cast<SimTrackerHit*>( STHcol->getElementAt( i ) ) ;
       
       const int celId = SimTHit->getCellID0() ;
-
+      
       const double *pos ;
       pos =  SimTHit->getPosition() ;  
       
@@ -161,9 +177,12 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
       int ladderNumber = 0 ;
 
       if(_ladder_Number_encoded_in_cellID) {
+        streamlog_out( DEBUG2 ) << "Get Layer Number using  ( celId / 10000 ) - 1 : celId = " << celId << std::endl ;
+
         layerNumber  = ( celId / 10000 ) - 1 ;
       }
       else{
+        streamlog_out( DEBUG2 ) << "Get Layer Number using celId - 1 : celId : " << celId << std::endl ;
         layerNumber = celId  - 1 ;
       }
 
@@ -173,30 +192,30 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
       mcp = SimTHit->getMCParticle() ;
       
       //phi between each ladder
-      double deltaPhi = ( 2 * M_PI ) / layerVXD.getNLadders(layerNumber) ;
-      //      double sensitive_length  = layerVXD.getSensitiveLength(layerNumber);
-      double sensitive_width  = layerVXD.getSensitiveWidth(layerNumber);
-      double sensitive_offset = layerVXD.getSensitiveOffset(layerNumber);
-      double ladder_r         = layerVXD.getSensitiveDistance(layerNumber);
+      double deltaPhi = ( 2 * M_PI ) / layerLayout.getNLadders(layerNumber) ;
+      //      double sensitive_length  = layerLayout.getSensitiveLength(layerNumber);
+      double sensitive_width  = layerLayout.getSensitiveWidth(layerNumber);
+      double sensitive_offset = layerLayout.getSensitiveOffset(layerNumber);
+      double ladder_r         = layerLayout.getSensitiveDistance(layerNumber);
 
       if(_ladder_Number_encoded_in_cellID) {
         ladderNumber = ( celId % ( 10000 * (layerNumber + 1) ) ) -1 ;
       }
       else{
         
-        for (int ic=0; ic < layerVXD.getNLadders(layerNumber); ++ic) {
+        for (int ic=0; ic < layerLayout.getNLadders(layerNumber); ++ic) {
           
-          double ladderPhi = correctPhiRange( layerVXD.getPhi0( layerNumber ) + ic*deltaPhi ) ;
+          double ladderPhi = correctPhiRange( layerLayout.getPhi0( layerNumber ) + ic*deltaPhi ) ;
 
           double PhiInLocal = hitvec.phi() - ladderPhi;
           double RXY = hitvec.rho();
           
-          //          streamlog_out(DEBUG) << "ladderPhi = " << ladderPhi << " PhiInLocal = "<< PhiInLocal << " RXY = " << RXY << " (RXY*cos(PhiInLocal) = " << RXY*cos(PhiInLocal) << " layerVXD.getSensitiveDistance(layerNumber) = " << layerVXD.getSensitiveDistance(layerNumber) << endl;
+          //          streamlog_out(DEBUG) << "ladderPhi = " << ladderPhi << " PhiInLocal = "<< PhiInLocal << " RXY = " << RXY << " (RXY*cos(PhiInLocal) = " << RXY*cos(PhiInLocal) << " layerLayout.getSensitiveDistance(layerNumber) = " << layerLayout.getSensitiveDistance(layerNumber) << endl;
       
 
           // check if point is in range of ladder
-          if (RXY*cos(PhiInLocal) - layerVXD.getSensitiveDistance(layerNumber) > -layerVXD.getSensitiveThickness(layerNumber) && 
-              RXY*cos(PhiInLocal) - layerVXD.getSensitiveDistance(layerNumber) <  layerVXD.getSensitiveThickness(layerNumber) )
+          if (RXY*cos(PhiInLocal) - layerLayout.getSensitiveDistance(layerNumber) > -layerLayout.getSensitiveThickness(layerNumber) && 
+              RXY*cos(PhiInLocal) - layerLayout.getSensitiveDistance(layerNumber) <  layerLayout.getSensitiveThickness(layerNumber) )
             {
               ladderNumber = ic;
               break;
@@ -205,7 +224,7 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
         
       }
 
-      double ladderPhi = correctPhiRange( layerVXD.getPhi0( layerNumber ) + ladderNumber*deltaPhi ) ;
+      double ladderPhi = correctPhiRange( layerLayout.getPhi0( layerNumber ) + ladderNumber*deltaPhi ) ;
       double ladder_incline = correctPhiRange( (M_PI/2.0 ) + ladderPhi );
 
       double PhiInLocal = hitvec.phi() - ladderPhi;
@@ -224,12 +243,12 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
                            << "  half ladder width " << sensitive_width * 0.5 
                            << "  u: " <<  u
                            << "  layer sensitive_offset " << sensitive_offset
-                           << "  layer phi0 " << layerVXD.getPhi0( layerNumber )
+                           << "  layer phi0 " << layerLayout.getPhi0( layerNumber )
                            << "  phi: " <<  hitvec.phi()
                            << "  PhiInLocal: " << PhiInLocal
                            << "  ladderPhi: " << ladderPhi
                            << "  ladder_incline: " << ladder_incline
-                           << "  nladders: " << layerVXD.getNLadders(layerNumber) 
+                           << "  nladders: " << layerLayout.getNLadders(layerNumber) 
                            << "  ladder r: " << ladder_r
                            << std::endl ;
 
@@ -250,15 +269,6 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
           
           if(tries > 0) streamlog_out(DEBUG) << "retry smearing for " << layerNumber << " " << ladderNumber << " : retries " << tries << std::endl;
           
-          if( layerNumber <= _last_inner_layer ){
-            _pointResoRPhi = _pointResoRPhi_Inner;
-            _pointResoZ    = _pointResoZ_Inner;
-          }
-          else{
-            _pointResoRPhi = _pointResoRPhi_Outer;
-            _pointResoZ    = _pointResoZ_Outer;
-          }
-
           rPhiSmear  = gsl_ran_gaussian(_rng, _pointResoRPhi);
           
           if( (u+rPhiSmear) < sensitive_width * 0.5 && (u+rPhiSmear) > -sensitive_width * 0.5)
@@ -288,8 +298,8 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
 
       //store hit variables
       TrackerHitPlaneImpl* trkHit = new TrackerHitPlaneImpl ;
-            
-      trkHit->setType(100+layerNumber );         // needed for FullLDCTracking et al.
+
+      trkHit->setType(det_id_for_type+layerNumber );         // needed for FullLDCTracking et al.
 
       
       streamlog_out(DEBUG) <<"Position of hit after smearing = "<<smearedPos[0]<<" "<<smearedPos[1]<<" "<<smearedPos[2]
@@ -298,18 +308,12 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
                            << "  v: " <<  hitvec.z()+zSmear
                            << std::endl ;
 
-      // SJA:FIXME: here you can use the value 2 but not 3 which is odd as the width of the field is 1, only 0 and 1 should be allowed?
-      int side = 1 ;
 
-      if( smearedPos[2] < 0.0 ) side = 1 ;
-
-      cellid_encoder[ ILDCellID0::subdet ] = ILDDetID::VXD ;
+      cellid_encoder[ ILDCellID0::subdet ] = _sub_det_id ;
+      cellid_encoder[ ILDCellID0::side   ] = 0 ;
       cellid_encoder[ ILDCellID0::layer  ] = layerNumber ;
       cellid_encoder[ ILDCellID0::module ] = ladderNumber ;
-
-      //SJA:FIXME: for now don't use side
-      //  (*_cellid_encoder)[ ILDCellID0::Fields::side   ] = side ;
-      cellid_encoder[ ILDCellID0::side   ] = 0 ;
+      cellid_encoder[ ILDCellID0::sensor ] = 0 ;
 
       cellid_encoder.setCellID( trkHit ) ;
 
@@ -351,7 +355,7 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
     }      
     
     
-    evt->addCollection( trkhitVec , _outColNameVTX ) ;
+    evt->addCollection( trkhitVec , _outColName ) ;
     
   }
   _nEvt ++ ;
