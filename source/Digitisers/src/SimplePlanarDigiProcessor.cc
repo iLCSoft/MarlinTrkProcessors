@@ -188,9 +188,6 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
 
       float edep = SimTHit->getEDep() ;
       
-      MCParticle *mcp ;
-      mcp = SimTHit->getMCParticle() ;
-      
       //phi between each ladder
       double deltaPhi = ( 2 * M_PI ) / layerLayout.getNLadders(layerNumber) ;
       //      double sensitive_length  = layerLayout.getSensitiveLength(layerNumber);
@@ -321,7 +318,7 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
 
       float u_direction[2] ;
       u_direction[0] = ladder_incline ;
-      u_direction[1] = 0.0 ;
+      u_direction[1] = M_PI/2.0 ;
 
       float v_direction[2] ;
       v_direction[0] = 0.0 ;
@@ -340,6 +337,9 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
         
       // 	  push back the SimTHit for this TrackerHit
       // fg: only if we have a sim hit with proper link to MC truth
+    
+      MCParticle *mcp ;
+      mcp = SimTHit->getMCParticle() ;
       if( mcp != 0 )  {
         trkHit->rawHits().push_back( SimTHit ) ;
       }
