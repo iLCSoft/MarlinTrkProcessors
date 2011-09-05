@@ -100,6 +100,7 @@ class RefitProcessor : public marlin::Processor {
 
   bool _MSOn ;
   bool _ElossOn ;
+  bool _SmoothOn ;
 
   int _n_run ;
   int _n_evt ;

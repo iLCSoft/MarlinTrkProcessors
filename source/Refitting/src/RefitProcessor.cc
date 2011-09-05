@@ -78,6 +78,12 @@ registerProcessorParameter("EnergyLossOn",
 			     _ElossOn,
 			     bool(true));
 
+registerProcessorParameter("SmoothOn",
+			     "Smooth All Mesurement Sites in Fit",
+			     _SmoothOn,
+			     bool(false));
+
+
 }
 
 
@@ -99,8 +105,9 @@ void RefitProcessor::init() {
     
   }
 
-  _trksystem->setOption( IMarlinTrkSystem::CFG::useQMS,    _MSOn ) ;
-  _trksystem->setOption( IMarlinTrkSystem::CFG::usedEdx,  _ElossOn) ;
+  _trksystem->setOption( IMarlinTrkSystem::CFG::useQMS,        _MSOn ) ;
+  _trksystem->setOption( IMarlinTrkSystem::CFG::usedEdx,       _ElossOn) ;
+  _trksystem->setOption( IMarlinTrkSystem::CFG::useSmoothing,  _SmoothOn) ;
   _trksystem->init() ;  
 
   
