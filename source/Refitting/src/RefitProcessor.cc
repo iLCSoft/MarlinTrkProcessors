@@ -159,6 +159,7 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
 
 	EVENT::TrackerHitVec trkHits = track->getTrackerHits() ;	
 
+	// sort the hits in R, so here we are assuming that the track came from the IP and that we want to fit out to in. 
 	sort(trkHits.begin(), trkHits.end(), RefitProcessor::compare_r() );
 
 	EVENT::TrackerHitVec::iterator it = trkHits.begin();
