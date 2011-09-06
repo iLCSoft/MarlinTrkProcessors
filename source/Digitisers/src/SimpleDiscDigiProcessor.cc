@@ -62,9 +62,9 @@ SimpleDiscDigiProcessor::SimpleDiscDigiProcessor() : Processor("SimpleDiscDigiPr
                             std::string("FTDTrackerHits") ) ;
                             
                             
-  registerProcessorParameter( "keepDeltas" ,
+  registerProcessorParameter( "keepHitsFromDeltas" ,
                               "Whether to put deltas (secondary particles) in the collection"  ,
-                              _keepDeltas ,
+                              _keepHitsFromDeltas ,
                               false) ;                            
 
 }
@@ -130,7 +130,7 @@ void SimpleDiscDigiProcessor::processEvent( LCEvent * evt ) {
         pos =  SimTHit->getPosition() ;  
         gear::Vector3D hitvec(pos[0],pos[1],pos[2]);
 
-        if ( ( _keepDeltas == true ) || ( hasCorrectZPos (pos[2]) == true ) ){
+        if ( ( _keepHitsFromDeltas == true ) || ( hasCorrectZPos (pos[2]) == true ) ){
         
           streamlog_out(DEBUG) << "Hit = "<< i << " has celId " << celId << " layer number = " << layerNumber  << endl;
           
