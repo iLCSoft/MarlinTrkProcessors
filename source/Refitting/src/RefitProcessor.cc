@@ -194,7 +194,8 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
 	  bool backwards = false ;
 	  
 	  int layerID = encoder.lowWord() ;  
-	  marlin_trk->intersectionWithLayer( forwards, layerID, xing_point); 
+	  int elementID = 0 ;
+	  marlin_trk->intersectionWithLayer( forwards, layerID, xing_point, elementID ); 
 
 	  encoder[ILDCellID0::subdet] = ILDDetID::VXD ;
 	  encoder[ILDCellID0::layer]  = 0 ;
@@ -203,49 +204,53 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
 	  // note the last hit to be added and filtered will probably be the first VXD hit so that is where the track state will be 
 	  // this means it is not clear if the track will be considered to be backwards or forwards from here
 	  // instead of a bool perhaps int with values -1,0,1 would be better ... 
-	  marlin_trk->intersectionWithLayer( forwards, layerID, xing_point); // first VXD layer	  
-	  marlin_trk->intersectionWithLayer( backwards, layerID, xing_point); // first VXD layer	  
+	  marlin_trk->intersectionWithLayer( forwards, layerID, xing_point, elementID ); // first VXD layer	  
+	  marlin_trk->intersectionWithLayer( backwards, layerID, xing_point, elementID ); // first VXD layer	  
 
 	  encoder[ILDCellID0::layer]  = 1 ;
 	  layerID = encoder.lowWord() ;  
-	  marlin_trk->intersectionWithLayer( forwards, layerID, xing_point); // second VXD layer	  
+	  marlin_trk->intersectionWithLayer( forwards, layerID, xing_point, elementID ); // second VXD layer	  
 
 	  encoder[ILDCellID0::layer]  = 2 ;
 	  layerID = encoder.lowWord() ;  
-	  marlin_trk->intersectionWithLayer( forwards, layerID, xing_point); // third VXD layer	  
+	  marlin_trk->intersectionWithLayer( forwards, layerID, xing_point, elementID ); // third VXD layer	  
 
 	  encoder[ILDCellID0::subdet] = ILDDetID::SIT ;
 	  encoder[ILDCellID0::layer]  = 1 ;
 	  layerID = encoder.lowWord() ;  
-	  marlin_trk->intersectionWithLayer( backwards, layerID, xing_point); // first SIT layer	  
+	  marlin_trk->intersectionWithLayer( backwards, layerID, xing_point, elementID ); // first SIT layer	  
 
+	  double chi2 = 0 ;
+	  int ndf = 0 ;
 	  // get track state at SIT outer  layer  
 	  TrackStateImpl trkState_at_sit;	  
-	  marlin_trk->extrapolateToLayer( backwards, layerID, trkState_at_sit); 
+	  marlin_trk->extrapolateToLayer( backwards, layerID, trkState_at_sit, chi2, ndf, elementID ); 
 
 	  // get track state at the first and last measurement sites
 	  TrackStateImpl trkState_at_begin;	  
 
-	  marlin_trk->getTrackState( trkState_at_begin ) ;
+	  marlin_trk->getTrackState( trkState_at_begin, chi2, ndf ) ;
 
 	  TrackStateImpl trkState_at_end;
 
-	  marlin_trk->getTrackState(  trkHits.back(), trkState_at_end ) ;	  
+	  marlin_trk->getTrackState(  trkHits.back(), trkState_at_end, chi2, ndf ) ;	  
 
 	  const gear::Vector3D point(0.,0.,0.); // nominal IP
 
 	  // use extrapolate, i.e. do not include material during propagation of the cov matrix 
 	  TrackStateImpl trkState_extrapolated;
-	  int return_code = marlin_trk->extrapolate(point, trkState_extrapolated) ;	  
+	  int return_code = marlin_trk->extrapolate(point, trkState_extrapolated, chi2, ndf ) ;	  
 
 	  // use propagate, i.e. include material during propagation of the cov matrix 
 	  TrackStateImpl* trkState = new TrackStateImpl() ;
-	  return_code = marlin_trk->propagate(point, *trkState) ;
+	  return_code = marlin_trk->propagate(point, *trkState, chi2, ndf ) ;
 
 	  if ( return_code == 0 ) {
 	    IMPL::TrackImpl* refittedTrack = new IMPL::TrackImpl();
 	    
 	    refittedTrack->addTrackState(trkState);
+	    refittedTrack->setChi2(chi2) ;
+	    refittedTrack->setNdf(ndf) ;
 
 	    for( it = trkHits.begin() ; it != trkHits.end() ; ++it )
 	      {
