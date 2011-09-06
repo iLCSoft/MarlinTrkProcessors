@@ -26,6 +26,10 @@ using namespace lcio ;
 using namespace marlin ;
 using namespace std ;
 
+
+
+
+
 SimpleDiscDigiProcessor aSimpleDiscDigiProcessor ;
 
 
@@ -56,6 +60,12 @@ SimpleDiscDigiProcessor::SimpleDiscDigiProcessor() : Processor("SimpleDiscDigiPr
                             "Name of the TrackerHit output collection"  ,
                             _outColName ,
                             std::string("FTDTrackerHits") ) ;
+                            
+                            
+  registerProcessorParameter( "keepDeltas" ,
+                              "Whether to put deltas (secondary particles) in the collection"  ,
+                              _keepDeltas ,
+                              false) ;                            
 
 }
 
@@ -71,7 +81,9 @@ void SimpleDiscDigiProcessor::init() {
   r = gsl_rng_alloc(gsl_rng_ranlxs2);
   Global::EVENTSEEDER->registerProcessor(this);
 
-  //  const gear::GearParameters& pFTD = Global::GEAR->getGearParameters("FTD");
+  const gear::GearParameters& pFTD = Global::GEAR->getGearParameters("FTD");
+  
+  _FTDZCoordinate = pFTD.getDoubleVals( "FTDZCoordinate" ) ;
 
 
 }
@@ -118,66 +130,79 @@ void SimpleDiscDigiProcessor::processEvent( LCEvent * evt ) {
         pos =  SimTHit->getPosition() ;  
         gear::Vector3D hitvec(pos[0],pos[1],pos[2]);
 
-        streamlog_out(DEBUG) << "Hit = "<< i << " has celId " << celId << " layer number = " << layerNumber  << endl;
+        if ( ( _keepDeltas == true ) || ( hasCorrectZPos (pos[2]) == true ) ){
         
-        streamlog_out(DEBUG) <<"Position of hit before smearing = "<<pos[0]<<" "<<pos[1]<<" "<<pos[2]<< " r = " << hitvec.rho() << endl;
+          streamlog_out(DEBUG) << "Hit = "<< i << " has celId " << celId << " layer number = " << layerNumber  << endl;
+          
+          streamlog_out(DEBUG) <<"Position of hit before smearing = "<<pos[0]<<" "<<pos[1]<<" "<<pos[2]<< " r = " << hitvec.rho() << endl;
 
-        double xSmear = gsl_ran_gaussian(r,_pointReso);
-        double ySmear = gsl_ran_gaussian(r,_pointReso);
-        
-        double smearedPos[3] ;
-        smearedPos[0] = pos[0] + xSmear;
-        smearedPos[1] = pos[1] + ySmear;
-        // No semaring of Z coordinate
-        smearedPos[2] = pos[2] ;
-        
-        streamlog_out(DEBUG) <<"Position of hit after smearing = "<<smearedPos[0]<<" "<<smearedPos[1]<<" "<<smearedPos[2] << std::endl ;
+          double xSmear = gsl_ran_gaussian(r,_pointReso);
+          double ySmear = gsl_ran_gaussian(r,_pointReso);
+          
+          double smearedPos[3] ;
+          smearedPos[0] = pos[0] + xSmear;
+          smearedPos[1] = pos[1] + ySmear;
+          // No semaring of Z coordinate
+          smearedPos[2] = pos[2] ;
+          
+          streamlog_out(DEBUG) <<"Position of hit after smearing = "<<smearedPos[0]<<" "<<smearedPos[1]<<" "<<smearedPos[2] << std::endl ;
 
 
-        //store hit variables
-        TrackerHitPlaneImpl* trkHit = new TrackerHitPlaneImpl ;        
+          //store hit variables
+          TrackerHitPlaneImpl* trkHit = new TrackerHitPlaneImpl ;        
 
-        trkHit->setType( 200+abs(celId));  // needed for FullLDCTracking et al.
+          trkHit->setType( 200+abs(celId));  // needed for FullLDCTracking et al.
 
-        cellid_encoder[ ILDCellID0::subdet ] = _sub_det_id ;
-        cellid_encoder[ ILDCellID0::side   ] = side ;
-        cellid_encoder[ ILDCellID0::layer  ] = layerNumber ;
-        cellid_encoder[ ILDCellID0::module ] = 0 ;
-        cellid_encoder[ ILDCellID0::sensor ] = 0 ;
-        
-        cellid_encoder.setCellID( trkHit ) ;
+          cellid_encoder[ ILDCellID0::subdet ] = _sub_det_id ;
+          cellid_encoder[ ILDCellID0::side   ] = side ;
+          cellid_encoder[ ILDCellID0::layer  ] = layerNumber ;
+          cellid_encoder[ ILDCellID0::module ] = 0 ;
+          cellid_encoder[ ILDCellID0::sensor ] = 0 ;
+          
+          cellid_encoder.setCellID( trkHit ) ;
 
-        trkHit->setPosition(  smearedPos  ) ;
+          trkHit->setPosition(  smearedPos  ) ;
 
-        float u_direction[2] ; // x
-        u_direction[0] = 0.0 ; 
-        u_direction[1] = M_PI/2.0 ;
-        
-        float v_direction[2] ; // y
-        v_direction[0] = M_PI/2.0 ;
-        v_direction[1] = M_PI/2.0 ;
-        
-        trkHit->setU( u_direction ) ;
-        trkHit->setV( v_direction ) ;
-        
-        trkHit->setdU( _pointReso ) ;
-        trkHit->setdV( _pointReso ) ;
-                
-        trkHit->setEDep( SimTHit->getEDep() ) ;
+          float u_direction[2] ; // x
+          u_direction[0] = 0.0 ; 
+          u_direction[1] = M_PI/2.0 ;
+          
+          float v_direction[2] ; // y
+          v_direction[0] = M_PI/2.0 ;
+          v_direction[1] = M_PI/2.0 ;
+          
+          trkHit->setU( u_direction ) ;
+          trkHit->setV( v_direction ) ;
+          
+          trkHit->setdU( _pointReso ) ;
+          trkHit->setdV( _pointReso ) ;
+                    
+          trkHit->setEDep( SimTHit->getEDep() ) ;
 
-        MCParticle *mcp ;
-        mcp = SimTHit->getMCParticle() ;
-        if( mcp != 0 )  {
-          trkHit->rawHits().push_back( SimTHit ) ;
+          MCParticle *mcp ;
+          mcp = SimTHit->getMCParticle() ;
+          if( mcp != 0 )  {
+              trkHit->rawHits().push_back( SimTHit ) ;
+          }
+          else{
+              streamlog_out( DEBUG0 ) << " ignore simhit pointer as MCParticle pointer is NULL ! " << std::endl ;
+          }
+          
+          trkhitVec->addElement( trkHit ) ; 
+
+          streamlog_out(DEBUG) << "-------------------------------------------------------" << std::endl;
+          
         }
         else{
-          streamlog_out( DEBUG0 ) << " ignore simhit pointer as MCParticle pointer is NULL ! " << std::endl ;
-        }
+          
+          streamlog_out(DEBUG) << "Hit "<< i << " is NOT KEPT! The z value is does not exactly correspond to a disk"  << endl;
+          
+          streamlog_out(DEBUG) <<"Position of hit = "<<pos[0]<<" "<<pos[1]<<" "<<pos[2]<< " r = " << hitvec.rho() << std::endl << endl;
         
-        trkhitVec->addElement( trkHit ) ; 
-
-        streamlog_out(DEBUG) << "-------------------------------------------------------" << std::endl;
-
+          streamlog_out(DEBUG) << "-------------------------------------------------------" << std::endl;
+          
+        }
+          
       }
       
       evt->addCollection( trkhitVec ,  _outColName ) ;
@@ -202,3 +227,17 @@ void SimpleDiscDigiProcessor::end(){
 
 }
 
+
+bool SimpleDiscDigiProcessor::hasCorrectZPos ( double z ){
+ 
+  double zPos = fabs ( z );
+  
+  for (unsigned int i=0; i < _FTDZCoordinate.size(); i++){
+    
+    if ( fabs ( _FTDZCoordinate[i] - zPos ) < 0.0001 ) return true;
+    
+  }
+  
+  return false;
+  
+}

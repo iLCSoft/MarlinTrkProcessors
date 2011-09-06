@@ -30,6 +30,12 @@ class FTDLayer ;
  * (default value 0.01) <br>
  * @param Sub_Detector_ID ID of Sub-Detector using UTIL/ILDConf.h from lcio <br>
  * (default value ILDDetID::FTD) <br>
+ * @param keepDeltas Whether to include secondary particles. Mokka also stores secondary particles. They are
+ * not on the exact detector surface as the surface of a hit is calculated as (entrypoint+exitpoint)/2.
+ * Secondary particles however come to existence within the silicon and will die there too. So their entry point
+ * is not really the beginning of the silicon but already within. Same is true for the exit point.
+ * The middle between them is therefore usually not on the exact z-postion of the detector. 
+ * So if keepDeltas is false all hits with no z-position corresponding to the correct one will not be stored.
  * <br>
  *
  */
@@ -79,6 +85,10 @@ class SimpleDiscDigiProcessor : public Processor {
   int _nEvt ;
  
   float _pointReso;
+  bool _keepDeltas;
+  std::vector< double > _FTDZCoordinate;
+  
+  bool hasCorrectZPos ( double z );
   
   // gsl random number generator
   gsl_rng * r ;
