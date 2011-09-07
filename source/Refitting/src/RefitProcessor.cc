@@ -171,9 +171,8 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
 	    
 	  }
 	
-	bool direction = false ;
-	marlin_trk->initialise( direction ) ;
-	int fit_status = marlin_trk->fit( direction ) ; // SJA:FIXME: false means from out to in here i.e. backwards. This would be better if had a more meaningful name perhaps fit_fwd and fit_rev
+	marlin_trk->initialise( IMarlinTrack::backward ) ;
+	int fit_status = marlin_trk->fit() ; 
 
 	if( fit_status == 0 ){ 
 
@@ -189,42 +188,35 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
 	  encoder[ILDCellID0::module] = 0 ;
 	  encoder[ILDCellID0::sensor] = 0 ;
 
-	  // direction is in time 
-	  bool forwards = true ;
-	  bool backwards = false ;
 	  
 	  int layerID = encoder.lowWord() ;  
 	  int elementID = 0 ;
-	  marlin_trk->intersectionWithLayer( forwards, layerID, xing_point, elementID ); 
+	  marlin_trk->intersectionWithLayer( layerID, xing_point, elementID, IMarlinTrack::modeForward ); 
 
 	  encoder[ILDCellID0::subdet] = ILDDetID::VXD ;
 	  encoder[ILDCellID0::layer]  = 0 ;
 	  layerID = encoder.lowWord() ;  
 
-	  // note the last hit to be added and filtered will probably be the first VXD hit so that is where the track state will be 
-	  // this means it is not clear if the track will be considered to be backwards or forwards from here
-	  // instead of a bool perhaps int with values -1,0,1 would be better ... 
-	  marlin_trk->intersectionWithLayer( forwards, layerID, xing_point, elementID ); // first VXD layer	  
-	  marlin_trk->intersectionWithLayer( backwards, layerID, xing_point, elementID ); // first VXD layer	  
+	  marlin_trk->intersectionWithLayer( layerID, xing_point, elementID ); // first VXD layer	  
 
 	  encoder[ILDCellID0::layer]  = 1 ;
 	  layerID = encoder.lowWord() ;  
-	  marlin_trk->intersectionWithLayer( forwards, layerID, xing_point, elementID ); // second VXD layer	  
+	  marlin_trk->intersectionWithLayer( layerID, xing_point, elementID, IMarlinTrack::modeForward ); // second VXD layer	  
 
 	  encoder[ILDCellID0::layer]  = 2 ;
 	  layerID = encoder.lowWord() ;  
-	  marlin_trk->intersectionWithLayer( forwards, layerID, xing_point, elementID ); // third VXD layer	  
+	  marlin_trk->intersectionWithLayer( layerID, xing_point, elementID, IMarlinTrack::modeForward ); // third VXD layer	  
 
 	  encoder[ILDCellID0::subdet] = ILDDetID::SIT ;
 	  encoder[ILDCellID0::layer]  = 1 ;
 	  layerID = encoder.lowWord() ;  
-	  marlin_trk->intersectionWithLayer( backwards, layerID, xing_point, elementID ); // first SIT layer	  
+	  marlin_trk->intersectionWithLayer( layerID, xing_point, elementID, IMarlinTrack::modeBackward ); // first SIT layer	  
 
 	  double chi2 = 0 ;
 	  int ndf = 0 ;
 	  // get track state at SIT outer  layer  
 	  TrackStateImpl trkState_at_sit;	  
-	  marlin_trk->extrapolateToLayer( backwards, layerID, trkState_at_sit, chi2, ndf, elementID ); 
+	  marlin_trk->extrapolateToLayer( layerID, trkState_at_sit, chi2, ndf, elementID, IMarlinTrack::modeBackward); 
 
 	  // get track state at the first and last measurement sites
 	  TrackStateImpl trkState_at_begin;	  
@@ -274,8 +266,9 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
 	      }
 	  
 	    //	//SJA:FIXME: This has to go away. The use of hardcoded number here is completely error prone ...
-	    refittedTrack->subdetectorHitNumbers().resize(12);
-	    for ( unsigned int detIndex = 0 ;  detIndex < refittedTrack->subdetectorHitNumbers().size() ; detIndex++ ) 
+	    unsigned int size_of_vec = track->getSubdetectorHitNumbers().size() ;
+	    refittedTrack->subdetectorHitNumbers().resize(size_of_vec) ;
+	    for ( unsigned int detIndex = 0 ;  detIndex < size_of_vec ; detIndex++ ) 
 	      {
 		refittedTrack->subdetectorHitNumbers()[detIndex] = track->getSubdetectorHitNumbers()[detIndex] ;
 	      }
