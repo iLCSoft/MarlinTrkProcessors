@@ -212,6 +212,14 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
 	  layerID = encoder.lowWord() ;  
 	  marlin_trk->intersectionWithLayer( layerID, xing_point, elementID, IMarlinTrack::modeBackward ); // first SIT layer	  
 
+	  
+	  streamlog_out(DEBUG4) << "elementID = " << elementID << std::endl ;
+
+	  marlin_trk->intersectionWithDetElement( elementID, xing_point, IMarlinTrack::modeBackward ); // just as an example get the intersection again using the elementID returned 
+
+
+
+
 	  double chi2 = 0 ;
 	  int ndf = 0 ;
 	  // get track state at SIT outer  layer  
