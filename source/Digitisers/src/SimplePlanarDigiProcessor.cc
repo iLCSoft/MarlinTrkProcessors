@@ -177,9 +177,14 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
       int ladderNumber = 0 ;
 
       if(_ladder_Number_encoded_in_cellID) {
-        streamlog_out( DEBUG2 ) << "Get Layer Number using  ( celId / 10000 ) - 1 : celId = " << celId << std::endl ;
+        streamlog_out( DEBUG2 ) << "Get Layer Number using Standard ILD Encoding from ILDConf.h : celId = " << celId << std::endl ;
+        UTIL::BitField64 encoder( ILDCellID0::encoder_string ) ; 
+        encoder.setValue(celId) ;
+        layerNumber  = encoder[ILDCellID0::layer] ;
+        ladderNumber = encoder[ILDCellID0::module] ;
+        streamlog_out( DEBUG2 ) << "layerNumber = " <<  layerNumber << std::endl ;
+        streamlog_out( DEBUG2 ) << "ladderNumber = " << ladderNumber << std::endl ;
 
-        layerNumber  = ( celId / 10000 ) - 1 ;
       }
       else{
         streamlog_out( DEBUG2 ) << "Get Layer Number using celId - 1 : celId : " << celId << std::endl ;
@@ -195,10 +200,7 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
       double sensitive_offset = layerLayout.getSensitiveOffset(layerNumber);
       double ladder_r         = layerLayout.getSensitiveDistance(layerNumber);
 
-      if(_ladder_Number_encoded_in_cellID) {
-        ladderNumber = ( celId % ( 10000 * (layerNumber + 1) ) ) -1 ;
-      }
-      else{
+      if( ! _ladder_Number_encoded_in_cellID) {
         
         for (int ic=0; ic < layerLayout.getNLadders(layerNumber); ++ic) {
           
