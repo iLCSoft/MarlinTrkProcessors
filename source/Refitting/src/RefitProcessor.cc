@@ -210,13 +210,13 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
 	  encoder[ILDCellID0::subdet] = ILDDetID::SIT ;
 	  encoder[ILDCellID0::layer]  = 1 ;
 	  layerID = encoder.lowWord() ;  
-	  marlin_trk->intersectionWithLayer( layerID, xing_point, elementID, IMarlinTrack::modeBackward ); // first SIT layer	  
+	  int intersects = marlin_trk->intersectionWithLayer( layerID, xing_point, elementID, IMarlinTrack::modeBackward ); // first SIT layer	  
 
 	  
 	  streamlog_out(DEBUG4) << "elementID = " << elementID << std::endl ;
-
-	  marlin_trk->intersectionWithDetElement( elementID, xing_point, IMarlinTrack::modeBackward ); // just as an example get the intersection again using the elementID returned 
-
+	  if( intersects == IMarlinTrack::success ) {
+	    marlin_trk->intersectionWithDetElement( elementID, xing_point, IMarlinTrack::modeBackward ); // just as an example get the intersection again using the elementID returned 
+	  }
 
 
 
@@ -273,7 +273,6 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
 		trackRelVec->addElement( rel );
 	      }
 	  
-	    //	//SJA:FIXME: This has to go away. The use of hardcoded number here is completely error prone ...
 	    unsigned int size_of_vec = track->getSubdetectorHitNumbers().size() ;
 	    refittedTrack->subdetectorHitNumbers().resize(size_of_vec) ;
 	    for ( unsigned int detIndex = 0 ;  detIndex < size_of_vec ; detIndex++ ) 
