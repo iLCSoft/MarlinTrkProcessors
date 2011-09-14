@@ -176,7 +176,7 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
 			
 			if( fit_status == 0 ){ 
 				
-				marlin_trk->smooth();
+				marlin_trk->smooth(trkHits.back());
 				
 				gear::Vector3D xing_point ; 
 				
