@@ -176,6 +176,8 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
 			
 			if( fit_status == 0 ){ 
 				
+				marlin_trk->smooth();
+				
 				gear::Vector3D xing_point ; 
 				
 				UTIL::BitField64 encoder( ILDCellID0::encoder_string ) ; 
