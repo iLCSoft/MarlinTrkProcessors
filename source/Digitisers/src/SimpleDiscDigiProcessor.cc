@@ -176,6 +176,14 @@ void SimpleDiscDigiProcessor::processEvent( LCEvent * evt ) {
           cellid_encoder[ ILDCellID0::module ] = petalNumber ;
           cellid_encoder[ ILDCellID0::sensor ] = sensorNumber ;
           
+          cellid_encoder.setValue( lcio::long64(cellid_encoder.lowWord() ) << 32 );
+          
+          cellid_encoder[ ILDCellID0::subdet ] = _sub_det_id ;
+          cellid_encoder[ ILDCellID0::side   ] = side ;
+          cellid_encoder[ ILDCellID0::layer  ] = layerNumber ;
+          cellid_encoder[ ILDCellID0::module ] = 0 ;
+          cellid_encoder[ ILDCellID0::sensor ] = 0 ;
+          
           cellid_encoder.setCellID( trkHit ) ;
 
           streamlog_out(DEBUG2) <<"side = "<< side << std::endl ;
