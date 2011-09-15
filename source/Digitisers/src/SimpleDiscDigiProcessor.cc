@@ -67,6 +67,16 @@ SimpleDiscDigiProcessor::SimpleDiscDigiProcessor() : Processor("SimpleDiscDigiPr
                               _keepHitsFromDeltas ,
                               false) ;                            
 
+   registerProcessorParameter( "PetalsPerDisk" ,
+                                 "Number of petals per disk"  ,
+                                 _petalsPerDisk ,
+                                 1 ) ;    
+                                 
+   registerProcessorParameter( "SensorsPerPetal" ,
+                              "Number of Sensors Per Petal"  ,
+                              _sensorsPerPetal ,
+                              1 ) ;    
+   
 }
 
 
@@ -84,7 +94,9 @@ void SimpleDiscDigiProcessor::init() {
   const gear::GearParameters& pFTD = Global::GEAR->getGearParameters("FTD");
   
   _FTDZCoordinate = pFTD.getDoubleVals( "FTDZCoordinate" ) ;
-
+  _diskInnerRadius = pFTD.getDoubleVals( "FTDInnerRadius" ) ;
+  _diskOuterRadius = pFTD.getDoubleVals( "FTDOuterRadius" ) ;
+  
 
 }
 
@@ -153,14 +165,25 @@ void SimpleDiscDigiProcessor::processEvent( LCEvent * evt ) {
 
           trkHit->setType( 200+abs(celId));  // needed for FullLDCTracking et al.
 
+          
+          int petalNumber = getPetalNumber( layerNumber , smearedPos[0] , smearedPos[1] );
+          int sensorNumber = getSensorNumber( layerNumber , smearedPos[0] , smearedPos[1] );
+          
+          
           cellid_encoder[ ILDCellID0::subdet ] = _sub_det_id ;
           cellid_encoder[ ILDCellID0::side   ] = side ;
           cellid_encoder[ ILDCellID0::layer  ] = layerNumber ;
-          cellid_encoder[ ILDCellID0::module ] = 0 ;
-          cellid_encoder[ ILDCellID0::sensor ] = 0 ;
+          cellid_encoder[ ILDCellID0::module ] = petalNumber ;
+          cellid_encoder[ ILDCellID0::sensor ] = sensorNumber ;
           
           cellid_encoder.setCellID( trkHit ) ;
 
+          streamlog_out(DEBUG2) <<"side = "<< side << std::endl ;
+          streamlog_out(DEBUG2) <<"layerNumber = "<< layerNumber << std::endl ;
+          streamlog_out(DEBUG2) <<"moduleNumber = "<< petalNumber << std::endl ;
+          streamlog_out(DEBUG2) <<"sensorNumber = "<< sensorNumber << std::endl ;
+          
+          
           trkHit->setPosition(  smearedPos  ) ;
 
           float u_direction[2] ; // x
@@ -241,3 +264,51 @@ bool SimpleDiscDigiProcessor::hasCorrectZPos ( double z ){
   return false;
   
 }
+
+
+int SimpleDiscDigiProcessor::getPetalNumber ( int layer , double x , double y ){
+   
+ 
+   
+   
+   //find out the petal (= modul)
+   
+   double phi = atan2 ( y , x ); // the phi angle
+   if  ( phi < 0. ) phi += 2*M_PI; // to the range of 0-2Pi
+            
+   double phiRel = phi / 2. /M_PI; // phi in a range from 0 to 1
+   
+   int petal = floor ( phiRel * _petalsPerDisk ); //the number of the corresponding petal
+   if ( petal == _petalsPerDisk ) petal--; //just in case, the hit really is at the exact boarder of a petal
+   
+
+   return petal;
+   
+}
+
+
+int SimpleDiscDigiProcessor::getSensorNumber ( int layer , double x , double y ){
+   
+
+   //find out the sensor
+   
+   double r = sqrt ( x*x + y*y ); //radius in xy plane
+   
+   // The relative radial position: from 0 to 1. 
+   // 0.0 means at the inner radius of the petal.
+   // 1.0 means at the outer radius of the petal.
+   double posRel = (r - _diskInnerRadius[layer]) / ( _diskOuterRadius[layer] - _diskInnerRadius[layer] ); 
+   
+   
+   int sensor = floor ( posRel * _sensorsPerPetal ); //the number of the sensor
+   if ( sensor == _sensorsPerPetal ) sensor--; //just in case, the hit really is at the exact boarder
+   
+   
+   return sensor;   
+
+   
+}
+   
+
+   
+   

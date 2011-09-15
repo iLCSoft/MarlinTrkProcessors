@@ -38,7 +38,17 @@ class FTDLayer ;
  * The middle between them is therefore usually not at the exact z-postion of the detector measurement plane. 
  * So only if keepHitsFromDeltas is set to true, will hits with a z-position not corresponding to the measurement plane produce TrackerHits.
  * <br>
+ * (default value false) <br>
  *
+ * @param PetalsPerDisk The number of petals per disk. (Although there are no real petals implemented, hits get a CellID0 corresponding
+ * to the petal they would be on.) A value of 1 means there is only one petal spanning the whole disk.
+ * The petals start from the x-axis with the beginning of the first petal aligned with the axis.  <br>
+ * (default value 1) <br>
+ *
+ * @param SensorsPerPetal The number of sensors per Petal. A petal will be split up into n Sensors, equally distributed. So if the values is 1,
+ * there will be one sensor filling the whole petal. If the value is 2, there will be two sensors, splitting the petal at (Rmin-Rmax)/2.
+ * As this digitiser simulates a PixelDisk, there there are no sensors at the back. <br>
+ * (default value 1) <br> 
  */
 
 
@@ -88,8 +98,16 @@ class SimpleDiscDigiProcessor : public Processor {
   float _pointReso;
   bool _keepHitsFromDeltas;
   std::vector< double > _FTDZCoordinate;
+  std::vector< double > _diskInnerRadius;
+  std::vector< double > _diskOuterRadius;
   
   bool hasCorrectZPos ( double z );
+
+  int getPetalNumber ( int layer , double x , double y );
+  int getSensorNumber ( int layer , double x , double y );
+  
+  int _petalsPerDisk;
+  int _sensorsPerPetal;
   
   // gsl random number generator
   gsl_rng * r ;
