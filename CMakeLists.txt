@@ -83,7 +83,14 @@ INCLUDE_DIRECTORIES( ./source/Digitisers/include ./source/Refitting/include ./so
 
 # add library
 FILE( GLOB_RECURSE library_sources "source/*.cc" )
-ADD_SHARED_LIBRARY( ${PROJECT_NAME} ${library_sources} )
+# needed for adding header files to xcode project
+IF(CMAKE_GENERATOR MATCHES "Xcode")
+  FILE( GLOB_RECURSE library_headers "*.h" )
+  ADD_SHARED_LIBRARY( ${PROJECT_NAME} ${library_sources} ${library_headers})
+ELSE()
+  ADD_SHARED_LIBRARY( ${PROJECT_NAME} ${library_sources} )
+ENDIF()  
+
 INSTALL_SHARED_LIBRARY( ${PROJECT_NAME} DESTINATION lib )
 
 # display some variables and write them to cache
