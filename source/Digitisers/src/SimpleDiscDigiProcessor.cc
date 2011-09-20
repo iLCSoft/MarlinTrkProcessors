@@ -286,7 +286,7 @@ int SimpleDiscDigiProcessor::getPetalNumber ( int layer , double x , double y ){
             
    double phiRel = phi / 2. /M_PI; // phi in a range from 0 to 1
    
-   int petal = floor ( phiRel * _petalsPerDisk ); //the number of the corresponding petal
+   int petal = int ( phiRel * _petalsPerDisk ); //the number of the corresponding petal
    if ( petal == _petalsPerDisk ) petal--; //just in case, the hit really is at the exact boarder of a petal
    
 
@@ -308,9 +308,9 @@ int SimpleDiscDigiProcessor::getSensorNumber ( int layer , double x , double y )
    double posRel = (r - _diskInnerRadius[layer]) / ( _diskOuterRadius[layer] - _diskInnerRadius[layer] ); 
    
    
-   int sensor = floor ( posRel * _sensorsPerPetal ); //the number of the sensor
+   int sensor = int ( posRel * _sensorsPerPetal ); //the number of the sensor
    if ( sensor == _sensorsPerPetal ) sensor--; //just in case, the hit really is at the exact boarder
-   
+   if ( sensor < 0) sensor = 0;  //hits might get smeared off disk and therefore get sensor = -1. this is prevented here   
    
    return sensor;   
 
