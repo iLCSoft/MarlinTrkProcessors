@@ -121,7 +121,7 @@ void SimpleDiscDigiProcessor::processEvent( LCEvent * evt ) {
   
     if( STHcol != 0 ){    
     
-      LCCollectionVec* trkhitVec = new LCCollectionVec( LCIO::TRACKERHIT )  ;
+      LCCollectionVec* trkhitVec = new LCCollectionVec( LCIO::TRACKERHITPLANE )  ;
       CellIDEncoder<TrackerHitPlaneImpl> cellid_encoder( ILDCellID0::encoder_string , trkhitVec ) ;
 
       int nSimHits = STHcol->getNumberOfElements()  ;
