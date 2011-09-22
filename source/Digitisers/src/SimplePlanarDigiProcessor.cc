@@ -108,14 +108,14 @@ void SimplePlanarDigiProcessor::processRunHeader( LCRunHeader* run) {
 void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) { 
 
   gsl_rng_set( _rng, Global::EVENTSEEDER->getSeed(this) ) ;   
-  streamlog_out( DEBUG ) << "seed set to " << Global::EVENTSEEDER->getSeed(this) << std::endl;
+  streamlog_out( DEBUG4 ) << "seed set to " << Global::EVENTSEEDER->getSeed(this) << std::endl;
 
   LCCollection* STHcol = 0 ;
   try{
     STHcol = evt->getCollection( _inColName ) ;
   }
   catch(DataNotAvailableException &e){
-    streamlog_out(DEBUG) << "Collection " << _inColName.c_str() << " is unavailable in event " << _nEvt << std::endl;
+    streamlog_out(DEBUG4) << "Collection " << _inColName.c_str() << " is unavailable in event " << _nEvt << std::endl;
   }
   
   if( STHcol != 0 ){    
@@ -147,9 +147,11 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
       gearDet = &(Global::GEAR->getSETParameters()) ;
     }
     else{
-      streamlog_out( DEBUG ) << "unknown detector ID" << std::endl;
+      std::stringstream errorMsg;
+      errorMsg << "SimplePlanarDigiProcessor::processEvent: unknown detector ID: file " << __FILE__ << " line " << __LINE__ ;
+      throw Exception( errorMsg.str() );  
     }
-
+    
     //smearing
     streamlog_out( DEBUG4 ) << " processing collection " << _inColName 
                            << " with " <<  nSimHits  << " hits ... " << std::endl ;
@@ -177,17 +179,17 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
       int ladderNumber = 0 ;
 
       if(_ladder_Number_encoded_in_cellID) {
-        streamlog_out( DEBUG2 ) << "Get Layer Number using Standard ILD Encoding from ILDConf.h : celId = " << celId << std::endl ;
+        streamlog_out( DEBUG3 ) << "Get Layer Number using Standard ILD Encoding from ILDConf.h : celId = " << celId << std::endl ;
         UTIL::BitField64 encoder( ILDCellID0::encoder_string ) ; 
         encoder.setValue(celId) ;
         layerNumber  = encoder[ILDCellID0::layer] ;
         ladderNumber = encoder[ILDCellID0::module] ;
-        streamlog_out( DEBUG2 ) << "layerNumber = " <<  layerNumber << std::endl ;
-        streamlog_out( DEBUG2 ) << "ladderNumber = " << ladderNumber << std::endl ;
+        streamlog_out( DEBUG3 ) << "layerNumber = " <<  layerNumber << std::endl ;
+        streamlog_out( DEBUG3 ) << "ladderNumber = " << ladderNumber << std::endl ;
 
       }
       else{
-        streamlog_out( DEBUG2 ) << "Get Layer Number using celId - 1 : celId : " << celId << std::endl ;
+        streamlog_out( DEBUG3 ) << "Get Layer Number using celId - 1 : celId : " << celId << std::endl ;
         layerNumber = celId  - 1 ;
       }
 
@@ -195,7 +197,7 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
       
       //phi between each ladder
       double deltaPhi = ( 2 * M_PI ) / layerLayout.getNLadders(layerNumber) ;
-      //      double sensitive_length  = layerLayout.getSensitiveLength(layerNumber);
+      double sensitive_length  = layerLayout.getSensitiveLength(layerNumber) * 2.0 ; // note: gear for historical reasons uses the halflength 
       double sensitive_width  = layerLayout.getSensitiveWidth(layerNumber);
       double sensitive_offset = layerLayout.getSensitiveOffset(layerNumber);
       double ladder_r         = layerLayout.getSensitiveDistance(layerNumber);
@@ -231,12 +233,12 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
       double u = (hitvec.rho() * sin(PhiInLocal) - sensitive_offset );
       //double u = (hitvec.rho() * sin(PhiInLocal) );
 
-      streamlog_out(DEBUG) << "Hit = "<< i << " has celId " << celId << " layer number = " << layerNumber << " ladderNumber = " << ladderNumber << endl;
+      streamlog_out(DEBUG3) << "Hit = "<< i << " has celId " << celId << " layer number = " << layerNumber << " ladderNumber = " << ladderNumber << endl;
       
-      streamlog_out(DEBUG) <<"Position of hit before smearing = "<<pos[0]<<" "<<pos[1]<<" "<<pos[2]<< " r = " << hitvec.rho() << endl;
+      streamlog_out(DEBUG3) <<"Position of hit before smearing = "<<pos[0]<<" "<<pos[1]<<" "<<pos[2]<< " r = " << hitvec.rho() << endl;
 
 
-      streamlog_out(DEBUG) << ":" 
+      streamlog_out(DEBUG3) << ":" 
                            << "  layer: " << layerNumber 
                            << "  ladderIndex: " << ladderNumber 
                            << "  half ladder width " << sensitive_width * 0.5 
@@ -253,7 +255,7 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
 
       if( u > sensitive_width * 0.5 || u < -sensitive_width * 0.5)
         {
-          streamlog_out(DEBUG) << "hit not in sensitive: u: " << u << " half ladder width = " << sensitive_width * 0.5 << std::endl;
+          streamlog_out(DEBUG4) << "hit not in sensitive: u: " << u << " half ladder width = " << sensitive_width * 0.5 << std::endl;
         }
 
       int  tries = 0;              
@@ -266,11 +268,11 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
       while( tries < 100 )
         {
           
-          if(tries > 0) streamlog_out(DEBUG) << "retry smearing for " << layerNumber << " " << ladderNumber << " : retries " << tries << std::endl;
+          if(tries > 0) streamlog_out(DEBUG0) << "retry smearing for " << layerNumber << " " << ladderNumber << " : retries " << tries << std::endl;
           
           rPhiSmear  = gsl_ran_gaussian(_rng, _pointResoRPhi);
           
-          if( (u+rPhiSmear) < sensitive_width * 0.5 && (u+rPhiSmear) > -sensitive_width * 0.5)
+          if( (u+rPhiSmear) < sensitive_width * 0.5 && (u+rPhiSmear) > -sensitive_width * 0.5 && (hitvec.z()+zSmear) < sensitive_length * 0.5 && (hitvec.z()+zSmear) > -sensitive_length * 0.5) 
             //          if( true )
             {
               accept_hit =true;
@@ -290,7 +292,7 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
  
       if( accept_hit == false ) 
         {
-          streamlog_out(DEBUG) << "hit could not be smeared within ladder after 100 tries: hit dropped"  << std::endl;
+          streamlog_out(DEBUG4) << "hit could not be smeared within ladder after 100 tries: hit dropped"  << std::endl;
           continue; 
         } // 
 
@@ -301,7 +303,7 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
       trkHit->setType(det_id_for_type+layerNumber );         // needed for FullLDCTracking et al.
 
       
-      streamlog_out(DEBUG) <<"Position of hit after smearing = "<<smearedPos[0]<<" "<<smearedPos[1]<<" "<<smearedPos[2]
+      streamlog_out(DEBUG3) <<"Position of hit after smearing = "<<smearedPos[0]<<" "<<smearedPos[1]<<" "<<smearedPos[2]
                            << " :" 
                            << "  u: " <<  u+rPhiSmear
                            << "  v: " <<  hitvec.z()+zSmear
@@ -352,7 +354,7 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
 
       trkhitVec->addElement( trkHit ) ; 
 
-      streamlog_out(DEBUG) << "-------------------------------------------------------" << std::endl;
+      streamlog_out(DEBUG3) << "-------------------------------------------------------" << std::endl;
 
     }      
     
