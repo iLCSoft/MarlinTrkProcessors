@@ -7,6 +7,7 @@
 #include <EVENT/MCParticle.h>
 #include <EVENT/SimTrackerHit.h>
 #include <EVENT/TrackerHit.h>
+#include <EVENT/TrackerHitPlane.h>
 #include <IMPL/LCCollectionVec.h>
 #include <IMPL/LCRelationImpl.h>
 #include <IMPL/LCFlagImpl.h>
@@ -913,7 +914,7 @@ int SiliconTracking_cplusplus::InitialiseVTX(LCEvent * evt) {
     _nTotalVTXHits = nelem;
 
     for (int ielem=0; ielem<nelem; ++ielem) {
-      TrackerHit * hit = dynamic_cast<TrackerHit*>(hitCollection->getElementAt(ielem));
+      TrackerHitPlane * hit = dynamic_cast<TrackerHitPlane*>(hitCollection->getElementAt(ielem));
 
       TrackerHitExtended * hitExt = new TrackerHitExtended( hit );
 
@@ -921,8 +922,10 @@ int SiliconTracking_cplusplus::InitialiseVTX(LCEvent * evt) {
 //      hitExt->setResolutionRPhi(float(sqrt(hit->getCovMatrix()[2])));
 //      hitExt->setResolutionZ(float(sqrt(hit->getCovMatrix()[5])));
 
-			hitExt->setResolutionRPhi(0.005);
-			hitExt->setResolutionZ(0.005);
+      
+
+			hitExt->setResolutionRPhi(hit->getdU());
+			hitExt->setResolutionZ(hit->getdV());
 														 
 //      if (hit->getCovMatrix()[2] < 1e-10) 
 //				hitExt->setResolutionRPhi(0.1);
@@ -982,7 +985,7 @@ int SiliconTracking_cplusplus::InitialiseVTX(LCEvent * evt) {
 
       for (int ielem=0; ielem<nelem; ++ielem) {
 
-				TrackerHit * hit = dynamic_cast<TrackerHit*>(hitCollection->getElementAt(ielem));
+				TrackerHitPlane * hit = dynamic_cast<TrackerHitPlane*>(hitCollection->getElementAt(ielem));
 				
         TrackerHitExtended * hitExt = new TrackerHitExtended( hit );
 
@@ -990,8 +993,8 @@ int SiliconTracking_cplusplus::InitialiseVTX(LCEvent * evt) {
 //				hitExt->setResolutionRPhi(float(sqrt(hit->getCovMatrix()[2])));
 //        hitExt->setResolutionZ(float(sqrt(hit->getCovMatrix()[5])));
 
-        hitExt->setResolutionRPhi(0.005);
-        hitExt->setResolutionZ(0.005);
+        hitExt->setResolutionRPhi(hit->getdU());
+        hitExt->setResolutionZ(hit->getdV());
         
 //				if (hit->getCovMatrix()[2] < 1e-10) 
 //					hitExt->setResolutionRPhi(0.1);
