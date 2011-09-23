@@ -41,34 +41,37 @@ using namespace lcio ;
 using namespace marlin ;
 using namespace MarlinTrk ;
 
-int min(int a,int b) {
-  int result;
-  if (a<b) {
-    result = a;
-  }
-  else {
-    result = b;
-  }    
-  return result;
-}
-
-int max(int a,int b) {
-  int result;
-  if (a>b) {
-    result = a;
-  }
-  else {
-    result = b;
-  }    
-  return result;
-}
-
-int abs(int x) {
-  int result = x;
-  if (x<0)
-    result = -x;
-  return result;
-}
+using std::min;
+using std::max;
+using std::abs;
+//int min(int a,int b) {
+//  int result;
+//  if (a<b) {
+//    result = a;
+//  }
+//  else {
+//    result = b;
+//  }    
+//  return result;
+//}
+//
+//int max(int a,int b) {
+//  int result;
+//  if (a>b) {
+//    result = a;
+//  }
+//  else {
+//    result = b;
+//  }    
+//  return result;
+//}
+//
+//int abs(int x) {
+//  int result = x;
+//  if (x<0)
+//    result = -x;
+//  return result;
+//}
 
 
 // extern "C" {
