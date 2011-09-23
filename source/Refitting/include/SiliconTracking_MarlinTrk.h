@@ -190,7 +190,7 @@ namespace MarlinTrk {
  */
 class SiliconTracking_MarlinTrk : public Processor {
   
- public:
+public:
   
   virtual Processor*  newProcessor() { return new SiliconTracking_MarlinTrk ; }
   
@@ -219,15 +219,15 @@ class SiliconTracking_MarlinTrk : public Processor {
   virtual void end() ;
   
   
- protected:
-
+protected:
+  
   int _nRun ;
   int _nEvt ;
-
+  
   int _nDivisionsInPhi;
   int _nDivisionsInTheta;
   int _nLayers;
-
+  
 	MarlinTrk::HelixFit* _fastfitter;
 	
   /** pointer to the IMarlinTrkSystem instance 
@@ -235,7 +235,7 @@ class SiliconTracking_MarlinTrk : public Processor {
   MarlinTrk::IMarlinTrkSystem* _trksystem ;
   
   bool _MSOn, _ElossOn, _SmoothOn ;
-
+  
   
   struct compare_r {
     bool operator()( EVENT::TrackerHit* a, EVENT::TrackerHit* b)  const { 
@@ -258,7 +258,7 @@ class SiliconTracking_MarlinTrk : public Processor {
   TrackExtendedVec _tracks5Hits;
   TrackExtendedVec _tracks4Hits;
   TrackExtendedVec _tracks3Hits;
-
+  
   int InitialiseVTX(LCEvent * evt);
   int InitialiseFTD(LCEvent * evt);
   void ProcessOneSector(int iSectorPhi, int iSectorTheta);
@@ -267,7 +267,7 @@ class SiliconTracking_MarlinTrk : public Processor {
 															TrackerHitExtended * middleHit,
 															TrackerHitExtended * innerHit,
 															HelixClass & helix);
-
+  
   int BuildTrack(TrackerHitExtended * outerHit, 
 								 TrackerHitExtended * middleHit,
 								 TrackerHitExtended * innerHit,
@@ -287,7 +287,7 @@ class SiliconTracking_MarlinTrk : public Processor {
   int BuildTrackFTD(TrackExtended* trackAR, int* nLR, int iS);
   int AttachHitToTrack(TrackExtended * trackAR, TrackerHitExtended * hit);
   void FinalRefit();
-
+  
   float _bField;
   float _chi2WRPhiTriplet;
   float _chi2WRPhiQuartet;
@@ -297,55 +297,55 @@ class SiliconTracking_MarlinTrk : public Processor {
   float _chi2WZSeptet;
   float _minDistCutAttach;
   int _minimalLayerToAttach;
-
+  
   double PI,TWOPI,PIOVER2;
   double _dPhi;
   double _dTheta;
   double _dPhiFTD;
-
+  
   int _debug;
-
+  
   std::vector<float> _zLayerFTD;
   std::vector<int> _Combinations;
   std::vector<int> _CombinationsFTD;
-
+  
   float _resolutionRPhiVTX;
   float _resolutionZVTX;
   
   float _resolutionRPhiFTD;
   float _resolutionZFTD;
-
+  
   float _resolutionRPhiSIT;
   float _resolutionZSIT;
-
+  
   float _phiCutForMerging;
   float _tanlambdaCutForMerging;
   float _angleCutForMerging;
-
+  
   int _print;
   int _checkForDelta;
   float _minDistToDelta;
-
+  
   float _distRPhi;
   float _distZ;
   float _chi2FitCut;
-
+  
   float _chi2PrefitCut;
-
+  
   TrackExtendedVec _trackImplVec;
-
+  
   float _cutOnD0, _cutOnZ0, _cutOnOmega, _cutOnPt;
-
+  
   int _minimalHits;
   int _attachFast;
-
+  
   int _nTotalVTXHits,_nTotalFTDHits,_nTotalSITHits;
   int _optFit,_simpleHelixFit;
   int _useSIT;
   int _finalRefit;
   int _createMap;
   int _useExtraPoint;
-//  MarlinTrackFit _trackFit;
+  //  MarlinTrackFit _trackFit;
 	
 	void setupGearGeom( const gear::GearMgr* gearMgr ) ;
 	
@@ -380,7 +380,7 @@ class SiliconTracking_MarlinTrk : public Processor {
   std::vector<SIT_Layer> _SITgeo;
 	
   unsigned int _nLayersSIT;
-
+  
 	unsigned int _nLayersFTD;
 	int _nPhiFTD;	
 	
