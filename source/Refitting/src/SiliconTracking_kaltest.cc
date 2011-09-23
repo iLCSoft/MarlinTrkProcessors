@@ -1,4 +1,4 @@
-#include "SiliconTracking_cplusplus.h"
+#include "SiliconTracking_kaltest.h"
 
 
 #include <UTIL/LCTOOLS.h>
@@ -152,9 +152,9 @@ float FastTripletCheck(TrackerHitExtended * hitIn,
   
 }
 
-SiliconTracking_cplusplus aSiliconTracking_cplusplus ;
+SiliconTracking_kaltest aSiliconTracking_kaltest ;
 
-SiliconTracking_cplusplus::SiliconTracking_cplusplus() : Processor("SiliconTracking_cplusplus") {
+SiliconTracking_kaltest::SiliconTracking_kaltest() : Processor("SiliconTracking_kaltest") {
 	
   _description = "Pattern recognition in silicon trackers";
 	
@@ -497,7 +497,7 @@ SiliconTracking_cplusplus::SiliconTracking_cplusplus() : Processor("SiliconTrack
 
 
 
-void SiliconTracking_cplusplus::init() { 
+void SiliconTracking_kaltest::init() { 
 	
   _nRun = -1 ;
   _nEvt = 0 ;
@@ -535,16 +535,16 @@ void SiliconTracking_cplusplus::init() {
 }
 
 
-void SiliconTracking_cplusplus::processRunHeader( LCRunHeader* run) { 
+void SiliconTracking_kaltest::processRunHeader( LCRunHeader* run) { 
 	
 	_nRun++ ;
 	_nEvt = 0;
 	
-	streamlog_out(MESSAGE) << "SiliconTracking_cplusplus ---> new run : run number = " << _nRun << std::endl;
+	streamlog_out(MESSAGE) << "SiliconTracking_kaltest ---> new run : run number = " << _nRun << std::endl;
 	
 } 
 
-void SiliconTracking_cplusplus::processEvent( LCEvent * evt ) { 
+void SiliconTracking_kaltest::processEvent( LCEvent * evt ) { 
 	
   // Intitialization of some constants and cuts
   PI = acos(double(-1.0));
@@ -563,7 +563,7 @@ void SiliconTracking_cplusplus::processEvent( LCEvent * evt ) {
   _tracks3Hits.clear();
   _trackImplVec.clear();
 	
-  streamlog_out(DEBUG4) << "SiliconTracking_cplusplus -> run = " << _nRun 
+  streamlog_out(DEBUG4) << "SiliconTracking_kaltest -> run = " << _nRun 
 	<< "  event = " << _nEvt << std::endl;
 	
   int success = InitialiseVTX( evt );
@@ -762,7 +762,7 @@ void SiliconTracking_cplusplus::processEvent( LCEvent * evt ) {
       }
     }        
 		
-		streamlog_out(DEBUG4) << "SiliconTracking_cplusplus -> run " << _nRun
+		streamlog_out(DEBUG4) << "SiliconTracking_kaltest -> run " << _nRun
 		<< " event " << _nEvt << std::endl;
 		streamlog_out(DEBUG4) << "Number of Si tracks = " << nSiSegments << std::endl;
 		streamlog_out(DEBUG4) << "Total 4-momentum of Si tracks : E = " << eTot
@@ -784,7 +784,7 @@ void SiliconTracking_cplusplus::processEvent( LCEvent * evt ) {
 }
 
 
-void SiliconTracking_cplusplus::CleanUp() {
+void SiliconTracking_kaltest::CleanUp() {
   int nTrk = int(_tracks5Hits.size());
   for (int iTrk=0; iTrk<nTrk;++iTrk) {
     TrackExtended * trackAR = _tracks5Hits[iTrk];
@@ -831,7 +831,7 @@ void SiliconTracking_cplusplus::CleanUp() {
 	
 }
 
-int SiliconTracking_cplusplus::InitialiseFTD(LCEvent * evt) {
+int SiliconTracking_kaltest::InitialiseFTD(LCEvent * evt) {
   int success = 1;
   _nTotalFTDHits = 0;
   _sectorsFTD.clear();
@@ -868,7 +868,7 @@ int SiliconTracking_cplusplus::InitialiseFTD(LCEvent * evt) {
       if (Phi < 0.) Phi = Phi + TWOPI;
       unsigned int layer = hit->getType() - 201;
       if (layer < 0 || layer > _nLayersFTD-1) {
-				streamlog_out(ERROR) << "SiliconTracking_cplusplus => fatal error in FTD : layer is outside allowed range : " << layer << std::endl;
+				streamlog_out(ERROR) << "SiliconTracking_kaltest => fatal error in FTD : layer is outside allowed range : " << layer << std::endl;
 				exit(1);
       }
       int iPhi = int(Phi/_dPhiFTD);
@@ -886,7 +886,7 @@ int SiliconTracking_cplusplus::InitialiseFTD(LCEvent * evt) {
   return success;
 }
 
-int SiliconTracking_cplusplus::InitialiseVTX(LCEvent * evt) {
+int SiliconTracking_kaltest::InitialiseVTX(LCEvent * evt) {
 	
   int success = 1;
 	
@@ -957,7 +957,7 @@ int SiliconTracking_cplusplus::InitialiseVTX(LCEvent * evt) {
       int layer = encoder[ILDCellID0::layer] ;
 
       if (layer < 0 || layer >= _nLayers) {
-				streamlog_out(ERROR) << "SiliconTracking_cplusplus => fatal error in VTX : layer is outside allowed range : " << layer << std::endl;
+				streamlog_out(ERROR) << "SiliconTracking_kaltest => fatal error in VTX : layer is outside allowed range : " << layer << std::endl;
 				exit(1);
       }
 
@@ -1025,7 +1025,7 @@ int SiliconTracking_cplusplus::InitialiseVTX(LCEvent * evt) {
         int layer = encoder[ILDCellID0::layer] ;
 				
         if (layer < 0 || layer >= _nLayers) {
-					streamlog_out(ERROR) << "SiliconTracking_cplusplus => fatal error in SIT : layer is outside allowed range : " << layer << std::endl;
+					streamlog_out(ERROR) << "SiliconTracking_kaltest => fatal error in SIT : layer is outside allowed range : " << layer << std::endl;
 					exit(1);
 				}
 				int iPhi = int(Phi/_dPhi);
@@ -1042,16 +1042,16 @@ int SiliconTracking_cplusplus::InitialiseVTX(LCEvent * evt) {
 	
 }
 
-void SiliconTracking_cplusplus::check(LCEvent * evt) { 
+void SiliconTracking_kaltest::check(LCEvent * evt) { 
 	
 }
 
-void SiliconTracking_cplusplus::end() {
+void SiliconTracking_kaltest::end() {
 	delete _fastfitter ;
 }
 
 
-void SiliconTracking_cplusplus::ProcessOneSector(int iPhi, int iTheta) {
+void SiliconTracking_kaltest::ProcessOneSector(int iPhi, int iTheta) {
 	
 	
   int counter = 0 ;
@@ -1182,7 +1182,7 @@ void SiliconTracking_cplusplus::ProcessOneSector(int iPhi, int iTheta) {
 	"  number of loops : " << counter << std::endl  ;
 }
 
-TrackExtended * SiliconTracking_cplusplus::TestTriplet(TrackerHitExtended * outerHit, 
+TrackExtended * SiliconTracking_kaltest::TestTriplet(TrackerHitExtended * outerHit, 
 																						 TrackerHitExtended * middleHit,
 																						 TrackerHitExtended * innerHit,
 																						 HelixClass & helix) {
@@ -1384,7 +1384,7 @@ TrackExtended * SiliconTracking_cplusplus::TestTriplet(TrackerHitExtended * oute
 	
 }
 
-int SiliconTracking_cplusplus::BuildTrack(TrackerHitExtended * outerHit, 
+int SiliconTracking_kaltest::BuildTrack(TrackerHitExtended * outerHit, 
 																TrackerHitExtended * middleHit,
 																TrackerHitExtended * innerHit,
 																HelixClass & helix,
@@ -1573,7 +1573,7 @@ int SiliconTracking_cplusplus::BuildTrack(TrackerHitExtended * outerHit,
 }
 
 
-void SiliconTracking_cplusplus::Sorting(TrackExtendedVec & trackVec) {
+void SiliconTracking_kaltest::Sorting(TrackExtendedVec & trackVec) {
   /**
 	 Sorting of Track Vector in ascending order of chi2
    */
@@ -1603,7 +1603,7 @@ void SiliconTracking_cplusplus::Sorting(TrackExtendedVec & trackVec) {
   
 }
 
-void SiliconTracking_cplusplus::CreateTrack(TrackExtended * trackAR ) {
+void SiliconTracking_kaltest::CreateTrack(TrackExtended * trackAR ) {
 	
   /**
    Method which creates Track out of TrackExtended objects. Checks for possible
@@ -1882,7 +1882,7 @@ void SiliconTracking_cplusplus::CreateTrack(TrackExtended * trackAR ) {
 	
 }
 
-void SiliconTracking_cplusplus::AttachRemainingVTXHitsFast() {
+void SiliconTracking_kaltest::AttachRemainingVTXHitsFast() {
 	
   std::vector<TrackerHitExtendedVec> nonAttachedHits;
   nonAttachedHits.resize(_nDivisionsInPhi*_nDivisionsInTheta);
@@ -2031,7 +2031,7 @@ void SiliconTracking_cplusplus::AttachRemainingVTXHitsFast() {
   }
 }
 
-void SiliconTracking_cplusplus::AttachRemainingVTXHitsSlow() {
+void SiliconTracking_kaltest::AttachRemainingVTXHitsSlow() {
   TrackerHitExtendedVec nonAttachedHits;
   nonAttachedHits.clear();
 	
@@ -2122,7 +2122,7 @@ void SiliconTracking_cplusplus::AttachRemainingVTXHitsSlow() {
   }  
 }
 
-void SiliconTracking_cplusplus::AttachRemainingFTDHitsSlow() {
+void SiliconTracking_kaltest::AttachRemainingFTDHitsSlow() {
   TrackerHitExtendedVec nonAttachedHits;
   nonAttachedHits.clear();
 	
@@ -2192,7 +2192,7 @@ void SiliconTracking_cplusplus::AttachRemainingFTDHitsSlow() {
 }
 
 
-void SiliconTracking_cplusplus::AttachRemainingFTDHitsFast() {
+void SiliconTracking_kaltest::AttachRemainingFTDHitsFast() {
   int nTrk = _trackImplVec.size();
 	
   for (int iTrk=0; iTrk<nTrk; ++iTrk) {
@@ -2266,7 +2266,7 @@ void SiliconTracking_cplusplus::AttachRemainingFTDHitsFast() {
   }
 }
 
-void SiliconTracking_cplusplus::TrackingInFTD() {
+void SiliconTracking_kaltest::TrackingInFTD() {
   int nComb = int(_CombinationsFTD.size()) / 3;
   for (int iComb=0;iComb<nComb;++iComb) {
     int nLS[3];
@@ -2347,7 +2347,7 @@ void SiliconTracking_cplusplus::TrackingInFTD() {
 }
 
 
-int SiliconTracking_cplusplus::BuildTrackFTD(TrackExtended * trackAR, int * nLR, int iS) {
+int SiliconTracking_kaltest::BuildTrackFTD(TrackExtended * trackAR, int * nLR, int iS) {
   //  std::cout << "Layers = " << nLR[0] << " " << nLR[1] << " " << nLR[2] << std::endl;
   for (unsigned int iL=0;iL<_nLayersFTD;++iL) {
     if (iL != nLR[0] && iL != nLR[1] && iL != nLR[2]) {
@@ -2407,7 +2407,7 @@ int SiliconTracking_cplusplus::BuildTrackFTD(TrackExtended * trackAR, int * nLR,
   return nH;
 }
 
-int SiliconTracking_cplusplus::AttachHitToTrack(TrackExtended * trackAR, TrackerHitExtended * hit) {
+int SiliconTracking_kaltest::AttachHitToTrack(TrackExtended * trackAR, TrackerHitExtended * hit) {
 	
   int attached = 0;
   TrackerHitExtendedVec& hitVec = trackAR->getTrackerHitExtendedVec();
@@ -2538,7 +2538,7 @@ int SiliconTracking_cplusplus::AttachHitToTrack(TrackExtended * trackAR, Tracker
 	
 }
 
-void SiliconTracking_cplusplus::FinalRefit() {
+void SiliconTracking_kaltest::FinalRefit() {
 	
   int nTracks = int(_trackImplVec.size());
 	
@@ -2710,7 +2710,7 @@ void SiliconTracking_cplusplus::FinalRefit() {
 
     // hits are in reverse order 
 
-    sort(trkHits.begin(), trkHits.end(), SiliconTracking_cplusplus::compare_r() );
+    sort(trkHits.begin(), trkHits.end(), SiliconTracking_kaltest::compare_r() );
     
     EVENT::TrackerHitVec::iterator it = trkHits.begin();
     
@@ -2798,7 +2798,7 @@ void SiliconTracking_cplusplus::FinalRefit() {
 }
 
 
-void SiliconTracking_cplusplus::setupGearGeom( const gear::GearMgr* gearMgr ){
+void SiliconTracking_kaltest::setupGearGeom( const gear::GearMgr* gearMgr ){
 	
 	_bField = gearMgr->getBField().at( gear::Vector3D( 0.,0.,0.)  ).z() ;
 	

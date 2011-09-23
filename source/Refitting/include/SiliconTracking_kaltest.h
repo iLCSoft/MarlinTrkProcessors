@@ -1,5 +1,5 @@
-#ifndef SILICONTRACKING_CPLUSPLUS_H
-#define SILICONTRACKING_CPLUSPLUS_H 1
+#ifndef SILICONTRACKING_kaltest_H
+#define SILICONTRACKING_kaltest_H 1
 
 #include "marlin/Processor.h"
 #include <marlin/Global.h>
@@ -188,14 +188,14 @@ namespace MarlinTrk {
  * <br>
  * @author A. Raspereza (MPI Munich)<br>
  */
-class SiliconTracking_cplusplus : public Processor {
+class SiliconTracking_kaltest : public Processor {
   
  public:
   
-  virtual Processor*  newProcessor() { return new SiliconTracking_cplusplus ; }
+  virtual Processor*  newProcessor() { return new SiliconTracking_kaltest ; }
   
   
-  SiliconTracking_cplusplus() ;
+  SiliconTracking_kaltest() ;
   
   /**  
    * Initialization
