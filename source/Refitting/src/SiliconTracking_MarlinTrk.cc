@@ -13,6 +13,7 @@
 #include <IMPL/LCFlagImpl.h>
 
 #include <iostream>
+#include <algorithm>
 #include <math.h>
 
 #include <gsl/gsl_vector.h>

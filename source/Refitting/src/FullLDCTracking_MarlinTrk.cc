@@ -1,5 +1,4 @@
 #include "FullLDCTracking_MarlinTrk.h"
-#include <iostream>
 #include <EVENT/LCObject.h>
 #include <EVENT/LCCollection.h>
 #include <EVENT/TrackerHitPlane.h>
@@ -11,6 +10,7 @@
 #include <IMPL/LCRelationImpl.h>
 #include <IMPL/LCFlagImpl.h>
 #include <iostream>
+#include <algorithm>
 #include <math.h>
 #include <map>
 #include <marlin/Global.h>
