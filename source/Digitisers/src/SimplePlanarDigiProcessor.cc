@@ -321,8 +321,9 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
       trkHit->setPosition( smearedPos ) ;
 
       float u_direction[2] ;
-      u_direction[0] = ladder_incline ;
-      u_direction[1] = M_PI/2.0 ;
+
+      u_direction[0] = M_PI/2.0 ;
+      u_direction[1] = ladder_incline ;
 
       float v_direction[2] ;
       v_direction[0] = 0.0 ;
