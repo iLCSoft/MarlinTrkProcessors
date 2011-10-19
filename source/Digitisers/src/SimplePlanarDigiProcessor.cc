@@ -40,65 +40,65 @@ SimplePlanarDigiProcessor::SimplePlanarDigiProcessor() : Processor("SimplePlanar
   // modify processor description
   _description = "SimplePlanarDigiProcessor creates TrackerHits from SimTrackerHits, smearing them according to the input parameters. The plannar geometry should be either VXD, SIT or SET described using ZPlannarLayout" ;
   
-
+  
   // register steering parameters: name, description, class-variable, default value
-
+  
   registerProcessorParameter( "PointResolutionRPhi" ,
-                              "R-Phi Resolution"  ,
-                              _pointResoRPhi ,
-                              float(0.0040)) ;
-	
+                             "R-Phi Resolution"  ,
+                             _pointResoRPhi ,
+                             float(0.0040)) ;
+  
   registerProcessorParameter( "PointResolutionZ" , 
-                              "Z Resolution" ,
-                              _pointResoZ ,
-                              float(0.0040));
-
+                             "Z Resolution" ,
+                             _pointResoZ ,
+                             float(0.0040));
+  
   registerProcessorParameter( "Ladder_Number_encoded_in_cellID" , 
-                              "Mokka has encoded the ladder number in the cellID" ,
-                              _ladder_Number_encoded_in_cellID ,
-                              bool(false));
-
+                             "Mokka has encoded the ladder number in the cellID" ,
+                             _ladder_Number_encoded_in_cellID ,
+                             bool(false));
+  
   registerProcessorParameter( "Sub_Detector_ID" , 
-                              "ID of Sub-Detector using UTIL/ILDConf.h from lcio. Either VXD, SIT or SET" ,
-                              _sub_det_id ,
-                              int(ILDDetID::VXD));
-
-
+                             "ID of Sub-Detector using UTIL/ILDConf.h from lcio. Either VXD, SIT or SET" ,
+                             _sub_det_id ,
+                             int(ILDDetID::VXD));
+  
+  
   // Input collections
   registerInputCollection( LCIO::SIMTRACKERHIT,
-                           "SimTrackHitCollectionName" , 
-                           "Name of the Input SimTrackerHit collection"  ,
-                           _inColName ,
-                           std::string("VXDCollection") ) ;
+                          "SimTrackHitCollectionName" , 
+                          "Name of the Input SimTrackerHit collection"  ,
+                          _inColName ,
+                          std::string("VXDCollection") ) ;
   
   
   // Output collections
   registerOutputCollection( LCIO::TRACKERHIT,
-                            "TrackerHitCollectionName" , 
-                            "Name of the TrackerHit output collection"  ,
-                            _outColName ,
-                            std::string("VTXTrackerHits") ) ;
+                           "TrackerHitCollectionName" , 
+                           "Name of the TrackerHit output collection"  ,
+                           _outColName ,
+                           std::string("VTXTrackerHits") ) ;
   
- 
+  
   // setup the list of supported detectors
-
- 
+  
+  
 }
 
 
 void SimplePlanarDigiProcessor::init() { 
-
+  
   // usually a good idea to
   printParameters() ;
-
+  
   _nRun = 0 ;
   _nEvt = 0 ;
-
+  
   // initialize gsl random generator
   _rng = gsl_rng_alloc(gsl_rng_ranlxs2);
   Global::EVENTSEEDER->registerProcessor(this);
-
-
+  
+  
 }
 
 void SimplePlanarDigiProcessor::processRunHeader( LCRunHeader* run) { 
@@ -106,10 +106,10 @@ void SimplePlanarDigiProcessor::processRunHeader( LCRunHeader* run) {
 } 
 
 void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) { 
-
+  
   gsl_rng_set( _rng, Global::EVENTSEEDER->getSeed(this) ) ;   
   streamlog_out( DEBUG4 ) << "seed set to " << Global::EVENTSEEDER->getSeed(this) << std::endl;
-
+  
   LCCollection* STHcol = 0 ;
   try{
     STHcol = evt->getCollection( _inColName ) ;
@@ -121,19 +121,19 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
   if( STHcol != 0 ){    
     
     LCCollectionVec* trkhitVec = new LCCollectionVec( LCIO::TRACKERHITPLANE )  ;
-
-
+    
+    
     CellIDEncoder<TrackerHitPlaneImpl> cellid_encoder( ILDCellID0::encoder_string , trkhitVec ) ;
-
+    
     
     int nSimHits = STHcol->getNumberOfElements()  ;
     
     
     //get geometry info
-
+    
     const gear::ZPlanarParameters* gearDet = NULL ;
-
-
+    
+    
     int det_id_for_type = 0 ;
     if( _sub_det_id == ILDDetID::VXD ) {      
       gearDet = &(Global::GEAR->getVXDParameters()) ;
@@ -154,11 +154,11 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
     
     //smearing
     streamlog_out( DEBUG4 ) << " processing collection " << _inColName 
-                           << " with " <<  nSimHits  << " hits ... " << std::endl ;
-
-
+    << " with " <<  nSimHits  << " hits ... " << std::endl ;
+    
+    
     const gear::ZPlanarLayerLayout& layerLayout = gearDet->getZPlanarLayerLayout() ;
-
+    
     
     for(int i=0; i< nSimHits; ++i){
       
@@ -173,11 +173,11 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
       
       gear::Vector3D hitvec(pos[0],pos[1],pos[2]);
       gear::Vector3D smearedhitvec(pos[0],pos[1],pos[2]);
-
-
+      
+      
       int layerNumber = 0 ;
       int ladderNumber = 0 ;
-
+      
       if(_ladder_Number_encoded_in_cellID) {
         streamlog_out( DEBUG3 ) << "Get Layer Number using Standard ILD Encoding from ILDConf.h : celId = " << celId << std::endl ;
         UTIL::BitField64 encoder( ILDCellID0::encoder_string ) ; 
@@ -186,13 +186,13 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
         ladderNumber = encoder[ILDCellID0::module] ;
         streamlog_out( DEBUG3 ) << "layerNumber = " <<  layerNumber << std::endl ;
         streamlog_out( DEBUG3 ) << "ladderNumber = " << ladderNumber << std::endl ;
-
+        
       }
       else{
         streamlog_out( DEBUG3 ) << "Get Layer Number using celId - 1 : celId : " << celId << std::endl ;
         layerNumber = celId  - 1 ;
       }
-
+      
       float edep = SimTHit->getEDep() ;
       
       //phi between each ladder
@@ -201,148 +201,148 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
       double sensitive_width  = layerLayout.getSensitiveWidth(layerNumber);
       double sensitive_offset = layerLayout.getSensitiveOffset(layerNumber);
       double ladder_r         = layerLayout.getSensitiveDistance(layerNumber);
-
+      
       if( ! _ladder_Number_encoded_in_cellID) {
         
         for (int ic=0; ic < layerLayout.getNLadders(layerNumber); ++ic) {
           
           double ladderPhi = correctPhiRange( layerLayout.getPhi0( layerNumber ) + ic*deltaPhi ) ;
-
+          
           double PhiInLocal = hitvec.phi() - ladderPhi;
           double RXY = hitvec.rho();
           
           //          streamlog_out(DEBUG) << "ladderPhi = " << ladderPhi << " PhiInLocal = "<< PhiInLocal << " RXY = " << RXY << " (RXY*cos(PhiInLocal) = " << RXY*cos(PhiInLocal) << " layerLayout.getSensitiveDistance(layerNumber) = " << layerLayout.getSensitiveDistance(layerNumber) << endl;
-      
-
+          
+          
           // check if point is in range of ladder
           if (RXY*cos(PhiInLocal) - layerLayout.getSensitiveDistance(layerNumber) > -layerLayout.getSensitiveThickness(layerNumber) && 
               RXY*cos(PhiInLocal) - layerLayout.getSensitiveDistance(layerNumber) <  layerLayout.getSensitiveThickness(layerNumber) )
             {
-              ladderNumber = ic;
-              break;
+            ladderNumber = ic;
+            break;
             }
         }
         
       }
-
+      
       double ladderPhi = correctPhiRange( layerLayout.getPhi0( layerNumber ) + ladderNumber*deltaPhi ) ;
       double ladder_incline = correctPhiRange( (M_PI/2.0 ) + ladderPhi );
-
+      
       double PhiInLocal = hitvec.phi() - ladderPhi;
-
+      
       double u = (hitvec.rho() * sin(PhiInLocal) - sensitive_offset );
       //double u = (hitvec.rho() * sin(PhiInLocal) );
-
+      
       streamlog_out(DEBUG3) << "Hit = "<< i << " has celId " << celId << " layer number = " << layerNumber << " ladderNumber = " << ladderNumber << endl;
       
       streamlog_out(DEBUG3) <<"Position of hit before smearing = "<<pos[0]<<" "<<pos[1]<<" "<<pos[2]<< " r = " << hitvec.rho() << endl;
-
-
+      
+      
       streamlog_out(DEBUG3) << ":" 
-                           << "  layer: " << layerNumber 
-                           << "  ladderIndex: " << ladderNumber 
-                           << "  half ladder width " << sensitive_width * 0.5 
-                           << "  u: " <<  u
-                           << "  layer sensitive_offset " << sensitive_offset
-                           << "  layer phi0 " << layerLayout.getPhi0( layerNumber )
-                           << "  phi: " <<  hitvec.phi()
-                           << "  PhiInLocal: " << PhiInLocal
-                           << "  ladderPhi: " << ladderPhi
-                           << "  ladder_incline: " << ladder_incline
-                           << "  nladders: " << layerLayout.getNLadders(layerNumber) 
-                           << "  ladder r: " << ladder_r
-                           << std::endl ;
-
+      << "  layer: " << layerNumber 
+      << "  ladderIndex: " << ladderNumber 
+      << "  half ladder width " << sensitive_width * 0.5 
+      << "  u: " <<  u
+      << "  layer sensitive_offset " << sensitive_offset
+      << "  layer phi0 " << layerLayout.getPhi0( layerNumber )
+      << "  phi: " <<  hitvec.phi()
+      << "  PhiInLocal: " << PhiInLocal
+      << "  ladderPhi: " << ladderPhi
+      << "  ladder_incline: " << ladder_incline
+      << "  nladders: " << layerLayout.getNLadders(layerNumber) 
+      << "  ladder r: " << ladder_r
+      << std::endl ;
+      
       if( u > sensitive_width * 0.5 || u < -sensitive_width * 0.5)
         {
-          streamlog_out(DEBUG4) << "hit not in sensitive: u: " << u << " half ladder width = " << sensitive_width * 0.5 << std::endl;
+        streamlog_out(DEBUG4) << "hit not in sensitive: u: " << u << " half ladder width = " << sensitive_width * 0.5 << std::endl;
         }
-
+      
       int  tries = 0;              
       // try to smear the hit within the ladder
       bool accept_hit = false;
-
+      
       double rPhiSmear(0) ;
       double zSmear(0) ;
-
+      
       while( tries < 100 )
         {
+        
+        if(tries > 0) streamlog_out(DEBUG0) << "retry smearing for " << layerNumber << " " << ladderNumber << " : retries " << tries << std::endl;
+        
+        rPhiSmear  = gsl_ran_gaussian(_rng, _pointResoRPhi);
+        
+        if( (u+rPhiSmear) < sensitive_width * 0.5 && (u+rPhiSmear) > -sensitive_width * 0.5 && (hitvec.z()+zSmear) < sensitive_length * 0.5 && (hitvec.z()+zSmear) > -sensitive_length * 0.5) 
+          //          if( true )
+          {
+          accept_hit =true;
+          zSmear  = gsl_ran_gaussian(_rng, _pointResoZ);
           
-          if(tries > 0) streamlog_out(DEBUG0) << "retry smearing for " << layerNumber << " " << ladderNumber << " : retries " << tries << std::endl;
           
-          rPhiSmear  = gsl_ran_gaussian(_rng, _pointResoRPhi);
+          //find smearing for x and y, so that hit is smeared along ladder plane
+          smearedPos[0] = hitvec.x() + rPhiSmear * cos(ladder_incline);
+          smearedPos[1] = hitvec.y() + rPhiSmear * sin(ladder_incline); 
+          smearedPos[2] = hitvec.z() + zSmear;
           
-          if( (u+rPhiSmear) < sensitive_width * 0.5 && (u+rPhiSmear) > -sensitive_width * 0.5 && (hitvec.z()+zSmear) < sensitive_length * 0.5 && (hitvec.z()+zSmear) > -sensitive_length * 0.5) 
-            //          if( true )
-            {
-              accept_hit =true;
-              zSmear  = gsl_ran_gaussian(_rng, _pointResoZ);
-
-
-              //find smearing for x and y, so that hit is smeared along ladder plane
-              smearedPos[0] = hitvec.x() + rPhiSmear * cos(ladder_incline);
-              smearedPos[1] = hitvec.y() + rPhiSmear * sin(ladder_incline); 
-              smearedPos[2] = hitvec.z() + zSmear;
-              
-              break;
-              
-            }
-          ++tries;
+          break;
+          
+          }
+        ++tries;
         }
- 
+      
       if( accept_hit == false ) 
         {
-          streamlog_out(DEBUG4) << "hit could not be smeared within ladder after 100 tries: hit dropped"  << std::endl;
-          continue; 
+        streamlog_out(DEBUG4) << "hit could not be smeared within ladder after 100 tries: hit dropped"  << std::endl;
+        continue; 
         } // 
-
-
+      
+      
       //store hit variables
       TrackerHitPlaneImpl* trkHit = new TrackerHitPlaneImpl ;
-
+      
       trkHit->setType(det_id_for_type+layerNumber );         // needed for FullLDCTracking et al.
-
+      
       
       streamlog_out(DEBUG3) <<"Position of hit after smearing = "<<smearedPos[0]<<" "<<smearedPos[1]<<" "<<smearedPos[2]
-                           << " :" 
-                           << "  u: " <<  u+rPhiSmear
-                           << "  v: " <<  hitvec.z()+zSmear
-                           << std::endl ;
-
-
+      << " :" 
+      << "  u: " <<  u+rPhiSmear
+      << "  v: " <<  hitvec.z()+zSmear
+      << std::endl ;
+      
+      
       cellid_encoder[ ILDCellID0::subdet ] = _sub_det_id ;
       cellid_encoder[ ILDCellID0::side   ] = 0 ;
       cellid_encoder[ ILDCellID0::layer  ] = layerNumber ;
       cellid_encoder[ ILDCellID0::module ] = ladderNumber ;
       cellid_encoder[ ILDCellID0::sensor ] = 0 ;
-
+      
       cellid_encoder.setCellID( trkHit ) ;
-
+      
       trkHit->setPosition( smearedPos ) ;
-
+      
       float u_direction[2] ;
-
+      
       u_direction[0] = M_PI/2.0 ;
       u_direction[1] = ladder_incline ;
-
+      
       float v_direction[2] ;
       v_direction[0] = 0.0 ;
       v_direction[1] = 0.0 ;
-
+      
       trkHit->setU( u_direction ) ;
       trkHit->setV( v_direction ) ;
       
       trkHit->setdU( _pointResoRPhi ) ;
       trkHit->setdV( _pointResoZ ) ;
-
+      
       trkHit->setEDep( edep ) ;
       
-//      float covMat[TRKHITNCOVMATRIX]={0.,0.,_pointResoRPhi*_pointResoRPhi,0.,0.,_pointResoZ*_pointResoZ};
-//      trkHit->setCovMatrix(covMat);      
-        
+      //      float covMat[TRKHITNCOVMATRIX]={0.,0.,_pointResoRPhi*_pointResoRPhi,0.,0.,_pointResoZ*_pointResoZ};
+      //      trkHit->setCovMatrix(covMat);      
+      
       // 	  push back the SimTHit for this TrackerHit
       // fg: only if we have a sim hit with proper link to MC truth
-    
+      
       MCParticle *mcp ;
       mcp = SimTHit->getMCParticle() ;
       if( mcp != 0 )  {
@@ -352,11 +352,11 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
         streamlog_out( DEBUG0 ) << " ignore simhit pointer as MCParticle pointer is NULL ! " << std::endl ;
       }
       
-
+      
       trkhitVec->addElement( trkHit ) ; 
-
+      
       streamlog_out(DEBUG3) << "-------------------------------------------------------" << std::endl;
-
+      
     }      
     
     
@@ -376,24 +376,24 @@ void SimplePlanarDigiProcessor::check( LCEvent * evt ) {
 void SimplePlanarDigiProcessor::end(){ 
   
   streamlog_out(MESSAGE) << " end()  " << name() 
-                         << " processed " << _nEvt << " events in " << _nRun << " runs "
-                         << std::endl ;
-
+  << " processed " << _nEvt << " events in " << _nRun << " runs "
+  << std::endl ;
+  
 }
 
 
 double SimplePlanarDigiProcessor::correctPhiRange( double Phi ) const {
-
+  
   while( (Phi < -1.0*M_PI) || (Phi > 1.0*M_PI) )
     {
-      if( Phi > 1.0*M_PI )
-        {
-          Phi -= 2.0 * M_PI;
-        }
-      else
-        {
-          Phi += 2.0 * M_PI;
-        }
+    if( Phi > 1.0*M_PI )
+      {
+      Phi -= 2.0 * M_PI;
+      }
+    else
+      {
+      Phi += 2.0 * M_PI;
+      }
     }
   
   return Phi ;

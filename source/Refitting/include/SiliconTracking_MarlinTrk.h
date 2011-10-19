@@ -22,7 +22,7 @@ using namespace marlin ;
 class gear::GearMgr ;
 
 namespace MarlinTrk {
-	class HelixFit;
+  class HelixFit;
   class IMarlinTrkSystem ;
 }
 
@@ -228,8 +228,8 @@ protected:
   int _nDivisionsInTheta;
   int _nLayers;
   
-	MarlinTrk::HelixFit* _fastfitter;
-	
+  MarlinTrk::HelixFit* _fastfitter;
+  
   /** pointer to the IMarlinTrkSystem instance 
    */
   MarlinTrk::IMarlinTrkSystem* _trksystem ;
@@ -264,19 +264,19 @@ protected:
   void ProcessOneSector(int iSectorPhi, int iSectorTheta);
   void CleanUp();
   TrackExtended * TestTriplet(TrackerHitExtended * outerHit, 
-															TrackerHitExtended * middleHit,
-															TrackerHitExtended * innerHit,
-															HelixClass & helix);
+                              TrackerHitExtended * middleHit,
+                              TrackerHitExtended * innerHit,
+                              HelixClass & helix);
   
   int BuildTrack(TrackerHitExtended * outerHit, 
-								 TrackerHitExtended * middleHit,
-								 TrackerHitExtended * innerHit,
-								 HelixClass & helix, 
-								 int innerlayer,
-								 int iPhiLow, int iPhiUp,
-								 int iTheta, int iThetaUp,
-								 TrackExtended * trackAR);
-	
+                 TrackerHitExtended * middleHit,
+                 TrackerHitExtended * innerHit,
+                 HelixClass & helix, 
+                 int innerlayer,
+                 int iPhiLow, int iPhiUp,
+                 int iTheta, int iThetaUp,
+                 TrackExtended * trackAR);
+  
   void Sorting( TrackExtendedVec & trackVec);
   void CreateTrack(TrackExtended * trackAR );
   void AttachRemainingVTXHitsSlow();
@@ -346,10 +346,10 @@ protected:
   int _createMap;
   int _useExtraPoint;
   //  MarlinTrackFit _trackFit;
-	
-	void setupGearGeom( const gear::GearMgr* gearMgr ) ;
-	
-	struct VXD_Layer {
+  
+  void setupGearGeom( const gear::GearMgr* gearMgr ) ;
+  
+  struct VXD_Layer {
     int nLadders;
     double phi0;
     double dphi;
@@ -362,10 +362,10 @@ protected:
     double supThickness;
   };
   std::vector<VXD_Layer> _VXDgeo;
-	
+  
   unsigned int _nLayersVTX;
-	
-	struct SIT_Layer {
+  
+  struct SIT_Layer {
     int nLadders;
     double phi0;
     double dphi;
@@ -378,13 +378,13 @@ protected:
     double supThickness;
   };
   std::vector<SIT_Layer> _SITgeo;
-	
+  
   unsigned int _nLayersSIT;
   
-	unsigned int _nLayersFTD;
-	int _nPhiFTD;	
-	
-	
+  unsigned int _nLayersFTD;
+  int _nPhiFTD;	
+  
+  
 } ;
 
 #endif

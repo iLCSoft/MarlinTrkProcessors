@@ -54,7 +54,7 @@ class FTDLayer ;
 
 class SimpleDiscDigiProcessor : public Processor {
   
- public:
+public:
   
   virtual Processor*  newProcessor() { return new SimpleDiscDigiProcessor ; }
   
@@ -83,18 +83,18 @@ class SimpleDiscDigiProcessor : public Processor {
   virtual void end() ;
   
   
- protected:
-
+protected:
+  
   /** Input collection name.
    */
   std::string _inColName ;
   std::string _outColName ;
-
+  
   int _sub_det_id ;
-
+  
   int _nRun ;
   int _nEvt ;
- 
+  
   float _pointReso;
   bool _keepHitsFromDeltas;
   std::vector< double > _FTDZCoordinate;
@@ -102,7 +102,7 @@ class SimpleDiscDigiProcessor : public Processor {
   std::vector< double > _diskOuterRadius;
   
   bool hasCorrectZPos ( double z );
-
+  
   int getPetalNumber ( int layer , double x , double y );
   int getSensorNumber ( int layer , double x , double y );
   
@@ -111,8 +111,8 @@ class SimpleDiscDigiProcessor : public Processor {
   
   // gsl random number generator
   gsl_rng * r ;
-
-
+  
+  
 } ;
 
 #endif

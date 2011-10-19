@@ -24,7 +24,7 @@ using namespace marlin ;
 class gear::GearMgr ;
 
 namespace MarlinTrk {
-	class HelixFit;
+  class HelixFit;
   class IMarlinTrkSystem ;
 }
 
@@ -333,7 +333,7 @@ protected:
   void SelectCombinedTracks();
   void AddNotCombinedTracks();
   void CheckTracks();
-//  void AddNotAssignedHits();
+  //  void AddNotAssignedHits();
   void RemoveSplitTracks();
   void AddTrackColToEvt(LCEvent * evt, TrackExtendedVec & trkVec, 
                         std::string TrkColName, std::string RelColName);
@@ -347,13 +347,13 @@ protected:
   
   void SortingTrackHitPairs(TrackHitPairVec & trackHitPairVec);
   
-//  void AssignSiHitsToTracks(TrackerHitExtendedVec hitVec,
-//                            float dcut);
+  //  void AssignSiHitsToTracks(TrackerHitExtendedVec hitVec,
+  //                            float dcut);
   
   void AssignTPCHitsToTracks(TrackerHitExtendedVec hitVec,
                              float dcut);
   
-//  void AssignOuterHitsToTracks(TrackerHitExtendedVec hitVec, float dcut, int refit);
+  //  void AssignOuterHitsToTracks(TrackerHitExtendedVec hitVec, float dcut, int refit);
   
   void CreateExtrapolations();
   
@@ -374,7 +374,7 @@ protected:
   int _nEvt ;
   
   MarlinTrk::HelixFit* _fastfitter;
-	
+  
   /** pointer to the IMarlinTrkSystem instance 
    */
   MarlinTrk::IMarlinTrkSystem* _trksystem ;

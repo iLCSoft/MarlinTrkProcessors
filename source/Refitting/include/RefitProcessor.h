@@ -16,7 +16,7 @@ namespace MarlinTrk{
 
 /**  Track Refitter processor for marlin. Refits an input track collection, producing a new collection of tracks
  * 
-
+ 
  *  <h4>Input - Prerequisites</h4>
  *  Needs a collection of LCIO Tracks. 
  *
@@ -31,7 +31,7 @@ namespace MarlinTrk{
 
 class RefitProcessor : public marlin::Processor {
   
- public:
+public:
   
   virtual marlin::Processor*  newProcessor() { return new RefitProcessor ; }
   
@@ -57,8 +57,8 @@ class RefitProcessor : public marlin::Processor {
   /** Called after data processing for clean up.
    */
   virtual void end() ;
-
-
+  
+  
   
   struct compare_r {
     bool operator()( EVENT::TrackerHit* a, EVENT::TrackerHit* b)  const { 
@@ -67,46 +67,46 @@ class RefitProcessor : public marlin::Processor {
       return ( r_a_sqd < r_b_sqd ) ; 
     }
   } ;
-
-
   
- protected:
-
+  
+  
+protected:
+  
   /* helper function to get collection using try catch block */
   lcio::LCCollection* GetCollection( lcio::LCEvent * evt, std::string colName ) ;
   
   /* helper function to get relations using try catch block */
   lcio::LCRelationNavigator* GetRelations(lcio::LCEvent * evt, std::string RelName ) ;
-
+  
   /** Input track collection name for refitting.
    */
   std::string _input_track_col_name ;
-
- /** Input track relations name for refitting.
-  */
+  
+  /** Input track relations name for refitting.
+   */
   std::string _input_track_rel_name ;
-
+  
   /** refitted track collection name.
    */
   std::string _output_track_col_name ;
   
- /** Output track relations name for refitting.
-  */
+  /** Output track relations name for refitting.
+   */
   std::string _output_track_rel_name ;
-
+  
   /** pointer to the IMarlinTrkSystem instance 
    */
   MarlinTrk::IMarlinTrkSystem* _trksystem ;
-
+  
   bool _MSOn ;
   bool _ElossOn ;
   bool _SmoothOn ;
-
+  
   int _n_run ;
   int _n_evt ;
-
-
-
+  
+  
+  
 } ;
 
 #endif

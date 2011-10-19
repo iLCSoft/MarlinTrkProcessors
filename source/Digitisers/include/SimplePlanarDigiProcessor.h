@@ -41,7 +41,7 @@ using namespace marlin ;
  */
 class SimplePlanarDigiProcessor : public Processor {
   
- public:
+public:
   
   virtual Processor*  newProcessor() { return new SimplePlanarDigiProcessor ; }
   
@@ -68,31 +68,31 @@ class SimplePlanarDigiProcessor : public Processor {
   /** Called after data processing for clean up.
    */
   virtual void end() ;
-
+  
   // find phi in correct range, taken from gear::VXDParameters
   double correctPhiRange( double Phi ) const ;  
   
   //  void fillMapTVolumeChildren(TGeoVolume* volume) ;
   
- protected:
-
+protected:
+  
   std::string _inColName ;
-
+  
   std::string _outColName ;
-
+  
   int _sub_det_id ;
-
+  
   int _nRun ;
   int _nEvt ;
-
+  
   float _pointResoRPhi ;
   float _pointResoZ, ;
-
+  
   bool _ladder_Number_encoded_in_cellID;
-
+  
   gsl_rng* _rng ;
-
-
+  
+  
 } ;
 
 #endif
