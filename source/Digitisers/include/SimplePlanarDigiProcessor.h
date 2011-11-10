@@ -86,7 +86,7 @@ protected:
   int _nEvt ;
   
   float _pointResoRPhi ;
-  float _pointResoZ, ;
+  float _pointResoZ ;
   
   bool _ladder_Number_encoded_in_cellID;
   
