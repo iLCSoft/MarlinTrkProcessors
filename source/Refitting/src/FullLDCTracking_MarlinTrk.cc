@@ -706,9 +706,11 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
     
     float RefPoint[3];
     
-    RefPoint[0] = -d0TrkCand*sin(phi0TrkCand);
-    RefPoint[1] =  d0TrkCand*cos(phi0TrkCand);
-    RefPoint[2] =  z0TrkCand;
+    // all tracks will for now have been propagated to the IP 
+    // as TrackExtended has no refpoint memember variable just set the values to 0.0
+    RefPoint[0] = 0.0;
+    RefPoint[1] = 0.0;
+    RefPoint[2] = 0.0;
     
     track->setReferencePoint(RefPoint);
     track->setRadiusOfInnermostHit(sqrt(r2Min));
