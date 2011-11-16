@@ -18,6 +18,8 @@
 #include <gear/GEAR.h>
 #include <gear/GearParameters.h>
 #include <gear/BField.h>
+#include "gear/FTDParameters.h"
+#include "gear/FTDLayerLayout.h"
 #include <cmath>
 
 #include <gsl/gsl_randist.h>
@@ -42,7 +44,13 @@ SimpleDiscDigiProcessor::SimpleDiscDigiProcessor() : Processor("SimpleDiscDigiPr
                              "ID of Sub-Detector using UTIL/ILDConf.h from lcio." ,
                              _sub_det_id ,
                              int(ILDDetID::FTD));
+                           
   
+  registerProcessorParameter( "SimHits_encoded_with_cellID" , 
+                             "Mokka has encoded the hits with the cellID as specified in UTIL/ILDConf.h from lcio" ,
+                             _SimHits_encoded_with_cellID ,
+                             bool(false));
+
   // register steering parameters: name, description, class-variable, default value
   registerInputCollection( LCIO::SIMTRACKERHIT,
                           "CollectionName" , 
@@ -82,6 +90,8 @@ SimpleDiscDigiProcessor::SimpleDiscDigiProcessor() : Processor("SimpleDiscDigiPr
 
 void SimpleDiscDigiProcessor::init() { 
   
+
+  
   // usually a good idea to
   printParameters() ;
   _nRun = 0 ;
@@ -91,34 +101,41 @@ void SimpleDiscDigiProcessor::init() {
   r = gsl_rng_alloc(gsl_rng_ranlxs2);
   Global::EVENTSEEDER->registerProcessor(this);
   
-  const gear::GearParameters& pFTD = Global::GEAR->getGearParameters("FTD");
+  _use_FTDLayerLayout_from_GEAR = false ;
   
-  _FTDZCoordinate = pFTD.getDoubleVals( "FTDZCoordinate" ) ;
-  _diskInnerRadius = pFTD.getDoubleVals( "FTDInnerRadius" ) ;
-  _diskOuterRadius = pFTD.getDoubleVals( "FTDOuterRadius" ) ;
+  try {
+    
+    const gear::FTDParameters& ftdParams = Global::GEAR->getFTDParameters() ;
+    const gear::FTDLayerLayout& ftdlayers = ftdParams.getFTDLayerLayout() ;
+    streamlog_out( MESSAGE ) << "  SimpleDiscDigiProcessor - Use FTDLayerLayout" << std::endl ;
+    _use_FTDLayerLayout_from_GEAR = true ;
+    
+  } catch (gear::UnknownParameterException& e) {
+    
+    _use_FTDLayerLayout_from_GEAR = false ;
+  }
   
+  if ( _use_FTDLayerLayout_from_GEAR == false ) {
+
+    streamlog_out( MESSAGE ) << "  SimpleDiscDigiProcessor - Use Loi style FTDParameters" << std::endl ;
+    
+    const gear::GearParameters& pFTD = Global::GEAR->getGearParameters("FTD");
+    
+    _FTDZCoordinate = pFTD.getDoubleVals( "FTDZCoordinate" ) ;
+    _diskInnerRadius = pFTD.getDoubleVals( "FTDInnerRadius" ) ;
+    _diskOuterRadius = pFTD.getDoubleVals( "FTDOuterRadius" ) ;
+    
+  }
+
   
 }
 
 void SimpleDiscDigiProcessor::processRunHeader( LCRunHeader* run) { 
-  
   _nRun++ ;
 } 
 
-void SimpleDiscDigiProcessor::processEvent( LCEvent * evt ) { 
-  
-  gsl_rng_set( r, Global::EVENTSEEDER->getSeed(this) ) ;   
-  streamlog_out( DEBUG ) << "seed set to " << Global::EVENTSEEDER->getSeed(this) << std::endl;
-  
-  LCCollection* STHcol = 0 ;
-  try{
-    STHcol = evt->getCollection( _inColName ) ;
-  }
-  catch(DataNotAvailableException &e){
-    streamlog_out(DEBUG) << "Collection " << _inColName.c_str() << " is unavailable in event " << _nEvt << std::endl;
-  }
-  
-  
+void SimpleDiscDigiProcessor::process_hits_loi( LCEvent * evt, LCCollection* STHcol ) { 
+
   if( STHcol != 0 ){    
     
     LCCollectionVec* trkhitVec = new LCCollectionVec( LCIO::TRACKERHITPLANE )  ;
@@ -126,7 +143,7 @@ void SimpleDiscDigiProcessor::processEvent( LCEvent * evt ) {
     
     int nSimHits = STHcol->getNumberOfElements()  ;
     
-    streamlog_out( DEBUG4 ) << " processing collection " << _inColName 
+    streamlog_out( DEBUG4 ) << " process hits alla loi " << _inColName 
     << " with " <<  nSimHits  << " hits ... " << std::endl ;
     
     for(int i=0; i< nSimHits; i++){
@@ -142,7 +159,7 @@ void SimpleDiscDigiProcessor::processEvent( LCEvent * evt ) {
       pos =  SimTHit->getPosition() ;  
       gear::Vector3D hitvec(pos[0],pos[1],pos[2]);
       
-      if ( ( _keepHitsFromDeltas == true ) || ( hasCorrectZPos (pos[2]) == true ) ){
+      if ( ( _keepHitsFromDeltas == true ) || ( hasCorrectZPos (SimTHit) == true ) ){
         
         streamlog_out(DEBUG) << "Hit = "<< i << " has celId " << celId << " layer number = " << layerNumber  << endl;
         
@@ -239,6 +256,150 @@ void SimpleDiscDigiProcessor::processEvent( LCEvent * evt ) {
     evt->addCollection( trkhitVec ,  _outColName ) ;
   }
   
+}
+
+void SimpleDiscDigiProcessor::process_hits_new( LCEvent * evt, LCCollection* STHcol ) { 
+
+  if( STHcol != 0 ){    
+    
+    LCCollectionVec* trkhitVec = new LCCollectionVec( LCIO::TRACKERHITPLANE )  ;
+    CellIDEncoder<TrackerHitPlaneImpl> cellid_encoder( ILDCellID0::encoder_string , trkhitVec ) ;
+    
+    int nSimHits = STHcol->getNumberOfElements()  ;
+    
+    streamlog_out( DEBUG4 ) << " processing hit using new FTDLayerLayout " << _inColName 
+    << " with " <<  nSimHits  << " hits ... " << std::endl ;
+    
+    for(int i=0; i< nSimHits; i++){
+      
+      SimTrackerHit* SimTHit = dynamic_cast<SimTrackerHit*>( STHcol->getElementAt( i ) ) ;
+      
+      const int celId = SimTHit->getCellID0() ;
+      
+      int layerNumber(0);
+      int petal(0);
+      int side(0);
+      
+      UTIL::BitField64 encoder( ILDCellID0::encoder_string ) ;       
+      
+      encoder.setValue(celId) ;  
+      
+      layerNumber = encoder[ILDCellID0::layer]-1;
+      
+      
+      streamlog_out( DEBUG2 ) << "CelId : " << celId <<
+      " subdet = " << encoder[ILDCellID0::subdet] <<
+      " side = " << encoder[ILDCellID0::side] <<
+      " layer = " << encoder[ILDCellID0::layer] <<
+      " module = " << encoder[ILDCellID0::module] <<
+      " sensor = " << encoder[ILDCellID0::sensor] <<
+      std::endl ;
+        
+      
+      const double *pos ;
+      pos =  SimTHit->getPosition() ;  
+      gear::Vector3D hitvec(pos[0],pos[1],pos[2]);
+      
+      if ( ( _keepHitsFromDeltas == true ) || ( hasCorrectZPos (SimTHit) == true ) ){
+        
+        streamlog_out(DEBUG) << "Hit = "<< i << " has celId " << celId << " layer number = " << layerNumber  << endl;
+        
+        streamlog_out(DEBUG) <<"Position of hit before smearing = "<<pos[0]<<" "<<pos[1]<<" "<<pos[2]<< " r = " << hitvec.rho() << endl;
+        
+        double xSmear = gsl_ran_gaussian(r,_pointReso);
+        double ySmear = gsl_ran_gaussian(r,_pointReso);
+        
+        double smearedPos[3] ;
+        smearedPos[0] = pos[0] + xSmear;
+        smearedPos[1] = pos[1] + ySmear;
+        // No semaring of Z coordinate
+        smearedPos[2] = pos[2] ;
+        
+        streamlog_out(DEBUG) <<"Position of hit after smearing = "<<smearedPos[0]<<" "<<smearedPos[1]<<" "<<smearedPos[2] << std::endl ;
+        
+        
+        //store hit variables
+        TrackerHitPlaneImpl* trkHit = new TrackerHitPlaneImpl ;        
+        
+        trkHit->setType( 200+abs(celId));  // needed for FullLDCTracking et al.
+        
+              
+        cellid_encoder.setValue(encoder.getValue());
+        
+        cellid_encoder.setCellID( trkHit ) ;
+        
+        trkHit->setPosition(  smearedPos  ) ;
+        
+        float u_direction[2] ; // x
+        u_direction[0] = 0.0 ; 
+        u_direction[1] = M_PI/2.0 ;
+        
+        float v_direction[2] ; // y
+        v_direction[0] = M_PI/2.0 ;
+        v_direction[1] = M_PI/2.0 ;
+        
+        trkHit->setU( u_direction ) ;
+        trkHit->setV( v_direction ) ;
+        
+        trkHit->setdU( _pointReso ) ;
+        trkHit->setdV( _pointReso ) ;
+        
+        trkHit->setEDep( SimTHit->getEDep() ) ;
+        
+        MCParticle *mcp ;
+        mcp = SimTHit->getMCParticle() ;
+        if( mcp != 0 )  {
+          trkHit->rawHits().push_back( SimTHit ) ;
+        }
+        else{
+          streamlog_out( DEBUG0 ) << " ignore simhit pointer as MCParticle pointer is NULL ! " << std::endl ;
+        }
+        
+        trkhitVec->addElement( trkHit ) ; 
+        
+        streamlog_out(DEBUG) << "-------------------------------------------------------" << std::endl;
+        
+      }
+      else{
+        
+        streamlog_out(DEBUG) << "Hit "<< i << " is NOT KEPT! The z value is does not exactly correspond to a disk"  << endl;
+        
+        streamlog_out(DEBUG) <<"Position of hit = "<<pos[0]<<" "<<pos[1]<<" "<<pos[2]<< " r = " << hitvec.rho() << std::endl << endl;
+        
+        streamlog_out(DEBUG) << "-------------------------------------------------------" << std::endl;
+        
+      }
+      
+    }
+    
+    evt->addCollection( trkhitVec ,  _outColName ) ;
+  }
+
+  
+}
+
+
+void SimpleDiscDigiProcessor::processEvent( LCEvent * evt ) { 
+  
+  gsl_rng_set( r, Global::EVENTSEEDER->getSeed(this) ) ;   
+  streamlog_out( DEBUG ) << "seed set to " << Global::EVENTSEEDER->getSeed(this) << std::endl;
+  
+  LCCollection* STHcol = 0 ;
+  try{
+    STHcol = evt->getCollection( _inColName ) ;
+  }
+  catch(DataNotAvailableException &e){
+    streamlog_out(DEBUG) << "Collection " << _inColName.c_str() << " is unavailable in event " << _nEvt << std::endl;
+  }
+  
+  
+  if (_use_FTDLayerLayout_from_GEAR) {
+    this->process_hits_new(evt,STHcol);
+  }
+  else{
+    this->process_hits_loi(evt, STHcol);
+  }
+  
   _nEvt ++ ;
 }
 
@@ -253,25 +414,59 @@ void SimpleDiscDigiProcessor::end(){
   
   gsl_rng_free(r);  
   //   std::cout << "SimpleDiscDigiProcessor::end()  " << name() 
-  // 	    << " processed " << _nEvt << " events in " << _nRun << " runs "
-  // 	    << std::endl ;
+  //        << " processed " << _nEvt << " events in " << _nRun << " runs "
+  //        << std::endl ;
   
 }
 
-
-bool SimpleDiscDigiProcessor::hasCorrectZPos ( double z ){
+bool SimpleDiscDigiProcessor::hasCorrectZPos ( SimTrackerHit* hit ){
   
-  double zPos = fabs ( z );
+  double zPos = fabs ( hit->getPosition()[2] );
   
-  for (unsigned int i=0; i < _FTDZCoordinate.size(); i++){
+  if(_use_FTDLayerLayout_from_GEAR){
     
-    if ( fabs ( _FTDZCoordinate[i] - zPos ) < 0.0001 ) return true;
+    UTIL::BitField64 encoder( ILDCellID0::encoder_string ) ; 
+    encoder.setValue(hit->getCellID0()) ;  
+   
+    //    if( encoder[ILDCellID0::sensor] < 1 || encoder[ILDCellID0::sensor] > 4 ) {
+    if( encoder[ILDCellID0::sensor] < 1 || encoder[ILDCellID0::sensor] > 2 ) {
+      //    if( encoder[ILDCellID0::sensor] < 3 || encoder[ILDCellID0::sensor] > 4 ) {
+      
+      streamlog_out(ERROR) << "FTD sensor value is not in the range 1-4 : value = " << encoder[ILDCellID0::sensor] << std::endl;
+      return false;
+      
+    }
     
+    int layer = encoder[ILDCellID0::layer];
+    int petal = encoder[ILDCellID0::module];
+    int sensor = encoder[ILDCellID0::sensor];
+    
+    double zSensitive = Global::GEAR->getFTDParameters().getFTDLayerLayout().getSensitiveZposition(layer, petal, sensor);
+    
+    streamlog_out(DEBUG) << " zSensitive = " << zSensitive;
+    streamlog_out(DEBUG) << " zPos = " << zPos << std::endl;
+    
+    if ( fabs ( zSensitive - zPos ) < 0.0001 ) return true;
+    
+  }
+  else{
+    
+    for (unsigned int i=0; i < _FTDZCoordinate.size(); i++){
+      
+      streamlog_out(DEBUG) << " zSensitive = " << _FTDZCoordinate[i];
+      streamlog_out(DEBUG) << " zPos = " << zPos << std::endl;
+      
+      //      if ( (fabs ( _FTDZCoordinate[i] - zPos ) < 0.0001) || (fabs ( _FTDZCoordinate[i] - 0.275 - zPos ) < 0.0001) ) return true;
+      //if ((fabs ( _FTDZCoordinate[i] - 0.275 - zPos ) < 0.0001) ) return true;
+      if ((fabs ( _FTDZCoordinate[i] - zPos ) < 0.0001) ) return true;
+      
+    }
   }
   
   return false;
   
 }
+
 
 
 int SimpleDiscDigiProcessor::getPetalNumber ( int layer , double x , double y ){
