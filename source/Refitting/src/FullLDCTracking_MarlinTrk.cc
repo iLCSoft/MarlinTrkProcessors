@@ -753,7 +753,7 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
       eTot += trkP;
       pxTot += trkPx;
       pyTot += trkPy;
-      pzTot += trkPz;	
+      pzTot += trkPz;   
       nTotTracks++;
       colTRK->addElement(track);
       if (_createMap > 0) {
@@ -948,9 +948,9 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
       //       float phi_hit = atan2( y_hit, x_hit );
       //       float r_hit = sqrt( x_hit*x_hit + y_hit*y_hit );
       //       printf("%3i  %8.2f  %6.3f  %8.2f  %6.3f  %6.3f   ", 
-      //  	     ielem, r_hit, phi_hit, z_hit, 
-      //  	     hitExt->getResolutionRPhi(), 
-      //  	     hitExt->getResolutionZ() );
+      //             ielem, r_hit, phi_hit, z_hit, 
+      //             hitExt->getResolutionRPhi(), 
+      //             hitExt->getResolutionZ() );
       //       std::cout << hit << std::endl;
       hitExt->setType(int(3));
       hitExt->setDet(int(8));
@@ -1025,7 +1025,7 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
       //      reso[0] = 1e-3;  // dPt/Pt = 1e-3*Pt
       //      reso[1] = 0.001; // angular resolution = 1mrad
       //      reso[2] = 1.0;   // D0 reso = 1mm 
-      //      reso[3] = 1.0;   // Z0 reso = 1mm	
+      //      reso[3] = 1.0;   // Z0 reso = 1mm 
       //      _trackFit.CrudeErrorEstimates(_bField,reso,param,cov);
       
       
@@ -1045,7 +1045,7 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
         TrackerHit * hit = hitVec[iHit];
         TrackerHitExtended * hitExt = mapTrackerHits[hit];
         hitExt->setTrackExtended( trackExt );
-        trackExt->addTrackerHitExtended( hitExt );	
+        trackExt->addTrackerHitExtended( hitExt );      
       }      
       
       //      if (_refitTPCTracks > 0) { // refit TPC tracks
@@ -1076,7 +1076,7 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
       //        for (int iPar=0;iPar<5;++iPar)
       //          par[iPar] = param[iPar];
       //        float epar[15];
-      //        float refPoint[3];	
+      //        float refPoint[3];      
       //        helixTPC.Initialize_Canonical(par[2],par[3],par[4],par[0],par[1],_bField);
       //        float momX = helixTPC.getMomentum()[0];
       //        float momY = helixTPC.getMomentum()[1];
@@ -1098,9 +1098,9 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
       //        float dPz = momZ - momZNew;
       //        float dMom = sqrt(dPx*dPx+dPy*dPy+dPz*dPz);
       //
-      //        if (ierr>=0 && dMom < 0.05) { // redefine track parameters if fit is stable	  
+      //        if (ierr>=0 && dMom < 0.05) { // redefine track parameters if fit is stable       
       //          trackExt->setCovMatrix(epar);
-      //          trackExt->setOmega(par[0]);	  
+      //          trackExt->setOmega(par[0]);     
       //          trackExt->setTanLambda(par[1]);
       //          trackExt->setPhi(par[2]);
       //          trackExt->setD0(par[3]);
@@ -1185,7 +1185,7 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
       int NC = int(Cov.size());
       for (int ic=0;ic<NC;ic++) {
         cov[ic] =  Cov[ic];
-      }	
+      } 
       //      }
       trackExt->setCovMatrix(cov);
       trackExt->setNDF(siTrack->getNdf());
@@ -1196,7 +1196,7 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
         TrackerHit * hit = hitVec[iHit];
         TrackerHitExtended * hitExt = mapTrackerHits[hit];
         hitExt->setTrackExtended( trackExt );
-        trackExt->addTrackerHitExtended( hitExt );	
+        trackExt->addTrackerHitExtended( hitExt );      
       }
       
       //      if (_refitSiTracks > 0) { // refit Si tracks
@@ -1231,9 +1231,9 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
       //        int ierr = _trackFit.DoFitting(_useExtraPoint,_optFitSi,NPT,_bField,idet_h,ityp_h,_chi2PrefitCut,
       //                                       x_h,y_h,z_h,rR_h,rZ_h,
       //                                       par,epar,refPoint,chi2_D,ndf_D,chi2rphi,chi2z,lhits);
-      //        if (ierr>=0) {	  
+      //        if (ierr>=0) {    
       //          trackExt->setCovMatrix(epar);
-      //          trackExt->setOmega(par[0]);	  
+      //          trackExt->setOmega(par[0]);     
       //          trackExt->setTanLambda(par[1]);
       //          trackExt->setPhi(par[2]);
       //          trackExt->setD0(par[3]);
@@ -1824,7 +1824,7 @@ void FullLDCTracking_MarlinTrk::SelectCombinedTracks() {
       if ((firstTrack->getGroupTracks() == NULL) &&
           (secondTrack->getGroupTracks() == NULL) ) {
         firstTrack->setGroupTracks(group);
-        secondTrack->setGroupTracks(group);	
+        secondTrack->setGroupTracks(group);     
         TrackerHitExtendedVec firstVec = firstTrack->getTrackerHitExtendedVec();
         TrackerHitExtendedVec secondVec = secondTrack->getTrackerHitExtendedVec();
         int nFirst = int(firstVec.size());
@@ -1839,7 +1839,7 @@ void FullLDCTracking_MarlinTrk::SelectCombinedTracks() {
           if (zpos>edges[1])
             edges[1] = zpos;
           if (zpos<edges[0])
-            edges[0] = zpos;	  
+            edges[0] = zpos;      
         }
         for (int iS=0;iS<nSecond;++iS) {
           TrackerHitExtended * trkHitExt = secondVec[iS];
@@ -1851,12 +1851,12 @@ void FullLDCTracking_MarlinTrk::SelectCombinedTracks() {
             edges[0] = zpos;
         }
         group->setEdges(edges);
-        _trkImplVec.push_back(trkExt);	
+        _trkImplVec.push_back(trkExt);  
         
         if (_debug == 3) {
           int iopt = 1;
           PrintOutMerging(secondTrack,firstTrack,iopt);
-        }	
+        }       
       }
     }else{
       if(nTracks>2 && _debug>1)std::cout << " MORE THAN TWO TRACKS " << std::endl;
@@ -1888,13 +1888,13 @@ void FullLDCTracking_MarlinTrk::AddNotCombinedTracks() {
           GroupTracks * groupSi = trkExtSi->getGroupTracks();
           if (groupSi == NULL) {
             int iComp = 0;
-            //	    float deltaP = CompareTrk(trkExtSi,trkExtTPC,_d0CutForForcedMerging,_z0CutForForcedMerging,iComp);
+            //      float deltaP = CompareTrk(trkExtSi,trkExtTPC,_d0CutForForcedMerging,_z0CutForForcedMerging,iComp);
             float angle(0.);
             float angleSignificance(0.);
             
             float dOmega = CompareTrkII(trkExtSi,trkExtTPC,_d0CutForForcedMerging,_z0CutForForcedMerging,iComp,angle);
             float significance = CompareTrkIII(trkExtSi,trkExtTPC,_d0CutForForcedMerging,_z0CutForForcedMerging,iComp,angleSignificance);
-            //	    if (deltaP < _dPCutForForcedMerging) {
+            //      if (deltaP < _dPCutForForcedMerging) {
             if ( ((dOmega<_dOmegaForForcedMerging) && (angle<_angleForForcedMerging)) ||
                 ((significance<5)                 && (angleSignificance<5))
                 ) {
@@ -1922,8 +1922,8 @@ void FullLDCTracking_MarlinTrk::AddNotCombinedTracks() {
           group->addTrackExtended(trkExtSi);
           group->addTrackExtended(trkExtTPC);
           OutputTrack->setGroupTracks(group);
-          //	    trkExtSi->setGroupTracks(group);
-          //	    trkExtTPC->setGroupTracks(group);	      
+          //        trkExtSi->setGroupTracks(group);
+          //        trkExtTPC->setGroupTracks(group);         
           OutputTrack->setOmega(trkExtTPC->getOmega());
           OutputTrack->setTanLambda(trkExtSi->getTanLambda());
           OutputTrack->setPhi(trkExtSi->getPhi());
@@ -1934,7 +1934,7 @@ void FullLDCTracking_MarlinTrk::AddNotCombinedTracks() {
           float covMat[15];
           for (int iCov=0;iCov<15;++iCov) {
             covMatTPC[iCov] = trkExtTPC->getCovMatrix()[iCov];
-            covMatSi[iCov] = trkExtSi->getCovMatrix()[iCov];		    
+            covMatSi[iCov] = trkExtSi->getCovMatrix()[iCov];                
             covMat[iCov] = covMatSi[iCov];
           }
           float scaling = sqrt(covMatTPC[5]/covMatSi[5]);
@@ -1942,12 +1942,12 @@ void FullLDCTracking_MarlinTrk::AddNotCombinedTracks() {
           covMat[3] = scaling*covMatSi[3];
           covMat[4] = scaling*covMatSi[4];
           covMat[8] = scaling*covMatSi[8];
-          covMat[12] = scaling*covMatSi[12];	      
+          covMat[12] = scaling*covMatSi[12];          
           OutputTrack->setCovMatrix(covMat);
           TrackerHitExtendedVec tpcHitVec = trkExtTPC->getTrackerHitExtendedVec();
-          TrackerHitExtendedVec siHitVec = trkExtSi->getTrackerHitExtendedVec();	      
+          TrackerHitExtendedVec siHitVec = trkExtSi->getTrackerHitExtendedVec();              
           int nTPCHits = int( tpcHitVec.size());
-          int nSiHits = int( siHitVec.size());	      
+          int nSiHits = int( siHitVec.size());        
           float edges[2];
           edges[0] = 1.0e+20;
           edges[1] = -1.0e+20;
@@ -1961,7 +1961,7 @@ void FullLDCTracking_MarlinTrk::AddNotCombinedTracks() {
               edges[0] = zpos;
             if (zpos>edges[1])
               edges[1] = zpos;
-          }	  
+          }       
           for (int iH=0;iH<nTPCHits;++iH) {
             TrackerHitExtended * hitExt = tpcHitVec[iH];
             OutputTrack->addTrackerHitExtended(hitExt);
@@ -1978,14 +1978,14 @@ void FullLDCTracking_MarlinTrk::AddNotCombinedTracks() {
           OutputTrack->setNDF(int(1));   // will be replaced if necessary
           _allCombinedTracks.push_back( OutputTrack );
           allMergedTracks.push_back( OutputTrack );
-        }	    
+        }           
       }
     }
     
     
     int nMerged = int(allMergedTracks.size());
     if (nMerged>0) {
-      Sorting(allMergedTracks);	
+      Sorting(allMergedTracks); 
       for (int iM=0;iM<nMerged;++iM) {
         TrackExtended * mergedTrack = allMergedTracks[iM];
         GroupTracks * grpTrk = mergedTrack->getGroupTracks();
@@ -2101,8 +2101,8 @@ void FullLDCTracking_MarlinTrk::AddNotCombinedTracks() {
               for (int iTrk=0;iTrk<nTrk;++iTrk) {
                 TrackExtended * trkInGroup = segVec[iTrk];
                 int iComp = 1;
-                float dPt = CompareTrk(trkExt,trkInGroup,_d0CutToMergeTPC,_z0CutToMergeTPC,iComp);		
-                if (dPt >= dPtMin) {	      
+                float dPt = CompareTrk(trkExt,trkInGroup,_d0CutToMergeTPC,_z0CutToMergeTPC,iComp);              
+                if (dPt >= dPtMin) {          
                   PrintOutMerging(trkExt,trkInGroup,iopt);
                 }
               }
@@ -2207,21 +2207,21 @@ void FullLDCTracking_MarlinTrk::AddNotCombinedTracks() {
       }
       
       if (CombTrkToAttach != NULL) { // attach TPC segment to existing Comb Track
-        GroupTracks * groupToAttach = CombTrkToAttach->getGroupTracks();	  
+        GroupTracks * groupToAttach = CombTrkToAttach->getGroupTracks();          
         TrackExtended * SiCombTrk = groupToAttach->getTrackExtendedVec()[0];
         TrackExtended * TpcCombTrk = groupToAttach->getTrackExtendedVec()[1];
         if (_debug==3) {
           int iopt = 4;
           PrintOutMerging(keyTrack,SiCombTrk,iopt);
           iopt = 5;
-          PrintOutMerging(keyTrack,TpcCombTrk,iopt);	  
+          PrintOutMerging(keyTrack,TpcCombTrk,iopt);      
         }
         for (int iTrk=0;iTrk<nTrk;iTrk++) {
           TrackExtended * trk = segVec[iTrk];
           groupToAttach->addTrackExtended( trk );
           trk->setGroupTracks( groupToAttach );
           TrackerHitExtendedVec hitVec = trk->getTrackerHitExtendedVec();
-          int nHitS = int(hitVec.size());	       
+          int nHitS = int(hitVec.size());              
           for (int iHS=0;iHS<nHitS;++iHS) {
             TrackerHitExtended * hitExt = hitVec[iHS];
             hitExt->setUsedInFit(false);
@@ -2264,14 +2264,14 @@ void FullLDCTracking_MarlinTrk::AddNotCombinedTracks() {
             for (int iTrk=0;iTrk<nTrk;++iTrk) {
               TrackExtended * trk = segVec[iTrk];
               trk->setGroupTracks( newGroup );
-              newGroup->addTrackExtended( trk );			
+              newGroup->addTrackExtended( trk );                        
               TrackerHitExtendedVec hitVecS = trk->getTrackerHitExtendedVec();
-              int nHitS = int(hitVecS.size());			
+              int nHitS = int(hitVecS.size());                  
               for (int iH=0;iH<nHitS;++iH) {
                 TrackerHitExtended * trkHitExt = hitVecS[iH];
                 if (trk!=chosenTrack) {
                   trkHitExt->setUsedInFit( false );
-                  chosenTrack->addTrackerHitExtended( trkHitExt );				
+                  chosenTrack->addTrackerHitExtended( trkHitExt );                              
                 }
                 else {
                   trkHitExt->setUsedInFit( true );
@@ -2318,7 +2318,7 @@ void FullLDCTracking_MarlinTrk::AddNotCombinedTracks() {
       _trkImplVec.push_back(trkExt);
       GroupTracks * newGrp = new GroupTracks();
       newGrp->addTrackExtended( trkExt );
-      trkExt->setGroupTracks( newGrp );	  
+      trkExt->setGroupTracks( newGrp );   
       _allNonCombinedSiTracks.push_back( trkExt );
     }
   }
@@ -2700,7 +2700,7 @@ float FullLDCTracking_MarlinTrk::CompareTrk(TrackExtended * first, TrackExtended
             TrackerHitExtendedVec hitVec = trkGrp->getTrackerHitExtendedVec();
             
             for(unsigned int i =0; i<hitVec.size(); ++i){
-              hitvecFirst.push_back(hitVec[i]->getTrackerHit());	  
+              hitvecFirst.push_back(hitVec[i]->getTrackerHit());          
             }
           }
         }
@@ -2819,7 +2819,7 @@ float FullLDCTracking_MarlinTrk::CompareTrk(TrackExtended * first, TrackExtended
           if(significance<5 && fcloseFirst>_maxFractionOfOutliersCutHighPtMerge){
             split = true;
             dpOverP = 0;
-            //	    int overlap = SegmentRadialOverlap(first,second);
+            //      int overlap = SegmentRadialOverlap(first,second);
             //std::cout << " Forcing MERGE " << overlap << std::endl;
           }
         }
@@ -2875,7 +2875,7 @@ float FullLDCTracking_MarlinTrk::CompareTrk(TrackExtended * first, TrackExtended
 ////      TrackerHit * hit = trkHit->getTrackerHit();
 ////      int layer = hit->getType() - 401;
 ////      if (layer>=0&&layer<nLayersSET) 
-////        SETHits[layer].push_back(trkHit);	
+////        SETHits[layer].push_back(trkHit);   
 ////    }
 ////    for (int iL=0; iL<nLayersSET; ++iL) { // loop over SET layers
 ////      TrackerHitExtendedVec hitVec = SETHits[iL];
@@ -2917,19 +2917,19 @@ float FullLDCTracking_MarlinTrk::CompareTrk(TrackExtended * first, TrackExtended
 ////    nonAssignedSITHits.resize(nLayersSIT);
 ////    int nSITHits = int(_allSITHits.size());
 ////    for (int iH=0;iH<nSITHits;++iH) {
-////	    TrackerHitExtended * trkHitExt = _allSITHits[iH];
-////	    TrackExtended * trkExt = trkHitExt->getTrackExtended();
-////	    if (trkExt == NULL) {
+////        TrackerHitExtended * trkHitExt = _allSITHits[iH];
+////        TrackExtended * trkExt = trkHitExt->getTrackExtended();
+////        if (trkExt == NULL) {
 ////        TrackerHit * trkHit = trkHitExt->getTrackerHit();
 ////        int layer = trkHit->getType() - 401;
 ////        if (layer >=0 && layer < nLayersSIT) {
 ////          nonAssignedSITHits[layer].push_back(trkHitExt);
 ////        }
-////	    }
-////    }	
+////        }
+////    }       
 ////    for (int iL=nLayersSIT-1;iL>=0;--iL) { // loop over layers in Si
-////	    TrackerHitExtendedVec hitVec = nonAssignedSITHits[iL];
-////	    AssignSiHitsToTracks(hitVec,
+////        TrackerHitExtendedVec hitVec = nonAssignedSITHits[iL];
+////        AssignSiHitsToTracks(hitVec,
 ////                           _distCutForSITHits);
 ////    }
 ////  }
@@ -2939,19 +2939,19 @@ float FullLDCTracking_MarlinTrk::CompareTrk(TrackExtended * first, TrackExtended
 ////    nonAssignedFTDHits.resize(nLayersFTD);
 ////    int nFTDHits = int(_allFTDHits.size());
 ////    for (int iH=0;iH<nFTDHits;++iH) {
-////	    TrackerHitExtended * trkHitExt = _allFTDHits[iH];
-////	    TrackExtended * trkExt = trkHitExt->getTrackExtended();
-////	    if (trkExt == NULL) {
+////        TrackerHitExtended * trkHitExt = _allFTDHits[iH];
+////        TrackExtended * trkExt = trkHitExt->getTrackExtended();
+////        if (trkExt == NULL) {
 ////        TrackerHit * trkHit = trkHitExt->getTrackerHit();
 ////        int layer = trkHit->getType() - 201;
 ////        if (layer >=0 && layer < nLayersFTD)
 ////          nonAssignedFTDHits[layer].push_back(trkHitExt);
-////	    }
+////        }
 ////    }
 ////    for (int iL=nLayersFTD-1;iL>=0;--iL) {
-////	    TrackerHitExtendedVec hitVec = nonAssignedFTDHits[iL];
-////	    AssignSiHitsToTracks(hitVec,
-////                           _distCutForFTDHits);	
+////        TrackerHitExtendedVec hitVec = nonAssignedFTDHits[iL];
+////        AssignSiHitsToTracks(hitVec,
+////                           _distCutForFTDHits);     
 ////    }
 ////  }
 //  
@@ -2961,19 +2961,19 @@ float FullLDCTracking_MarlinTrk::CompareTrk(TrackExtended * first, TrackExtended
 ////    nonAssignedVTXHits.resize(nLayersVTX);
 ////    int nVTXHits = int(_allVTXHits.size());
 ////    for (int iH=0;iH<nVTXHits;++iH) {
-////	    TrackerHitExtended * trkHitExt = _allVTXHits[iH];
-////	    TrackExtended * trkExt = trkHitExt->getTrackExtended();
-////	    if (trkExt == NULL) {
+////        TrackerHitExtended * trkHitExt = _allVTXHits[iH];
+////        TrackExtended * trkExt = trkHitExt->getTrackExtended();
+////        if (trkExt == NULL) {
 ////        TrackerHit * trkHit = trkHitExt->getTrackerHit();
 ////        int layer = trkHit->getType() - 101;
 ////        if (layer >=0 && layer < nLayersVTX)
 ////          nonAssignedVTXHits[layer].push_back(trkHitExt);
-////	    }
+////        }
 ////    }
 ////    for (int iL=nLayersVTX-1;iL>=0;--iL) {
-////	    TrackerHitExtendedVec hitVec = nonAssignedVTXHits[iL];
-////	    AssignSiHitsToTracks(hitVec,
-////                           _distCutForVTXHits);	
+////        TrackerHitExtendedVec hitVec = nonAssignedVTXHits[iL];
+////        AssignSiHitsToTracks(hitVec,
+////                           _distCutForVTXHits);     
 ////    }
 ////  }
 //  
@@ -2983,11 +2983,11 @@ float FullLDCTracking_MarlinTrk::CompareTrk(TrackExtended * first, TrackExtended
 //    TrackerHitExtendedVec nonAssignedTPCHits;
 //    int nTPCHits = int(_allTPCHits.size());
 //    for (int iH=0;iH<nTPCHits;++iH) {
-//	    TrackerHitExtended * trkHitExt = _allTPCHits[iH];
-//	    TrackExtended * trkExt = trkHitExt->getTrackExtended();
-//	    if (trkExt == NULL) {
+//          TrackerHitExtended * trkHitExt = _allTPCHits[iH];
+//          TrackExtended * trkExt = trkHitExt->getTrackExtended();
+//          if (trkExt == NULL) {
 //        nonAssignedTPCHits.push_back(trkHitExt);
-//	    }
+//          }
 //    }
 //    AssignTPCHitsToTracks(nonAssignedTPCHits,
 //                          _distCutForTPCHits);
@@ -3045,18 +3045,18 @@ void FullLDCTracking_MarlinTrk::CleanUpExtrapolations() {
 //    //      float phi_hit = atan2(pos[1],pos[0]);
 //    //      float z_hit = pos[2];
 //    //      std::cout << r_hit << " " << phi_hit << " "
-//    // 		<< z_hit << " " 
-//    // 		<< trkHitExt->getResolutionRPhi() << " "
-//    // 		<< trkHitExt->getResolutionZ() << std::endl;
+//    //                << z_hit << " " 
+//    //                << trkHitExt->getResolutionRPhi() << " "
+//    //                << trkHitExt->getResolutionZ() << std::endl;
 //    
 //    for (int iT=0;iT<nTrk;++iT) {
 //      TrackExtended * trkExt = _trkImplVec[iT];
-//      float tanLambda = trkExt->getTanLambda();	    
+//      float tanLambda = trkExt->getTanLambda();           
 //      float product = pos[2]*tanLambda;
 //      if (product>0) {
 //        HelixClass * helix = _trackExtrapolatedHelix[trkExt];
 //        float distance = helix->getDistanceToPoint(pos,dcut);
-//        //	  std::cout << "Dist = " << dist[2] << std::endl;
+//        //      std::cout << "Dist = " << dist[2] << std::endl;
 //        if (distance<dcut) {
 //          TrackHitPair * trkHitPair = 
 //          new TrackHitPair(trkExt,trkHitExt,distance);
@@ -3075,7 +3075,7 @@ void FullLDCTracking_MarlinTrk::CleanUpExtrapolations() {
 //      TrackHitPair * trkHitPair = pairs[iP];
 //      TrackExtended * trkExt = trkHitPair->getTrackExtended();
 //      TrackerHitExtended * trkHitExt = 
-//      trkHitPair->getTrackerHitExtended();	   
+//      trkHitPair->getTrackerHitExtended();       
 //      if (flagTrack[trkExt] && flagHit[trkHitExt]) {
 //        if (refit==0) {
 //          trkExt->addTrackerHitExtended( trkHitExt );
@@ -3122,7 +3122,7 @@ void FullLDCTracking_MarlinTrk::CleanUpExtrapolations() {
 //          idet_h[iHitInFit] = trkHitExt->getDet();
 //          ityp_h[iHitInFit] = trkHitExt->getType();
 //          rR_h[iHitInFit] = trkHitExt->getResolutionRPhi();
-//          rZ_h[iHitInFit] = trkHitExt->getResolutionZ();	    
+//          rZ_h[iHitInFit] = trkHitExt->getResolutionZ();          
 //          iHitInFit++;
 //          
 //          int NPT = iHitInFit;
@@ -3138,13 +3138,13 @@ void FullLDCTracking_MarlinTrk::CleanUpExtrapolations() {
 //                                         _chi2PrefitCut,
 //                                         x_h,y_h,z_h,rR_h,rZ_h,
 //                                         par,epar,refPoint,chi2_D,ndf_D,
-//                                         chi2rphi,chi2z,lhits);	       
+//                                         chi2rphi,chi2z,lhits);              
 //          
 //          float chi2ndf = chi2_D/float(ndf_D);
 //          if (ierr==0 && chi2ndf<_chi2FitCut) {
 //            trkExt->addTrackerHitExtended( trkHitExt );
 //            trkExt->setCovMatrix(epar);
-//            trkExt->setOmega(par[0]);	  
+//            trkExt->setOmega(par[0]);   
 //            trkExt->setTanLambda(par[1]);
 //            trkExt->setPhi(par[2]);
 //            trkExt->setD0(par[3]);
@@ -3327,11 +3327,11 @@ void FullLDCTracking_MarlinTrk::AssignTPCHitsToTracks(TrackerHitExtendedVec hitV
         TrackerHitExtended * trkHitExt = hitVecGrp[iH];
         float pos[3] = {0.,0.,0.};
         for (int iC=0;iC<3;++iC) 
-          pos[iC] = float(trkHitExt->getTrackerHit()->getPosition()[iC]);	  
+          pos[iC] = float(trkHitExt->getTrackerHit()->getPosition()[iC]);         
         if (pos[2]>zMax) {
           zMax = pos[2];
           for (int iC=0;iC<3;++iC)
-            endPoint[iC] = pos[iC];	      
+            endPoint[iC] = pos[iC];           
         }
         if (pos[2]<zMin) {
           zMin = pos[2];
@@ -3420,55 +3420,55 @@ void FullLDCTracking_MarlinTrk::AssignTPCHitsToTracks(TrackerHitExtendedVec hitV
   
   
   //     for (int iH=0;iH<nHits;iH++) { // loop over leftover TPC hits
-  // 	TrackerHitExtended * hitExt = hitVec[iH];
-  // 	float pos[3];
-  // 	for (int ip=0;ip<3;++ip) 
-  // 	    pos[ip] = float(hitExt->getTrackerHit()->getPosition()[ip]);
-  // 	float minDist = 1.0e+20;
-  // 	TrackExtended * trackToAttach = NULL;
-  // 	for (int iT=0;iT<nTrk;++iT) { // loop over all tracks
-  // 	    TrackExtended * foundTrack = _trkImplVec[iT];
-  // 	    float tanLambdaFound = foundTrack->getTanLambda();
-  // 	    float product = tanLambdaFound*pos[2];
-  // 	    if (product>0) {
-  // 	      GroupTracks * group = foundTrack->getGroupTracks();
-  // 	      TrackExtendedVec tracksInGroup = group->getTrackExtendedVec();
-  // 	      int nTrkGrp = int(tracksInGroup.size());
-  // 	      for (int iTrkGrp=0;iTrkGrp<nTrkGrp;++iTrkGrp) {
-  // 		TrackExtended * trkGrp = tracksInGroup[iTrkGrp];
-  // 		float tanLambda = trkGrp->getTanLambda();
-  // 		float omega = trkGrp->getOmega();
-  // 		float d0 = trkGrp->getD0();
-  // 		float z0 = trkGrp->getZ0();
-  // 		float phi0 = trkGrp->getPhi();
-  // 		float dist[3];
-  // 		float startPoint[3];
-  // 		float endPoint[3];
-  // 		for (int iC=0;iC<3;++iC) {
-  // 		  startPoint[iC] = trkGrp->getStart()[iC];
-  // 		  endPoint[iC] = trkGrp->getEnd()[iC];
-  // 		}
-  // 		HelixClass helix;
-  // 		helix.Initialize_Canonical(phi0,d0,z0,omega,tanLambda,_bField);
-  // 		float halfPeriodZ = fabs(acos(-1.)*tanLambda/omega);
-  // 		helix.getDistanceToPoint(pos,dist);
-  // 		float DeltaStart = fabs(pos[2]-startPoint[2]);
-  // 		float DeltaEnd = fabs(pos[2]-endPoint[2]);
-  // 		bool consider = DeltaStart <= 1.5*halfPeriodZ;
-  // 		consider = consider || (DeltaEnd <= 1.5*halfPeriodZ);
-  // 		consider = consider || ( (pos[2]>=startPoint[2]) && (pos[2]<=endPoint[2]) );
-  // // 		float ZMin = DeltaStart;
-  // // 		if (DeltaEnd<ZMin)
-  // // 		  ZMin = DeltaEnd;
-  // 		if (dist[2]<dcut && consider && dist[2]<minDist) {
-  // 		  minDist = dist[2];
-  // 		  trackToAttach = foundTrack;
-  // 		}
-  // 	      }
-  // 	    }
-  // 	}
+  //    TrackerHitExtended * hitExt = hitVec[iH];
+  //    float pos[3];
+  //    for (int ip=0;ip<3;++ip) 
+  //        pos[ip] = float(hitExt->getTrackerHit()->getPosition()[ip]);
+  //    float minDist = 1.0e+20;
+  //    TrackExtended * trackToAttach = NULL;
+  //    for (int iT=0;iT<nTrk;++iT) { // loop over all tracks
+  //        TrackExtended * foundTrack = _trkImplVec[iT];
+  //        float tanLambdaFound = foundTrack->getTanLambda();
+  //        float product = tanLambdaFound*pos[2];
+  //        if (product>0) {
+  //          GroupTracks * group = foundTrack->getGroupTracks();
+  //          TrackExtendedVec tracksInGroup = group->getTrackExtendedVec();
+  //          int nTrkGrp = int(tracksInGroup.size());
+  //          for (int iTrkGrp=0;iTrkGrp<nTrkGrp;++iTrkGrp) {
+  //            TrackExtended * trkGrp = tracksInGroup[iTrkGrp];
+  //            float tanLambda = trkGrp->getTanLambda();
+  //            float omega = trkGrp->getOmega();
+  //            float d0 = trkGrp->getD0();
+  //            float z0 = trkGrp->getZ0();
+  //            float phi0 = trkGrp->getPhi();
+  //            float dist[3];
+  //            float startPoint[3];
+  //            float endPoint[3];
+  //            for (int iC=0;iC<3;++iC) {
+  //              startPoint[iC] = trkGrp->getStart()[iC];
+  //              endPoint[iC] = trkGrp->getEnd()[iC];
+  //            }
+  //            HelixClass helix;
+  //            helix.Initialize_Canonical(phi0,d0,z0,omega,tanLambda,_bField);
+  //            float halfPeriodZ = fabs(acos(-1.)*tanLambda/omega);
+  //            helix.getDistanceToPoint(pos,dist);
+  //            float DeltaStart = fabs(pos[2]-startPoint[2]);
+  //            float DeltaEnd = fabs(pos[2]-endPoint[2]);
+  //            bool consider = DeltaStart <= 1.5*halfPeriodZ;
+  //            consider = consider || (DeltaEnd <= 1.5*halfPeriodZ);
+  //            consider = consider || ( (pos[2]>=startPoint[2]) && (pos[2]<=endPoint[2]) );
+  // //                 float ZMin = DeltaStart;
+  // //                 if (DeltaEnd<ZMin)
+  // //                   ZMin = DeltaEnd;
+  //            if (dist[2]<dcut && consider && dist[2]<minDist) {
+  //              minDist = dist[2];
+  //              trackToAttach = foundTrack;
+  //            }
+  //          }
+  //        }
+  //    }
   
-  //	if (trackToAttach!=NULL) {
+  //    if (trackToAttach!=NULL) {
   //   trackToAttach->addTrackerHitExtended(hitExt);
   //  hitExt->setTrackExtended( trackToAttach );
   //  hitExt->setUsedInFit( false );
@@ -3476,7 +3476,7 @@ void FullLDCTracking_MarlinTrk::AssignTPCHitsToTracks(TrackerHitExtendedVec hitV
   //
   //}
   //else {
-  ///	  std::cout << iH << " hit is not assigned : distance to closest track = " << minDist << std::endl;
+  ///     std::cout << iH << " hit is not assigned : distance to closest track = " << minDist << std::endl;
   ///}
   //}
   //std::cout << " Slow loop done " << std::endl;
@@ -3501,12 +3501,12 @@ void FullLDCTracking_MarlinTrk::AssignTPCHitsToTracks(TrackerHitExtendedVec hitV
 //    TrackerHitExtended * trkHitExt = hitVec[iH];
 //    TrackerHit * hit = trkHitExt->getTrackerHit();
 //    for (int ip=0;ip<3;++ip)
-//	    pos[ip] = float(hit->getPosition()[ip]);
+//          pos[ip] = float(hit->getPosition()[ip]);
 //    for (int iT=0;iT<nTrk;++iT) {
-//	    TrackExtended * trkExt = _allNonCombinedTPCTracks[iT];
-//	    float tanLambda = trkExt->getTanLambda();	    
-//	    float product = pos[2]*tanLambda;
-//	    if (product>0) {
+//          TrackExtended * trkExt = _allNonCombinedTPCTracks[iT];
+//          float tanLambda = trkExt->getTanLambda();       
+//          float product = pos[2]*tanLambda;
+//          if (product>0) {
 //        float d0 = trkExt->getD0();
 //        float z0 = trkExt->getZ0();
 //        float tanLambda = trkExt->getTanLambda();
@@ -3522,7 +3522,7 @@ void FullLDCTracking_MarlinTrk::AssignTPCHitsToTracks(TrackerHitExtendedVec hitV
 //          flagTrack[trkExt] = true;
 //          flagHit[trkHitExt] = true;
 //        }
-//	    }
+//          }
 //    }
 //  }
 //  
@@ -3530,13 +3530,13 @@ void FullLDCTracking_MarlinTrk::AssignTPCHitsToTracks(TrackerHitExtendedVec hitV
 //  if (nPairs>0) {
 //    SortingTrackHitPairs(pairs);
 //    for (int iP=0;iP<nPairs;++iP) {
-//	    TrackHitPair * trkHitPair = pairs[iP];
-//	    TrackExtended * trkExt = trkHitPair->getTrackExtended();
-//	    TrackerHitExtended * trkHitExt = 
+//          TrackHitPair * trkHitPair = pairs[iP];
+//          TrackExtended * trkExt = trkHitPair->getTrackExtended();
+//          TrackerHitExtended * trkHitExt = 
 //      trkHitPair->getTrackerHitExtended();
-//	    if (flagTrack[trkExt] && flagHit[trkHitExt]) {		
+//          if (flagTrack[trkExt] && flagHit[trkHitExt]) {              
 //        TrackerHitExtendedVec hitsInTrack = 
-//		    trkExt->getTrackerHitExtendedVec();
+//                  trkExt->getTrackerHitExtendedVec();
 //        int nTotH = int(hitsInTrack.size());
 //        int nHitsInFit = 0;
 //        for (int iTH=0;iTH<nTotH;++iTH) {
@@ -3574,7 +3574,7 @@ void FullLDCTracking_MarlinTrk::AssignTPCHitsToTracks(TrackerHitExtendedVec hitV
 //        idet_h[iHitInFit] = trkHitExt->getDet();
 //        ityp_h[iHitInFit] = trkHitExt->getType();
 //        rR_h[iHitInFit] = trkHitExt->getResolutionRPhi();
-//        rZ_h[iHitInFit] = trkHitExt->getResolutionZ();		
+//        rZ_h[iHitInFit] = trkHitExt->getResolutionZ();                
 //        iHitInFit++;
 //        int NPT = iHitInFit;
 //        float chi2_D;
@@ -3588,12 +3588,12 @@ void FullLDCTracking_MarlinTrk::AssignTPCHitsToTracks(TrackerHitExtendedVec hitV
 //                                       _chi2PrefitCut,
 //                                       x_h,y_h,z_h,rR_h,rZ_h,
 //                                       par,epar,refPoint,chi2_D,ndf_D,
-//                                       chi2rphi,chi2z,lhits);	       
+//                                       chi2rphi,chi2z,lhits);        
 //        float chi2ndf = chi2_D/float(ndf_D);
 //        if (ierr==0 && chi2ndf<_chi2FitCut) {
 //          trkExt->addTrackerHitExtended( trkHitExt );
 //          trkExt->setCovMatrix(epar);
-//          trkExt->setOmega(par[0]);	  
+//          trkExt->setOmega(par[0]);     
 //          trkExt->setTanLambda(par[1]);
 //          trkExt->setPhi(par[2]);
 //          trkExt->setD0(par[3]);
@@ -3623,7 +3623,7 @@ void FullLDCTracking_MarlinTrk::AssignTPCHitsToTracks(TrackerHitExtendedVec hitV
 //                epar[6]  = sD0*sZ0*epar[6];
 //                trkExt->setZ0(siTrack->getZ0());
 //                trkExt->setD0(siTrack->getD0());
-//                trkExt->setCovMatrix(epar);			
+//                trkExt->setCovMatrix(epar);                   
 //              }
 //            }
 //          }
@@ -3640,12 +3640,12 @@ void FullLDCTracking_MarlinTrk::AssignTPCHitsToTracks(TrackerHitExtendedVec hitV
 //        delete[] idet_h;
 //        delete[] ityp_h;
 //        delete[] lhits;
-//	    }
+//          }
 //    }
 //    
 //    for (int iP=0;iP<nPairs;++iP) {
-//	    TrackHitPair * trkHitPair = pairs[iP];
-//	    delete trkHitPair;
+//          TrackHitPair * trkHitPair = pairs[iP];
+//          delete trkHitPair;
 //    }
 //    
 //    pairs.clear();
@@ -3742,19 +3742,19 @@ void FullLDCTracking_MarlinTrk::PrintOutMerging(TrackExtended * firstTrackExt, T
     float z0Second = secondTrackExt->getZ0();
     float omegaSecond = secondTrackExt->getOmega();
     float tanLSecond = secondTrackExt->getTanLambda();
-    float phi0Second = secondTrackExt->getPhi();	    
+    float phi0Second = secondTrackExt->getPhi();            
     
     HelixClass firstHelix;
     firstHelix.Initialize_Canonical(phi0First,d0First,z0First,omegaFirst,tanLFirst,_bField);
     float pxFirst = firstHelix.getMomentum()[0];
     float pyFirst = firstHelix.getMomentum()[1];
-    float pzFirst = firstHelix.getMomentum()[2];	    
+    float pzFirst = firstHelix.getMomentum()[2];            
     
     HelixClass secondHelix;
     secondHelix.Initialize_Canonical(phi0Second,d0Second,z0Second,omegaSecond,tanLSecond,_bField);
     float pxSecond = secondHelix.getMomentum()[0];
     float pySecond = secondHelix.getMomentum()[1];
-    float pzSecond = secondHelix.getMomentum()[2];	    
+    float pzSecond = secondHelix.getMomentum()[2];          
     
     float dPx = pxFirst - pxSecond;
     float dPy = pyFirst - pySecond;
@@ -4040,7 +4040,7 @@ int FullLDCTracking_MarlinTrk::SegmentRadialOverlap(TrackExtended* first, TrackE
       TrackerHitExtendedVec hitVec = trkGrp->getTrackerHitExtendedVec();
       
       for(unsigned int i =0; i<hitVec.size(); ++i){
-        hitvecFirst.push_back(hitVec[i]->getTrackerHit());	  
+        hitvecFirst.push_back(hitVec[i]->getTrackerHit());        
       }
     }
   }
@@ -4092,19 +4092,19 @@ bool FullLDCTracking_MarlinTrk::VetoMerge(TrackExtended* firstTrackExt, TrackExt
   const float z0Second = secondTrackExt->getZ0();
   const float omegaSecond = secondTrackExt->getOmega();
   const float tanLSecond = secondTrackExt->getTanLambda();
-  const float phi0Second = secondTrackExt->getPhi();	    
+  const float phi0Second = secondTrackExt->getPhi();        
   
   HelixClass firstHelix;
   firstHelix.Initialize_Canonical(phi0First,d0First,z0First,omegaFirst,tanLFirst,_bField);
   const float pxFirst = firstHelix.getMomentum()[0];
   const float pyFirst = firstHelix.getMomentum()[1];
-  const float pzFirst = firstHelix.getMomentum()[2];	    
+  const float pzFirst = firstHelix.getMomentum()[2];        
   
   HelixClass secondHelix;
   secondHelix.Initialize_Canonical(phi0Second,d0Second,z0Second,omegaSecond,tanLSecond,_bField);
   const float pxSecond = secondHelix.getMomentum()[0];
   const float pySecond = secondHelix.getMomentum()[1];
-  const float pzSecond = secondHelix.getMomentum()[2];	    
+  const float pzSecond = secondHelix.getMomentum()[2];      
   const float pFirst = sqrt(pxFirst*pxFirst+pyFirst*pyFirst+pzFirst*pzFirst);
   const float pSecond = sqrt(pxSecond*pxSecond+pySecond*pySecond+pzSecond*pzSecond);
   if(pFirst<2.5 || pSecond<2.5)return false;

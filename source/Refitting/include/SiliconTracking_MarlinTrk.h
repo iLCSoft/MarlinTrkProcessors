@@ -382,7 +382,7 @@ protected:
   unsigned int _nLayersSIT;
   
   unsigned int _nLayersFTD;
-  int _nPhiFTD;	
+  int _nPhiFTD; 
   
   
 } ;
