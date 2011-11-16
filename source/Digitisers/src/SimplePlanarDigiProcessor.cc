@@ -340,7 +340,7 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
       //      float covMat[TRKHITNCOVMATRIX]={0.,0.,_pointResoRPhi*_pointResoRPhi,0.,0.,_pointResoZ*_pointResoZ};
       //      trkHit->setCovMatrix(covMat);      
       
-      // 	  push back the SimTHit for this TrackerHit
+      //          push back the SimTHit for this TrackerHit
       // fg: only if we have a sim hit with proper link to MC truth
       
       MCParticle *mcp ;

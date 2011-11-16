@@ -428,14 +428,20 @@ bool SimpleDiscDigiProcessor::hasCorrectZPos ( SimTrackerHit* hit ){
     UTIL::BitField64 encoder( ILDCellID0::encoder_string ) ; 
     encoder.setValue(hit->getCellID0()) ;  
    
-    //    if( encoder[ILDCellID0::sensor] < 1 || encoder[ILDCellID0::sensor] > 4 ) {
-    if( encoder[ILDCellID0::sensor] < 1 || encoder[ILDCellID0::sensor] > 2 ) {
-      //    if( encoder[ILDCellID0::sensor] < 3 || encoder[ILDCellID0::sensor] > 4 ) {
+    if( encoder[ILDCellID0::sensor] < 1 || encoder[ILDCellID0::sensor] > 4 ) {
       
       streamlog_out(ERROR) << "FTD sensor value is not in the range 1-4 : value = " << encoder[ILDCellID0::sensor] << std::endl;
       return false;
       
     }
+    
+    if( encoder[ILDCellID0::sensor] == 3 || encoder[ILDCellID0::sensor] == 4 ) {
+      
+      streamlog_out(DEBUG4) << "FTD sensor value is not in the range 1-2 : Hit Skipped: value = " << encoder[ILDCellID0::sensor] << " Currently only the sensitive faces facing the IP are taken" << std::endl;
+      return false;
+      
+    }
+
     
     int layer = encoder[ILDCellID0::layer];
     int petal = encoder[ILDCellID0::module];
