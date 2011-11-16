@@ -13,6 +13,9 @@ using namespace marlin ;
 
 class FTDLayer ;
 
+namespace EVENT{
+  class SimTrackerHit;
+}
 
 /** ======= SimpleDiscDigiProcessor ========== <br>
  * Produces a TrackerHit collection from SimTrackerHit collection. <br> 
@@ -85,6 +88,10 @@ public:
   
 protected:
   
+  void process_hits_loi( LCEvent* evt, LCCollection* STHcol );
+
+  void process_hits_new( LCEvent* evt, LCCollection* STHcol );
+
   /** Input collection name.
    */
   std::string _inColName ;
@@ -95,13 +102,19 @@ protected:
   int _nRun ;
   int _nEvt ;
   
+  //  int _nDisks;
+  //  double _bZ;
+  
+  bool _SimHits_encoded_with_cellID;
+  bool _use_FTDLayerLayout_from_GEAR;
+
   float _pointReso;
   bool _keepHitsFromDeltas;
   std::vector< double > _FTDZCoordinate;
   std::vector< double > _diskInnerRadius;
   std::vector< double > _diskOuterRadius;
   
-  bool hasCorrectZPos ( double z );
+  bool hasCorrectZPos ( SimTrackerHit* hit );
   
   int getPetalNumber ( int layer , double x , double y );
   int getSensorNumber ( int layer , double x , double y );
