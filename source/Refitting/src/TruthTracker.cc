@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include <vector>
+#include <algorithm>
 
 #include <EVENT/LCCollection.h>
 #include <IMPL/LCCollectionVec.h>
@@ -24,6 +25,8 @@
 #include "gear/GEAR.h"
 #include <gear/BField.h>
 
+#include "MarlinTrk/Factory.h"
+#include "MarlinTrk/IMarlinTrack.h"
 #include "MarlinTrk/HelixTrack.h"
 
 #include <UTIL/BitField64.h>
@@ -32,6 +35,7 @@
 using namespace lcio ;
 using namespace marlin ;
 
+using namespace MarlinTrk ;
 
 bool TrackerHitSortPredicate(const TrackerHit* hit1, const TrackerHit* hit2)
 {
@@ -128,6 +132,27 @@ TruthTracker::TruthTracker() : Processor("TruthTracker") {
                              _MCpThreshold,
                              float(0.5));
   
+  registerProcessorParameter( "FitTracksWithMarlinTrk",
+                             "Fit the Tracks with MarlinTrk, otherwise take track parameters from MCParticle",
+                             _FitTracksWithMarlinTrk,
+                             bool(true));
+  
+  registerProcessorParameter("MultipleScatteringOn",
+                             "Use MultipleScattering in Fit",
+                             _MSOn,
+                             bool(true));
+  
+  registerProcessorParameter("EnergyLossOn",
+                             "Use Energy Loss in Fit",
+                             _ElossOn,
+                             bool(true));
+  
+  registerProcessorParameter("SmoothOn",
+                             "Smooth All Mesurement Sites in Fit",
+                             _SmoothOn,
+                             bool(false));
+
+  
   
   _n_run = 0 ;
   _n_evt = 0 ;
@@ -166,7 +191,21 @@ void TruthTracker::init() {
   // usually a good idea to
   printParameters() ;
   
+  //FIXME: for now do KalTest only - make this a steering parameter to use other fitters
+  _trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( "KalTest" , marlin::Global::GEAR , "" ) ;
   
+  
+  if( _trksystem == 0 ){
+    
+    throw EVENT::Exception( std::string("  Cannot initialize MarlinTrkSystem of Type: ") + std::string("KalTest" )  ) ;
+    
+  }
+  
+  _trksystem->setOption( IMarlinTrkSystem::CFG::useQMS,        _MSOn ) ;
+  _trksystem->setOption( IMarlinTrkSystem::CFG::usedEdx,       _ElossOn) ;
+  _trksystem->setOption( IMarlinTrkSystem::CFG::useSmoothing,  _SmoothOn) ;
+  _trksystem->init() ;  
+
   
 }
 
@@ -416,22 +455,77 @@ TrackImpl* TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_
   
   streamlog_out( DEBUG3 ) << "Create track with " << _hit_list.size() << " hits" << std::endl;  
   
-  float bZ = float(marlin::Global::GEAR->getBField().at( gear::Vector3D( 0., 0., 0.) ).z()) ;
-  // use mcp pos and mom to set the track parameters
-  HelixTrack hel(mcp->getVertex(), mcp->getMomentum(), mcp->getCharge(), bZ );
+  double d0;
+  double phi0;
+  double omega;
+  double z0;
+  double tanL;
   
-  Track->setD0( hel.getD0());
-  Track->setZ0( hel.getZ0());
-  Track->setPhi( hel.getPhi0());
-  Track->setOmega( hel.getOmega());
-  Track->setTanLambda( hel.getTanLambda());
+  double chi2 = 0 ;
+  int ndf = 0 ;
   
   float ref[3];
-  ref[0] = hel.getRefPointX() ;
-  ref[1] = hel.getRefPointY() ;
-  ref[2] = hel.getRefPointZ() ;
   
-  Track->setReferencePoint(ref) ;
+  if(_FitTracksWithMarlinTrk) {
+
+    MarlinTrk::IMarlinTrack* marlin_trk = _trksystem->createTrack();
+    
+    
+    // sort the hits in R, so here we are assuming that the track came from the IP and that we want to fit out to in. 
+    sort(_hit_list.begin(), _hit_list.end(), TruthTracker::compare_time() );
+    //    sort(_hit_list.begin(), _hit_list.end(), TruthTracker::compare_r() );
+    
+    for(unsigned int j=0; j<_hit_list.size(); ++j){
+      marlin_trk->addHit( _hit_list[j] );
+    }  
+    
+    marlin_trk->initialise( IMarlinTrack::backward ) ;
+    int fit_status = marlin_trk->fit() ; 
+
+    if( fit_status == 0 ){ 
+      
+      marlin_trk->smooth(_hit_list.back());
+      const gear::Vector3D point(0.,0.,0.); // nominal IP
+
+      TrackStateImpl* trkState = new TrackStateImpl() ;
+      int return_code = marlin_trk->propagate(point, *trkState, chi2, ndf ) ;
+      if ( return_code == 0 ) {
+        
+       Track->addTrackState(trkState);
+       Track->setChi2(chi2) ;
+       Track->setNdf(ndf) ;
+        
+      }
+    }
+    
+    
+  }
+  else{
+    
+    float bZ = float(marlin::Global::GEAR->getBField().at( gear::Vector3D( 0., 0., 0.) ).z()) ;
+    // use mcp pos and mom to set the track parameters
+    HelixTrack hel(mcp->getVertex(), mcp->getMomentum(), mcp->getCharge(), bZ );
+    d0    = hel.getD0();
+    phi0  = hel.getPhi0();
+    omega = hel.getOmega();
+    z0    = hel.getZ0();
+    tanL  = hel.getTanLambda();
+    
+    ref[0] = hel.getRefPointX() ;
+    ref[1] = hel.getRefPointY() ;
+    ref[2] = hel.getRefPointZ() ;
+    
+    Track->setD0(d0);
+    Track->setPhi(phi0);
+    Track->setOmega(omega);
+    Track->setZ0(z0);
+    Track->setTanLambda(tanL);
+    
+    Track->setReferencePoint(ref) ;
+    
+  }
+  
+
   
   std::map<int, int> hitNumbers; 
   
@@ -464,6 +558,8 @@ TrackImpl* TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_
   Track->subdetectorHitNumbers()[9] = hitNumbers[ILDDetID::TPC];
   Track->subdetectorHitNumbers()[10] = int(0);
   Track->subdetectorHitNumbers()[11] = int(0);
+  
+  
   
   _hit_list.clear();      
   

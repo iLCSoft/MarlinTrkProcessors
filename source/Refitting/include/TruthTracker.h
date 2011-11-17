@@ -5,12 +5,14 @@
 #include "lcio.h"
 #include <string>
 
+#include <EVENT/TrackerHit.h>
+
 using namespace lcio ;
 using namespace marlin ;
 
 namespace EVENT{
   class MCParticle ;
-  class TrackerHit ;
+  //  class TrackerHit ;
   class Track ;
 }
 
@@ -21,6 +23,11 @@ namespace IMPL {
 namespace UTIL{
   class LCRelationNavigator ;
   class BitField64 ;
+}
+
+
+namespace MarlinTrk{
+  class IMarlinTrkSystem ;
 }
 
 /**  Track creation based on MC truth. 
@@ -68,6 +75,21 @@ public:
    */
   virtual void end() ;
   
+  struct compare_time {
+    bool operator()( EVENT::TrackerHit* a, EVENT::TrackerHit* b)  const { 
+      return ( a->getTime() < b->getTime() ) ; 
+    }
+  };
+  
+  
+  struct compare_r {
+    bool operator()( EVENT::TrackerHit* a, EVENT::TrackerHit* b)  const { 
+      double r_a_sqd = a->getPosition()[0] * a->getPosition()[0] + a->getPosition()[1] * a->getPosition()[1] ; 
+      double r_b_sqd = b->getPosition()[0] * b->getPosition()[0] + b->getPosition()[1] * b->getPosition()[1] ; 
+      return ( r_a_sqd < r_b_sqd ) ; 
+    }
+  } ;
+
   
 protected:
   
@@ -122,7 +144,6 @@ protected:
    */
   std::string _output_track_rel_name ;
   
-  
   std::map< MCParticle*, std::vector<TrackerHit*> > _MCParticleTrkHitMap;
   
   std::vector<TrackerHit*> _hit_list;
@@ -144,6 +165,17 @@ protected:
   int _n_evt ;
   
   float _MCpThreshold ;
+  bool  _FitTracksWithMarlinTrk;
+  
+  /** pointer to the IMarlinTrkSystem instance 
+   */
+  MarlinTrk::IMarlinTrkSystem* _trksystem ;
+  
+  bool _MSOn ;
+  bool _ElossOn ;
+  bool _SmoothOn ;
+
+
   
 } ;
 
