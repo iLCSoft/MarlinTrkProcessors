@@ -6,13 +6,13 @@
 #include <string>
 
 #include <EVENT/TrackerHit.h>
+#include <EVENT/SimTrackerHit.h>
 
 using namespace lcio ;
 using namespace marlin ;
 
 namespace EVENT{
   class MCParticle ;
-  //  class TrackerHit ;
   class Track ;
 }
 
@@ -77,7 +77,9 @@ public:
   
   struct compare_time {
     bool operator()( EVENT::TrackerHit* a, EVENT::TrackerHit* b)  const { 
-      return ( a->getTime() < b->getTime() ) ; 
+      SimTrackerHit* hita = dynamic_cast<SimTrackerHit*>(a->getRawHits().at(0));
+      SimTrackerHit* hitb = dynamic_cast<SimTrackerHit*>(b->getRawHits().at(0));
+      return ( hita->getTime() < hitb->getTime() ) ; 
     }
   };
   

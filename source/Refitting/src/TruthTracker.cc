@@ -473,7 +473,7 @@ TrackImpl* TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_
     
     // sort the hits in R, so here we are assuming that the track came from the IP and that we want to fit out to in. 
     sort(_hit_list.begin(), _hit_list.end(), TruthTracker::compare_time() );
-    //    sort(_hit_list.begin(), _hit_list.end(), TruthTracker::compare_r() );
+    //sort(_hit_list.begin(), _hit_list.end(), TruthTracker::compare_r() );
     
     for(unsigned int j=0; j<_hit_list.size(); ++j){
       marlin_trk->addHit( _hit_list[j] );
@@ -542,7 +542,7 @@ TrackImpl* TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_
     cellID_encoder.setValue(_hit_list.at(j)->getCellID0()) ;
     int detID = cellID_encoder[ILDCellID0::subdet];
     ++hitNumbers[detID];
-    streamlog_out( DEBUG1 ) << "Hit from Detector " << detID << std::endl;     
+    //    streamlog_out( DEBUG1 ) << "Hit from Detector " << detID << std::endl;     
       }
   
   Track->subdetectorHitNumbers().resize(12);
