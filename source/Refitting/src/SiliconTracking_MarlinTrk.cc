@@ -25,9 +25,12 @@
 #include "ClusterShapes.h"
 
 #include <gear/GEAR.h>
-#include <gear/VXDParameters.h>
 #include <gear/GearParameters.h>
 #include <gear/VXDLayerLayout.h>
+#include <gear/VXDParameters.h>
+#include "gear/FTDLayerLayout.h"
+#include "gear/FTDParameters.h"
+
 #include <gear/BField.h>
 
 #include <UTIL/BitField64.h>
@@ -527,8 +530,6 @@ void SiliconTracking_MarlinTrk::init() {
   
   this->setupGearGeom(Global::GEAR);
   
-  _nLayersFTD = 0;
-  _zLayerFTD.resize( _nLayersFTD);
   
   if (_useSIT == 0)
     _nLayers = _nLayersVTX;
@@ -820,9 +821,9 @@ void SiliconTracking_MarlinTrk::CleanUp() {
   }
   
   for (int iS=0;iS<2;++iS) {
-    for (unsigned int layer=0;layer<_nLayersFTD;++layer) {
+    for (unsigned int layer=0;layer<_ndisksFTD;++layer) {
       for (int ip=0;ip<_nPhiFTD;++ip) {
-        int iCode = iS + 2*layer + 2*_nLayersFTD*ip;
+        int iCode = iS + 2*layer + 2*_ndisksFTD*ip;
         TrackerHitExtendedVec& hitVec = _sectorsFTD[iCode];
         int nH = int(hitVec.size());
         for (int iH=0; iH<nH; ++iH) {
@@ -836,10 +837,12 @@ void SiliconTracking_MarlinTrk::CleanUp() {
 }
 
 int SiliconTracking_MarlinTrk::InitialiseFTD(LCEvent * evt) {
+  
   int success = 1;
+  
   _nTotalFTDHits = 0;
   _sectorsFTD.clear();
-  _sectorsFTD.resize(2*_nLayersFTD*_nPhiFTD);
+  _sectorsFTD.resize(2*_ndisksFTD*_nPhiFTD);
   
   //fg: not needed - resize already did the job....
   //   for (int i=0; i<2*_nLayersFTD*_nPhiFTD;++i) {
@@ -851,35 +854,89 @@ int SiliconTracking_MarlinTrk::InitialiseFTD(LCEvent * evt) {
   // Reading out FTD Hits Collection
   //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   try {
+    
     LCCollection * hitCollection = evt->getCollection(_FTDHitCollection.c_str());
+    
     int nelem = hitCollection->getNumberOfElements();
+    
     streamlog_out(DEBUG4) << "Number of FTD hits = " << nelem << std::endl;
     _nTotalFTDHits = nelem;
+    
     for (int ielem=0; ielem<nelem; ++ielem) {
-      TrackerHit * hit = dynamic_cast<TrackerHit*>(hitCollection->getElementAt(ielem));
+      TrackerHitPlane * hit = dynamic_cast<TrackerHitPlane*>(hitCollection->getElementAt(ielem));
+      
       TrackerHitExtended * hitExt = new TrackerHitExtended( hit );
-      hitExt->setResolutionRPhi(float(sqrt(hit->getCovMatrix()[0])));
+      
+      // get the resolutions in R-Phi and Z      
+      //      hitExt->setResolutionRPhi(float(sqrt(hit->getCovMatrix()[0])));
+      
+      
+      
+      // SJA: this assumes that U and V are in fact X and Y
+      // Check that U and V have in fact been set to X and Y
+      
+      float phi_u = hit->getU()[0];
+      float theta_u = hit->getU()[1];
+      float phi_v = hit->getV()[0];
+      float theta_v = hit->getV()[1];
+      
+      const float eps = 1.0e-07;
+      if ( fabs(phi_u) > eps || fabs(theta_u - M_PI/2.0) > eps || fabs(phi_v - M_PI/2.0) > eps || fabs(theta_v - M_PI/2.0) > eps ) {
+        streamlog_out(ERROR) << " measurment vectors U and V are not equal to the global axis X and Y exit(1) called from file " << __FILE__ << " and line " << __LINE__ << std::endl;
+        exit(1);
+      }
+      
+      double point_res_rphi = sqrt( hit->getdU()*hit->getdU() + hit->getdV()*hit->getdV() );
+      hitExt->setResolutionRPhi( point_res_rphi );
+      
+      // SJA:FIXME why is this needed? 
       hitExt->setResolutionZ(0.1);
-      if (hit->getCovMatrix()[0] < 1e-10)
-        hitExt->setResolutionRPhi(0.1);
+      
+      //      if (hit->getCovMatrix()[0] < 1e-10)
+      //        hitExt->setResolutionRPhi(0.1);
+      
+      UTIL::BitField64 encoder( ILDCellID0::encoder_string ) ;
+      encoder.setValue(hit->getCellID0());
+      
       hitExt->setType(int(2));
       hitExt->setDet(int(2));
+      
       double pos[3];
+      
       for (int i=0; i<3; ++i) {
         pos[i] = hit->getPosition()[i];
       }
+      
       double Phi = atan2(pos[1],pos[0]);
       if (Phi < 0.) Phi = Phi + TWOPI;
-      unsigned int layer = hit->getType() - 201;
-      if (layer < 0 || layer > _nLayersFTD-1) {
+      
+      // get the layer number
+      int layer = encoder[ILDCellID0::layer] ;
+      int petalIndex = encoder[ILDCellID0::module] ;
+      // as we are dealing with staggered petals we will use 2*nlayers in each directions +/- z
+      // the layers will follow the even odd numbering of the petals 
+      if ( petalIndex % 2 == 0 ) {
+        layer = 2*layer;
+      }
+      else {
+        layer = 2*layer + 1;
+      }
+      
+      
+      if (layer >= _ndisksFTD) {
         streamlog_out(ERROR) << "SiliconTracking_MarlinTrk => fatal error in FTD : layer is outside allowed range : " << layer << std::endl;
         exit(1);
       }
+      
       int iPhi = int(Phi/_dPhiFTD);
+      
+      int side = encoder[ILDCellID0::side] ;
       int iSemiSphere = 0;
-      if (hit->getPosition()[2] > 0) 
+      
+      if (side > 0) 
         iSemiSphere = 1;
-      int iCode = iSemiSphere + 2*layer + 2*_nLayersFTD*iPhi;
+      
+      int iCode = iSemiSphere + 2*layer + 2*_ndisksFTD*iPhi;
       _sectorsFTD[iCode].push_back( hitExt );
     }
   }
@@ -925,8 +982,6 @@ int SiliconTracking_MarlinTrk::InitialiseVTX(LCEvent * evt) {
       // get the resolutions in R-Phi and Z
       //      hitExt->setResolutionRPhi(float(sqrt(hit->getCovMatrix()[2])));
       //      hitExt->setResolutionZ(float(sqrt(hit->getCovMatrix()[5])));
-      
-      
       
       hitExt->setResolutionRPhi(hit->getdU());
       hitExt->setResolutionZ(hit->getdV());
@@ -1182,8 +1237,8 @@ void SiliconTracking_MarlinTrk::ProcessOneSector(int iPhi, int iTheta) {
   } // endloop over triplets
   
   
-  streamlog_out( DEBUG2 ) << " process one sectector theta,phi " << iTheta << ", " << iPhi <<
-  "  number of loops : " << counter << std::endl  ;
+  //  streamlog_out( DEBUG2 ) << " process one sectector theta,phi " << iTheta << ", " << iPhi <<
+  //  "  number of loops : " << counter << std::endl  ;
 }
 
 TrackExtended * SiliconTracking_MarlinTrk::TestTriplet(TrackerHitExtended * outerHit, 
@@ -1309,13 +1364,12 @@ TrackExtended * SiliconTracking_MarlinTrk::TestTriplet(TrackerHitExtended * oute
   int iopt = 2;
   float chi2RPhi;
   float chi2Z;
-  float chi2_D;
-  int ndf_D;
+  float chi2_D = NAN;
+  int ndf_D = INT_MAX;
   //  float refPoint[3];
   if (_simpleHelixFit > 0) {
     //    tfithl_(NPT, xh, yh, rh, ph, wrh, zh,
     //      wzh, IOPT, par, epar, chi2RPhi, chi2Z);
-    
     _fastfitter->fastHelixFit(NPT, xh, yh, rh, ph, wrh, zh, wzh,iopt, par, epar, chi2RPhi, chi2Z);
     par[3] = par[3]*par[0]/fabs(par[0]);
   }
@@ -1323,7 +1377,7 @@ TrackExtended * SiliconTracking_MarlinTrk::TestTriplet(TrackerHitExtended * oute
     //    _trackFit.DoFitting(_useExtraPoint,_optFit,NPT,_bField,idet_h,ityp_h,_chi2PrefitCut,
     //                  xh_fl,yh_fl,zh,rphi_reso,z_reso,
     //                  par,epar,refPoint,chi2_D,ndf_D,chi2RPhi,chi2Z,lhits);
-  }
+  } 
   
   delete[] xh;
   delete[] yh;
@@ -1587,16 +1641,16 @@ void SiliconTracking_MarlinTrk::Sorting(TrackExtendedVec & trackVec) {
   
   for (int i = 0 ; i < sizeOfVector-1; i++)
     for (int j = 0; j < sizeOfVector-i-1; j++)
-      {
+        {
       one = trackVec[j];
       two = trackVec[j+1];
       if( one->getChi2()/float(one->getNDF()) > two->getChi2()/float(two->getNDF()) )
-        {
+          {
         Temp = trackVec[j];
         trackVec[j] = trackVec[j+1];
         trackVec[j+1] = Temp;
-        }
-      }  
+          }
+        }  
   for (int i=0; i<sizeOfVector; ++i) {
     TrackerHitExtendedVec& hitVec = trackVec[i]->getTrackerHitExtendedVec();
     int nHits = int(hitVec.size());
@@ -2028,7 +2082,8 @@ void SiliconTracking_MarlinTrk::AttachRemainingVTXHitsFast() {
           }
         }
         if (minDist < _minDistCutAttach && trackToAttach != NULL) {
-          AttachHitToTrack(trackToAttach,hit);
+          int iopt = 3;
+          AttachHitToTrack(trackToAttach,hit,iopt);
         }      
       }
     }
@@ -2120,7 +2175,8 @@ void SiliconTracking_MarlinTrk::AttachRemainingVTXHitsSlow() {
         }
       }
       if (minDist < _minDistCutAttach && trackToAttach != NULL) {
-        AttachHitToTrack(trackToAttach,hit);
+        int iopt = 3;
+        AttachHitToTrack(trackToAttach,hit,iopt);
       }      
     }
   }  
@@ -2131,9 +2187,9 @@ void SiliconTracking_MarlinTrk::AttachRemainingFTDHitsSlow() {
   nonAttachedHits.clear();
   
   for (int iS=0;iS<2;++iS) {
-    for (unsigned int layer=0;layer<_nLayersFTD;++layer) {
+    for (unsigned int layer=0;layer<_ndisksFTD;++layer) {
       for (int ip=0;ip<_nPhiFTD;++ip) {
-        int iCode = iS + 2*layer + 2*_nLayersFTD*ip;      
+        int iCode = iS + 2*layer + 2*_ndisksFTD*ip;      
         TrackerHitExtendedVec& hitVec = _sectorsFTD[iCode];
         int nH = int(hitVec.size());
         for (int iH=0; iH<nH; ++iH) {
@@ -2190,7 +2246,8 @@ void SiliconTracking_MarlinTrk::AttachRemainingFTDHitsSlow() {
       }
     }
     if (minDist < _minDistCutAttach && trackToAttach != NULL) {
-      AttachHitToTrack(trackToAttach,hit);
+      int iopt = 2;
+      AttachHitToTrack(trackToAttach,hit,iopt);
     }      
   }  
 }
@@ -2215,7 +2272,7 @@ void SiliconTracking_MarlinTrk::AttachRemainingFTDHitsFast() {
     for (int i=0;i<3;++i) 
       ref[i] = helix.getReferencePoint()[i];
     // Start loop over FTD layers
-    for (unsigned int layer=0;layer<_nLayersFTD;layer++) {
+    for (unsigned int layer=0;layer<_ndisksFTD;layer++) {
       float ZL = _zLayerFTD[layer];
       if (iSemiSphere == 0)
         ZL = - ZL;
@@ -2233,7 +2290,7 @@ void SiliconTracking_MarlinTrk::AttachRemainingFTDHitsFast() {
           iPP = iP + _nPhiFTD;
         if (iP >= _nPhiFTD)
           iPP = iP - _nPhiFTD;  
-        int iCode = iSemiSphere + 2*layer + 2*_nLayersFTD*iPP;
+        int iCode = iSemiSphere + 2*layer + 2*_ndisksFTD*iPP;
         int nHits = int(_sectorsFTD[iCode].size());
         for (int iHit=0;iHit<nHits;++iHit) {
           TrackerHitExtended * hit = _sectorsFTD[iCode][iHit];
@@ -2264,7 +2321,8 @@ void SiliconTracking_MarlinTrk::AttachRemainingFTDHitsFast() {
         }
       }
       if (distMin < _minDistCutAttach && attachedHit != NULL) {
-        AttachHitToTrack(trackAR,attachedHit);
+        int iopt = 2;
+        AttachHitToTrack(trackAR,attachedHit, iopt);
       }
     }
   }
@@ -2292,7 +2350,7 @@ void SiliconTracking_MarlinTrk::TrackingInFTD() {
       for (int ipOuter=0;ipOuter<_nPhiFTD;++ipOuter) {
         int ipMiddleLow = ipOuter - 1;
         int ipMiddleUp  = ipOuter + 1;
-        int iCodeOuter = iS + 2*nLS[0] + 2*_nLayersFTD*ipOuter;
+        int iCodeOuter = iS + 2*nLS[0] + 2*_ndisksFTD*ipOuter;
         TrackerHitExtendedVec& hitVecOuter = _sectorsFTD[iCodeOuter];
         int nOuter = int(hitVecOuter.size());
         for (int iOuter=0;iOuter<nOuter;++iOuter) {
@@ -2304,7 +2362,7 @@ void SiliconTracking_MarlinTrk::TrackingInFTD() {
               ipM = ipMiddle + _nPhiFTD;
             if (ipM >= _nPhiFTD) 
               ipM = ipMiddle - _nPhiFTD;
-            int iCodeMiddle = iS + 2*nLS[1] + 2*_nLayersFTD*ipM;
+            int iCodeMiddle = iS + 2*nLS[1] + 2*_ndisksFTD*ipM;
             TrackerHitExtendedVec& hitVecMiddle = _sectorsFTD[iCodeMiddle];
             int ipInnerLow,ipInnerUp;       
             ipInnerLow = ipMiddle - 1;
@@ -2319,19 +2377,19 @@ void SiliconTracking_MarlinTrk::TrackingInFTD() {
                   ipI = ipInner + _nPhiFTD;
                 if (ipI >= _nPhiFTD) 
                   ipI = ipInner - _nPhiFTD;
-                int iCodeInner = iS + 2*nLS[2] + 2*_nLayersFTD*ipI;
+                int iCodeInner = iS + 2*nLS[2] + 2*_ndisksFTD*ipI;
                 TrackerHitExtendedVec& hitVecInner = _sectorsFTD[iCodeInner];
                 int nInner = int(hitVecInner.size());
                 for (int iInner=0;iInner<nInner;++iInner) {
                   TrackerHitExtended * hitInner = hitVecInner[iInner];
                   HelixClass helix;
-                  //              std::cout << std::endl;
-                  //              std::cout << hitOuter->getTrackerHit()->getType() << " " 
-                  //                        << hitMiddle->getTrackerHit()->getType() << " " 
-                  //                        << hitInner->getTrackerHit()->getType() << std::endl;
+//                  std::cout << std::endl;
+//                  std::cout << "Outer Hit Type " << hitOuter->getTrackerHit()->getType() << " z = " << hitOuter->getTrackerHit()->getPosition()[2] 
+//                  << "\nMiddle Hit Type "<< hitMiddle->getTrackerHit()->getType() << " z = " << hitMiddle->getTrackerHit()->getPosition()[2]  
+//                  << "\nInner Hit Type "<< hitInner->getTrackerHit()->getType() << " z = " << hitInner->getTrackerHit()->getPosition()[2]  << std::endl;
                   TrackExtended * trackAR = TestTriplet(hitOuter,hitMiddle,hitInner,helix);
                   if (trackAR != NULL) {
-                    //    std::cout << "FTD triplet found" << std::endl;
+//                    std::cout << "FTD triplet found" << std::endl;
                     int nH = BuildTrackFTD(trackAR,nLS,iS);
                     if (nH == 3) 
                       _tracks3Hits.push_back(trackAR);
@@ -2352,8 +2410,8 @@ void SiliconTracking_MarlinTrk::TrackingInFTD() {
 
 
 int SiliconTracking_MarlinTrk::BuildTrackFTD(TrackExtended * trackAR, int * nLR, int iS) {
-  //  std::cout << "Layers = " << nLR[0] << " " << nLR[1] << " " << nLR[2] << std::endl;
-  for (unsigned int iL=0;iL<_nLayersFTD;++iL) {
+  //  std::cout << "BuildTrackFTD: Layers = " << nLR[0] << " " << nLR[1] << " " << nLR[2] << std::endl;
+  for (unsigned int iL=0;iL<_ndisksFTD;++iL) {
     if (iL != nLR[0] && iL != nLR[1] && iL != nLR[2]) {
       HelixClass helix;
       float d0 = trackAR->getD0();
@@ -2381,7 +2439,7 @@ int SiliconTracking_MarlinTrk::BuildTrackFTD(TrackExtended * trackAR, int * nLR,
           iP = ip + _nPhiFTD;
         if (iP >= _nPhiFTD)
           iP = ip - _nPhiFTD;   
-        int iCode = iS + 2*iL + 2*_nLayersFTD*iP;
+        int iCode = iS + 2*iL + 2*_ndisksFTD*iP;
         TrackerHitExtendedVec& hitVec = _sectorsFTD[iCode];
         int nH = int(hitVec.size());
         for (int iH=0; iH<nH; ++iH) {
@@ -2402,7 +2460,8 @@ int SiliconTracking_MarlinTrk::BuildTrackFTD(TrackExtended * trackAR, int * nLR,
       }
       //      std::cout << "Layer = " << iL << "  distMin = " << distMin << std::endl;
       if (distMin < _minDistCutAttach && attachedHit != NULL) {
-        AttachHitToTrack( trackAR, attachedHit );
+        int iopt = 2;
+        AttachHitToTrack( trackAR, attachedHit, iopt);
       }
     }
   }
@@ -2411,7 +2470,7 @@ int SiliconTracking_MarlinTrk::BuildTrackFTD(TrackExtended * trackAR, int * nLR,
   return nH;
 }
 
-int SiliconTracking_MarlinTrk::AttachHitToTrack(TrackExtended * trackAR, TrackerHitExtended * hit) {
+int SiliconTracking_MarlinTrk::AttachHitToTrack(TrackExtended * trackAR, TrackerHitExtended * hit, int iopt) {
   
   int attached = 0;
   TrackerHitExtendedVec& hitVec = trackAR->getTrackerHitExtendedVec();
@@ -2469,11 +2528,14 @@ int SiliconTracking_MarlinTrk::AttachHitToTrack(TrackExtended * trackAR, Tracker
   idet_h[nHits] = hit->getDet();
   
   int NPT = nHits + 1;
-  int iopt = 3;
+
+  // SJA:FIXME the newtonian part is giving crazy results for FTD so just use iopt 2 for simply attaching hits 
+  // using SIT and VXD doesn't seem to give any problems, so make it a function parameter and let the caller decide
+  //  int iopt = 3;
+
   float chi2RPhi;
   float chi2Z;
-  float chi2_D;
-  int ndf_D;
+  
   //  float refPoint[3] = {0.,0.,0.};
   if (_simpleHelixFit>0){
     //    tfithl_(NPT, xh, yh, rh, ph, wrh, zh,
@@ -2493,8 +2555,8 @@ int SiliconTracking_MarlinTrk::AttachHitToTrack(TrackExtended * trackAR, Tracker
   float phi0 = par[2];
   float d0 = par[3];
   float z0 = par[4];
-  float chi2 = chi2_D;
-  int ndf = ndf_D;
+  float chi2 = NAN;
+  int ndf = INT_MAX;
   
   if (_simpleHelixFit>0) {
     if (NPT == 3) {
@@ -2607,15 +2669,30 @@ void SiliconTracking_MarlinTrk::FinalRefit() {
       int det = trkHit->getType()/100;
       
       if (det <= 4) {
+
+        UTIL::BitField64 encoder( ILDCellID0::encoder_string ) ;
+        encoder.setValue(trkHit->getCellID0());
         
+        int layer = encoder[ILDCellID0::layer] ;
+        int petalIndex = encoder[ILDCellID0::module] ;
+
         // start a double loop over the hits which have already been checked 
         for (int lhit=0;lhit<ihit;++lhit) {
           
           // get the pointer to the lcio trackerhit for the previously checked hit
           TrackerHit * trkHitS = hitVec[lhit]->getTrackerHit();
           
+          encoder.setValue(trkHitS->getCellID0());
+          
+          int layerS = encoder[ILDCellID0::layer] ;
+          int petalIndexS = encoder[ILDCellID0::module] ;
+          
           // if they are on the same layer and the previously checked hits has been declared good for fitting
-          if ((trkHitS->getType() == trkHit->getType()) && (lh[lhit] == 1)) {
+          //          if ((trkHitS->getType() == trkHit->getType()) && (lh[lhit] == 1)) {
+          // check if the hits have the same layer and petal number
+          //          hitVec[ihit]->
+          if ((layer == layerS) && (petalIndex==petalIndexS) && (lh[lhit] == 1)) {
+            
             
             // get the position of the hits 
             float xP[3];
@@ -2722,7 +2799,7 @@ void SiliconTracking_MarlinTrk::FinalRefit() {
     
     int number_of_added_hits = 0;
     for( it = trkHits.begin() ; it != trkHits.end() ; ++it )
-      {
+        {
       
       if (marlin_trk->addHit(*it) == 0){
         ++number_of_added_hits;
@@ -2731,7 +2808,7 @@ void SiliconTracking_MarlinTrk::FinalRefit() {
         streamlog_out(DEBUG4) << "Hit " << it - trkHits.begin() << " Dropped " << std::endl;
       }
       
-      }
+        }
     
     if( number_of_added_hits < 3 ) {
       delete marlin_trk ;
@@ -2868,11 +2945,99 @@ void SiliconTracking_MarlinTrk::setupGearGeom( const gear::GearMgr* gearMgr ){
       _SITgeo[layer].supThickness = pSITLayerLayout.getLadderThickness(layer); 
     }
     
-  } catch (gear::UnknownParameterException& e) {
+  } 
+  catch (gear::UnknownParameterException& e) {
     streamlog_out( MESSAGE ) << "  MarlinKalTest - SIT missing in gear file: SIT Not Built " << std::endl ;
   }
   
+  try {
+    
+    
+    const gear::FTDParameters& ftdParams = gearMgr->getFTDParameters() ;
+    const gear::FTDLayerLayout& ftdlayers = ftdParams.getFTDLayerLayout() ;
+    
+    
+    _ndisksFTD = ftdlayers.getNLayers() ; 
+    _FTDgeo.resize(_ndisksFTD);
+    
+    //SJA:FIXME: for now the support is taken as the same size the sensitive
+    //           if this is not done then the exposed areas of the support would leave a carbon - air boundary,
+    //           which if traversed in the reverse direction to the next boundary then the track be propagated through carbon
+    //           for a significant distance 
+    
+    for(int disk=0; disk< _ndisksFTD; ++disk){
+      
+      // numbers taken from the ILD_01 gear file for the sensitive part 
+      _FTDgeo[disk].nPetals = ftdlayers.getNPetals(disk) ;    
+      _FTDgeo[disk].dphi = 2*M_PI /  _FTDgeo[disk].nPetals ;
+      _FTDgeo[disk].phi0 = ftdlayers.getPhi0(disk) ;
+      _FTDgeo[disk].alpha = ftdlayers.getAlpha(disk) ;
+      _FTDgeo[disk].rInner = ftdlayers.getSensitiveRinner(disk) ;
+      _FTDgeo[disk].height = ftdlayers.getSensitiveWidth(disk) ;
+      _FTDgeo[disk].innerBaseLength =  ftdlayers.getSensitiveLengthMin(disk) ;
+      _FTDgeo[disk].outerBaseLength =  ftdlayers.getSensitiveLengthMax(disk) ;
+      _FTDgeo[disk].senThickness =  ftdlayers.getSensitiveThickness(disk) ;
+      _FTDgeo[disk].supThickness =  ftdlayers.getSupportThickness(disk) ;
+      
+      _FTDgeo[disk].senZPos_even_petal1 = ftdlayers.getSensitiveZposition(disk, 0, 1) ; 
+      _FTDgeo[disk].senZPos_even_petal2 = ftdlayers.getSensitiveZposition(disk, 0, 2) ; 
+      _FTDgeo[disk].senZPos_even_petal3 = ftdlayers.getSensitiveZposition(disk, 0, 3) ; 
+      _FTDgeo[disk].senZPos_even_petal4 = ftdlayers.getSensitiveZposition(disk, 0, 4) ; 
+      
+      // currently the design assumes that the petal on the same side are at the same z
+      assert(_FTDgeo[disk].senZPos_even_petal1==_FTDgeo[disk].senZPos_even_petal2);
+      assert(_FTDgeo[disk].senZPos_even_petal3==_FTDgeo[disk].senZPos_even_petal4);
+      
+      _FTDgeo[disk].senZPos_odd_petal1 = ftdlayers.getSensitiveZposition(disk, 1, 1) ; 
+      _FTDgeo[disk].senZPos_odd_petal2 = ftdlayers.getSensitiveZposition(disk, 1, 2) ; 
+      _FTDgeo[disk].senZPos_odd_petal3 = ftdlayers.getSensitiveZposition(disk, 1, 3) ; 
+      _FTDgeo[disk].senZPos_odd_petal4 = ftdlayers.getSensitiveZposition(disk, 1, 4) ; 
+      
+      // currently the design assumes that the petal on the same side are at the same z
+      assert(_FTDgeo[disk].senZPos_odd_petal1==_FTDgeo[disk].senZPos_odd_petal2);
+      assert(_FTDgeo[disk].senZPos_odd_petal3==_FTDgeo[disk].senZPos_odd_petal4);
+      
+      _FTDgeo[disk].supZPos_even_petal1 = ftdlayers.getSensitiveZposition(disk, 0, 1) ; 
+      _FTDgeo[disk].supZPos_even_petal2 = ftdlayers.getSensitiveZposition(disk, 0, 2) ; 
+      _FTDgeo[disk].supZPos_even_petal3 = ftdlayers.getSensitiveZposition(disk, 0, 3) ; 
+      _FTDgeo[disk].supZPos_even_petal4 = ftdlayers.getSensitiveZposition(disk, 0, 4) ; 
+      
+      assert(_FTDgeo[disk].supZPos_even_petal1==_FTDgeo[disk].supZPos_even_petal2);
+      assert(_FTDgeo[disk].supZPos_even_petal3==_FTDgeo[disk].supZPos_even_petal4);
+      
+      _FTDgeo[disk].supZPos_odd_petal1 = ftdlayers.getSensitiveZposition(disk, 1, 1) ; 
+      _FTDgeo[disk].supZPos_odd_petal2 = ftdlayers.getSensitiveZposition(disk, 1, 2) ; 
+      _FTDgeo[disk].supZPos_odd_petal3 = ftdlayers.getSensitiveZposition(disk, 1, 3) ; 
+      _FTDgeo[disk].supZPos_odd_petal4 = ftdlayers.getSensitiveZposition(disk, 1, 4) ; 
+      
+      assert(_FTDgeo[disk].supZPos_odd_petal1==_FTDgeo[disk].supZPos_odd_petal2);
+      assert(_FTDgeo[disk].supZPos_odd_petal3==_FTDgeo[disk].supZPos_odd_petal4);
+      
+      
+      
+      
+      
+      // rough check to see if the petal is rotated
+      if( fabs(_FTDgeo[disk].alpha) > fabs(FLT_MIN)  ) { 
+        streamlog_out( ERROR ) << "  SiliconTracking_MarlinTrk - tilted design not supported exit(1) " << std::endl ;
+        exit(1);
+      }
+      
+    }
+    
+    for (int disk=0; disk < _ndisksFTD; ++disk) {
+      _zLayerFTD.push_back(_FTDgeo[disk].senZPos_even_petal1); // front petal even numbered
+      _zLayerFTD.push_back(_FTDgeo[disk].senZPos_odd_petal1);  // front petal odd numbered
+    }
+    
+    // SJA as disks are staggered lets treat them internally as 2*ndisksFTD
+    _ndisksFTD =_zLayerFTD.size() ;
+    
+  } 
   
+  catch (gear::UnknownParameterException& e) {
+    streamlog_out( MESSAGE ) << "  SiliconTracking_MarlinTrk - FTD missing in gear file: FTD Not Built " << std::endl ;
+  }
   
   
   
