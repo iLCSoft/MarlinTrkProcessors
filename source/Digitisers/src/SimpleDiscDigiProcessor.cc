@@ -180,7 +180,7 @@ void SimpleDiscDigiProcessor::process_hits_loi( LCEvent * evt, LCCollection* STH
         //store hit variables
         TrackerHitPlaneImpl* trkHit = new TrackerHitPlaneImpl ;        
         
-        trkHit->setType( 200+abs(celId));  // needed for FullLDCTracking et al.
+        trkHit->setType( 200+layerNumber );  // needed for FullLDCTracking et al.
         
         
         int petalNumber = getPetalNumber( layerNumber , smearedPos[0] , smearedPos[1] );
@@ -226,6 +226,7 @@ void SimpleDiscDigiProcessor::process_hits_loi( LCEvent * evt, LCCollection* STH
         trkHit->setdV( _pointReso ) ;
         
         trkHit->setEDep( SimTHit->getEDep() ) ;
+        trkHit->setTime( SimTHit->getTime() ) ;
         
         MCParticle *mcp ;
         mcp = SimTHit->getMCParticle() ;
@@ -284,7 +285,7 @@ void SimpleDiscDigiProcessor::process_hits_new( LCEvent * evt, LCCollection* STH
       
       encoder.setValue(celId) ;  
       
-      layerNumber = encoder[ILDCellID0::layer]-1;
+      layerNumber = encoder[ILDCellID0::layer];
       
       
       streamlog_out( DEBUG2 ) << "CelId : " << celId <<
@@ -321,7 +322,7 @@ void SimpleDiscDigiProcessor::process_hits_new( LCEvent * evt, LCCollection* STH
         //store hit variables
         TrackerHitPlaneImpl* trkHit = new TrackerHitPlaneImpl ;        
         
-        trkHit->setType( 200+abs(celId));  // needed for FullLDCTracking et al.
+        trkHit->setType( 200+layerNumber);  // needed for FullLDCTracking et al.
         
               
         cellid_encoder.setValue(encoder.getValue());
