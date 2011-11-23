@@ -128,9 +128,9 @@ TruthTracker::TruthTracker() : Processor("TruthTracker") {
                              int(1000));
   
   registerProcessorParameter( "MCpThreshold",
-                             "Momentume Threshold MC particles which will produce tracks GeV",
+                             "Transverse Momentum Threshold MC particles which will produce tracks GeV",
                              _MCpThreshold,
-                             float(0.5));
+                             float(0.1));
   
   registerProcessorParameter( "FitTracksWithMarlinTrk",
                              "Fit the Tracks with MarlinTrk, otherwise take track parameters from MCParticle",
@@ -317,7 +317,8 @@ void TruthTracker::processEvent( LCEvent * evt ) {
       
       MCParticle* mcp = dynamic_cast<SimTrackerHit*>(trkhits.at(i)->getRawHits().at(0))->getMCParticle();
       double const* p    = mcp->getMomentum() ;
-      float  const pmag2 = p[0]*p[0] + p[1]*p[1] + p[2]*p[2] ; 
+      float  const pt2   = p[0]*p[0] + p[1]*p[1] ;
+      //float  const pmag2 =  p[0]*p[0] + p[1]*p[1] + p[2]*p[2] ; 
       
       if ( i == 0 ) {
         mcplast = mcp ;
@@ -338,7 +339,7 @@ void TruthTracker::processEvent( LCEvent * evt ) {
         }
       }
       
-      if( pmag2  > (_MCpThreshold*_MCpThreshold) ) {
+      if( pt2  > (_MCpThreshold*_MCpThreshold) ) {
         // if momentum is greater than cut add hit to list
         streamlog_out( DEBUG3 ) << "Add hit to track from MCParticle " << mcp << std::endl;
         _hit_list.push_back(trkhits.at(i)) ;
