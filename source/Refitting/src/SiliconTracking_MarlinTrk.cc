@@ -575,6 +575,7 @@ void SiliconTracking_MarlinTrk::processEvent( LCEvent * evt ) {
   int successFTD = InitialiseFTD( evt );
   
   if (success == 1) {
+    streamlog_out(DEBUG1) << " phi   :   theta   :   layer  :  nh outer : nh middle : nh inner : nho*nhm*nhi" << std::endl; 
     for (int iPhi=0; iPhi<_nDivisionsInPhi; ++iPhi) 
       for (int iTheta=0; iTheta<_nDivisionsInTheta;++iTheta)
         ProcessOneSector(iPhi,iTheta); // Process one VXD sector     
@@ -1081,7 +1082,7 @@ int SiliconTracking_MarlinTrk::InitialiseVTX(LCEvent * evt) {
         
         if (Phi < 0.) Phi = Phi + TWOPI;
         
-        int layer = encoder[ILDCellID0::layer] ;
+        int layer = encoder[ILDCellID0::layer] + _nLayersVTX;
         
         if (layer < 0 || layer >= _nLayers) {
           streamlog_out(ERROR) << "SiliconTracking_MarlinTrk => fatal error in SIT : layer is outside allowed range : " << layer << std::endl;
@@ -1125,14 +1126,14 @@ void SiliconTracking_MarlinTrk::ProcessOneSector(int iPhi, int iTheta) {
   int nComb = int( _Combinations.size() / 3 ); // number of triplet combinations
                                                //  std::cout << iPhi << " " << iTheta << " " << _nEvt << std::endl;
   int iNC = 0;
+
   for (int iComb=0; iComb < nComb; ++iComb) { // loop over triplets
     int nLR[3];
     for (int iS=0; iS<3; ++iS) {
       nLR[iS] = _Combinations[iNC];
       iNC++;
     }    
-    //          std::cout << iPhi << " " << iTheta << " " << nLR[0] << " " << nLR[1] << " " << nLR[2] << " " 
-    //          << std::endl;
+    //    std::cout << iPhi << " " << iTheta << " " << nLR[0] << " " << nLR[1] << " " << nLR[2] << " " << std::endl;
     
     int iCode = nLR[0] + _nLayers*iPhi +  _nLayers*_nDivisionsInPhi*iTheta;
     
@@ -1198,11 +1199,14 @@ void SiliconTracking_MarlinTrk::ProcessOneSector(int iPhi, int iTheta) {
                 TrackerHitExtendedVec& hitVecInner = _sectors[iCode];
                 int nHitsInner = int(hitVecInner.size());
                 if (nHitsInner > 0) {
-                  //              std::cout << iPhi << " " << ipMiddle << " " << ipInner << "     " 
-                  //                        << iTheta << " " << itMiddle << " " << itInner << "     " 
-                  //                        << nLR[0] << " " << nLR[1] << " " << nLR[2] << "     " 
-                  //                        << nHitsOuter << " " << nHitsMiddle << " " << nHitsInner << "     " 
-                  //                        << nHitsOuter*nHitsMiddle* nHitsInner << std::endl;
+
+                  streamlog_out(DEBUG1) 
+                  << iPhi << " " << ipMiddle << " " << ipInner << "     " 
+                  << iTheta << " " << itMiddle << " " << itInner << "     " 
+                  << nLR[0] << " " << nLR[1] << " " << nLR[2] << "     " 
+                  << nHitsOuter << " " << nHitsMiddle << " " << nHitsInner << "     " 
+                  << nHitsOuter*nHitsMiddle* nHitsInner << std::endl;
+
                   for (int iOuter=0; iOuter<nHitsOuter; ++iOuter) { // loop over hits in the outer sector
                     TrackerHitExtended * outerHit = hitVecOuter[iOuter];
                     for (int iMiddle=0;iMiddle<nHitsMiddle;iMiddle++) { // loop over hits in the middle sector
