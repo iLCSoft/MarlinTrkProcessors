@@ -151,7 +151,7 @@ TruthTracker::TruthTracker() : Processor("TruthTracker") {
                              "Smooth All Mesurement Sites in Fit",
                              _SmoothOn,
                              bool(false));
-
+  
   
   
   _n_run = 0 ;
@@ -195,7 +195,7 @@ void TruthTracker::init() {
   _trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( "KalTest" , marlin::Global::GEAR , "" ) ;
   
   
-  if( _trksystem == 0 ){
+  if( _trksystem == 0 ) {
     
     throw EVENT::Exception( std::string("  Cannot initialize MarlinTrkSystem of Type: ") + std::string("KalTest" )  ) ;
     
@@ -205,7 +205,7 @@ void TruthTracker::init() {
   _trksystem->setOption( IMarlinTrkSystem::CFG::usedEdx,       _ElossOn) ;
   _trksystem->setOption( IMarlinTrkSystem::CFG::useSmoothing,  _SmoothOn) ;
   _trksystem->init() ;  
-
+  
   
 }
 
@@ -268,46 +268,41 @@ void TruthTracker::processEvent( LCEvent * evt ) {
   // check each TrackerHit to see that it has only one SimTrackerHit
   std::vector<TrackerHit*> trkhits; 
   
-  for(int i=0; i< _nVTXTrkHits ; ++i)
-      {
+  for(int i=0; i< _nVTXTrkHits ; ++i) {
     TrackerHit * trkhit = dynamic_cast<TrackerHit*>(_VTXTrkHits->getElementAt( i ));      
     if( trkhit->getRawHits().size()==1 ) {
       trkhits.push_back(trkhit);
     }
-      }
+  }
   
-  for(int i=0; i< _nSITTrkHits ; ++i)
-      {
+  for(int i=0; i< _nSITTrkHits ; ++i) {
     TrackerHit * trkhit = dynamic_cast<TrackerHit*>(_SITTrkHits->getElementAt( i ));      
     if( trkhit->getRawHits().size()==1 ) {
       trkhits.push_back(trkhit);
     }
-      }
+  }
   
-  for(int i=0; i< _nFTDTrkHits ; ++i)
-      {
+  for(int i=0; i< _nFTDTrkHits ; ++i) {
     TrackerHit * trkhit = dynamic_cast<TrackerHit*>(_FTDTrkHits->getElementAt( i ));      
     if( trkhit->getRawHits().size()==1 ) {
       trkhits.push_back(trkhit);
     }
-      }
+  }
   
-  for(int i=0; i< _nTPCTrkHits ; ++i)
-      {
+  for(int i=0; i< _nTPCTrkHits ; ++i) {
     TrackerHit * trkhit = dynamic_cast<TrackerHit*>(_TPCTrkHits->getElementAt( i ));      
     if( trkhit->getRawHits().size()==1 ) {
       trkhits.push_back(trkhit);
     }
-      }
+  }
   
   
   streamlog_out( DEBUG4 ) << "Number of Tracker hits = " << trkhits.size() << std::endl;     
   
-  for(unsigned int i=0; i< trkhits.size() ; ++i)
-      {
+  for(unsigned int i=0; i< trkhits.size() ; ++i) {
     SimTrackerHit * simHit = dynamic_cast<SimTrackerHit*>(trkhits[i]->getRawHits().at(0)) ;
     streamlog_out( DEBUG1 ) << "Tracker hit: = " << trkhits[i] << "  mcp = " << simHit->getMCParticle() << " time = " << simHit->getTime() << std::endl;     
-      }
+  }
   
   // now order the hits by MCParticle and then in time  
   std::sort(trkhits.begin(), trkhits.end(), TrackerHitSortPredicate);
@@ -318,37 +313,51 @@ void TruthTracker::processEvent( LCEvent * evt ) {
   if( trkhits.size() > 0) {
     MCParticle* mcplast = NULL;
     
-    for(unsigned int i=0; i< trkhits.size() ; ++i)
-        {
+    for(unsigned int i=0; i< trkhits.size() ; ++i) {
       
       MCParticle* mcp = dynamic_cast<SimTrackerHit*>(trkhits.at(i)->getRawHits().at(0))->getMCParticle();
       double const* p    = mcp->getMomentum() ;
       float  const pmag2 = p[0]*p[0] + p[1]*p[1] + p[2]*p[2] ; 
       
-      if ( i == 0 ) 
-          {
+      if ( i == 0 ) {
         mcplast = mcp ;
-          }
+      }
       
-      if( mcp != mcplast && _hit_list.size() > 2 )
-          { // create track from vector of hits                           
-            streamlog_out( DEBUG4 ) << "Create New Track for new MCParticle " << mcp << std::endl;
-            trackVec->addElement( this->createTrack(mcp, cellID_encoder) );
-          }
-      else if( i == (trkhits.size()-1) && mcp == mcplast && _hit_list.size() > 1 )
-          { 
-            // this hit is from the same mcp so we'll end up with at least 3 hits
-            streamlog_out( DEBUG4 ) << "Create New Track for last MCParticle " << mcp << std::endl;
-            _hit_list.push_back(trkhits.at(i)) ;
-            trackVec->addElement( this->createTrack(mcp, cellID_encoder) );
-          }
-      else if( pmag2  > (_MCpThreshold*_MCpThreshold) )
-          {
-        streamlog_out( DEBUG4 ) << "Add hit to track from MCParticle " << mcp << std::endl;
-        _hit_list.push_back(trkhits.at(i)) ;
-        mcplast = mcp;
-          }
+      if( mcp != mcplast ) { 
+        // new MCParticle
+        
+        if (_hit_list.size() >= 3) {
+          // create track from vector of hits                           
+          streamlog_out( DEBUG4 ) << "Create New Track for MCParticle " << mcplast << std::endl;
+          trackVec->addElement( this->createTrack(mcplast, cellID_encoder) );
+          _hit_list.clear();      
         }
+        else { 
+          // clear the hit list to start a new list of hits from the same mcparticle
+          _hit_list.clear();  
+        }
+      }
+      
+      if( pmag2  > (_MCpThreshold*_MCpThreshold) ) {
+        // if momentum is greater than cut add hit to list
+        streamlog_out( DEBUG3 ) << "Add hit to track from MCParticle " << mcp << std::endl;
+        _hit_list.push_back(trkhits.at(i)) ;
+      }
+      
+      // set last mcparticle 
+      mcplast = mcp;
+      
+    } // end of loop over hits
+    
+    // check if there is still a track to be created 
+    if( _hit_list.size() >= 3 ) { 
+      // then create a new track
+      streamlog_out( DEBUG4 ) << "Create New Track for Last MCParticle " << mcplast << std::endl;
+      trackVec->addElement( this->createTrack(mcplast, cellID_encoder) );
+      _hit_list.clear();      
+    }
+    
+    
   }    
   
   evt->addCollection( trackVec , _output_track_col_name) ;
@@ -366,9 +375,9 @@ void TruthTracker::check( LCEvent * evt ) {
 }
 
 
-void TruthTracker::end(){ 
+void TruthTracker::end() { 
   
-  streamlog_out(DEBUG) << "TruthTracker::end()  " << name() 
+  streamlog_out(DEBUG4) << "TruthTracker::end()  " << name() 
   << " processed " << _n_evt << " events in " << _n_run << " runs "
   << std::endl ;
   
@@ -380,12 +389,12 @@ LCCollection* TruthTracker::GetCollection(  LCEvent * evt, std::string colName )
   
   int nElements = 0;
   
-  try{
+  try {
     col = evt->getCollection( colName.c_str() ) ;
     nElements = col->getNumberOfElements()  ;
     streamlog_out( DEBUG4 ) << " --> " << colName.c_str() << " collection found in event = " << col << " number of elements " << col->getNumberOfElements() << std::endl;
   }
-  catch(DataNotAvailableException &e){
+  catch(DataNotAvailableException &e) {
     streamlog_out( DEBUG4 ) << " --> " << colName.c_str() <<  " collection absent in event" << std::endl;     
   }
   
@@ -397,11 +406,11 @@ LCRelationNavigator* TruthTracker::GetRelations( EVENT::LCEvent * evt , std::str
   
   LCRelationNavigator* nav = NULL ;
   
-  try{
+  try {
     nav = new LCRelationNavigator(evt->getCollection( RelName.c_str() ));
     streamlog_out( DEBUG2 ) << "TruthTracker --> " << RelName << " track relation collection in event = " << nav << std::endl;
   }
-  catch(DataNotAvailableException &e){
+  catch(DataNotAvailableException &e) {
     streamlog_out( DEBUG2 ) << "TruthTracker --> " << RelName.c_str() << " track relation collection absent in event" << std::endl;     
   }
   
@@ -410,7 +419,7 @@ LCRelationNavigator* TruthTracker::GetRelations( EVENT::LCEvent * evt , std::str
 }
 
 
-void TruthTracker::SetupInputCollections( LCEvent * evt ){
+void TruthTracker::SetupInputCollections( LCEvent * evt ) {
   
   _colMCP = GetCollection( evt, _colNameMC) ;
   streamlog_out( DEBUG2 ) << "number of MCParticles: " << _nMCP << std::endl ;
@@ -449,7 +458,7 @@ void TruthTracker::SetupInputCollections( LCEvent * evt ){
 }
 
 
-TrackImpl* TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encoder ){
+TrackImpl* TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encoder ) {
   
   TrackImpl* Track = new TrackImpl ; 
   
@@ -467,7 +476,7 @@ TrackImpl* TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_
   float ref[3];
   
   if(_FitTracksWithMarlinTrk) {
-
+    
     MarlinTrk::IMarlinTrack* marlin_trk = _trksystem->createTrack();
     
     
@@ -475,32 +484,31 @@ TrackImpl* TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_
     sort(_hit_list.begin(), _hit_list.end(), TruthTracker::compare_time() );
     //sort(_hit_list.begin(), _hit_list.end(), TruthTracker::compare_r() );
     
-    for(unsigned int j=0; j<_hit_list.size(); ++j){
+    for(unsigned int j=0; j<_hit_list.size(); ++j) {
       marlin_trk->addHit( _hit_list[j] );
     }  
     
     marlin_trk->initialise( IMarlinTrack::backward ) ;
     int fit_status = marlin_trk->fit() ; 
-
-    if( fit_status == 0 ){ 
+    
+    if( fit_status == 0 ) { 
       
-      marlin_trk->smooth(_hit_list.back());
       const gear::Vector3D point(0.,0.,0.); // nominal IP
-
+      
       TrackStateImpl* trkState = new TrackStateImpl() ;
       int return_code = marlin_trk->propagate(point, *trkState, chi2, ndf ) ;
       if ( return_code == 0 ) {
         
-       Track->addTrackState(trkState);
-       Track->setChi2(chi2) ;
-       Track->setNdf(ndf) ;
+        Track->addTrackState(trkState);
+        Track->setChi2(chi2) ;
+        Track->setNdf(ndf) ;
         
       }
     }
     
     
   }
-  else{
+  else {
     
     float bZ = float(marlin::Global::GEAR->getBField().at( gear::Vector3D( 0., 0., 0.) ).z()) ;
     // use mcp pos and mom to set the track parameters
@@ -525,7 +533,7 @@ TrackImpl* TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_
     
   }
   
-
+  
   
   std::map<int, int> hitNumbers; 
   
@@ -535,15 +543,14 @@ TrackImpl* TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_
   hitNumbers[ILDDetID::TPC] = 0;
   
   
-  for(unsigned int j=0; j<_hit_list.size(); ++j)
-      {
+  for(unsigned int j=0; j<_hit_list.size(); ++j) {
     Track->addHit(_hit_list.at(j)) ;
     
     cellID_encoder.setValue(_hit_list.at(j)->getCellID0()) ;
     int detID = cellID_encoder[ILDCellID0::subdet];
     ++hitNumbers[detID];
     //    streamlog_out( DEBUG1 ) << "Hit from Detector " << detID << std::endl;     
-      }
+  }
   
   Track->subdetectorHitNumbers().resize(12);
   Track->subdetectorHitNumbers()[0] = hitNumbers[ILDDetID::VXD];
@@ -560,8 +567,6 @@ TrackImpl* TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_
   Track->subdetectorHitNumbers()[11] = int(0);
   
   
-  
-  _hit_list.clear();      
   
   return Track;
   
