@@ -14,7 +14,8 @@
 
 #include <iostream>
 #include <algorithm>
-#include <math.h>
+#include <cmath>
+#include <climits>
 
 #include <gsl/gsl_vector.h>
 #include <gsl/gsl_matrix.h>
