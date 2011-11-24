@@ -157,7 +157,7 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
       
       MarlinTrk::IMarlinTrack* marlin_trk = _trksystem->createTrack();
       
-      EVENT::TrackerHitVec trkHits = track->getTrackerHits() ;	
+      EVENT::TrackerHitVec trkHits = track->getTrackerHits() ;
       
       // sort the hits in R, so here we are assuming that the track came from the IP and that we want to fit out to in. 
       sort(trkHits.begin(), trkHits.end(), RefitProcessor::compare_r() );
@@ -168,12 +168,14 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
         {
         
         marlin_trk->addHit(*it);
-        
+
         }
       
       marlin_trk->initialise( IMarlinTrack::backward ) ;
       int fit_status = marlin_trk->fit() ; 
       
+      streamlog_out(DEBUG4) << "fit_status = " << fit_status << std::endl ;
+    
       if( fit_status == 0 ){ 
         
         marlin_trk->smooth(trkHits.back());
@@ -199,20 +201,20 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
         encoder[ILDCellID0::layer]  = 0 ;
         layerID = encoder.lowWord() ;  
         
-        marlin_trk->intersectionWithLayer( layerID, xing_point, elementID ); // first VXD layer	  
+        marlin_trk->intersectionWithLayer( layerID, xing_point, elementID ); // first VXD layer         
         
         encoder[ILDCellID0::layer]  = 1 ;
         layerID = encoder.lowWord() ;  
-        marlin_trk->intersectionWithLayer( layerID, xing_point, elementID, IMarlinTrack::modeForward ); // second VXD layer	  
+        marlin_trk->intersectionWithLayer( layerID, xing_point, elementID, IMarlinTrack::modeForward ); // second VXD layer     
         
         encoder[ILDCellID0::layer]  = 2 ;
         layerID = encoder.lowWord() ;  
-        marlin_trk->intersectionWithLayer( layerID, xing_point, elementID, IMarlinTrack::modeForward ); // third VXD layer	  
+        marlin_trk->intersectionWithLayer( layerID, xing_point, elementID, IMarlinTrack::modeForward ); // third VXD layer      
         
         encoder[ILDCellID0::subdet] = ILDDetID::SIT ;
-        encoder[ILDCellID0::layer]  = 1 ;
+        encoder[ILDCellID0::layer]  = 0 ;
         layerID = encoder.lowWord() ;  
-        int intersects = marlin_trk->intersectionWithLayer( layerID, xing_point, elementID, IMarlinTrack::modeBackward ); // first SIT layer	  
+        int intersects = marlin_trk->intersectionWithLayer( layerID, xing_point, elementID, IMarlinTrack::modeBackward ); // first SIT layer      
         
         
         streamlog_out(DEBUG4) << "elementID = " << elementID << std::endl ;
@@ -225,23 +227,23 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
         double chi2 = 0 ;
         int ndf = 0 ;
         // get track state at SIT outer  layer  
-        TrackStateImpl trkState_at_sit;	  
+        TrackStateImpl trkState_at_sit;   
         marlin_trk->extrapolateToLayer( layerID, trkState_at_sit, chi2, ndf, elementID, IMarlinTrack::modeBackward); 
         
         // get track state at the first and last measurement sites
-        TrackStateImpl trkState_at_begin;	  
+        TrackStateImpl trkState_at_begin;         
         
         marlin_trk->getTrackState( trkState_at_begin, chi2, ndf ) ;
         
         TrackStateImpl trkState_at_end;
         
-        marlin_trk->getTrackState(  trkHits.back(), trkState_at_end, chi2, ndf ) ;	  
+        marlin_trk->getTrackState(  trkHits.back(), trkState_at_end, chi2, ndf ) ;      
         
         const gear::Vector3D point(0.,0.,0.); // nominal IP
         
         // use extrapolate, i.e. do not include material during propagation of the cov matrix 
         TrackStateImpl trkState_extrapolated;
-        int return_code = marlin_trk->extrapolate(point, trkState_extrapolated, chi2, ndf ) ;	  
+        int return_code = marlin_trk->extrapolate(point, trkState_extrapolated, chi2, ndf ) ;   
         
         // use propagate, i.e. include material during propagation of the cov matrix 
         TrackStateImpl* trkState = new TrackStateImpl() ;
