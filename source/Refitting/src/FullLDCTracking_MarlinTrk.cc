@@ -15,13 +15,17 @@
 #include <map>
 #include <marlin/Global.h>
 #include "ClusterShapes.h"
+
 #include <gear/GEAR.h>
+#include <gear/GearParameters.h>
+#include <gear/BField.h>
+#include <gear/VXDLayerLayout.h>
+#include <gear/VXDParameters.h>
+#include "gear/FTDLayerLayout.h"
+#include "gear/FTDParameters.h"
 #include <gear/TPCParameters.h>
 #include <gear/PadRowLayout2D.h>
-#include <gear/VXDParameters.h>
-#include <gear/GearParameters.h>
-#include <gear/VXDLayerLayout.h>
-#include <gear/BField.h>
+
 #include <UTIL/LCTOOLS.h>
 #include <UTIL/LCRelationNavigator.h>
 
@@ -124,30 +128,6 @@ FullLDCTracking_MarlinTrk::FullLDCTracking_MarlinTrk() : Processor("FullLDCTrack
                            _LDCTrackMCPCollection,
                            std::string("LDCTracksMCP"));
   
-  // Refitted track collection
-  registerOutputCollection(LCIO::TRACK,
-                           "ReffitedTPCTrackCollection",
-                           "Refitted TPC track collection name",
-                           _RefittedTPCTrackCollection,
-                           std::string("RefittedTPCTracks"));
-  
-  registerOutputCollection(LCIO::LCRELATION,
-                           "RefittedTPCTrackMCPRelCollection",
-                           "Collection name for the refitted TPC track to MCParticle relations",
-                           _RefittedTPCTrackMCPCollection,
-                           std::string("RefittedTPCTracksMCP"));
-  
-  registerOutputCollection(LCIO::TRACK,
-                           "RefittedSiTrackCollection",
-                           "Refitted Si track collection name",
-                           _RefittedSiTrackCollection,
-                           std::string("RefittedSiTracks"));
-  
-  registerOutputCollection(LCIO::LCRELATION,
-                           "RefittedSiTrackMCPRelCollection",
-                           "Collection name for the refittedSi track to MCParticle relations",
-                           _RefittedSiTrackMCPCollection,
-                           std::string("RefittedSiTracksMCP"));
   
   
   // steering parameters
@@ -192,15 +172,6 @@ FullLDCTracking_MarlinTrk::FullLDCTracking_MarlinTrk() : Processor("FullLDCTrack
                              _debug,
                              int(0));
   
-  registerProcessorParameter("UseExtraPoint",
-                             "Use Extra Point in Fit",
-                             _useExtraPoint,
-                             int(0));
-  
-  registerProcessorParameter("OptFit",
-                             "Option for the LDC Track fit",
-                             _optFit,
-                             int(4));
   
   registerProcessorParameter("ForceSiTPCMerging",
                              "Force merging of Si and TPC segments?",
@@ -226,26 +197,6 @@ FullLDCTracking_MarlinTrk::FullLDCTracking_MarlinTrk() : Processor("FullLDCTrack
                              "Cut on Opening Angle for forced merging of Si and TPC segments",
                              _angleForForcedMerging,
                              float(0.05));
-  
-  registerProcessorParameter("RefitTPCTracks",
-                             "Refit TPC Tracks ?",
-                             _refitTPCTracks,
-                             int(1));
-  
-  registerProcessorParameter("RefitSiTracks",
-                             "Refit Si Tracks ?",
-                             _refitSiTracks,
-                             int(0));
-  
-  registerProcessorParameter("StoreRefittedTPCTracks",
-                             "Store Refitted TPC Tracks ?",
-                             _storeRefittedTPCTracks,
-                             int(0));
-  
-  registerProcessorParameter("StoreRefittedSiTracks",
-                             "Store Refitted Si Tracks ?",
-                             _storeRefittedSiTracks,
-                             int(0));
   
   registerProcessorParameter("ForceTPCSegmentsMerging",
                              "Force merging of TPC Segments?",
@@ -322,20 +273,6 @@ FullLDCTracking_MarlinTrk::FullLDCTracking_MarlinTrk() : Processor("FullLDCTrack
                              _cutOnSiHits,
                              int(4));
   
-  registerProcessorParameter("aParameterForIPError",
-                             "Parameter a to define minimal IP error",
-                             _aParIpReso,
-                             float(0.002));
-  
-  registerProcessorParameter("bParameterForIPError",
-                             "Parameter b to define minimal IP error",
-                             _bParIpReso,
-                             float(0.0076));
-  
-  registerProcessorParameter("sParameterForIPError",
-                             "Parameter s to define minimal IP error",
-                             _sParIpReso,
-                             float(0.75));
   
   registerProcessorParameter("AssignVTXHits",
                              "Assign left over VTX hits",
@@ -414,17 +351,6 @@ FullLDCTracking_MarlinTrk::FullLDCTracking_MarlinTrk() : Processor("FullLDCTrack
                              float(15.0));
   
   
-  registerProcessorParameter("OptFitTPC",
-                             "Option for TPC tracks refitting",
-                             _optFitTPC,
-                             int(2));
-  
-  registerProcessorParameter("OptFitSi",
-                             "Option for Si tracks refitting",
-                             _optFitSi,
-                             int(2));
-  
-  
   registerProcessorParameter("CutOnTrackD0",
                              "Cut on the track parameter D0",
                              _d0TrkCut,
@@ -493,7 +419,7 @@ void FullLDCTracking_MarlinTrk::init() {
   _trksystem->setOption( IMarlinTrkSystem::CFG::useSmoothing,  _SmoothOn) ;
   _trksystem->init() ;  
   
-  
+  this->setupGearGeom(Global::GEAR);
   
 }
 
@@ -501,8 +427,8 @@ void FullLDCTracking_MarlinTrk::processRunHeader( LCRunHeader* run) {
   
   _nRun++ ;
   _nEvt = 0;
-  std::cout << std::endl;
-  std::cout << "FullLDCTracking_MarlinTrk ---> new run : run number = " << _nRun << std::endl;
+  streamlog_out(DEBUG4) << std::endl;
+  streamlog_out(DEBUG4) << "FullLDCTracking_MarlinTrk ---> new run : run number = " << _nRun << std::endl;
   
 } 
 
@@ -510,60 +436,40 @@ void FullLDCTracking_MarlinTrk::processEvent( LCEvent * evt ) {
   
   _evt = evt;
   
-  //  _bField = Global::parameters->getFloatVal("BField");
-  _bField = Global::GEAR->getBField().at( gear::Vector3D( 0., 0., 0.) ).z() ;
   
-  //  float parIpReso[3];
-  //  parIpReso[0] = _aParIpReso;
-  //  parIpReso[1] = _bParIpReso;
-  //  parIpReso[2] = _sParIpReso;
-  //  _trackFit.setParametersForIPErrors(parIpReso);
+  streamlog_out(DEBUG4) << std::endl;
+  streamlog_out(DEBUG4) << "FullLDCTracking_MarlinTrk -> run = " << _nRun 
+  << "  event = " << _nEvt << std::endl;
+  streamlog_out(DEBUG4) << std::endl;
   
-  if (_debug>=1) {
-    std::cout << std::endl;
-    std::cout << "FullLDCTracking_MarlinTrk -> run = " << _nRun 
-    << "  event = " << _nEvt << std::endl;
-    std::cout << std::endl;
-  }
   
   prepareVectors( evt );
-  //  std::cout << "prepareVectors done..." << std::endl;
-  if (_storeRefittedTPCTracks>0 && _refitTPCTracks>0) {
-    AddTrackColToEvt(evt,_allTPCTracks,
-                     _RefittedTPCTrackCollection,_RefittedTPCTrackMCPCollection);
-    // std::cout << "Collection of refitted TPC tracks is added to event..." << std::endl;
-  }
-  if (_storeRefittedSiTracks>0 && _refitSiTracks>0) {
-    AddTrackColToEvt(evt,_allSiTracks,
-                     _RefittedSiTrackCollection,_RefittedSiTrackMCPCollection);
-    // std::cout << "Collection of refitted Si tracks is added to event..." << std::endl; 
-  }
-  if (_debug>=2)std::cout << "************************************Merge TPC/Si" << std::endl;
+  streamlog_out(DEBUG3) << "prepareVectors done..." << std::endl;
+  streamlog_out(DEBUG3) << "************************************Merge TPC/Si" << std::endl;
   MergeTPCandSiTracks();
-  if (_debug>=2)std::cout << "************************************Merging done..." << std::endl;
+  streamlog_out(DEBUG3) << "************************************Merging done..." << std::endl;
   MergeTPCandSiTracksII();
-  if (_debug>=2)std::cout << "************************************Merging II done..." << std::endl;
+  streamlog_out(DEBUG3) << "************************************Merging II done..." << std::endl;
   Sorting(_allCombinedTracks);
-  if (_debug>=2)std::cout << "************************************Sorting done..." << std::endl;
+  streamlog_out(DEBUG3) << "************************************Sorting done..." << std::endl;
   SelectCombinedTracks();
-  if (_debug>=2)std::cout << "************************************Selection of combined tracks done..." << std::endl;
+  streamlog_out(DEBUG3) << "************************************Selection of combined tracks done..." << std::endl;
   AddNotCombinedTracks( );
-  if (_debug>=2)std::cout << "************************************Not combined tracks added..." << std::endl;
+  streamlog_out(DEBUG3) << "************************************Not combined tracks added..." << std::endl;
   //CheckTracks( );
   
-  //  AddNotAssignedHits();
-  if (_debug>=2)std::cout << "***********************************Not assigned hits added..." << std::endl;
+  AddNotAssignedHits();
+  streamlog_out(DEBUG3) << "***********************************Not assigned hits added..." << std::endl;
   AddTrackColToEvt(evt,_trkImplVec,
                    _LDCTrackCollection,_LDCTrackMCPCollection);
-  //  std::cout << "Collections added to event..." << std::endl;
+  streamlog_out(DEBUG3) << "Collections added to event..." << std::endl;
   CleanUp();
-  //  std::cout << "Cleanup is done..." << std::endl;
+  streamlog_out(DEBUG3) << "Cleanup is done..." << std::endl;
   _nEvt++;
   //  getchar();
-  if (_debug>=2) {
-    std::cout << std::endl;
-    std::cout << std::endl;
-  }
+  streamlog_out(DEBUG3) << std::endl;
+  streamlog_out(DEBUG3) << std::endl;
+  
 }
 
 void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec & trkVec, 
@@ -702,7 +608,7 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
     
     float d0TrkCand = trkCand->getD0();
     float z0TrkCand = trkCand->getZ0();
-    float phi0TrkCand = trkCand->getPhi();
+    //    float phi0TrkCand = trkCand->getPhi();
     
     float RefPoint[3];
     
@@ -770,16 +676,15 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
       }
     }
   }
-  if (_debug >= 1) {
-    std::cout << std::endl;
-    std::cout << "Number of accepted " << TrkColName << " = " 
-    << nTotTracks << std::endl;
-    std::cout << "Total 4-momentum of " << TrkColName << " : E = " << eTot
-    << " Px = " << pxTot
-    << " Py = " << pyTot
-    << " Pz = " << pzTot << std::endl;
-    std::cout << std::endl;
-  }  
+  
+  streamlog_out(DEBUG4) << std::endl;
+  streamlog_out(DEBUG4) << "Number of accepted " << TrkColName << " = " 
+  << nTotTracks << std::endl;
+  streamlog_out(DEBUG4) << "Total 4-momentum of " << TrkColName << " : E = " << eTot
+  << " Px = " << pxTot
+  << " Py = " << pyTot
+  << " Pz = " << pzTot << std::endl;
+  streamlog_out(DEBUG4) << std::endl;
   
   evt->addCollection(colTRK,TrkColName.c_str());
   if (_createMap)
@@ -789,6 +694,8 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
 
 
 void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
+  
+  
   
   
   _allTPCHits.clear();
@@ -805,43 +712,26 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
   _trkImplVec.clear();
   _candidateCombinedTracks.clear();
   
-  //  const gear::TPCParameters& gearTPC = Global::GEAR->getTPCParameters() ;
-  //  const gear::PadRowLayout2D& padLayout = gearTPC.getPadLayout() ;
-  
   
   std::map <TrackerHit*,TrackerHitExtended*> mapTrackerHits;
   
   // Reading TPC hits
   try {
+    
     LCCollection * col = event->getCollection(_TPCTrackerHitCollection.c_str());
+    
     int nelem = col->getNumberOfElements();
+    
     for (int ielem=0;ielem<nelem;++ielem) {
+      
       TrackerHit * hit = dynamic_cast<TrackerHit*>(col->getElementAt(ielem));
       TrackerHitExtended * hitExt = new TrackerHitExtended(hit);
-      //       double tpcRPhiResConst = gearTPC.getDoubleVal("tpcRPhiResConst");
-      //       double tpcRPhiResDiff  = gearTPC.getDoubleVal("tpcRPhiResDiff");
-      //       double aReso = tpcRPhiResConst*tpcRPhiResConst;
-      //       double driftLenght = gearTPC.getMaxDriftLength() - fabs(hit->getPosition()[2]);
-      //       if (driftLenght <0) { 
-      //         driftLenght = 0.10;
-      //       }
-      //       double bReso = tpcRPhiResDiff*tpcRPhiResDiff;
-      //       double tpcRPhiRes = sqrt(aReso + bReso*driftLenght);
-      //       double tpcZRes = gearTPC.getDoubleVal("tpcZRes");
-      //       hitExt->setResolutionRPhi(float(tpcRPhiRes));
-      //       hitExt->setResolutionZ(float(tpcZRes));      
       
       // Covariance Matrix in LCIO is defined in XYZ convert to R-Phi-Z
       // For no error in r
       
-      //      double phi = atan2(hit->getPosition()[1],hit->getPosition()[0]); 
       double tpcRPhiRes = sqrt(hit->getCovMatrix()[0] + hit->getCovMatrix()[2]);
       double tpcZRes = sqrt(hit->getCovMatrix()[5]);
-      
-      
-      // f77 tracking code works in cm
-      //       tpcRPhiRes = 0.1 * tpcRPhiRes;
-      //       tpcZRes = 0.1 * tpcZRes;
       
       hitExt->setResolutionRPhi(float(tpcRPhiRes));
       hitExt->setResolutionZ(float(tpcZRes));
@@ -853,53 +743,79 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
     }
   }
   catch( DataNotAvailableException &e ) {
-    if (_debug >= 2)
-      std::cout << _TPCTrackerHitCollection.c_str() << " collection is unavailable" << std::endl;
+    streamlog_out(DEBUG4) << _TPCTrackerHitCollection.c_str() << " collection is unavailable" << std::endl;
   };
   
   // Reading FTD Hits
   try {
-    LCCollection * col = event->getCollection(_FTDTrackerHitCollection.c_str());
-    int nelem = col->getNumberOfElements();
-    for (int ielem=0;ielem<nelem;++ielem) {
-      TrackerHit * hit = dynamic_cast<TrackerHit*>(col->getElementAt(ielem));
-      TrackerHitExtended * hitExt = new TrackerHitExtended(hit);
-      hitExt->setResolutionRPhi(float(sqrt(hit->getCovMatrix()[0])));
+    
+    LCCollection * hitCollection = event->getCollection(_FTDTrackerHitCollection.c_str());
+    
+    int nelem = hitCollection->getNumberOfElements();
+    
+    streamlog_out(DEBUG4) << "Number of FTD hits = " << nelem << std::endl;
+    
+    for (int ielem=0; ielem<nelem; ++ielem) {
+      TrackerHitPlane * hit = dynamic_cast<TrackerHitPlane*>(hitCollection->getElementAt(ielem));
+      
+      TrackerHitExtended * hitExt = new TrackerHitExtended( hit );
+      
+      // SJA: this assumes that U and V are in fact X and Y
+      // Check that U and V have in fact been set to X and Y
+      
+      float phi_u = hit->getU()[0];
+      float theta_u = hit->getU()[1];
+      float phi_v = hit->getV()[0];
+      float theta_v = hit->getV()[1];
+      
+      const float eps = 1.0e-07;
+      if ( fabs(phi_u) > eps || fabs(theta_u - M_PI/2.0) > eps || fabs(phi_v - M_PI/2.0) > eps || fabs(theta_v - M_PI/2.0) > eps ) {
+        streamlog_out(ERROR) << " measurment vectors U and V are not equal to the global axis X and Y exit(1) called from file " << __FILE__ << " and line " << __LINE__ << std::endl;
+        exit(1);
+      }
+      
+      double point_res_rphi = sqrt( hit->getdU()*hit->getdU() + hit->getdV()*hit->getdV() );
+      hitExt->setResolutionRPhi( point_res_rphi );
+      
+      // SJA:FIXME why is this needed? 
       hitExt->setResolutionZ(0.1);
-      //      hitExt->setResolutionRPhi(_resolutionRPhi_FTD);
-      //      hitExt->setResolutionZ(_resolutionZ_FTD);
+      
+      UTIL::BitField64 encoder( ILDCellID0::encoder_string ) ;
+      encoder.setValue(hit->getCellID0());
+      
       hitExt->setType(int(2));
       hitExt->setDet(int(2));
+      
       _allFTDHits.push_back( hitExt );
       mapTrackerHits[hit] = hitExt;
+      
     }
   }
-  catch( DataNotAvailableException &e ) {
-    if (_debug >= 2)
-      std::cout << _FTDTrackerHitCollection.c_str() << " collection is unavailable" << std::endl;
+  catch(DataNotAvailableException &e ) {
+    streamlog_out(DEBUG4) << _FTDTrackerHitCollection.c_str() << " collection is unavailable" << std::endl;
   }
   
-  // Reading ETD Hits
-  try {
-    LCCollection * col = event->getCollection(_ETDTrackerHitCollection.c_str());
-    int nelem = col->getNumberOfElements();
-    for (int ielem=0;ielem<nelem;++ielem) {
-      TrackerHit * hit = dynamic_cast<TrackerHit*>(col->getElementAt(ielem));
-      TrackerHitExtended * hitExt = new TrackerHitExtended(hit);
-      hitExt->setResolutionRPhi(float(sqrt(hit->getCovMatrix()[0])));
-      hitExt->setResolutionZ(0.1);
-      //      hitExt->setResolutionRPhi(_resolutionRPhi_FTD);
-      //      hitExt->setResolutionZ(_resolutionZ_FTD);
-      hitExt->setType(int(2));
-      hitExt->setDet(int(9));
-      _allETDHits.push_back( hitExt );
-      mapTrackerHits[hit] = hitExt;
-    }
-  }
-  catch( DataNotAvailableException &e ) {
-    if (_debug >= 2)
-      std::cout << _ETDTrackerHitCollection.c_str() << " collection is unavailable" << std::endl;
-  }
+  
+  //  // Reading ETD Hits
+  //  try {
+  //    LCCollection * col = event->getCollection(_ETDTrackerHitCollection.c_str());
+  //    int nelem = col->getNumberOfElements();
+  //    for (int ielem=0;ielem<nelem;++ielem) {
+  //      TrackerHit * hit = dynamic_cast<TrackerHit*>(col->getElementAt(ielem));
+  //      TrackerHitExtended * hitExt = new TrackerHitExtended(hit);
+  //      hitExt->setResolutionRPhi(float(sqrt(hit->getCovMatrix()[0])));
+  //      hitExt->setResolutionZ(0.1);
+  //      //      hitExt->setResolutionRPhi(_resolutionRPhi_FTD);
+  //      //      hitExt->setResolutionZ(_resolutionZ_FTD);
+  //      hitExt->setType(int(2));
+  //      hitExt->setDet(int(9));
+  //      _allETDHits.push_back( hitExt );
+  //      mapTrackerHits[hit] = hitExt;
+  //    }
+  //  }
+  //  catch( DataNotAvailableException &e ) {
+  //      streamlog_out(DEBUG4) << _ETDTrackerHitCollection.c_str() << " collection is unavailable" << std::endl;
+  //  }
   
   // Reading SIT Hits
   try {
@@ -909,15 +825,10 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
       TrackerHitPlane * hit = dynamic_cast<TrackerHitPlane*>(col->getElementAt(ielem));
       TrackerHitExtended * hitExt = new TrackerHitExtended(hit);
       
-      // get the resolutions in R-Phi and Z
-      //      hitExt->setResolutionRPhi(float(sqrt(hit->getCovMatrix()[2])));
-      //      hitExt->setResolutionZ(float(sqrt(hit->getCovMatrix()[5])));
+      // SJA:FIXME: just use planar res for now
       hitExt->setResolutionRPhi(hit->getdU());
       hitExt->setResolutionZ(hit->getdV());
       
-      
-      //      hitExt->setResolutionRPhi(_resolutionRPhi_SIT);
-      //      hitExt->setResolutionZ(_resolutionZ_SIT);
       hitExt->setType(int(3));
       hitExt->setDet(int(7));
       _allSITHits.push_back( hitExt );
@@ -925,43 +836,46 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
     }
   }
   catch( DataNotAvailableException &e ) {
-    if (_debug >=2 )
-      std::cout << _SITTrackerHitCollection.c_str() << " collection is unavailable" << std::endl;
+    streamlog_out(DEBUG4) << _SITTrackerHitCollection.c_str() << " collection is unavailable" << std::endl;
   }
   
   // Reading SET Hits
-  //    printf("SET hits ----->\n");
-  //    printf(" id    r_hit   phi_hit    z_hit  e(r-phi)  e(z)  \n");
+  //    sprintf(strg,"SET hits ----->\n");
+  //    streamlog_out(DEBUG4) << strg;
+  //    sprintf(strg," id    r_hit   phi_hit    z_hit  e(r-phi)  e(z)  \n");
+  //    streamlog_out(DEBUG4) << strg;
+  
   //     "  0   1807.64   -1.97     26.45   0.010   0.010
   //     "  1   1812.64   -1.97     26.51   0.010   0.010
-  try {
-    LCCollection * col = event->getCollection(_SETTrackerHitCollection.c_str());
-    int nelem = col->getNumberOfElements();
-    for (int ielem=0;ielem<nelem;++ielem) {
-      TrackerHit * hit = dynamic_cast<TrackerHit*>(col->getElementAt(ielem));
-      TrackerHitExtended * hitExt = new TrackerHitExtended(hit);
-      hitExt->setResolutionRPhi(float(sqrt(hit->getCovMatrix()[2])));
-      hitExt->setResolutionZ(float(sqrt(hit->getCovMatrix()[5])));
-      //       float x_hit = float(hit->getPosition()[0]);
-      //       float y_hit = float(hit->getPosition()[1]);
-      //       float z_hit = float(hit->getPosition()[2]);
-      //       float phi_hit = atan2( y_hit, x_hit );
-      //       float r_hit = sqrt( x_hit*x_hit + y_hit*y_hit );
-      //       printf("%3i  %8.2f  %6.3f  %8.2f  %6.3f  %6.3f   ", 
-      //             ielem, r_hit, phi_hit, z_hit, 
-      //             hitExt->getResolutionRPhi(), 
-      //             hitExt->getResolutionZ() );
-      //       std::cout << hit << std::endl;
-      hitExt->setType(int(3));
-      hitExt->setDet(int(8));
-      _allSETHits.push_back( hitExt );
-      mapTrackerHits[hit] = hitExt;
-    }
-  }
-  catch( DataNotAvailableException &e ) {
-    if (_debug >=2 )
-      std::cout << _SETTrackerHitCollection.c_str() << " collection is unavailable" << std::endl;
-  }
+  //  try {
+  //    LCCollection * col = event->getCollection(_SETTrackerHitCollection.c_str());
+  //    int nelem = col->getNumberOfElements();
+  //    for (int ielem=0;ielem<nelem;++ielem) {
+  //      TrackerHit * hit = dynamic_cast<TrackerHit*>(col->getElementAt(ielem));
+  //      TrackerHitExtended * hitExt = new TrackerHitExtended(hit);
+  //      hitExt->setResolutionRPhi(float(sqrt(hit->getCovMatrix()[2])));
+  //      hitExt->setResolutionZ(float(sqrt(hit->getCovMatrix()[5])));
+  //      //       float x_hit = float(hit->getPosition()[0]);
+  //      //       float y_hit = float(hit->getPosition()[1]);
+  //      //       float z_hit = float(hit->getPosition()[2]);
+  //      //       float phi_hit = atan2( y_hit, x_hit );
+  //      //       float r_hit = sqrt( x_hit*x_hit + y_hit*y_hit );
+  //      //       sprintf(strg,"%3i  %8.2f  %6.3f  %8.2f  %6.3f  %6.3f   ", 
+  //      //             ielem, r_hit, phi_hit, z_hit, 
+  //      //             hitExt->getResolutionRPhi(), 
+  //      //             hitExt->getResolutionZ() );
+  //      //       streamlog_out(DEBUG4) << strg;
+  //
+  //      //       std::cout << hit << std::endl;
+  //      hitExt->setType(int(3));
+  //      hitExt->setDet(int(8));
+  //      _allSETHits.push_back( hitExt );
+  //      mapTrackerHits[hit] = hitExt;
+  //    }
+  //  }
+  //  catch( DataNotAvailableException &e ) {
+  //      streamlog_out(DEBUG4) << _SETTrackerHitCollection.c_str() << " collection is unavailable" << std::endl;
+  //  }
   
   // Reading VTX Hits
   try {
@@ -971,14 +885,9 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
       TrackerHitPlane * hit = dynamic_cast<TrackerHitPlane*>(col->getElementAt(ielem));
       TrackerHitExtended * hitExt = new TrackerHitExtended(hit);
       
-      // get the resolutions in R-Phi and Z
-      //      hitExt->setResolutionRPhi(float(sqrt(hit->getCovMatrix()[2])));
-      //      hitExt->setResolutionZ(float(sqrt(hit->getCovMatrix()[5])));
-      
+      // SJA:FIXME: just use planar res for now
       hitExt->setResolutionRPhi(hit->getdU());
       hitExt->setResolutionZ(hit->getdV());
-      //      hitExt->setResolutionRPhi(_resolutionRPhi_VTX);
-      //      hitExt->setResolutionZ(_resolutionZ_VTX);
       
       hitExt->setType(int(3));
       hitExt->setDet(int(3));
@@ -996,12 +905,11 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
   try {
     LCCollection * col = event->getCollection(_TPCTrackCollection.c_str());
     int nelem = col->getNumberOfElements();
-    if (_debug >= 2) {
-      std::cout << std::endl;
-      std::cout << "Number of TPC Tracks = " << nelem << std::endl;
-      std::cout << " Trk       p          D0         Z0       Px       Py       Pz    ntpc ndf Chi2/ndf" << std::endl;
-      //           "  0  1.111   0.059      0.022    -0.54     0.61    -0.45    0.185
-    }
+    streamlog_out(DEBUG3) << std::endl;
+    streamlog_out(DEBUG3) << "Number of TPC Tracks = " << nelem << std::endl;
+    streamlog_out(DEBUG3) << " Trk       p          D0         Z0       Px       Py       Pz    ntpc ndf Chi2/ndf" << std::endl;
+    //           "  0  1.111   0.059      0.022    -0.54     0.61    -0.45    0.185
+    
     for (int iTrk=0; iTrk<nelem; ++iTrk) {
       Track * tpcTrack = dynamic_cast<Track*>(col->getElementAt(iTrk));
       TrackExtended * trackExt = new TrackExtended( tpcTrack );
@@ -1021,13 +929,6 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
       param[3] = tpcTrack->getD0();
       param[4] = tpcTrack->getZ0();
       
-      //      // Setting crude resolutions for TPC Track parameters 
-      //      reso[0] = 1e-3;  // dPt/Pt = 1e-3*Pt
-      //      reso[1] = 0.001; // angular resolution = 1mrad
-      //      reso[2] = 1.0;   // D0 reso = 1mm 
-      //      reso[3] = 1.0;   // Z0 reso = 1mm 
-      //      _trackFit.CrudeErrorEstimates(_bField,reso,param,cov);
-      
       
       const FloatVec Cov = tpcTrack->getCovMatrix();
       int NC = int(Cov.size());
@@ -1041,6 +942,7 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
       trackExt->setChi2(tpcTrack->getChi2());            
       char strg[200];
       HelixClass helixTPC;
+      
       for (int iHit=0;iHit<nHits;++iHit) {
         TrackerHit * hit = hitVec[iHit];
         TrackerHitExtended * hitExt = mapTrackerHits[hit];
@@ -1048,111 +950,40 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
         trackExt->addTrackerHitExtended( hitExt );      
       }      
       
-      //      if (_refitTPCTracks > 0) { // refit TPC tracks
-      //        float * x_h = new float[nHits];
-      //        float * y_h = new float[nHits];
-      //        float * z_h = new float[nHits];
-      //        int * idet_h = new int[nHits];
-      //        int * ityp_h = new int[nHits];
-      //        int * lhits = new int[nHits];
-      //        float * rR_h = new float[nHits];
-      //        float * rZ_h = new float[nHits];
-      //        for (int iHit=0;iHit<nHits;++iHit) {
-      //          TrackerHit * hit = hitVec[iHit];
-      //          TrackerHitExtended * hitExt = mapTrackerHits[hit];
-      //          x_h[iHit] = float(hit->getPosition()[0]);
-      //          y_h[iHit] = float(hit->getPosition()[1]);
-      //          z_h[iHit] = float(hit->getPosition()[2]);
-      //          idet_h[iHit] = hitExt->getDet();
-      //          ityp_h[iHit] = hitExt->getType();
-      //          rR_h[iHit] = hitExt->getResolutionRPhi();
-      //          rZ_h[iHit] = hitExt->getResolutionZ();
-      //        }
-      //        int NPT = nHits;
-      //        float chi2_D;
-      //        int ndf_D;
-      //        float chi2rphi,chi2z;
-      //        float par[5] = {0.,0.,0.,0.,0.};
-      //        for (int iPar=0;iPar<5;++iPar)
-      //          par[iPar] = param[iPar];
-      //        float epar[15];
-      //        float refPoint[3];      
-      //        helixTPC.Initialize_Canonical(par[2],par[3],par[4],par[0],par[1],_bField);
-      //        float momX = helixTPC.getMomentum()[0];
-      //        float momY = helixTPC.getMomentum()[1];
-      //        float momZ = helixTPC.getMomentum()[2];
-      //        
-      //        
-      //        int ierr = _trackFit.DoFitting(_useExtraPoint,_optFitTPC,NPT,_bField,idet_h,ityp_h,_chi2PrefitCut,
-      //                                       x_h,y_h,z_h,rR_h,rZ_h,
-      //                                       par,epar,refPoint,chi2_D,ndf_D,chi2rphi,chi2z,lhits);
-      //
-      //        helixTPC.Initialize_Canonical(par[2],par[3],par[4],par[0],par[1],_bField);
-      //
-      //        float momXNew = helixTPC.getMomentum()[0];
-      //        float momYNew = helixTPC.getMomentum()[1];
-      //        float momZNew = helixTPC.getMomentum()[2];
-      //
-      //        float dPx = momX - momXNew;
-      //        float dPy = momY - momYNew;
-      //        float dPz = momZ - momZNew;
-      //        float dMom = sqrt(dPx*dPx+dPy*dPy+dPz*dPz);
-      //
-      //        if (ierr>=0 && dMom < 0.05) { // redefine track parameters if fit is stable       
-      //          trackExt->setCovMatrix(epar);
-      //          trackExt->setOmega(par[0]);     
-      //          trackExt->setTanLambda(par[1]);
-      //          trackExt->setPhi(par[2]);
-      //          trackExt->setD0(par[3]);
-      //          trackExt->setZ0(par[4]);
-      //          trackExt->setChi2(chi2_D);
-      //          trackExt->setNDF(ndf_D);
-      //        }
-      //
-      //        delete[] idet_h;
-      //        delete[] ityp_h;
-      //        delete[] lhits;
-      //        delete[] x_h;
-      //        delete[] y_h;
-      //        delete[] z_h;
-      //        delete[] rZ_h;
-      //        delete[] rR_h;
-      //      }  
       
-      if (_debug>=2) {
-        float d0TPC = trackExt->getD0();
-        float z0TPC = trackExt->getZ0();
-        float omegaTPC = trackExt->getOmega();
-        float phi0TPC = trackExt->getPhi();
-        float tanLTPC = trackExt->getTanLambda();
-        float Chi2TPC = trackExt->getChi2()/float(trackExt->getNDF());
-        const int ndfTPC = trackExt->getNDF();
-        helixTPC.Initialize_Canonical(phi0TPC,d0TPC,z0TPC,omegaTPC,tanLTPC,_bField);
-        float pxTPC = helixTPC.getMomentum()[0];
-        float pyTPC = helixTPC.getMomentum()[1];
-        float pzTPC = helixTPC.getMomentum()[2];
-        const float ptot = sqrt(pxTPC*pxTPC+pyTPC*pyTPC+pzTPC*pzTPC);
-        sprintf(strg,"%3i  %9.3f  %9.3f  %9.3f  %7.2f  %7.2f  %7.2f %4i %4i %8.3f",iTrk,
-                ptot, d0TPC,z0TPC,pxTPC,pyTPC,pzTPC,nHits,ndfTPC,Chi2TPC);
-        std::cout << strg << std::endl;
-      }
+      float d0TPC = trackExt->getD0();
+      float z0TPC = trackExt->getZ0();
+      float omegaTPC = trackExt->getOmega();
+      float phi0TPC = trackExt->getPhi();
+      float tanLTPC = trackExt->getTanLambda();
+      float Chi2TPC = trackExt->getChi2()/float(trackExt->getNDF());
+      const int ndfTPC = trackExt->getNDF();
+      
+      helixTPC.Initialize_Canonical(phi0TPC,d0TPC,z0TPC,omegaTPC,tanLTPC,_bField);
+      
+      float pxTPC = helixTPC.getMomentum()[0];
+      float pyTPC = helixTPC.getMomentum()[1];
+      float pzTPC = helixTPC.getMomentum()[2];
+      const float ptot = sqrt(pxTPC*pxTPC+pyTPC*pyTPC+pzTPC*pzTPC);
+      sprintf(strg,"%3i  %9.3f  %9.3f  %9.3f  %7.2f  %7.2f  %7.2f %4i %4i %8.3f",iTrk,
+              ptot, d0TPC,z0TPC,pxTPC,pyTPC,pzTPC,nHits,ndfTPC,Chi2TPC);
+      streamlog_out(DEBUG3) << strg << std::endl;
+      
       _allTPCTracks.push_back( trackExt );                
     }      
   }
   catch ( DataNotAvailableException &e) {
-    if (_debug >= 2 )
-      std::cout << _TPCTrackCollection.c_str() << " collection is unavailable" << std::endl;
+    streamlog_out(DEBUG4) << _TPCTrackCollection.c_str() << " collection is unavailable" << std::endl;
   }
   
   // Reading Si Tracks
   try {
     LCCollection * col = event->getCollection(_SiTrackCollection.c_str());
     int nelem = col->getNumberOfElements();
-    if (_debug >= 2) {
-      std::cout << std::endl;
-      std::cout << "Number of Si Tracks = " << nelem << std::endl;
-      std::cout << " Trk       p          D0         Z0       Px       Py       Pz   hitsSi ndf Chi2/ndf" << std::endl;
-    }
+    streamlog_out(DEBUG3) << std::endl;
+    streamlog_out(DEBUG3) << "Number of Si Tracks = " << nelem << std::endl;
+    streamlog_out(DEBUG3) << " Trk       p          D0         Z0       Px       Py       Pz   hitsSi ndf Chi2/ndf" << std::endl;
+    
     for (int iTrk=0; iTrk<nelem; ++iTrk) {
       Track * siTrack = dynamic_cast<Track*>(col->getElementAt(iTrk));
       TrackExtended * trackExt = new TrackExtended( siTrack );
@@ -1165,22 +996,15 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
       trackExt->setZ0(siTrack->getZ0());
       float cov[15];
       float param[5];
-      //      float reso[4];
+      
       param[0] = siTrack->getOmega();
       param[1] = siTrack->getTanLambda();
       param[2] = siTrack->getPhi();
       param[3] = siTrack->getD0();
       param[4] = siTrack->getZ0();      
       
-      //      if (_refitSiTracks < 0) { // Setting crude resolutions for the Si Track parameters
-      //        reso[0] = 1e-2;  // dPt/Pt = 1e-2*Pt
-      //        reso[1] = 0.001; // angular resolution = 1mrad
-      //        reso[2] = 0.1;   // D0 reso = 1mm 
-      //        reso[3] = 0.1;   // Z0 reso = 1mm
-      //        _trackFit.CrudeErrorEstimates(_bField,reso,param,cov);
-      //      }
       
-      //      if (_refitSiTracks == 0) { // using cov matrix obtained from Si track fits
+      
       const FloatVec Cov = siTrack->getCovMatrix();
       int NC = int(Cov.size());
       for (int ic=0;ic<NC;ic++) {
@@ -1199,87 +1023,34 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
         trackExt->addTrackerHitExtended( hitExt );      
       }
       
-      //      if (_refitSiTracks > 0) { // refit Si tracks
-      //        float * x_h = new float[nHits];
-      //        float * y_h = new float[nHits];
-      //        float * z_h = new float[nHits];
-      //        int * idet_h = new int[nHits];
-      //        int * ityp_h = new int[nHits];
-      //        int * lhits = new int[nHits];
-      //        float * rR_h = new float[nHits];
-      //        float * rZ_h = new float[nHits];
-      //        for (int iHit=0;iHit<nHits;++iHit) {
-      //          TrackerHit * hit = hitVec[iHit];
-      //          TrackerHitExtended * hitExt = mapTrackerHits[hit];
-      //          x_h[iHit] = float(hit->getPosition()[0]);
-      //          y_h[iHit] = float(hit->getPosition()[1]);
-      //          z_h[iHit] = float(hit->getPosition()[2]);
-      //          idet_h[iHit] = hitExt->getDet();
-      //          ityp_h[iHit] = hitExt->getType();
-      //          rR_h[iHit] = hitExt->getResolutionRPhi();
-      //          rZ_h[iHit] = hitExt->getResolutionZ();
-      //        }
-      //        int NPT = nHits;
-      //        float chi2_D;
-      //        int ndf_D;
-      //        float chi2rphi,chi2z;
-      //        float par[5];
-      //        float epar[15];
-      //        float refPoint[3];
-      //        for (int iPar=0;iPar<5;++iPar)
-      //          par[iPar] = param[iPar];
-      //        int ierr = _trackFit.DoFitting(_useExtraPoint,_optFitSi,NPT,_bField,idet_h,ityp_h,_chi2PrefitCut,
-      //                                       x_h,y_h,z_h,rR_h,rZ_h,
-      //                                       par,epar,refPoint,chi2_D,ndf_D,chi2rphi,chi2z,lhits);
-      //        if (ierr>=0) {    
-      //          trackExt->setCovMatrix(epar);
-      //          trackExt->setOmega(par[0]);     
-      //          trackExt->setTanLambda(par[1]);
-      //          trackExt->setPhi(par[2]);
-      //          trackExt->setD0(par[3]);
-      //          trackExt->setZ0(par[4]);
-      //          trackExt->setChi2(chi2_D);
-      //          trackExt->setNDF(ndf_D);
-      //        }
-      //        delete[] idet_h;
-      //        delete[] ityp_h;
-      //        delete[] x_h;
-      //        delete[] y_h;
-      //        delete[] z_h;
-      //        delete[] rZ_h;
-      //        delete[] rR_h;
-      //        delete[] lhits;
-      //      }
       
-      if (_debug>=2) {
-        float d0Si = trackExt->getD0();
-        float z0Si = trackExt->getZ0();
-        float omegaSi = trackExt->getOmega();
-        float phi0Si = trackExt->getPhi();
-        float tanLSi = trackExt->getTanLambda();
-        helixSi.Initialize_Canonical(phi0Si,d0Si,z0Si,omegaSi,tanLSi,_bField);
-        float pxSi = helixSi.getMomentum()[0];
-        float pySi = helixSi.getMomentum()[1];
-        float pzSi = helixSi.getMomentum()[2];
-        const float pTot = sqrt(pxSi*pxSi+pySi*pySi+pzSi*pzSi);
-        const int ndfSi = trackExt->getNDF();
-        float Chi2Si = trackExt->getChi2()/float(trackExt->getNDF());
-        sprintf(strg,"%3i  %9.3f  %9.3f  %9.3f  %7.2f  %7.2f  %7.2f %4i %4i %8.3f",iTrk,
-                pTot, d0Si,z0Si,pxSi,pySi,pzSi,nHits, ndfSi, Chi2Si);
-        std::cout << strg << std::endl;
-      }
+      float d0Si = trackExt->getD0();
+      float z0Si = trackExt->getZ0();
+      float omegaSi = trackExt->getOmega();
+      float phi0Si = trackExt->getPhi();
+      float tanLSi = trackExt->getTanLambda();
+      helixSi.Initialize_Canonical(phi0Si,d0Si,z0Si,omegaSi,tanLSi,_bField);
+      float pxSi = helixSi.getMomentum()[0];
+      float pySi = helixSi.getMomentum()[1];
+      float pzSi = helixSi.getMomentum()[2];
+      const float pTot = sqrt(pxSi*pxSi+pySi*pySi+pzSi*pzSi);
+      const int ndfSi = trackExt->getNDF();
+      float Chi2Si = trackExt->getChi2()/float(trackExt->getNDF());
+      sprintf(strg,"%3i  %9.3f  %9.3f  %9.3f  %7.2f  %7.2f  %7.2f %4i %4i %8.3f",iTrk,
+              pTot, d0Si,z0Si,pxSi,pySi,pzSi,nHits, ndfSi, Chi2Si);
+      streamlog_out(DEBUG3) << strg << std::endl;
+      
       if(nHits>0){
         _allSiTracks.push_back( trackExt );
       }else{
         delete trackExt;
       }
     }
-    if (_debug>=2)
-      std::cout << std::endl;
+    
+    streamlog_out(DEBUG3) << std::endl;
   }
   catch ( DataNotAvailableException &e) {
-    if (_debug >= 2)
-      std::cout << _SiTrackCollection.c_str() << " collection is unavailable" << std::endl;
+    streamlog_out(DEBUG4) << _SiTrackCollection.c_str() << " collection is unavailable" << std::endl;
   }
   
   
@@ -1398,19 +1169,19 @@ void FullLDCTracking_MarlinTrk::MergeTPCandSiTracks() {
           _allCombinedTracks.push_back( combinedTrack );
           _candidateCombinedTracks.insert(tpcTrackExt);
           _candidateCombinedTracks.insert(siTrackExt);
-          if (_debug == 3 ) {
+          if (_debug >= 3 ) {
             int iopt = 1;
             PrintOutMerging(tpcTrackExt,siTrackExt,iopt);
           }
         }else{
-          if (_debug == 3 ) {
+          if (_debug >= 3 ) {
             int iopt = 6;
             PrintOutMerging(tpcTrackExt,siTrackExt,iopt);
           }
         }
       }
       else {
-        if (_debug == 3 ) {
+        if (_debug >= 3 ) {
           int iopt = 6;
           PrintOutMerging(tpcTrackExt,siTrackExt,iopt);
         }
@@ -1445,19 +1216,19 @@ void FullLDCTracking_MarlinTrk::MergeTPCandSiTracksII() {
         if (combinedTrack != NULL) {
           
           _allCombinedTracks.push_back( combinedTrack );
-          if (_debug == 3 ) {
+          if (_debug >= 3 ) {
             int iopt = 1;
             PrintOutMerging(tpcTrackExt,siTrackExt,iopt);
           }
         }else{
-          if (_debug == 3 ) {
+          if (_debug >= 3 ) {
             int iopt = 6;
             PrintOutMerging(tpcTrackExt,siTrackExt,iopt);
           }
         }
       }
       else {
-        if (_debug == 3 ) {
+        if (_debug >= 3 ) {
           int iopt = 6;
           PrintOutMerging(tpcTrackExt,siTrackExt,iopt);
         }
@@ -1481,7 +1252,7 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
   int nHits = nTPCHits + nSiHits;
   
   EVENT::TrackerHitVec trkHits;
-  //  trkHits.resize(nHits);
+  trkHits.reserve(nHits);
   
   for (int ih=0;ih<nSiHits;++ih) {
     TrackerHit * trkHit = siHitVec[ih]->getTrackerHit();
@@ -1517,14 +1288,14 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
   
   int number_of_added_hits = 0;
   for( it = trkHits.begin() ; it != trkHits.end() ; ++it )
-    {
+      {
     if (marlin_trk->addHit(*it) == 0){
       ++number_of_added_hits;
     }
     else{
-      streamlog_out(DEBUG4) << "Hit " << it - trkHits.begin() << " Dropped " << std::endl;
+      streamlog_out(DEBUG2) << "Hit " << it - trkHits.begin() << " Dropped " << std::endl;
     }
-    }
+      }
   
   if( number_of_added_hits < 3 ) {
     
@@ -1564,6 +1335,7 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
   
   float chiQ = chi2_D/float(ndf_D);
   
+  // SJA:FIXME remove hardcoded chiQ cut
   if (fit_status == 0 && chiQ > 0.001) {
     
     float chi2Fit = chi2_D/float(ndf_D);
@@ -1639,7 +1411,7 @@ TrackExtended * FullLDCTracking_MarlinTrk::TrialCombineTracks(TrackExtended * tp
   int nHits = nTPCHits + nSiHits;
   
   EVENT::TrackerHitVec trkHits;
-  //  trkHits.resize(nHits);
+  trkHits.reserve(nHits);
   
   for (int ih=0;ih<nSiHits;++ih) {
     TrackerHit * trkHit = siHitVec[ih]->getTrackerHit();
@@ -1669,14 +1441,14 @@ TrackExtended * FullLDCTracking_MarlinTrk::TrialCombineTracks(TrackExtended * tp
   
   int number_of_added_hits = 0;
   for( it = trkHits.begin() ; it != trkHits.end() ; ++it )
-    {
+      {
     if (marlin_trk->addHit(*it) == 0){
       ++number_of_added_hits;
     }
     else{
-      streamlog_out(DEBUG4) << "Hit " << it - trkHits.begin() << " Dropped " << std::endl;
+      streamlog_out(DEBUG2) << "Hit " << it - trkHits.begin() << " Dropped " << std::endl;
     }
-    }
+      }
   
   if( number_of_added_hits < 3 ) {
     
@@ -1716,6 +1488,8 @@ TrackExtended * FullLDCTracking_MarlinTrk::TrialCombineTracks(TrackExtended * tp
   
   float chiQ = chi2_D/float(ndf_D);
   
+  
+  // SJA:FIXME remove hard coded chiQ cut 
   if (fit_status == 0 && chiQ > 0.001) {
     
     float chi2Fit = chi2_D/float(ndf_D);
@@ -1771,19 +1545,17 @@ void FullLDCTracking_MarlinTrk::SortingTrackHitPairs(TrackHitPairVec & trackHitP
   TrackHitPair *one,*two,*Temp;
   
   for (int i = 0 ; i < sizeOfVector-1; i++)
-    for (int j = 0; j < sizeOfVector-i-1; j++)
-      {
+    for (int j = 0; j < sizeOfVector-i-1; j++) {
       one = trackHitPairVec[j];
       two = trackHitPairVec[j+1];
       float oneQ = one->getDistance();
       float twoQ = two->getDistance();
-      if( oneQ > twoQ )
-        {
+      if( oneQ > twoQ ) {
         Temp = trackHitPairVec[j];
         trackHitPairVec[j] = trackHitPairVec[j+1];
         trackHitPairVec[j+1] = Temp;
-        }
-      }  
+      }
+    }  
   
   
 }
@@ -1794,19 +1566,17 @@ void FullLDCTracking_MarlinTrk::Sorting(TrackExtendedVec & trackVec) {
   TrackExtended *one,*two,*Temp;
   
   for (int i = 0 ; i < sizeOfVector-1; i++)
-    for (int j = 0; j < sizeOfVector-i-1; j++)
-      {
+    for (int j = 0; j < sizeOfVector-i-1; j++) {
       one = trackVec[j];
       two = trackVec[j+1];
       float oneQ = one->getChi2()/float(one->getNDF());
       float twoQ = two->getChi2()/float(two->getNDF());
-      if( oneQ > twoQ )
-        {
+      if( oneQ > twoQ ) {
         Temp = trackVec[j];
         trackVec[j] = trackVec[j+1];
         trackVec[j+1] = Temp;
-        }
-      }  
+      }
+    }  
 }
 
 void FullLDCTracking_MarlinTrk::SelectCombinedTracks() {
@@ -1853,13 +1623,13 @@ void FullLDCTracking_MarlinTrk::SelectCombinedTracks() {
         group->setEdges(edges);
         _trkImplVec.push_back(trkExt);  
         
-        if (_debug == 3) {
+        if (_debug >= 3) {
           int iopt = 1;
           PrintOutMerging(secondTrack,firstTrack,iopt);
         }       
       }
     }else{
-      if(nTracks>2 && _debug>1)std::cout << " MORE THAN TWO TRACKS " << std::endl;
+      if(nTracks>2) streamlog_out(DEBUG3) << " MORE THAN TWO TRACKS " << std::endl;
     }
   }
   
@@ -1908,7 +1678,7 @@ void FullLDCTracking_MarlinTrk::AddNotCombinedTracks() {
             }else{
               if (_debug==3) {
                 int  iopt = 7;
-                std::cout << significance << " " << angleSignificance << std::endl;
+                streamlog_out(DEBUG2) << significance << " " << angleSignificance << std::endl;
                 PrintOutMerging(trkExtTPC,trkExtSi,iopt);
               }
             }
@@ -2007,7 +1777,7 @@ void FullLDCTracking_MarlinTrk::AddNotCombinedTracks() {
             float totChi2 = trkTPC->getChi2() + trkSi->getChi2();
             mergedTrack->setNDF( totNdf );
             mergedTrack->setChi2( totChi2 );
-            if (_debug == 3) {
+            if (_debug >= 3) {
               int iopt = 2;
               PrintOutMerging(trkTPC,trkSi,iopt);
             }
@@ -2096,7 +1866,7 @@ void FullLDCTracking_MarlinTrk::AddNotCombinedTracks() {
             }
           }
           else {
-            if (_debug == 3) {
+            if (_debug >= 3) {
               int iopt = 9;
               for (int iTrk=0;iTrk<nTrk;++iTrk) {
                 TrackExtended * trkInGroup = segVec[iTrk];
@@ -2721,13 +2491,7 @@ float FullLDCTracking_MarlinTrk::CompareTrk(TrackExtended * first, TrackExtended
           }
         }
         
-        const gear::TPCParameters& pTPC = Global::GEAR->getTPCParameters();
-        const gear::PadRowLayout2D& pTPCpads = pTPC.getPadLayout();
         
-        std::vector<double>tpcExtent = pTPCpads.getPlaneExtent();
-        
-        float tpcInnerR = tpcExtent[0]; 
-        int tpcMaxRow = pTPCpads.getNRows();
         
         // for non-looping tracks 
         int nhitsFirst  = (int)hitvecFirst.size();
@@ -2756,7 +2520,7 @@ float FullLDCTracking_MarlinTrk::CompareTrk(TrackExtended * first, TrackExtended
           
           float r = sqrt(x*x+y*y);
           
-          if(r>tpcInnerR) ntpcFirst++;
+          if(r>_tpc_inner_r) ntpcFirst++;
           
           hitxyz[0]=x;
           hitxyz[1]=y;
@@ -2779,7 +2543,7 @@ float FullLDCTracking_MarlinTrk::CompareTrk(TrackExtended * first, TrackExtended
           
           float r = sqrt(x*x+y*y);
           
-          if(r>tpcInnerR) ntpcSecond++;
+          if(r>_tpc_inner_r) ntpcSecond++;
           
           hitxyz[0]=x;
           hitxyz[1]=y;
@@ -2800,7 +2564,7 @@ float FullLDCTracking_MarlinTrk::CompareTrk(TrackExtended * first, TrackExtended
         //std::cout << "Momenta = " << momFirst << " " << momSecond << std::endl;
         //std::cout << "MaxDist = " << maxdistSecond << " " << maxdistFirst << " " << _maxHitDistanceCutHighPtMerge << std::endl;
         //std::cout << "close   = " << fcloseSecond << " " << fcloseFirst << " " << _maxFractionOfOutliersCutHighPtMerge << std::endl;
-        //std::cout << "ntpc    = " << ntpcFirst << " " << ntpcSecond << " " << tpcMaxRow+10 << std::endl;
+        //std::cout << "ntpc    = " << ntpcFirst << " " << ntpcSecond << " " << _tpc_pad_height+10 << std::endl;
         //std::cout << "pdot    = " << pdot << " significance " << significance << std::endl;
         
         TrackExtended * combinedTrack = TrialCombineTracks(first,second);
@@ -2814,7 +2578,8 @@ float FullLDCTracking_MarlinTrk::CompareTrk(TrackExtended * first, TrackExtended
           }
           delete combinedTrack->getGroupTracks();
           delete combinedTrack;
-        }else{
+        } 
+        else {
           //std::cout << "Could not combine track " << std::endl;
           if(significance<5 && fcloseFirst>_maxFractionOfOutliersCutHighPtMerge){
             split = true;
@@ -2830,9 +2595,12 @@ float FullLDCTracking_MarlinTrk::CompareTrk(TrackExtended * first, TrackExtended
            && 
            (fcloseSecond > _maxFractionOfOutliersCutHighPtMerge || fcloseFirst > _maxFractionOfOutliersCutHighPtMerge) 
            && 
-           ntpcFirst+ntpcSecond < tpcMaxRow+10.)
-          split = true;
-        
+           ntpcFirst+ntpcSecond < _tpc_pad_height+10.) {
+
+          split = true;        
+  
+        }
+  
         if(split){
           result = dpOverP;
         }
@@ -2845,156 +2613,200 @@ float FullLDCTracking_MarlinTrk::CompareTrk(TrackExtended * first, TrackExtended
   
 }
 
-//void FullLDCTracking_MarlinTrk::AddNotAssignedHits() {
-//  
-//  const gear::VXDParameters& pVXDDet = Global::GEAR->getVXDParameters();
-//  const gear::VXDLayerLayout& pVXDLayerLayout = pVXDDet.getVXDLayerLayout();
-//  int nLayersVTX = int(pVXDLayerLayout.getNLayers());
-//  
-//  const gear::GearParameters& pFTDDet = Global::GEAR->getGearParameters("FTD");  
-//  int nLayersFTD = int(pFTDDet.getDoubleVals("FTDZCoordinate").size());
-//  
-//  const gear::GearParameters& pSITDet = Global::GEAR->getGearParameters("SIT");  
-//  int nLayersSIT = int(pSITDet.getDoubleVals("SITLayerRadius").size());
-//  
-//  // Creating helix extrapolations
-//  if (_assignSETHits>0||_assignETDHits>0)
-//    CreateExtrapolations();
-//  
-////  if (_assignSETHits>0) { // Assignment of SET Hits
-////    
-////    const gear::GearParameters& pSETDet = Global::GEAR->getGearParameters("SET");  
-////    int nLayersSET = int(pSETDet.getDoubleVals("SETLayerRadius").size());
-////    
-////    int nSETHits = _allSETHits.size();
-////    std::vector<TrackerHitExtendedVec> SETHits;
-////    SETHits.resize(nLayersSET);
-////    
-////    for (int iSET=0;iSET<nSETHits;++iSET) {
-////      TrackerHitExtended * trkHit = _allSETHits[iSET];
-////      TrackerHit * hit = trkHit->getTrackerHit();
-////      int layer = hit->getType() - 401;
-////      if (layer>=0&&layer<nLayersSET) 
-////        SETHits[layer].push_back(trkHit);   
-////    }
-////    for (int iL=0; iL<nLayersSET; ++iL) { // loop over SET layers
-////      TrackerHitExtendedVec hitVec = SETHits[iL];
-////      int refit = 1;
-////      AssignOuterHitsToTracks(hitVec,_distCutForSETHits,refit);
-////    }
-////  }
-//  
-////  if (_assignETDHits>0) { // Assignment of ETD Hits
-////    
-////    const gear::GearParameters& pETDDet = Global::GEAR->getGearParameters("ETD");  
-////    int nLayersETD = int(pETDDet.getDoubleVals("ETDLayerZ").size());
-////    
-////    int nETDHits = _allETDHits.size();
-////    std::vector<TrackerHitExtendedVec> ETDHits;
-////    ETDHits.resize(nLayersETD);
-////    
-////    for (int iETD=0;iETD<nETDHits;++iETD) {
-////      TrackerHitExtended * trkHit = _allETDHits[iETD];
-////      TrackerHit * hit = trkHit->getTrackerHit();
-////      int layer = hit->getType() - 201;
-////      if (layer>=0 && layer < nLayersETD) 
-////        ETDHits[layer].push_back(trkHit);
-////    }
-////    for (int iL=0; iL<nLayersETD; ++iL) { // loop over ETD layers
-////      TrackerHitExtendedVec hitVec = ETDHits[iL];
-////      int refit = 0;
-////      AssignOuterHitsToTracks( hitVec, _distCutForETDHits, refit );
-////    }
-////    
-////  }
-//  
-//  // Cleaning up helix extrapolations
-//  if (_assignSETHits>0||_assignETDHits>0)
-//    CleanUpExtrapolations();
-//  
-////  if (_assignSITHits>0) { // Treatment of left-over SIT hits 
-////    std::vector<TrackerHitExtendedVec> nonAssignedSITHits;    
-////    nonAssignedSITHits.resize(nLayersSIT);
-////    int nSITHits = int(_allSITHits.size());
-////    for (int iH=0;iH<nSITHits;++iH) {
-////        TrackerHitExtended * trkHitExt = _allSITHits[iH];
-////        TrackExtended * trkExt = trkHitExt->getTrackExtended();
-////        if (trkExt == NULL) {
-////        TrackerHit * trkHit = trkHitExt->getTrackerHit();
-////        int layer = trkHit->getType() - 401;
-////        if (layer >=0 && layer < nLayersSIT) {
-////          nonAssignedSITHits[layer].push_back(trkHitExt);
-////        }
-////        }
-////    }       
-////    for (int iL=nLayersSIT-1;iL>=0;--iL) { // loop over layers in Si
-////        TrackerHitExtendedVec hitVec = nonAssignedSITHits[iL];
-////        AssignSiHitsToTracks(hitVec,
-////                           _distCutForSITHits);
-////    }
-////  }
-//  
-////  if (_assignFTDHits>0) { // Treatment of left-over FTD hits
-////    std::vector<TrackerHitExtendedVec> nonAssignedFTDHits;
-////    nonAssignedFTDHits.resize(nLayersFTD);
-////    int nFTDHits = int(_allFTDHits.size());
-////    for (int iH=0;iH<nFTDHits;++iH) {
-////        TrackerHitExtended * trkHitExt = _allFTDHits[iH];
-////        TrackExtended * trkExt = trkHitExt->getTrackExtended();
-////        if (trkExt == NULL) {
-////        TrackerHit * trkHit = trkHitExt->getTrackerHit();
-////        int layer = trkHit->getType() - 201;
-////        if (layer >=0 && layer < nLayersFTD)
-////          nonAssignedFTDHits[layer].push_back(trkHitExt);
-////        }
-////    }
-////    for (int iL=nLayersFTD-1;iL>=0;--iL) {
-////        TrackerHitExtendedVec hitVec = nonAssignedFTDHits[iL];
-////        AssignSiHitsToTracks(hitVec,
-////                           _distCutForFTDHits);     
-////    }
-////  }
-//  
-//  
-////  if (_assignVTXHits>0) { // Treatment of left-over VTX hits
-////    std::vector<TrackerHitExtendedVec> nonAssignedVTXHits;
-////    nonAssignedVTXHits.resize(nLayersVTX);
-////    int nVTXHits = int(_allVTXHits.size());
-////    for (int iH=0;iH<nVTXHits;++iH) {
-////        TrackerHitExtended * trkHitExt = _allVTXHits[iH];
-////        TrackExtended * trkExt = trkHitExt->getTrackExtended();
-////        if (trkExt == NULL) {
-////        TrackerHit * trkHit = trkHitExt->getTrackerHit();
-////        int layer = trkHit->getType() - 101;
-////        if (layer >=0 && layer < nLayersVTX)
-////          nonAssignedVTXHits[layer].push_back(trkHitExt);
-////        }
-////    }
-////    for (int iL=nLayersVTX-1;iL>=0;--iL) {
-////        TrackerHitExtendedVec hitVec = nonAssignedVTXHits[iL];
-////        AssignSiHitsToTracks(hitVec,
-////                           _distCutForVTXHits);     
-////    }
-////  }
-//  
-//  if(_debug>1)std::cout << "Assign TPC hits *********************************" << std::endl;
-//  
-//  if (_assignTPCHits) {// Treatment of left-over TPC hits
-//    TrackerHitExtendedVec nonAssignedTPCHits;
-//    int nTPCHits = int(_allTPCHits.size());
-//    for (int iH=0;iH<nTPCHits;++iH) {
-//          TrackerHitExtended * trkHitExt = _allTPCHits[iH];
-//          TrackExtended * trkExt = trkHitExt->getTrackExtended();
-//          if (trkExt == NULL) {
-//        nonAssignedTPCHits.push_back(trkHitExt);
-//          }
-//    }
-//    AssignTPCHitsToTracks(nonAssignedTPCHits,
-//                          _distCutForTPCHits);
-//  }
-//  
-//  
-//}
+void FullLDCTracking_MarlinTrk::AddNotAssignedHits() {
+  
+  
+  // Creating helix extrapolations
+  //  if (_assignSETHits>0||_assignETDHits>0)
+  //    CreateExtrapolations();
+  
+  //  if (_assignSETHits>0) { // Assignment of SET Hits
+  //    
+  //    const gear::GearParameters& pSETDet = Global::GEAR->getGearParameters("SET");  
+  //    int nLayersSET = int(pSETDet.getDoubleVals("SETLayerRadius").size());
+  //    
+  //    int nSETHits = _allSETHits.size();
+  //    std::vector<TrackerHitExtendedVec> SETHits;
+  //    SETHits.resize(nLayersSET);
+  //    
+  //    for (int iSET=0;iSET<nSETHits;++iSET) {
+  //      TrackerHitExtended * trkHit = _allSETHits[iSET];
+  //      TrackerHit * hit = trkHit->getTrackerHit();
+  //      int layer = hit->getType() - 401;
+  //      if (layer>=0&&layer<nLayersSET) 
+  //        SETHits[layer].push_back(trkHit);   
+  //    }
+  //    for (int iL=0; iL<nLayersSET; ++iL) { // loop over SET layers
+  //      TrackerHitExtendedVec hitVec = SETHits[iL];
+  //      int refit = 1;
+  //      AssignOuterHitsToTracks(hitVec,_distCutForSETHits,refit);
+  //    }
+  //  }
+  
+  //  if (_assignETDHits>0) { // Assignment of ETD Hits
+  //    
+  //    const gear::GearParameters& pETDDet = Global::GEAR->getGearParameters("ETD");  
+  //    int nLayersETD = int(pETDDet.getDoubleVals("ETDLayerZ").size());
+  //    
+  //    int nETDHits = _allETDHits.size();
+  //    std::vector<TrackerHitExtendedVec> ETDHits;
+  //    ETDHits.resize(nLayersETD);
+  //    
+  //    for (int iETD=0;iETD<nETDHits;++iETD) {
+  //      TrackerHitExtended * trkHit = _allETDHits[iETD];
+  //      TrackerHit * hit = trkHit->getTrackerHit();
+  //      int layer = hit->getType() - 201;
+  //      if (layer>=0 && layer < nLayersETD) 
+  //        ETDHits[layer].push_back(trkHit);
+  //    }
+  //    for (int iL=0; iL<nLayersETD; ++iL) { // loop over ETD layers
+  //      TrackerHitExtendedVec hitVec = ETDHits[iL];
+  //      int refit = 0;
+  //      AssignOuterHitsToTracks( hitVec, _distCutForETDHits, refit );
+  //    }
+  //    
+  //  }
+  
+  //  // Cleaning up helix extrapolations
+  //  if (_assignSETHits>0||_assignETDHits>0)
+  //    CleanUpExtrapolations();
+  
+  if (_assignSITHits>0) { // Treatment of left-over SIT hits 
+    
+    std::vector<TrackerHitExtendedVec> nonAssignedSITHits;    
+    nonAssignedSITHits.resize(_nLayersSIT);
+    
+    int nSITHits = int(_allSITHits.size());
+    
+    // loop over all SIT hits ...
+    for (int iH=0;iH<nSITHits;++iH) {
+      
+      TrackerHitExtended * trkHitExt = _allSITHits[iH];
+      TrackExtended * trkExt = trkHitExt->getTrackExtended();
+      
+      // check if this hit has not already been assigned to a track
+      if (trkExt == NULL) {
+        TrackerHit * trkHit = trkHitExt->getTrackerHit();
+        
+        UTIL::BitField64 encoder( ILDCellID0::encoder_string ) ;
+        encoder.setValue(trkHit->getCellID0());
+        
+        //        int layer = trkHit->getType() - 401;
+        int layer = encoder[ILDCellID0::layer];
+        
+        if (layer >=0 && layer < _nLayersSIT) {
+          nonAssignedSITHits[layer].push_back(trkHitExt);
+        }
+      }
+    }       
+    
+    for (int iL=_nLayersSIT-1;iL>=0;--iL) { // reverse loop over layers in Si
+      TrackerHitExtendedVec hitVec = nonAssignedSITHits[iL];
+      AssignSiHitsToTracks(hitVec,
+                           _distCutForSITHits);
+    }
+  }
+  
+  if (_assignFTDHits>0) { // Treatment of left-over FTD hits
+    
+    std::vector<TrackerHitExtendedVec> nonAssignedFTDHits;
+    nonAssignedFTDHits.resize(_nLayersFTD);
+    
+    int nFTDHits = int(_allFTDHits.size());
+    
+    // loop over all FTD hits ...
+    for (int iH=0;iH<nFTDHits;++iH) {
+      
+      TrackerHitExtended * trkHitExt = _allFTDHits[iH];
+      TrackExtended * trkExt = trkHitExt->getTrackExtended();
+      
+      // check if this hit has not already been assigned to a track
+      if (trkExt == NULL) {
+        TrackerHit * trkHit = trkHitExt->getTrackerHit();
+        
+        UTIL::BitField64 encoder( ILDCellID0::encoder_string ) ;
+        encoder.setValue(trkHit->getCellID0());
+        
+        //        int layer = trkHit->getType() - 201;
+        
+        // get the layer number
+        int layer = encoder[ILDCellID0::layer] ;
+        int petalIndex = encoder[ILDCellID0::module] ;
+        // as we are dealing with staggered petals we will use 2*nlayers in each directions +/- z
+        // the layers will follow the even odd numbering of the petals 
+        if ( petalIndex % 2 == 0 ) {
+          layer = 2*layer;
+        }
+        else {
+          layer = 2*layer + 1;
+        }
+        
+        
+        if (layer >=0 && layer < _nLayersFTD)
+          nonAssignedFTDHits[layer].push_back(trkHitExt);
+      }
+    }
+    for (int iL=_nLayersFTD-1;iL>=0;--iL) {
+      TrackerHitExtendedVec hitVec = nonAssignedFTDHits[iL];
+      AssignSiHitsToTracks(hitVec,
+                           _distCutForFTDHits);     
+    }
+  }
+  
+  
+  
+  if (_assignVTXHits>0) { // Treatment of left-over VTX hits
+    
+    std::vector<TrackerHitExtendedVec> nonAssignedVTXHits;
+    nonAssignedVTXHits.resize(_nLayersVTX);
+    
+    int nVTXHits = int(_allVTXHits.size());
+    
+    // loop over all VXD hits ...
+    for (int iH=0;iH<nVTXHits;++iH) {
+      
+      TrackerHitExtended * trkHitExt = _allVTXHits[iH];
+      TrackExtended * trkExt = trkHitExt->getTrackExtended();
+      
+      // check if this hit has not already been assigned to a track
+      if (trkExt == NULL) {
+        TrackerHit * trkHit = trkHitExt->getTrackerHit();
+        
+        UTIL::BitField64 encoder( ILDCellID0::encoder_string ) ;
+        encoder.setValue(trkHit->getCellID0());
+        
+        //        int layer = trkHit->getType() - 101;
+        int layer = encoder[ILDCellID0::layer];
+        
+        if (layer >=0 && layer < _nLayersVTX)
+          nonAssignedVTXHits[layer].push_back(trkHitExt);
+      }
+    }
+    for (int iL=_nLayersVTX-1;iL>=0;--iL) {
+      TrackerHitExtendedVec hitVec = nonAssignedVTXHits[iL];
+      AssignSiHitsToTracks(hitVec,
+                           _distCutForVTXHits);     
+    }
+  }
+    
+  streamlog_out(DEBUG4) << "Assign TPC hits *********************************" << std::endl;
+  
+  if (_assignTPCHits) {// Treatment of left-over TPC hits
+    TrackerHitExtendedVec nonAssignedTPCHits;
+    int nTPCHits = int(_allTPCHits.size());
+    for (int iH=0;iH<nTPCHits;++iH) {
+      TrackerHitExtended * trkHitExt = _allTPCHits[iH];
+      TrackExtended * trkExt = trkHitExt->getTrackExtended();
+      if (trkExt == NULL) {
+        nonAssignedTPCHits.push_back(trkHitExt);
+      }
+    }
+    AssignTPCHitsToTracks(nonAssignedTPCHits,
+                          _distCutForTPCHits);
+  }
+  
+  
+}
 
 
 void FullLDCTracking_MarlinTrk::CreateExtrapolations() {
@@ -3362,7 +3174,7 @@ void FullLDCTracking_MarlinTrk::AssignTPCHitsToTracks(TrackerHitExtendedVec hitV
     HitSign[iH]=signbit(temppos[2]);
   }    
   
-  if(_debug>0)std::cout << " Starting loop " << nTrk << " tracks   and  " << nHits << " hits" << std::endl;
+  streamlog_out(DEBUG4) << " Starting loop " << nTrk << " tracks   and  " << nHits << " hits" << std::endl;
   
   for (int iT=0;iT<nTrk;++iT) { // loop over all tracks
     TrackExtended * foundTrack = _trkImplVec[iT];
@@ -3416,7 +3228,7 @@ void FullLDCTracking_MarlinTrk::AssignTPCHitsToTracks(TrackerHitExtendedVec hitV
     }
   }
   
-  if(_debug>0)std::cout << " Fast loop done " << std::endl;
+  streamlog_out(DEBUG4) << " Fast loop done " << std::endl;
   
   
   //     for (int iH=0;iH<nHits;iH++) { // loop over leftover TPC hits
@@ -3483,175 +3295,200 @@ void FullLDCTracking_MarlinTrk::AssignTPCHitsToTracks(TrackerHitExtendedVec hitV
   
 }
 
-//void FullLDCTracking_MarlinTrk::AssignSiHitsToTracks(TrackerHitExtendedVec hitVec,
-//                                                     float dcut) {
-//  
-//  int nHits = int(hitVec.size());
-//  int nTrk = int(_allNonCombinedTPCTracks.size());
-//  
-//  std::map <TrackExtended*,bool> flagTrack;
-//  std::map <TrackerHitExtended*,bool> flagHit;
-//  TrackHitPairVec pairs;
-//  flagTrack.clear();
-//  flagHit.clear();
-//  pairs.clear();
-//  
-//  for (int iH=0;iH<nHits;++iH) {
-//    float pos[3];
-//    TrackerHitExtended * trkHitExt = hitVec[iH];
-//    TrackerHit * hit = trkHitExt->getTrackerHit();
-//    for (int ip=0;ip<3;++ip)
-//          pos[ip] = float(hit->getPosition()[ip]);
-//    for (int iT=0;iT<nTrk;++iT) {
-//          TrackExtended * trkExt = _allNonCombinedTPCTracks[iT];
-//          float tanLambda = trkExt->getTanLambda();       
-//          float product = pos[2]*tanLambda;
-//          if (product>0) {
-//        float d0 = trkExt->getD0();
-//        float z0 = trkExt->getZ0();
-//        float tanLambda = trkExt->getTanLambda();
-//        float phi0 = trkExt->getPhi();
-//        float omega = trkExt->getOmega();
-//        HelixClass helix;
-//        helix.Initialize_Canonical(phi0,d0,z0,omega,tanLambda,_bField);
-//        float distance = helix.getDistanceToPoint(pos,dcut);
-//        if (distance<dcut) {
-//          TrackHitPair * trkHitPair = 
-//          new TrackHitPair(trkExt,trkHitExt,distance);
-//          pairs.push_back(trkHitPair);
-//          flagTrack[trkExt] = true;
-//          flagHit[trkHitExt] = true;
-//        }
-//          }
-//    }
-//  }
-//  
-//  int nPairs = int(pairs.size());
-//  if (nPairs>0) {
-//    SortingTrackHitPairs(pairs);
-//    for (int iP=0;iP<nPairs;++iP) {
-//          TrackHitPair * trkHitPair = pairs[iP];
-//          TrackExtended * trkExt = trkHitPair->getTrackExtended();
-//          TrackerHitExtended * trkHitExt = 
-//      trkHitPair->getTrackerHitExtended();
-//          if (flagTrack[trkExt] && flagHit[trkHitExt]) {              
-//        TrackerHitExtendedVec hitsInTrack = 
-//                  trkExt->getTrackerHitExtendedVec();
-//        int nTotH = int(hitsInTrack.size());
-//        int nHitsInFit = 0;
-//        for (int iTH=0;iTH<nTotH;++iTH) {
-//          TrackerHitExtended * hitInTrack = hitsInTrack[iTH];
-//          if (hitInTrack->getUsedInFit())
-//            nHitsInFit++;
-//        }
-//        float * x_h = new float[nHitsInFit+1];
-//        float * y_h = new float[nHitsInFit+1];
-//        float * z_h = new float[nHitsInFit+1];
-//        int * idet_h = new int[nHitsInFit+1];
-//        int * ityp_h = new int[nHitsInFit+1];
-//        int * lhits = new int[nHitsInFit+1];
-//        float * rR_h = new float[nHitsInFit+1];
-//        float * rZ_h = new float[nHitsInFit+1];
-//        int iHitInFit = 0;
-//        for (int iHit=0;iHit<nTotH;++iHit) {
-//          TrackerHitExtended * hitInTrack = hitsInTrack[iHit];
-//          if (hitInTrack->getUsedInFit()) {
-//            TrackerHit * hit = hitInTrack->getTrackerHit();
-//            x_h[iHitInFit] = float(hit->getPosition()[0]);
-//            y_h[iHitInFit] = float(hit->getPosition()[1]);
-//            z_h[iHitInFit] = float(hit->getPosition()[2]);
-//            idet_h[iHitInFit] = hitInTrack->getDet();
-//            ityp_h[iHitInFit] = hitInTrack->getType();
-//            rR_h[iHitInFit] = hitInTrack->getResolutionRPhi();
-//            rZ_h[iHitInFit] = hitInTrack->getResolutionZ();
-//            iHitInFit++;
-//          }
-//        }
-//        TrackerHit * remainHit = trkHitExt->getTrackerHit();
-//        x_h[iHitInFit] = float(remainHit->getPosition()[0]);
-//        y_h[iHitInFit] = float(remainHit->getPosition()[1]);
-//        z_h[iHitInFit] = float(remainHit->getPosition()[2]);
-//        idet_h[iHitInFit] = trkHitExt->getDet();
-//        ityp_h[iHitInFit] = trkHitExt->getType();
-//        rR_h[iHitInFit] = trkHitExt->getResolutionRPhi();
-//        rZ_h[iHitInFit] = trkHitExt->getResolutionZ();                
-//        iHitInFit++;
-//        int NPT = iHitInFit;
-//        float chi2_D;
-//        int ndf_D;
-//        float chi2rphi,chi2z;
-//        float par[5];
-//        float epar[15];
-//        float refPoint[3];
-//        int ierr = _trackFit.DoFitting(_useExtraPoint,_optFit,NPT,
-//                                       _bField,idet_h,ityp_h,
-//                                       _chi2PrefitCut,
-//                                       x_h,y_h,z_h,rR_h,rZ_h,
-//                                       par,epar,refPoint,chi2_D,ndf_D,
-//                                       chi2rphi,chi2z,lhits);        
-//        float chi2ndf = chi2_D/float(ndf_D);
-//        if (ierr==0 && chi2ndf<_chi2FitCut) {
-//          trkExt->addTrackerHitExtended( trkHitExt );
-//          trkExt->setCovMatrix(epar);
-//          trkExt->setOmega(par[0]);     
-//          trkExt->setTanLambda(par[1]);
-//          trkExt->setPhi(par[2]);
-//          trkExt->setD0(par[3]);
-//          trkExt->setZ0(par[4]);
-//          trkExt->setChi2(chi2_D);
-//          trkExt->setNDF(ndf_D);
-//          if (_optFit == 4) {
-//            GroupTracks * group = trkExt->getGroupTracks();
-//            if (group!=NULL) {
-//              TrackExtendedVec trks = group->getTrackExtendedVec();
-//              int nTrks = int(trks.size());
-//              if (nTrks > 0) {
-//                TrackExtended * siTrack = trks[0];
-//                // preserving positiveness of cov. matrix
-//                float eD0 = siTrack->getCovMatrix()[0];
-//                float eZ0 = siTrack->getCovMatrix()[9];
-//                float sD0 = sqrt(eD0/epar[0]);
-//                float sZ0 = sqrt(eZ0/epar[9]);
-//                epar[0]  = eD0;
-//                epar[9]  = eZ0;
-//                epar[1]  = sD0*epar[1];
-//                epar[3]  = sD0*epar[3];
-//                epar[10] = sD0*epar[10];
-//                epar[7]  = sZ0*epar[7];
-//                epar[8]  = sZ0*epar[8];
-//                epar[13] = sZ0*epar[13];
-//                epar[6]  = sD0*sZ0*epar[6];
-//                trkExt->setZ0(siTrack->getZ0());
-//                trkExt->setD0(siTrack->getD0());
-//                trkExt->setCovMatrix(epar);                   
-//              }
-//            }
-//          }
-//          trkHitExt->setTrackExtended( trkExt );
-//          trkHitExt->setUsedInFit( true );
-//          flagTrack[trkExt] = false;
-//          flagHit[trkHitExt] = false;
-//        }
-//        delete[] x_h;
-//        delete[] y_h;
-//        delete[] z_h;
-//        delete[] rR_h;
-//        delete[] rZ_h;
-//        delete[] idet_h;
-//        delete[] ityp_h;
-//        delete[] lhits;
-//          }
-//    }
-//    
-//    for (int iP=0;iP<nPairs;++iP) {
-//          TrackHitPair * trkHitPair = pairs[iP];
-//          delete trkHitPair;
-//    }
-//    
-//    pairs.clear();
-//    
-//  }
-//}
+void FullLDCTracking_MarlinTrk::AssignSiHitsToTracks(TrackerHitExtendedVec hitVec,
+                                                     float dcut) {
+  
+  int nHits = int(hitVec.size());
+  int nTrk = int(_allNonCombinedTPCTracks.size());
+  
+  std::map <TrackExtended*,bool> flagTrack;
+  std::map <TrackerHitExtended*,bool> flagHit;
+  TrackHitPairVec pairs;
+  flagTrack.clear();
+  flagHit.clear();
+  pairs.clear();
+  
+  for (int iH=0;iH<nHits;++iH) {
+    
+    float pos[3];
+    TrackerHitExtended * trkHitExt = hitVec[iH];
+    TrackerHit * hit = trkHitExt->getTrackerHit();
+    
+    for (int ip=0;ip<3;++ip) {
+      pos[ip] = float(hit->getPosition()[ip]);
+    }
+    
+    for (int iT=0;iT<nTrk;++iT) {
+      
+      TrackExtended * trkExt = _allNonCombinedTPCTracks[iT];
+      
+      float tanLambda = trkExt->getTanLambda();       
+      float product = pos[2]*tanLambda;
+      
+      if (product>0) {
+        
+        float d0 = trkExt->getD0();
+        float z0 = trkExt->getZ0();
+        float tanLambda = trkExt->getTanLambda();
+        float phi0 = trkExt->getPhi();
+        float omega = trkExt->getOmega();
+        
+        HelixClass helix;
+        helix.Initialize_Canonical(phi0,d0,z0,omega,tanLambda,_bField);
+        float distance = helix.getDistanceToPoint(pos,dcut);
+        
+        if (distance<dcut) {
+          TrackHitPair * trkHitPair = 
+          new TrackHitPair(trkExt,trkHitExt,distance);
+          pairs.push_back(trkHitPair);
+          flagTrack[trkExt] = true;
+          flagHit[trkHitExt] = true;
+        }
+      }
+    }
+  }
+  
+  int nPairs = int(pairs.size());
+  
+  if (nPairs>0) {
+    
+    SortingTrackHitPairs(pairs);
+    
+    for (int iP=0;iP<nPairs;++iP) {
+      
+      TrackHitPair * trkHitPair = pairs[iP];
+      TrackExtended * trkExt = trkHitPair->getTrackExtended();
+      TrackerHitExtended * trkHitExt = 
+      
+      trkHitPair->getTrackerHitExtended();
+      
+      if (flagTrack[trkExt] && flagHit[trkHitExt]) {              
+        
+        // get the hits already assigned to the track
+        TrackerHitExtendedVec hitsInTrack = trkExt->getTrackerHitExtendedVec();
+        
+        int nTotH = int(hitsInTrack.size());
+        int nHitsInFit = 0;
+        
+        for (int iTH=0;iTH<nTotH;++iTH) {
+          
+          TrackerHitExtended * hitInTrack = hitsInTrack[iTH];
+          
+          // count the number of hits used in the fit
+          if (hitInTrack->getUsedInFit()) {
+            nHitsInFit++; 
+          }
+        }
+        
+        int iHitInFit = 0;
+        
+        // add the previously used hits from the track to the vectors 
+        
+        EVENT::TrackerHitVec trkHits;
+        
+        for (int iHit=0;iHit<nTotH;++iHit) {
+          
+          TrackerHitExtended * hitInTrack = hitsInTrack[iHit];
+          if (hitInTrack->getUsedInFit()) {
+            TrackerHit * hit = hitInTrack->getTrackerHit();
+            iHitInFit++;
+            trkHits.push_back(hit);
+          }
+        }
+        
+        // add the hit to be attached to the vectors 
+        TrackerHit * remainHit = trkHitExt->getTrackerHit();
+        iHitInFit++;
+        trkHits.push_back(remainHit);
+        
+        
+        double chi2;
+        int ndf;
+        
+        if( trkHits.size() < 3 ) return ;
+        
+        MarlinTrk::IMarlinTrack* marlin_trk = _trksystem->createTrack();
+        sort(trkHits.begin(), trkHits.end(), FullLDCTracking_MarlinTrk::compare_r() );
+        
+        EVENT::TrackerHitVec::iterator it = trkHits.begin();
+        
+        streamlog_out(DEBUG2) << "Start Fitting: AddHits: number of hits to fit " << trkHits.size() << std::endl;
+        
+        int number_of_added_hits = 0;
+        for( it = trkHits.begin() ; it != trkHits.end() ; ++it ) {
+          
+          if (marlin_trk->addHit(*it) == 0){
+            ++number_of_added_hits;
+          }
+          else{
+            streamlog_out(DEBUG4) << "Hit " << it - trkHits.begin() << " Dropped " << std::endl;
+          }
+          
+        }
+        
+        if( number_of_added_hits < 3 ) {
+          delete marlin_trk ;
+          return ;
+        }
+        
+        marlin_trk->initialise( IMarlinTrack::backward ) ;
+        int fit_status = marlin_trk->fit() ; 
+        
+        if( fit_status != 0 ){ 
+          delete marlin_trk ;
+          return;
+        }
+        
+        const gear::Vector3D point(0.,0.,0.); // nominal IP
+        int return_code = 0;
+        
+        TrackStateImpl trkState ;
+        return_code = marlin_trk->propagate(point, trkState, chi2, ndf ) ;
+        
+        delete marlin_trk ;
+        
+        if (return_code !=0 || (chi2/(double)ndf) > _chi2FitCut) {
+          return;
+        }
+        
+        
+        // note trackAR which is of type TrackExtended, only takes fits set for ref point = 0,0,0 
+        trkExt->setOmega(trkState.getOmega());
+        trkExt->setTanLambda(trkState.getTanLambda());
+        trkExt->setPhi(trkState.getPhi());
+        trkExt->setD0(trkState.getD0());
+        trkExt->setZ0(trkState.getZ0());
+        
+        
+        float cov[15];
+        
+        for (int i = 0 ; i<15 ; ++i) {
+          cov[i] = trkState.getCovMatrix().operator[](i);
+        }
+        
+        trkExt->setCovMatrix(cov);
+        trkExt->setChi2(chi2);
+        trkExt->setNDF(ndf);
+        
+        trkExt->addTrackerHitExtended( trkHitExt );
+        trkHitExt->setTrackExtended( trkExt );
+        trkHitExt->setUsedInFit( true );
+        flagTrack[trkExt] = false;
+        flagHit[trkHitExt] = false;
+        
+        
+      }
+    }
+    
+    for (int iP=0;iP<nPairs;++iP) {
+      TrackHitPair * trkHitPair = pairs[iP];
+      delete trkHitPair;
+    }
+    
+    pairs.clear();
+    
+  }
+}
 
 void FullLDCTracking_MarlinTrk::PrintOutMerging(TrackExtended * firstTrackExt, TrackExtended * secondTrackExt, int iopt) {
   // iopt = 1 false Si and TPC merging
@@ -3664,6 +3501,7 @@ void FullLDCTracking_MarlinTrk::PrintOutMerging(TrackExtended * firstTrackExt, T
   // iopt = 8 unmerged Comb and TPC
   // iopt = 9 unmerged TPC segments
   
+  char strg[200];
   
   try {
     
@@ -3704,6 +3542,7 @@ void FullLDCTracking_MarlinTrk::PrintOutMerging(TrackExtended * firstTrackExt, T
     
     LCCollection * firstCol = _evt->getCollection(firstColName.c_str());
     LCCollection * secondCol = _evt->getCollection(secondColName.c_str());
+    
     
     LCRelationNavigator firstNav(firstCol);
     LCRelationNavigator secondNav(secondCol);
@@ -3771,6 +3610,7 @@ void FullLDCTracking_MarlinTrk::PrintOutMerging(TrackExtended * firstTrackExt, T
     float pFirst = sqrt(pxFirst*pxFirst+pyFirst*pyFirst+pzFirst*pzFirst);
     float pSecond = sqrt(pxSecond*pxSecond+pySecond*pySecond+pzSecond*pzSecond);
     
+    //SJA:FIXME Hardcoded cut here should be removed 
     if(pFirst < 1.5 && pSecond < 1.5 )return; 
     
     const float sigmaPOverPFirst  = sqrt(firstTrackExt->getCovMatrix()[5])/fabs(omegaFirst);
@@ -3792,44 +3632,52 @@ void FullLDCTracking_MarlinTrk::PrintOutMerging(TrackExtended * firstTrackExt, T
     if (firstMCP!=secondMCP && iopt < 6) {
       
       if (iopt==1) {
-        std::cout << "Erroneous combining Si and TPC segments (iopt=1) --->" << std::endl;
+        streamlog_out(DEBUG4) << "Erroneous combining Si and TPC segments (iopt=1) --->" << std::endl;
       }
       else if (iopt==2) {
-        std::cout << "Erroneous merging of Si and TPC segments (iopt=2) --->" << std::endl;
+        streamlog_out(DEBUG4) << "Erroneous merging of Si and TPC segments (iopt=2) --->" << std::endl;
       }
       else if (iopt==3) {
-        std::cout << "Erroneous merging of TPC segments (iopt=3) ---> " << std::endl; 
+        streamlog_out(DEBUG4) << "Erroneous merging of TPC segments (iopt=3) ---> " << std::endl; 
       }
       else if (iopt==4) {
-        std::cout << "Erroneous merging of combSi segment with uncombTPC segment (iopt=4) ---> " << std::endl;
+        streamlog_out(DEBUG4) << "Erroneous merging of combSi segment with uncombTPC segment (iopt=4) ---> " << std::endl;
       }
       else {
-        std::cout << "Erroneous merging of combTPC segment with uncombTPC segment (iopt=5) --->" << std::endl;
+        streamlog_out(DEBUG4) << "Erroneous merging of combTPC segment with uncombTPC segment (iopt=5) --->" << std::endl;
       }
       
-      printf("%7.2f +- %7.2f    %7.1f %7.1f %7.2f %7.2f %7.2f  ",
-             pFirst, sigmaPFirst, d0First,z0First,pxFirst,pyFirst,pzFirst);
-      printf("  %5.3f\n",firstWght);
       
-      printf("%7.2f +- %7.2f    %7.1f %7.1f %7.2f %7.2f %7.2f  ",
-             pSecond, sigmaPSecond, d0Second,z0Second,pxSecond,pySecond,pzSecond);
-      printf("  %5.3f\n",secondWght);
       
-      std::cout << "Difference in +P = " << dPplus << "  -P = " << dPminus << std::endl;
+      sprintf(strg,"%7.2f +- %7.2f    %7.1f %7.1f %7.2f %7.2f %7.2f  ",
+              pFirst, sigmaPFirst, d0First,z0First,pxFirst,pyFirst,pzFirst);
+      streamlog_out(DEBUG4) << strg;
+      
+      sprintf(strg,"  %5.3f\n",firstWght);
+      streamlog_out(DEBUG4) << strg;
+      
+      
+      sprintf(strg,"%7.2f +- %7.2f    %7.1f %7.1f %7.2f %7.2f %7.2f  ",
+              pSecond, sigmaPSecond, d0Second,z0Second,pxSecond,pySecond,pzSecond);
+      streamlog_out(DEBUG4) << strg;
+      sprintf(strg,"  %5.3f\n",secondWght);
+      streamlog_out(DEBUG4) << strg;
+      
+      streamlog_out(DEBUG4) << "Difference in +P = " << dPplus << "  -P = " << dPminus << std::endl;
       
       
       TrackExtended * combinedTrack = TrialCombineTracks(firstTrackExt,secondTrackExt);
       
       if(combinedTrack != NULL){
-        std::cout << "CombinedTrack " << combinedTrack->getNDF() << " c.f. " << firstTrackExt->getNDF()+secondTrackExt->getNDF()+5 << std::endl;
+        streamlog_out(DEBUG4) << "CombinedTrack " << combinedTrack->getNDF() << " c.f. " << firstTrackExt->getNDF()+secondTrackExt->getNDF()+5 << std::endl;
         delete combinedTrack->getGroupTracks();
         delete combinedTrack;
       }else{
-        std::cout << "Could not combine track " << std::endl;
+        streamlog_out(DEBUG4) << "Could not combine track " << std::endl;
       }
-      std::cout << " Overlap = " << SegmentRadialOverlap(firstTrackExt, secondTrackExt) << " veto = " << VetoMerge(firstTrackExt, secondTrackExt) << std::endl;
+      streamlog_out(DEBUG4) << " Overlap = " << SegmentRadialOverlap(firstTrackExt, secondTrackExt) << " veto = " << VetoMerge(firstTrackExt, secondTrackExt) << std::endl;
       
-      std::cout << std::endl;
+      streamlog_out(DEBUG4) << std::endl;
       
     }
     else if (firstMCP==secondMCP && ( (iopt==8) || (iopt==9) ) ) {
@@ -3837,10 +3685,10 @@ void FullLDCTracking_MarlinTrk::PrintOutMerging(TrackExtended * firstTrackExt, T
       float deltaOmega = _dOmegaForMerging;
       float deltaAngle = _angleForMerging;
       if (iopt==8) {
-        std::cout << "Unmerged TPC and Comb segments (iopt=8) --->" << std::endl;
+        streamlog_out(DEBUG4) << "Unmerged TPC and Comb segments (iopt=8) --->" << std::endl;
       }
       else {
-        std::cout << "Unmerged TPC segments (iopt=9) --->" << std::endl;
+        streamlog_out(DEBUG4) << "Unmerged TPC segments (iopt=9) --->" << std::endl;
       }
       
       float qFirst = PIOVER2 - atan(tanLFirst);
@@ -3851,33 +3699,37 @@ void FullLDCTracking_MarlinTrk::PrintOutMerging(TrackExtended * firstTrackExt, T
       angle = acos(angle);
       
       
-      std::cout << " dOmegaCut = " << deltaOmega
+      streamlog_out(DEBUG4) << " dOmegaCut = " << deltaOmega
       << " AngleCut = " << deltaAngle
       << " dOmega = " << dOmega
       << " angle = " << angle << std::endl;
       
       
-      printf("%7.2f +- %7.2f    %7.1f %7.1f %7.2f %7.2f %7.2f  ",
-             pFirst, sigmaPFirst, d0First,z0First,pxFirst,pyFirst,pzFirst);
-      printf("  %5.3f\n",firstWght);
+      sprintf(strg,"%7.2f +- %7.2f    %7.1f %7.1f %7.2f %7.2f %7.2f  ",
+              pFirst, sigmaPFirst, d0First,z0First,pxFirst,pyFirst,pzFirst);
+      streamlog_out(DEBUG4) << strg;
+      sprintf(strg,"  %5.3f\n",firstWght);
+      streamlog_out(DEBUG4) << strg;
       
-      printf("%7.2f +- %7.2f    %7.1f %7.1f %7.2f %7.2f %7.2f  ",
-             pSecond, sigmaPSecond, d0Second,z0Second,pxSecond,pySecond,pzSecond);
-      printf("  %5.3f\n",secondWght);
+      sprintf(strg,"%7.2f +- %7.2f    %7.1f %7.1f %7.2f %7.2f %7.2f  ",
+              pSecond, sigmaPSecond, d0Second,z0Second,pxSecond,pySecond,pzSecond);
+      streamlog_out(DEBUG4) << strg;
+      sprintf(strg,"  %5.3f\n",secondWght);
+      streamlog_out(DEBUG4) << strg;
       
-      std::cout << "Difference in +P = " << dPplus << "  -P = " << dPminus << std::endl;
+      streamlog_out(DEBUG4) << "Difference in +P = " << dPplus << "  -P = " << dPminus << std::endl;
       
       TrackExtended * combinedTrack = TrialCombineTracks(firstTrackExt,secondTrackExt);
       if(combinedTrack != NULL){
-        std::cout << "CombinedTrack " << combinedTrack->getNDF() << " c.f. " << firstTrackExt->getNDF()+secondTrackExt->getNDF()+5 << std::endl;
+        streamlog_out(DEBUG4) << "CombinedTrack " << combinedTrack->getNDF() << " c.f. " << firstTrackExt->getNDF()+secondTrackExt->getNDF()+5 << std::endl;
         delete combinedTrack->getGroupTracks();
         delete combinedTrack;
       }else{
-        std::cout << "Could not combine track " << std::endl;
+        streamlog_out(DEBUG4) << "Could not combine track " << std::endl;
       }
-      std::cout << " Overlap = " << SegmentRadialOverlap(firstTrackExt, secondTrackExt) << " veto = " << VetoMerge(firstTrackExt, secondTrackExt) << std::endl;
+      streamlog_out(DEBUG4) << " Overlap = " << SegmentRadialOverlap(firstTrackExt, secondTrackExt) << " veto = " << VetoMerge(firstTrackExt, secondTrackExt) << std::endl;
       
-      std::cout << std::endl;
+      streamlog_out(DEBUG4) << std::endl;
       
     }    
     else if (firstMCP==secondMCP && ( (iopt == 6) || (iopt == 7) ) ) {
@@ -3886,10 +3738,10 @@ void FullLDCTracking_MarlinTrk::PrintOutMerging(TrackExtended * firstTrackExt, T
       float deltaAngle = _angleForMerging;
       
       if (iopt ==6) {
-        std::cout << "Unmerged TPC and Si segments (iopt=6) --->" << std::endl;
+        streamlog_out(DEBUG4) << "Unmerged TPC and Si segments (iopt=6) --->" << std::endl;
       }
       else {
-        std::cout << "Unmerged TPC and Si segments (iopt=7) --->" << std::endl;
+        streamlog_out(DEBUG4) << "Unmerged TPC and Si segments (iopt=7) --->" << std::endl;
         deltaOmega = _dOmegaForForcedMerging;
         deltaAngle = _angleForForcedMerging;
       }
@@ -3903,70 +3755,79 @@ void FullLDCTracking_MarlinTrk::PrintOutMerging(TrackExtended * firstTrackExt, T
       angle = acos(angle);
       
       
-      std::cout << " dOmegaCut = " << deltaOmega
+      streamlog_out(DEBUG4) << " dOmegaCut = " << deltaOmega
       << " AngleCut = " << deltaAngle
       << " dOmega = " << dOmega
       << " angle = " << angle << std::endl;
-      printf("%7.2f +- %7.2f    %7.1f %7.1f %7.2f %7.2f %7.2f  ",
-             pFirst, sigmaPFirst, d0First,z0First,pxFirst,pyFirst,pzFirst);
-      printf("  %5.3f\n",firstWght);
+      sprintf(strg,"%7.2f +- %7.2f    %7.1f %7.1f %7.2f %7.2f %7.2f  ",
+              pFirst, sigmaPFirst, d0First,z0First,pxFirst,pyFirst,pzFirst);
+      streamlog_out(DEBUG4) << strg;
+      sprintf(strg,"  %5.3f\n",firstWght);
+      streamlog_out(DEBUG4) << strg;
       
-      printf("%7.2f +- %7.2f    %7.1f %7.1f %7.2f %7.2f %7.2f  ",
-             pSecond, sigmaPSecond, d0Second,z0Second,pxSecond,pySecond,pzSecond);
-      printf("  %5.3f\n",secondWght);
+      sprintf(strg,"%7.2f +- %7.2f    %7.1f %7.1f %7.2f %7.2f %7.2f  ",
+              pSecond, sigmaPSecond, d0Second,z0Second,pxSecond,pySecond,pzSecond);
+      streamlog_out(DEBUG4) << strg;
+      sprintf(strg,"  %5.3f\n",secondWght);
+      streamlog_out(DEBUG4) << strg;
       
-      std::cout << "Difference in +P = " << dPplus << "  -P = " << dPminus << std::endl;      
+      streamlog_out(DEBUG4) << "Difference in +P = " << dPplus << "  -P = " << dPminus << std::endl;      
       TrackExtended * combinedTrack = TrialCombineTracks(firstTrackExt,secondTrackExt);
       
       if(combinedTrack != NULL){
-        std::cout << "CombinedTrack " << combinedTrack->getNDF() << " c.f. " << firstTrackExt->getNDF()+secondTrackExt->getNDF()+5 << std::endl;
+        streamlog_out(DEBUG4) << "CombinedTrack " << combinedTrack->getNDF() << " c.f. " << firstTrackExt->getNDF()+secondTrackExt->getNDF()+5 << std::endl;
         delete combinedTrack->getGroupTracks();
         delete combinedTrack;
       }else{
-        std::cout << "Could not combine track " << std::endl;
+        streamlog_out(DEBUG4) << "Could not combine track " << std::endl;
       }
-      std::cout << " Overlap = " << SegmentRadialOverlap(firstTrackExt, secondTrackExt) << " veto = " << VetoMerge(firstTrackExt, secondTrackExt) << std::endl;
-      std::cout << std::endl;      
+      streamlog_out(DEBUG4) << " Overlap = " << SegmentRadialOverlap(firstTrackExt, secondTrackExt) << " veto = " << VetoMerge(firstTrackExt, secondTrackExt) << std::endl;
+      streamlog_out(DEBUG4) << std::endl;      
       
     }else if (firstMCP==secondMCP && iopt < 6) {
-      return;
+      //      return;
       if (iopt==1) {
-        std::cout << "Correct combining Si and TPC segments (iopt=1) --->" << std::endl;
+        streamlog_out(DEBUG4) << "Correct combining Si and TPC segments (iopt=1) --->" << std::endl;
       }
       else if (iopt==2) {
-        std::cout << "Correct merging of Si and TPC segments (iopt=2) --->" << std::endl;
+        streamlog_out(DEBUG4) << "Correct merging of Si and TPC segments (iopt=2) --->" << std::endl;
       }
       else if (iopt==3) {
-        std::cout << "Correct merging of TPC segments (iopt=3) ---> " << std::endl; 
+        streamlog_out(DEBUG4) << "Correct merging of TPC segments (iopt=3) ---> " << std::endl; 
       }
       else if (iopt==4) {
-        std::cout << "Correct merging of combSi segment with uncombTPC segment (iopt=4) ---> " << std::endl;
+        streamlog_out(DEBUG4) << "Correct merging of combSi segment with uncombTPC segment (iopt=4) ---> " << std::endl;
       }
       else {
-        std::cout << "Correct merging of combTPC segment with uncombTPC segment (iopt=5) --->" << std::endl;
+        streamlog_out(DEBUG4) << "Correct merging of combTPC segment with uncombTPC segment (iopt=5) --->" << std::endl;
       }
       
-      printf("%7.2f +- %7.2f    %7.1f %7.1f %7.2f %7.2f %7.2f  ",
-             pFirst, sigmaPFirst, d0First,z0First,pxFirst,pyFirst,pzFirst);
-      printf("  %5.3f\n",firstWght);
+      streamlog_out(DEBUG3) << "    p         error       D0      Z0     Px      Py      Pz      wieght" << std::endl;
+      sprintf(strg,"%7.2f +- %7.2f    %7.1f %7.1f %7.2f %7.2f %7.2f  ",
+              pFirst, sigmaPFirst, d0First,z0First,pxFirst,pyFirst,pzFirst);
+      streamlog_out(DEBUG4) << strg;
+      sprintf(strg,"  %5.3f\n",firstWght);
+      streamlog_out(DEBUG4) << strg;
       
-      printf("%7.2f +- %7.2f    %7.1f %7.1f %7.2f %7.2f %7.2f  ",
-             pSecond, sigmaPSecond, d0Second,z0Second,pxSecond,pySecond,pzSecond);
-      printf("  %5.3f\n",secondWght);
+      sprintf(strg,"%7.2f +- %7.2f    %7.1f %7.1f %7.2f %7.2f %7.2f  ",
+              pSecond, sigmaPSecond, d0Second,z0Second,pxSecond,pySecond,pzSecond);
+      streamlog_out(DEBUG4) << strg;
+      sprintf(strg,"  %5.3f\n",secondWght);
+      streamlog_out(DEBUG4) << strg;
       
-      std::cout << "Difference in +P = " << dPplus << "  -P = " << dPminus << std::endl;
+      streamlog_out(DEBUG4) << "Difference in +P = " << dPplus << "  -P = " << dPminus << std::endl;
       TrackExtended * combinedTrack = TrialCombineTracks(firstTrackExt,secondTrackExt);
       
       if(combinedTrack != NULL){
-        std::cout << "CombinedTrack " << combinedTrack->getNDF() << " c.f. " << firstTrackExt->getNDF()+secondTrackExt->getNDF()+5 << std::endl;
+        streamlog_out(DEBUG4) << "CombinedTrack " << combinedTrack->getNDF() << " c.f. " << firstTrackExt->getNDF()+secondTrackExt->getNDF()+5 << std::endl;
       }else{
-        std::cout << "Could not combine track " << std::endl;
+        streamlog_out(DEBUG4) << "Could not combine track " << std::endl;
       }
       delete combinedTrack->getGroupTracks();
       delete combinedTrack;
-      std::cout << " Overlap = " << SegmentRadialOverlap(firstTrackExt, secondTrackExt) << " veto = " << VetoMerge(firstTrackExt, secondTrackExt) << std::endl;
+      streamlog_out(DEBUG4) << " Overlap = " << SegmentRadialOverlap(firstTrackExt, secondTrackExt) << " veto = " << VetoMerge(firstTrackExt, secondTrackExt) << std::endl;
       
-      std::cout << std::endl;
+      streamlog_out(DEBUG4) << std::endl;
       
     }
   }
@@ -3994,14 +3855,14 @@ void FullLDCTracking_MarlinTrk::GeneralSorting(int * index, float * val, int dir
       if (direct>0) 
         order = valOne <= valTwo;
       if( order )
-        {
+          {
         valTemp = val[j];
         val[j] = val[j+1];
         val[j+1] = valTemp;
         indTemp = index[j];
         index[j] = index[j+1];
         index[j+1] = indTemp;
-        }
+          }
     }  
   }
   
@@ -4009,17 +3870,6 @@ void FullLDCTracking_MarlinTrk::GeneralSorting(int * index, float * val, int dir
 }
 
 int FullLDCTracking_MarlinTrk::SegmentRadialOverlap(TrackExtended* first, TrackExtended* second){
-  
-  const gear::TPCParameters& pTPC = Global::GEAR->getTPCParameters();
-  const gear::PadRowLayout2D& pTPCpads = pTPC.getPadLayout();
-  static const std::vector<double>tpcExtent = pTPCpads.getPlaneExtent();
-  static const float tpcInnerR = tpcExtent[0]; 
-  static const float tpcOuterR = tpcExtent[1];
-  //static const float tpcZmax   = pTPC.getMaxDriftLength();
-  static const float tpcMaxRow = pTPCpads.getNRows();
-  
-  
-  float padHeight = (tpcOuterR-tpcInnerR)/(float)tpcMaxRow;
   
   
   int nTrkGrpFirst = 0;
@@ -4068,12 +3918,12 @@ int FullLDCTracking_MarlinTrk::SegmentRadialOverlap(TrackExtended* first, TrackE
     float xi = (float)hitvecFirst[i]->getPosition()[0];
     float yi = (float)hitvecFirst[i]->getPosition()[1];
     float ri = sqrt(xi*xi+yi*yi);
-    if(ri < tpcInnerR || ri > tpcOuterR)continue;
+    if(ri < _tpc_inner_r || ri > _tpc_pad_height)continue;
     for(int j =0;j<nhitsSecond;++j){
       float xj = (float)hitvecSecond[j]->getPosition()[0];
       float yj = (float)hitvecSecond[j]->getPosition()[1];
       float rj = sqrt(xj*xj+yj*yj);
-      if(fabs(ri-rj)<padHeight/2.0)count++;
+      if(fabs(ri-rj)<_tpc_pad_height/2.0)count++;
     }
   }  
   return count;
@@ -4107,11 +3957,14 @@ bool FullLDCTracking_MarlinTrk::VetoMerge(TrackExtended* firstTrackExt, TrackExt
   const float pzSecond = secondHelix.getMomentum()[2];      
   const float pFirst = sqrt(pxFirst*pxFirst+pyFirst*pyFirst+pzFirst*pzFirst);
   const float pSecond = sqrt(pxSecond*pxSecond+pySecond*pySecond+pzSecond*pzSecond);
+  
+  //SJA:FIXME hardcoded cut 
   if(pFirst<2.5 || pSecond<2.5)return false;
   
   TrackExtended * combinedTrack = TrialCombineTracks(firstTrackExt,secondTrackExt);
   bool veto = false;
   if(combinedTrack!=NULL){
+    //SJA:FIXME hardcoded cut 
     if(combinedTrack->getNDF()+15<firstTrackExt->getNDF()+secondTrackExt->getNDF()+5)veto=true;
     delete combinedTrack->getGroupTracks();
     delete combinedTrack;
@@ -4126,5 +3979,178 @@ bool FullLDCTracking_MarlinTrk::VetoMerge(TrackExtended* firstTrackExt, TrackExt
 
 void FullLDCTracking_MarlinTrk::check(LCEvent * evt) { }
 void FullLDCTracking_MarlinTrk::end() {}
+
+
+void FullLDCTracking_MarlinTrk::setupGearGeom( const gear::GearMgr* gearMgr ){
+  
+  _bField = gearMgr->getBField().at( gear::Vector3D( 0.,0.,0.)  ).z() ;
+  
+  
+  try {
+    
+    const gear::ZPlanarParameters& pVXDDetMain = gearMgr->getVXDParameters();
+    const gear::ZPlanarLayerLayout& pVXDLayerLayout = pVXDDetMain.getVXDLayerLayout();
+    
+    _nLayersVTX = pVXDLayerLayout.getNLayers(); 
+    _VXDgeo.resize(_nLayersVTX);
+    
+    //SJA:FIXME: for now the support is taken as the same size the sensitive
+    //           if this is not done then the exposed areas of the support would leave a carbon - air boundary,
+    //           which if traversed in the reverse direction to the next boundary then the track be propagated through carbon
+    //           for a significant distance 
+    
+    for( unsigned int layer=0; layer < _nLayersVTX; ++layer){
+      _VXDgeo[layer].nLadders = pVXDLayerLayout.getNLadders(layer); 
+      _VXDgeo[layer].phi0 = pVXDLayerLayout.getPhi0(layer); 
+      _VXDgeo[layer].dphi = 2*M_PI / _VXDgeo[layer].nLadders; 
+      _VXDgeo[layer].senRMin = pVXDLayerLayout.getSensitiveDistance(layer); 
+      _VXDgeo[layer].supRMin = pVXDLayerLayout.getLadderDistance(layer); 
+      _VXDgeo[layer].length = pVXDLayerLayout.getSensitiveLength(layer); 
+      _VXDgeo[layer].width = pVXDLayerLayout.getSensitiveWidth(layer); 
+      _VXDgeo[layer].offset = pVXDLayerLayout.getSensitiveOffset(layer); 
+      _VXDgeo[layer].senThickness = pVXDLayerLayout.getSensitiveThickness(layer); 
+      _VXDgeo[layer].supThickness = pVXDLayerLayout.getLadderThickness(layer); 
+    }
+    
+  } catch (gear::UnknownParameterException& e) {
+    streamlog_out( MESSAGE ) << "  MarlinKalTest - VXD missing in gear file: VXD Not Built " << std::endl ;
+  }
+  
+  try {
+    
+    const gear::ZPlanarParameters& pSITDetMain = gearMgr->getSITParameters();
+    const gear::ZPlanarLayerLayout& pSITLayerLayout = pSITDetMain.getZPlanarLayerLayout();
+    
+    _nLayersSIT = pSITLayerLayout.getNLayers(); 
+    _SITgeo.resize(_nLayersSIT);
+    
+    //SJA:FIXME: for now the support is taken as the same size the sensitive
+    //           if this is not done then the exposed areas of the support would leave a carbon - air boundary,
+    //           which if traversed in the reverse direction to the next boundary then the track be propagated through carbon
+    //           for a significant distance 
+    
+    for( unsigned int layer=0; layer < _nLayersSIT; ++layer){
+      _SITgeo[layer].nLadders = pSITLayerLayout.getNLadders(layer); 
+      _SITgeo[layer].phi0 = pSITLayerLayout.getPhi0(layer); 
+      _SITgeo[layer].dphi = 2*M_PI / _SITgeo[layer].nLadders; 
+      _SITgeo[layer].senRMin = pSITLayerLayout.getSensitiveDistance(layer); 
+      _SITgeo[layer].supRMin = pSITLayerLayout.getLadderDistance(layer); 
+      _SITgeo[layer].length = pSITLayerLayout.getSensitiveLength(layer); 
+      _SITgeo[layer].width = pSITLayerLayout.getSensitiveWidth(layer); 
+      _SITgeo[layer].offset = pSITLayerLayout.getSensitiveOffset(layer); 
+      _SITgeo[layer].senThickness = pSITLayerLayout.getSensitiveThickness(layer); 
+      _SITgeo[layer].supThickness = pSITLayerLayout.getLadderThickness(layer); 
+    }
+    
+  } 
+  catch (gear::UnknownParameterException& e) {
+    streamlog_out( MESSAGE ) << "  MarlinKalTest - SIT missing in gear file: SIT Not Built " << std::endl ;
+  }
+  
+  try {
+    
+    
+    const gear::FTDParameters& ftdParams = gearMgr->getFTDParameters() ;
+    const gear::FTDLayerLayout& ftdlayers = ftdParams.getFTDLayerLayout() ;
+    
+    
+    _nLayersFTD = ftdlayers.getNLayers() ; 
+    _FTDgeo.resize(_nLayersFTD);
+    
+    //SJA:FIXME: for now the support is taken as the same size the sensitive
+    //           if this is not done then the exposed areas of the support would leave a carbon - air boundary,
+    //           which if traversed in the reverse direction to the next boundary then the track be propagated through carbon
+    //           for a significant distance 
+    
+    for(int disk=0; disk< _nLayersFTD; ++disk){
+      
+      // numbers taken from the ILD_01 gear file for the sensitive part 
+      _FTDgeo[disk].nPetals = ftdlayers.getNPetals(disk) ;    
+      _FTDgeo[disk].dphi = 2*M_PI /  _FTDgeo[disk].nPetals ;
+      _FTDgeo[disk].phi0 = ftdlayers.getPhi0(disk) ;
+      _FTDgeo[disk].alpha = ftdlayers.getAlpha(disk) ;
+      _FTDgeo[disk].rInner = ftdlayers.getSensitiveRinner(disk) ;
+      _FTDgeo[disk].height = ftdlayers.getSensitiveWidth(disk) ;
+      _FTDgeo[disk].innerBaseLength =  ftdlayers.getSensitiveLengthMin(disk) ;
+      _FTDgeo[disk].outerBaseLength =  ftdlayers.getSensitiveLengthMax(disk) ;
+      _FTDgeo[disk].senThickness =  ftdlayers.getSensitiveThickness(disk) ;
+      _FTDgeo[disk].supThickness =  ftdlayers.getSupportThickness(disk) ;
+      
+      _FTDgeo[disk].senZPos_even_petal1 = ftdlayers.getSensitiveZposition(disk, 0, 1) ; 
+      _FTDgeo[disk].senZPos_even_petal2 = ftdlayers.getSensitiveZposition(disk, 0, 2) ; 
+      _FTDgeo[disk].senZPos_even_petal3 = ftdlayers.getSensitiveZposition(disk, 0, 3) ; 
+      _FTDgeo[disk].senZPos_even_petal4 = ftdlayers.getSensitiveZposition(disk, 0, 4) ; 
+      
+      // currently the design assumes that the petal on the same side are at the same z
+      assert(_FTDgeo[disk].senZPos_even_petal1==_FTDgeo[disk].senZPos_even_petal2);
+      assert(_FTDgeo[disk].senZPos_even_petal3==_FTDgeo[disk].senZPos_even_petal4);
+      
+      _FTDgeo[disk].senZPos_odd_petal1 = ftdlayers.getSensitiveZposition(disk, 1, 1) ; 
+      _FTDgeo[disk].senZPos_odd_petal2 = ftdlayers.getSensitiveZposition(disk, 1, 2) ; 
+      _FTDgeo[disk].senZPos_odd_petal3 = ftdlayers.getSensitiveZposition(disk, 1, 3) ; 
+      _FTDgeo[disk].senZPos_odd_petal4 = ftdlayers.getSensitiveZposition(disk, 1, 4) ; 
+      
+      // currently the design assumes that the petal on the same side are at the same z
+      assert(_FTDgeo[disk].senZPos_odd_petal1==_FTDgeo[disk].senZPos_odd_petal2);
+      assert(_FTDgeo[disk].senZPos_odd_petal3==_FTDgeo[disk].senZPos_odd_petal4);
+      
+      _FTDgeo[disk].supZPos_even_petal1 = ftdlayers.getSensitiveZposition(disk, 0, 1) ; 
+      _FTDgeo[disk].supZPos_even_petal2 = ftdlayers.getSensitiveZposition(disk, 0, 2) ; 
+      _FTDgeo[disk].supZPos_even_petal3 = ftdlayers.getSensitiveZposition(disk, 0, 3) ; 
+      _FTDgeo[disk].supZPos_even_petal4 = ftdlayers.getSensitiveZposition(disk, 0, 4) ; 
+      
+      assert(_FTDgeo[disk].supZPos_even_petal1==_FTDgeo[disk].supZPos_even_petal2);
+      assert(_FTDgeo[disk].supZPos_even_petal3==_FTDgeo[disk].supZPos_even_petal4);
+      
+      _FTDgeo[disk].supZPos_odd_petal1 = ftdlayers.getSensitiveZposition(disk, 1, 1) ; 
+      _FTDgeo[disk].supZPos_odd_petal2 = ftdlayers.getSensitiveZposition(disk, 1, 2) ; 
+      _FTDgeo[disk].supZPos_odd_petal3 = ftdlayers.getSensitiveZposition(disk, 1, 3) ; 
+      _FTDgeo[disk].supZPos_odd_petal4 = ftdlayers.getSensitiveZposition(disk, 1, 4) ; 
+      
+      assert(_FTDgeo[disk].supZPos_odd_petal1==_FTDgeo[disk].supZPos_odd_petal2);
+      assert(_FTDgeo[disk].supZPos_odd_petal3==_FTDgeo[disk].supZPos_odd_petal4);
+      
+      
+      
+      
+      
+      // rough check to see if the petal is rotated
+      if( fabs(_FTDgeo[disk].alpha) > fabs(FLT_MIN)  ) { 
+        streamlog_out( ERROR ) << "  SiliconTracking_MarlinTrk - tilted design not supported exit(1) " << std::endl ;
+        exit(1);
+      }
+      
+    }
+    
+    for (int disk=0; disk < _nLayersFTD; ++disk) {
+      _zLayerFTD.push_back(_FTDgeo[disk].senZPos_even_petal1); // front petal even numbered
+      _zLayerFTD.push_back(_FTDgeo[disk].senZPos_odd_petal1);  // front petal odd numbered
+    }
+    
+    // SJA as disks are staggered lets treat them internally as 2*ndisksFTD
+    _nLayersFTD =_zLayerFTD.size() ;
+    
+  } 
+  
+  catch (gear::UnknownParameterException& e) {
+    streamlog_out( MESSAGE ) << "  SiliconTracking_MarlinTrk - FTD missing in gear file: FTD Not Built " << std::endl ;
+  }
+  
+  try {
+    const gear::TPCParameters& pTPC = Global::GEAR->getTPCParameters();
+    const gear::PadRowLayout2D& pTPCpads = pTPC.getPadLayout();
+    _tpc_inner_r = pTPCpads.getPlaneExtent()[0];
+    _tpc_outer_r = pTPCpads.getPlaneExtent()[1];
+    _tpc_nrows = pTPCpads.getNRows();
+    _tpc_pad_height = (_tpc_outer_r-_tpc_inner_r)/(double)_tpc_nrows;
+    
+  } catch (gear::UnknownParameterException& e) {
+    streamlog_out( MESSAGE ) << "  MarlinKalTest - TPC missing in gear file: TPC Not Built " << std::endl ;
+  }
+  
+  
+  
+  
+}
 
 

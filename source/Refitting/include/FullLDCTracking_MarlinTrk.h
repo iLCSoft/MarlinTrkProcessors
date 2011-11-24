@@ -21,7 +21,7 @@
 using namespace lcio ;
 using namespace marlin ;
 
-class gear::GearMgr ;
+//class gear::GearMgr ;
 
 namespace MarlinTrk {
   class HelixFit;
@@ -105,14 +105,6 @@ namespace MarlinTrk {
  * (default parameter value : "LDCTracks") <br>
  * @param LDCTrackMCPRelCollection name of the output LDC track to MC Particle relation collection <br>
  * (default parameter value : "LDCTracksMCP") <br>
- * @param ReffitedTPCTrackCollection name of the output collection of the refitted TPC tracks <br>
- * (default parameter value : "RefittedTPCTracks") <br>
- * @param RefittedTPCTrackMCPRelCollection name of the output refitted TPC track to MC Particle relation collection <br>
- * (default parameter value : "RefittedTPCTracksMCP") <br>
- * @param ReffitedSiTrackCollection name of the output collection of the refitted Si tracks <br>
- * (default parameter value : "RefittedSiTracks") <br>
- * @param RefittedSiTrackMCPRelCollection name of the output refitted Si track to MC Particle relation collection <br>
- * (default parameter value : "RefittedSiTracksMCP") <br>
  * @param Chi2FitCut cut on the Chi2/Ndf of the track fit <br>
  * (default parameter value : 100.0) <br>
  * @param Chi2PrefitCut cut on the prefit Chi2 of the track candidate, 
@@ -137,42 +129,9 @@ namespace MarlinTrk {
  * @param Z0CutForMerging Upper cutoff on the difference in Z0 [mm] to allow for merging
  * of the Si and TPC segments <br>
  * (default parameter value : 1000) <br>
- * @param RefitTPCTracks flag to refit TPC tracks,
- * if set to 1 TPC tracks are refitted <br>
- * (default parameter value : 1) <br>
- * @param RefitSiTracks flag to refit Si Tracks,
- * if set to 1 Si tracks are refitted <br>
- * (default parameter value : 0) <br>
- * @param StoreRefittedTPCTracks flag to store refitted TPC tracks in additional 
- * LCIOTrack collection named RefittedTPCTracks. Corresponding track MCParticle relations
- * are stored in additional collection named RefittedTPCTracksMCP.
- * If set to 1 refitted TPC tracks are stored in the separate collection <br>
- * (default parameter value : 0) <br>
- * @param StoreRefittedSiTracks flag to store refitted Si tracks in additional 
- * LCIOTrack collection named RefittedSiTracks. Corresponding track MCParticle relations
- * are stored in additional collection named RefittedSiTracksMCP.
- * If set to 1 refitted Si tracks are stored in the separate collection <br>
- * (default parameter value : 0) <br>
  * @param Debug flag to allow for printout of debug information,
  * if set to 1 debugging printout is activated
  * (default parameter value : 1) <br>
- * @param OptFit option for track candidate prefitting <br>
- * if OptFit=0 - FORTRAN code tfithl is invoked, <br> 
- * if OptFit=1 - prefit of track candidate is done with the fitting method of ClusterShapes class <br>
- * if OptFit=2 - initial track parameters d0, z0, phi0 and tan(lambda) are taken from the Si 
- * and parameter Omega for the TPC track segments <br>
- * if OptFit=3 - sophisticated iterative prefit, improving cov matrix estimate <br>
- * if OptFit=4 - track parameters are determined from the two separate fits of the Si track segment
- * and the combined Si-TPC track (recommended). Track parameters d0 and z0 are taken from the fit of 
- * the Silicon track segment, all other parameters are taken from the fit of combined track. <br>
- * (default parameter value : 4) <br>
- * @param OptFitTPC option for TPC track refit. Options are the same as for the combined LDC track prefit <br>
- * (default parameter value : 2) <br>
- * @param OptFitSi option for Si track refit. Options are the same as for the combined LDC track prefit <br>
- * (default parameter value : 2) <br>
- * @param UseExtraPoint This flag is used to steer DELPHI fitting code. If set to 1, additional 
- * artificial mesurement point at PCA is introduced with relatively large errors [OBSOLETE] <br>
- * (default parameter value : 0) <br>
  * @param ForceSiTPCMerging This flag steers merging of Si and TPC track segments. If ForceMerging=1
  * Si and TPC track segments are forced to be merged if the opening angle between Si track 
  * momentum and TPC track momentum
@@ -268,18 +227,6 @@ namespace MarlinTrk {
  * @param ForbidOverlapInZComb If this flag is set to 1 then merging of left-over TPC semiloop and
  * combined Si-TPC track is their segments overlap in z <br>
  * (default parameter value : 0) <br>
- * @param aParameterForIPError parameter a defining minimal IP resolution
- * according to the formular sigma[IP] = a + b/[P*sin^3/2{Q}]^s where P is the particle momentum
- * and Q is the polar angle. If the resolution on IP, calculated with DELPHI fitting routine,
- * is smaller than minimal allowed resolution, the corresponding track parameter 
- * covariance matrix element is set to the minimal allowed value <br>
- * (default is 0.002 [mm]) <br>
- * @param bParameterForIPError parameter b in the parametrisation of the minimal IP resolution
- * sigma[IP] = a + b/[P*sin^3/2{Q}]^s <br>
- * (default is 0.0076 [mm]) <br>
- * @param sParameterForIPError parameter s in the parametrisation of the minimal IP resolution
- * sigma[IP] = a + b/[P*sin^3/2{Q}]^s <br>
- * (default is 0.75 [mm]) <br>
  * @param StoreHitsInFit if set to 1 only hits used in the track fit are stored in the 
  * corresponding associated vector of TrackerHits <br>
  * (default is 0) <br>
@@ -333,7 +280,7 @@ protected:
   void SelectCombinedTracks();
   void AddNotCombinedTracks();
   void CheckTracks();
-  //  void AddNotAssignedHits();
+  void AddNotAssignedHits();
   void RemoveSplitTracks();
   void AddTrackColToEvt(LCEvent * evt, TrackExtendedVec & trkVec, 
                         std::string TrkColName, std::string RelColName);
@@ -347,13 +294,13 @@ protected:
   
   void SortingTrackHitPairs(TrackHitPairVec & trackHitPairVec);
   
-  //  void AssignSiHitsToTracks(TrackerHitExtendedVec hitVec,
-  //                            float dcut);
+  void AssignSiHitsToTracks(TrackerHitExtendedVec hitVec,
+                            float dcut);
   
   void AssignTPCHitsToTracks(TrackerHitExtendedVec hitVec,
                              float dcut);
   
-  //  void AssignOuterHitsToTracks(TrackerHitExtendedVec hitVec, float dcut, int refit);
+  void AssignOuterHitsToTracks(TrackerHitExtendedVec hitVec, float dcut, int refit);
   
   void CreateExtrapolations();
   
@@ -406,10 +353,6 @@ protected:
   std::string _LDCTrackCollection;
   std::string _LDCTrackMCPCollection;
   
-  std::string _RefittedTPCTrackCollection;
-  std::string _RefittedTPCTrackMCPCollection;
-  std::string _RefittedSiTrackCollection;
-  std::string _RefittedSiTrackMCPCollection;
   
   TrackExtendedVec _allSiTracks;
   TrackExtendedVec _allTPCTracks;
@@ -424,10 +367,6 @@ protected:
   TrackerHitExtendedVec _allSETHits;
   TrackerHitExtendedVec _allETDHits;
   
-  float _resolutionRPhi_TPC,_resolutionZ_TPC;
-  float _resolutionRPhi_VTX,_resolutionZ_VTX;
-  float _resolutionRPhi_FTD,_resolutionZ_FTD;
-  float _resolutionRPhi_SIT,_resolutionZ_SIT;
   float PI, PIOVER2, TWOPI;
   
   float _bField;
@@ -436,7 +375,6 @@ protected:
   
   int _debug;
   int _createMap;
-  int _useExtraPoint,_optFit;
   
   float _dPCutForMerging;
   float _d0CutForMerging;
@@ -445,7 +383,7 @@ protected:
   float _angleForMerging;
   
   
-  int _forceMerging;
+  int   _forceMerging;
   float _dPCutForForcedMerging;
   float _d0CutForForcedMerging;
   float _z0CutForForcedMerging;
@@ -467,12 +405,7 @@ protected:
   float _maxHitDistanceCutHighPtMerge;
   float _maxFractionOfOutliersCutHighPtMerge;
   
-  //  MarlinTrackFit _trackFit;
-  
-  int _refitTPCTracks;
-  int _refitSiTracks;
-  int _storeRefittedTPCTracks;
-  int _storeRefittedSiTracks;
+ 
   int _storeHitsInFit;
   
   int _nHitsExtrapolation;
@@ -480,7 +413,6 @@ protected:
   int _cutOnTPCHits;
   int _cutOnSiHits;
   
-  float _aParIpReso,_bParIpReso,_sParIpReso;
   
   int _assignVTXHits,_assignFTDHits,_assignSITHits,_assignTPCHits;
   
@@ -490,7 +422,6 @@ protected:
   
   float _distCutForSETHits, _distCutForETDHits;
   
-  int _optFitTPC,_optFitSi;
   
   float _d0TrkCut,_z0TrkCut;
   
@@ -500,6 +431,91 @@ protected:
   
   std::map<TrackExtended*,HelixClass*> _trackExtrapolatedHelix;
   std::set<TrackExtended*> _candidateCombinedTracks;
+  
+  
+  
+  void setupGearGeom( const gear::GearMgr* gearMgr ) ;
+  
+  double _tpc_inner_r;
+  double _tpc_outer_r;
+  double _tpc_pad_height;
+  int    _tpc_nrows;
+  
+  struct VXD_Layer {
+    int nLadders;
+    double phi0;
+    double dphi;
+    double senRMin;
+    double supRMin;
+    double length;
+    double width;
+    double offset;
+    double senThickness;
+    double supThickness;
+  };
+  std::vector<VXD_Layer> _VXDgeo;
+  
+  unsigned int _nLayersVTX;
+  
+  struct SIT_Layer {
+    int nLadders;
+    double phi0;
+    double dphi;
+    double senRMin;
+    double supRMin;
+    double length;
+    double width;
+    double offset;
+    double senThickness;
+    double supThickness;
+  };
+  std::vector<SIT_Layer> _SITgeo;
+  
+  unsigned int _nLayersSIT;
+  
+  struct FTD_Disk {
+    int nPetals;
+    double phi0;
+    double dphi;
+    
+    double alpha;
+    double rInner;
+    double height;
+    double innerBaseLength;
+    double outerBaseLength;
+    double senThickness;
+    double supThickness;
+    
+    double senZPos_even_petal1;
+    double senZPos_even_petal2;
+    double senZPos_even_petal3;
+    double senZPos_even_petal4;
+    
+    double supZPos_even_petal1;
+    double supZPos_even_petal2;
+    double supZPos_even_petal3;
+    double supZPos_even_petal4;
+    
+    double senZPos_odd_petal1;
+    double senZPos_odd_petal2;
+    double senZPos_odd_petal3;
+    double senZPos_odd_petal4;
+    
+    double supZPos_odd_petal1;
+    double supZPos_odd_petal2;
+    double supZPos_odd_petal3;
+    double supZPos_odd_petal4;
+    
+    
+    
+  };
+  
+  std::vector<FTD_Disk> _FTDgeo;
+  std::vector<float> _zLayerFTD;
+  
+  unsigned int _nLayersFTD;
+  int _nPhiFTD; 
+
   
 } ;
 

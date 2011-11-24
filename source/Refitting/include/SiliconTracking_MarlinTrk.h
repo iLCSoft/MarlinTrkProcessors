@@ -163,26 +163,12 @@ namespace MarlinTrk {
  * @param FastAttachment if this flag is set to 1, less accurate but fast procedure to merge additional hits to tracks is used <br> 
  * if set to 0, a more accurate, but slower procedure is invoked <br>
  * (default value is 0) <br>
- * @param OptPrefit Option for prefit of the track with simple helix model. If 
- * set to 0, helix fit based on FORTRAN code tfithl is used, when set to 1 ClusterShapes class
- * is used to fit track with the simple helix model <br>
- * (default value is 0) <br>
- * @param SimpleHelixFit Flag to enable fast procedure of track fitting based on simple helix fit.
- * This procedure is used when performing pattern recognition.<br>
- * (default value is 1)
  * @param UseSIT When this flag is set to 1, SIT is included in pattern recognition. When this flag is set
  * to 0, SIT is excluded from the procedure of pattern recognition <br>
- * (default value is 1) <br>
- * @param FinalRefit If set to 1, final track candidates are refitted using DELPHI fitting code, which 
- * accounts for effects of multiple scattering and energy loss <br>
  * (default value is 1) <br>
  * @param CreateMap When this flag is set to 1 collection of relations between tracks and MCParticles is 
  * created <br>
  * (default value is 1) <br>
- * @param UseExtraPoint This flag is used to steer DELPHI fitting code. If set to 0, an additional 
- * artificial mesurement point at PCA is introduced with relatively large errors. This helps
- * to improve resolution on D0 and Z0 for fitted track. <br>
- * (default value 0)
  * @param Debug flag to activate debug printout <br>
  * (default value 1)
  * <br>
@@ -305,7 +291,6 @@ protected:
   
   int _debug;
   
-  std::vector<float> _zLayerFTD;
   std::vector<int> _Combinations;
   std::vector<int> _CombinationsFTD;
   
@@ -340,12 +325,8 @@ protected:
   int _attachFast;
   
   int _nTotalVTXHits,_nTotalFTDHits,_nTotalSITHits;
-  int _optFit,_simpleHelixFit;
   int _useSIT;
-  int _finalRefit;
   int _createMap;
-  int _useExtraPoint;
-  //  MarlinTrackFit _trackFit;
   
   void setupGearGeom( const gear::GearMgr* gearMgr ) ;
   
@@ -422,9 +403,9 @@ protected:
   };
 
   std::vector<FTD_Disk> _FTDgeo;
+  std::vector<float> _zLayerFTD;
   
-  
-  unsigned int _ndisksFTD;
+  unsigned int _nlayersFTD;
   int _nPhiFTD; 
   
   
