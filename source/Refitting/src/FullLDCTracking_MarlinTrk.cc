@@ -622,18 +622,20 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
     track->setRadiusOfInnermostHit(sqrt(r2Min));
     
     track->subdetectorHitNumbers().resize(2 * ILDDetID::ETD);
-    track->subdetectorHitNumbers()[2*(ILDDetID::VXD - 1)] = nHitsVTX;
-    track->subdetectorHitNumbers()[2*(ILDDetID::FTD - 1)] = nHitsFTD;
-    track->subdetectorHitNumbers()[2*(ILDDetID::SIT - 1)] = nHitsSIT;
-    track->subdetectorHitNumbers()[2*(ILDDetID::TPC - 1)] = nHitsTPC;
-    track->subdetectorHitNumbers()[2*(ILDDetID::SET - 1)] = nHitsSET;
-    track->subdetectorHitNumbers()[2*(ILDDetID::ETD - 1)] = nHitsETD;
-    track->subdetectorHitNumbers()[2*ILDDetID::VXD - 1] = nHitsVTXInFit;
-    track->subdetectorHitNumbers()[2*ILDDetID::FTD - 1] = nHitsFTDInFit;
-    track->subdetectorHitNumbers()[2*ILDDetID::SIT - 1] = nHitsSITInFit;
-    track->subdetectorHitNumbers()[2*ILDDetID::TPC - 1] = nHitsTPCInFit;
-    track->subdetectorHitNumbers()[2*ILDDetID::SET - 1] = nHitsSETInFit;
-    track->subdetectorHitNumbers()[2*ILDDetID::ETD - 1] = nHitsETDInFit;
+    
+    track->subdetectorHitNumbers()[ 2 * ILDDetID::VXD - 1 ] = nHitsVTXInFit;
+    track->subdetectorHitNumbers()[ 2 * ILDDetID::FTD - 1 ] = nHitsFTDInFit;
+    track->subdetectorHitNumbers()[ 2 * ILDDetID::SIT - 1 ] = nHitsSITInFit;
+    track->subdetectorHitNumbers()[ 2 * ILDDetID::TPC - 1 ] = nHitsTPCInFit;
+    track->subdetectorHitNumbers()[ 2 * ILDDetID::SET - 1 ] = nHitsSETInFit;
+    track->subdetectorHitNumbers()[ 2 * ILDDetID::ETD - 1 ] = nHitsETDInFit;
+    track->subdetectorHitNumbers()[ 2 * ILDDetID::VXD - 2 ] = nHitsVTX;
+    track->subdetectorHitNumbers()[ 2 * ILDDetID::FTD - 2 ] = nHitsFTD;
+    track->subdetectorHitNumbers()[ 2 * ILDDetID::SIT - 2 ] = nHitsSIT;
+    track->subdetectorHitNumbers()[ 2 * ILDDetID::TPC - 2 ] = nHitsTPC;
+    track->subdetectorHitNumbers()[ 2 * ILDDetID::SET - 2 ] = nHitsSET;
+    track->subdetectorHitNumbers()[ 2 * ILDDetID::ETD - 2 ] = nHitsETD;
+
     
     int nHitsSiInFit = nHitsVTXInFit+nHitsFTDInFit+nHitsSITInFit;
     bool rejectTrack = (nHitsTPCInFit<_cutOnTPCHits) && (nHitsSiInFit<=0);

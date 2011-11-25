@@ -555,20 +555,20 @@ TrackImpl* TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_
     //    streamlog_out( DEBUG1 ) << "Hit from Detector " << detID << std::endl;     
   }
   
-   
+  //SJA:FIXME no distiction made for hits in fit or not
   Track->subdetectorHitNumbers().resize(2 * ILDDetID::ETD);
-  Track->subdetectorHitNumbers()[2*(ILDDetID::VXD - 1)] = hitNumbers[ILDDetID::VXD];
-  Track->subdetectorHitNumbers()[2*(ILDDetID::FTD - 1)] = hitNumbers[ILDDetID::FTD];
-  Track->subdetectorHitNumbers()[2*(ILDDetID::SIT - 1)] = hitNumbers[ILDDetID::SIT];
-  Track->subdetectorHitNumbers()[2*(ILDDetID::TPC - 1)] = hitNumbers[ILDDetID::TPC];
-  Track->subdetectorHitNumbers()[2*(ILDDetID::SET - 1)] = 0;
-  Track->subdetectorHitNumbers()[2*(ILDDetID::ETD - 1)] = 0;
-  Track->subdetectorHitNumbers()[2*ILDDetID::VXD - 1] = hitNumbers[ILDDetID::VXD];
-  Track->subdetectorHitNumbers()[2*ILDDetID::FTD - 1] = hitNumbers[ILDDetID::FTD];
-  Track->subdetectorHitNumbers()[2*ILDDetID::SIT - 1] = hitNumbers[ILDDetID::SIT];
-  Track->subdetectorHitNumbers()[2*ILDDetID::TPC - 1] = hitNumbers[ILDDetID::TPC];
-  Track->subdetectorHitNumbers()[2*ILDDetID::SET - 1] = 0;
-  Track->subdetectorHitNumbers()[2*ILDDetID::ETD - 1] = 0;
+  Track->subdetectorHitNumbers()[ 2 * ILDDetID::VXD - 2 ] = hitNumbers[ILDDetID::VXD];
+  Track->subdetectorHitNumbers()[ 2 * ILDDetID::FTD - 2 ] = hitNumbers[ILDDetID::FTD];
+  Track->subdetectorHitNumbers()[ 2 * ILDDetID::SIT - 2 ] = hitNumbers[ILDDetID::SIT];
+  Track->subdetectorHitNumbers()[ 2 * ILDDetID::TPC - 2 ] = hitNumbers[ILDDetID::TPC];
+  Track->subdetectorHitNumbers()[ 2 * ILDDetID::SET - 2 ] = 0;
+  Track->subdetectorHitNumbers()[ 2 * ILDDetID::ETD - 2 ] = 0;
+  Track->subdetectorHitNumbers()[ 2 * ILDDetID::VXD - 1 ] = hitNumbers[ILDDetID::VXD];
+  Track->subdetectorHitNumbers()[ 2 * ILDDetID::FTD - 1 ] = hitNumbers[ILDDetID::FTD];
+  Track->subdetectorHitNumbers()[ 2 * ILDDetID::SIT - 1 ] = hitNumbers[ILDDetID::SIT];
+  Track->subdetectorHitNumbers()[ 2 * ILDDetID::TPC - 1 ] = hitNumbers[ILDDetID::TPC];
+  Track->subdetectorHitNumbers()[ 2 * ILDDetID::SET - 1 ] = 0;
+  Track->subdetectorHitNumbers()[ 2 * ILDDetID::ETD - 1 ] = 0;
 
   
   

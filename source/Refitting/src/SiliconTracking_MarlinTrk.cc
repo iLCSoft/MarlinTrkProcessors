@@ -670,18 +670,19 @@ void SiliconTracking_MarlinTrk::processEvent( LCEvent * evt ) {
         // SJA:FIXME for now there is no distiction between hits used and rejected ...
 
         trackImpl->subdetectorHitNumbers().resize(2 * ILDDetID::ETD);
-        trackImpl->subdetectorHitNumbers()[2*(ILDDetID::VXD - 1)] = nHitsVTX;
-        trackImpl->subdetectorHitNumbers()[2*(ILDDetID::FTD - 1)] = nHitsFTD;
-        trackImpl->subdetectorHitNumbers()[2*(ILDDetID::SIT - 1)] = nHitsSIT;
-        trackImpl->subdetectorHitNumbers()[2*(ILDDetID::TPC - 1)] = nHitsTPC;
-        trackImpl->subdetectorHitNumbers()[2*(ILDDetID::SET - 1)] = 0;
-        trackImpl->subdetectorHitNumbers()[2*(ILDDetID::ETD - 1)] = 0;
-        trackImpl->subdetectorHitNumbers()[2*ILDDetID::VXD - 1] = nHitsVTX;
-        trackImpl->subdetectorHitNumbers()[2*ILDDetID::FTD - 1] = nHitsFTD;
-        trackImpl->subdetectorHitNumbers()[2*ILDDetID::SIT - 1] = nHitsSIT;
-        trackImpl->subdetectorHitNumbers()[2*ILDDetID::TPC - 1] = nHitsTPC;
-        trackImpl->subdetectorHitNumbers()[2*ILDDetID::SET - 1] = 0;
-        trackImpl->subdetectorHitNumbers()[2*ILDDetID::ETD - 1] = 0;
+        
+        trackImpl->subdetectorHitNumbers()[ 2 * ILDDetID::VXD - 1 ] = nHitsVTX;
+        trackImpl->subdetectorHitNumbers()[ 2 * ILDDetID::FTD - 1 ] = nHitsFTD;
+        trackImpl->subdetectorHitNumbers()[ 2 * ILDDetID::SIT - 1 ] = nHitsSIT;
+        trackImpl->subdetectorHitNumbers()[ 2 * ILDDetID::TPC - 1 ] = nHitsTPC;
+        trackImpl->subdetectorHitNumbers()[ 2 * ILDDetID::SET - 1 ] = 0;
+        trackImpl->subdetectorHitNumbers()[ 2 * ILDDetID::ETD - 1 ] = 0;
+        trackImpl->subdetectorHitNumbers()[ 2 * ILDDetID::VXD - 2 ] = nHitsVTX;
+        trackImpl->subdetectorHitNumbers()[ 2 * ILDDetID::FTD - 2 ] = nHitsFTD;
+        trackImpl->subdetectorHitNumbers()[ 2 * ILDDetID::SIT - 2 ] = nHitsSIT;
+        trackImpl->subdetectorHitNumbers()[ 2 * ILDDetID::TPC - 2 ] = nHitsTPC;
+        trackImpl->subdetectorHitNumbers()[ 2 * ILDDetID::SET - 2 ] = 0;
+        trackImpl->subdetectorHitNumbers()[ 2 * ILDDetID::ETD - 2 ] = 0;
         
         nSiSegments++;
         float omega = trackAR->getOmega();
