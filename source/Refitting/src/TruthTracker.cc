@@ -310,6 +310,8 @@ void TruthTracker::processEvent( LCEvent * evt ) {
   
   streamlog_out( DEBUG4 ) << "Add Tracker hits to Tracks" << std::endl;
   
+  _hit_list.clear();
+  
   if( trkhits.size() > 0) {
     MCParticle* mcplast = NULL;
     
@@ -319,23 +321,23 @@ void TruthTracker::processEvent( LCEvent * evt ) {
       double const* p    = mcp->getMomentum() ;
       float  const pt2   = p[0]*p[0] + p[1]*p[1] ;
       //float  const pmag2 =  p[0]*p[0] + p[1]*p[1] + p[2]*p[2] ; 
-      
+            
       if ( i == 0 ) {
         mcplast = mcp ;
       }
       
       if( mcp != mcplast ) { 
         // new MCParticle
-        
+
         if (_hit_list.size() >= 3) {
           // create track from vector of hits                           
-          streamlog_out( DEBUG4 ) << "Create New Track for MCParticle " << mcplast << std::endl;
+          streamlog_out( DEBUG2 ) << "Create New Track for MCParticle " << mcplast << std::endl;
           trackVec->addElement( this->createTrack(mcplast, cellID_encoder) );
           _hit_list.clear();      
         }
         else { 
           // clear the hit list to start a new list of hits from the same mcparticle
-          _hit_list.clear();  
+          _hit_list.clear();   
         }
       }
       
