@@ -133,6 +133,8 @@ SiliconTracking_MarlinTrk::SiliconTracking_MarlinTrk() : Processor("SiliconTrack
   
   _fastfitter = new MarlinTrk::HelixFit();
   
+  _encoder = new UTIL::BitField64(ILDCellID0::encoder_string);
+  
   std::vector<int> combinations;
   
   combinations.push_back(6);
@@ -634,15 +636,13 @@ void SiliconTracking_MarlinTrk::processEvent( LCEvent * evt ) {
             
             TrackerHit * trkHit = hitVec[iHit]->getTrackerHit();
             trackImpl->addHit(trkHit);
-            int det = trkHit->getType()/100;
-            if (det == 1)
+            int det = getDetectorID(trkHit);
+            if (det == ILDDetID::VXD)
               nHitsVTX++;
-            if (det == 2)
+            if (det == ILDDetID::FTD)
               nHitsFTD++;
-            if (det == 4)
+            if (det == ILDDetID::SIT)
               nHitsSIT++;
-            if (det == 5)
-              nHitsTPC++;
             if (_createMap > 0) {
               int nSH = int(trkHit->getRawHits().size());
               for (int ish=0;ish<nSH;++ish) {
@@ -666,19 +666,22 @@ void SiliconTracking_MarlinTrk::processEvent( LCEvent * evt ) {
           }
         }
         
-        trackImpl->subdetectorHitNumbers().resize(12);
-        trackImpl->subdetectorHitNumbers()[0] = nHitsVTX;
-        trackImpl->subdetectorHitNumbers()[1] = nHitsFTD;
-        trackImpl->subdetectorHitNumbers()[2] = nHitsSIT;
-        trackImpl->subdetectorHitNumbers()[3] = nHitsTPC;
-        trackImpl->subdetectorHitNumbers()[4] = 0;
-        trackImpl->subdetectorHitNumbers()[5] = 0;
-        trackImpl->subdetectorHitNumbers()[6] = nHitsVTX;
-        trackImpl->subdetectorHitNumbers()[7] = nHitsFTD;
-        trackImpl->subdetectorHitNumbers()[8] = nHitsSIT;
-        trackImpl->subdetectorHitNumbers()[9] = nHitsTPC;
-        trackImpl->subdetectorHitNumbers()[10] = 0;
-        trackImpl->subdetectorHitNumbers()[11] = 0;
+        
+        // SJA:FIXME for now there is no distiction between hits used and rejected ...
+
+        trackImpl->subdetectorHitNumbers().resize(2 * ILDDetID::ETD);
+        trackImpl->subdetectorHitNumbers()[2*(ILDDetID::VXD - 1)] = nHitsVTX;
+        trackImpl->subdetectorHitNumbers()[2*(ILDDetID::FTD - 1)] = nHitsFTD;
+        trackImpl->subdetectorHitNumbers()[2*(ILDDetID::SIT - 1)] = nHitsSIT;
+        trackImpl->subdetectorHitNumbers()[2*(ILDDetID::TPC - 1)] = nHitsTPC;
+        trackImpl->subdetectorHitNumbers()[2*(ILDDetID::SET - 1)] = 0;
+        trackImpl->subdetectorHitNumbers()[2*(ILDDetID::ETD - 1)] = 0;
+        trackImpl->subdetectorHitNumbers()[2*ILDDetID::VXD - 1] = nHitsVTX;
+        trackImpl->subdetectorHitNumbers()[2*ILDDetID::FTD - 1] = nHitsFTD;
+        trackImpl->subdetectorHitNumbers()[2*ILDDetID::SIT - 1] = nHitsSIT;
+        trackImpl->subdetectorHitNumbers()[2*ILDDetID::TPC - 1] = nHitsTPC;
+        trackImpl->subdetectorHitNumbers()[2*ILDDetID::SET - 1] = 0;
+        trackImpl->subdetectorHitNumbers()[2*ILDDetID::ETD - 1] = 0;
         
         nSiSegments++;
         float omega = trackAR->getOmega();
@@ -827,11 +830,10 @@ int SiliconTracking_MarlinTrk::InitialiseFTD(LCEvent * evt) {
       // SJA:FIXME why is this needed? 
       hitExt->setResolutionZ(0.1);
       
-      UTIL::BitField64 encoder( ILDCellID0::encoder_string ) ;
-      encoder.setValue(hit->getCellID0());
-      
-      hitExt->setType(int(2));
-      hitExt->setDet(int(2));
+      // type is now only used in one place where it is set to 0 to reject hits from a fit, set to INT_MAX to try and catch any missuse
+      hitExt->setType(int(INT_MAX));
+      // det is no longer used set to INT_MAX to try and catch any missuse
+      hitExt->setDet(int(INT_MAX));
       
       double pos[3];
       
@@ -843,8 +845,8 @@ int SiliconTracking_MarlinTrk::InitialiseFTD(LCEvent * evt) {
       if (Phi < 0.) Phi = Phi + TWOPI;
       
       // get the layer number
-      int layer = encoder[ILDCellID0::layer] ;
-      int petalIndex = encoder[ILDCellID0::module] ;
+      int layer = getLayerID(hit);
+      int petalIndex = getModuleID(hit);
       // as we are dealing with staggered petals we will use 2*nlayers in each directions +/- z
       // the layers will follow the even odd numbering of the petals 
       if ( petalIndex % 2 == 0 ) {
@@ -862,7 +864,7 @@ int SiliconTracking_MarlinTrk::InitialiseFTD(LCEvent * evt) {
       
       int iPhi = int(Phi/_dPhiFTD);
       
-      int side = encoder[ILDCellID0::side] ;
+      int side = getSideID(hit);
       int iSemiSphere = 0;
       
       if (side > 0) 
@@ -910,12 +912,10 @@ int SiliconTracking_MarlinTrk::InitialiseVTX(LCEvent * evt) {
       hitExt->setResolutionRPhi(hit->getdU());
       hitExt->setResolutionZ(hit->getdV());
       
-      
-      UTIL::BitField64 encoder( ILDCellID0::encoder_string ) ;
-      encoder.setValue(hit->getCellID0());
-      
-      hitExt->setType(int(3));
-      hitExt->setDet(int(3));
+      // set type is now only used in one place where it is set to 0 to reject hits from a fit, set to INT_MAX to try and catch any missuse
+      hitExt->setType(int(INT_MAX));
+      // det is no longer used set to INT_MAX to try and catch any missuse
+      hitExt->setDet(int(INT_MAX));
       
       double pos[3];
       double radius = 0;
@@ -933,7 +933,7 @@ int SiliconTracking_MarlinTrk::InitialiseVTX(LCEvent * evt) {
       if (Phi < 0.) Phi = Phi + TWOPI;
       
       // get the layer number
-      int layer = encoder[ILDCellID0::layer] ;
+      int layer = getLayerID(hit);
       
       if (layer < 0 || layer >= _nLayers) {
         streamlog_out(ERROR) << "SiliconTracking_MarlinTrk => fatal error in VTX : layer is outside allowed range : " << layer << std::endl;
@@ -972,12 +972,10 @@ int SiliconTracking_MarlinTrk::InitialiseVTX(LCEvent * evt) {
         hitExt->setResolutionRPhi(hit->getdU());
         hitExt->setResolutionZ(hit->getdV());
         
-        
-        UTIL::BitField64 encoder( ILDCellID0::encoder_string ) ;
-        encoder.setValue(hit->getCellID0());
-        
-        hitExt->setType(int(3));
-        hitExt->setDet(int(7));
+        // set type is now only used in one place where it is set to 0 to reject hits from a fit, set to INT_MAX to try and catch any missuse
+        hitExt->setType(int(INT_MAX));
+        // det is no longer used set to INT_MAX to try and catch any missuse
+        hitExt->setDet(int(INT_MAX));
         
         double pos[3];
         double radius = 0;
@@ -994,7 +992,8 @@ int SiliconTracking_MarlinTrk::InitialiseVTX(LCEvent * evt) {
         
         if (Phi < 0.) Phi = Phi + TWOPI;
         
-        int layer = encoder[ILDCellID0::layer] + _nLayersVTX;
+        // VXD and SIT are treated as one system so SIT layers start from _nLayersVTX
+        int layer = getLayerID(hit) + _nLayersVTX;
         
         if (layer < 0 || layer >= _nLayers) {
           streamlog_out(ERROR) << "SiliconTracking_MarlinTrk => fatal error in SIT : layer is outside allowed range : " << layer << std::endl;
@@ -1020,6 +1019,7 @@ void SiliconTracking_MarlinTrk::check(LCEvent * evt) {
 
 void SiliconTracking_MarlinTrk::end() {
   delete _fastfitter ;
+  delete _encoder ;
 }
 
 
@@ -1392,15 +1392,9 @@ int SiliconTracking_MarlinTrk::BuildTrack(TrackerHitExtended * outerHit,
       float * wzh = new float[nHits+1];
       float * rh = new float[nHits+1];
       float * ph = new float[nHits+1];
-      float * xh_fl = new float[nHits+1];
-      float * yh_fl = new float[nHits+1];
-      float * rphi_reso = new float[nHits+1];
-      float * z_reso = new float[nHits+1];
-      int * ityp_h = new int[nHits+1];
-      int * idet_h = new int[nHits+1];
-      int * lhits = new int[nHits+1];
       float par[5];
       float epar[15];
+
       for (int ih=0;ih<nHits;++ih) {
         TrackerHit * trkHit = hvec[ih]->getTrackerHit();
         xh[ih] = trkHit->getPosition()[0];
@@ -1412,18 +1406,10 @@ int SiliconTracking_MarlinTrk::BuildTrack(TrackerHitExtended * outerHit,
         ph[ih] = float(atan2(yh[ih],xh[ih]));
         if (ph[ih] < 0.) 
           ph[ih] = 2.0*acos(-1.0) + ph[ih]; 
-        xh_fl[ih] = float(xh[ih]);
-        yh_fl[ih] = float(yh[ih]);
-        rphi_reso[ih] = hvec[ih]->getResolutionRPhi();
-        z_reso[ih] = hvec[ih]->getResolutionZ();
-        ityp_h[ih] = hvec[ih]->getType();
-        idet_h[ih] = hvec[ih]->getDet();
       }      
       TrackerHit * assignedTrkHit = assignedhit->getTrackerHit();
       xh[nHits] = assignedTrkHit->getPosition()[0];
       yh[nHits] = assignedTrkHit->getPosition()[1];
-      xh_fl[nHits] = float(xh[nHits]);
-      yh_fl[nHits] = float(yh[nHits]);
       zh[nHits] = float(assignedTrkHit->getPosition()[2]);
       rh[nHits] = float(sqrt(xh[nHits]*xh[nHits]+yh[nHits]*yh[nHits]));
       ph[nHits] = float(atan2(yh[nHits],xh[nHits]));
@@ -1431,10 +1417,7 @@ int SiliconTracking_MarlinTrk::BuildTrack(TrackerHitExtended * outerHit,
         ph[nHits] = 2.0*acos(-1.0) + ph[nHits]; 
       wrh[nHits] = double(1.0/(assignedhit->getResolutionRPhi()*assignedhit->getResolutionRPhi()));
       wzh[nHits] = 1.0/(assignedhit->getResolutionZ()*assignedhit->getResolutionZ());
-      rphi_reso[nHits] = assignedhit->getResolutionRPhi();
-      z_reso[nHits] = assignedhit->getResolutionZ();
-      ityp_h[nHits] = assignedhit->getType();
-      idet_h[nHits] = assignedhit->getDet();
+
       int NPT = nHits + 1;
       int iopt = 2;
       float chi2RPhi;
@@ -1453,13 +1436,6 @@ int SiliconTracking_MarlinTrk::BuildTrack(TrackerHitExtended * outerHit,
       delete[] wzh;
       delete[] rh;
       delete[] ph;
-      delete[] xh_fl;
-      delete[] yh_fl;
-      delete[] rphi_reso;
-      delete[] z_reso;
-      delete[] ityp_h;
-      delete[] idet_h;
-      delete[] lhits;
       
       bool validCombination = 0;
       float Chi2 = chi2_D;
@@ -1574,18 +1550,11 @@ void SiliconTracking_MarlinTrk::CreateTrack(TrackExtended * trackAR ) {
       int nTotHits = nHits + nHitsOld;
       double * xh = new double[nTotHits];
       double * yh = new double[nTotHits];
-      float * xh_fl = new float[nTotHits];
-      float * yh_fl = new float[nTotHits];
       float * zh = new float[nTotHits];
       double * wrh = new double[nTotHits];
       float * wzh = new float[nTotHits];
       float * rh = new float[nTotHits];
       float * ph = new float[nTotHits];
-      float * rphi_reso = new float[nTotHits];
-      float * z_reso = new float[nTotHits];
-      int * idet_h = new int[nTotHits];
-      int * ityp_h = new int[nTotHits];
-      int * lhits = new int[nTotHits];
       float par[5];
       float epar[15];
       float refPoint[3] = {0.,0.,0.};
@@ -1597,24 +1566,16 @@ void SiliconTracking_MarlinTrk::CreateTrack(TrackExtended * trackAR ) {
           streamlog_out(DEBUG2) << "WARNING : HIT POINTS TO TRACK " << std::endl;
         xh[ih] = trkHit->getPosition()[0];
         yh[ih] = trkHit->getPosition()[1];
-        xh_fl[ih] = float(xh[ih]);
-        yh_fl[ih] = float(yh[ih]);
         zh[ih] = float(trkHit->getPosition()[2]);
         wrh[ih] = double(1.0/(rR*rR));
         wzh[ih] = 1.0/(rZ*rZ);
         rh[ih] = float(sqrt(xh[ih]*xh[ih]+yh[ih]*yh[ih]));
         ph[ih] = float(atan2(yh[ih],xh[ih]));
-        rphi_reso[ih] = rR;
-        z_reso[ih] = rZ;
-        ityp_h[ih] =  hitVec[ih]->getType();
-        idet_h[ih] =  hitVec[ih]->getDet();
       }      
       for (int ih=0;ih<nHitsOld;++ih) {
         TrackerHit * trkHit = hitVecOld[ih]->getTrackerHit();
         xh[ih+nHits] = trkHit->getPosition()[0];
         yh[ih+nHits] = trkHit->getPosition()[1];
-        xh_fl[ih+nHits] = float(xh[ih+nHits]);
-        yh_fl[ih+nHits] = float(yh[ih+nHits]);
         zh[ih+nHits] = float(trkHit->getPosition()[2]);
         float rR = hitVecOld[ih]->getResolutionRPhi();
         float rZ = hitVecOld[ih]->getResolutionZ();     
@@ -1622,10 +1583,7 @@ void SiliconTracking_MarlinTrk::CreateTrack(TrackExtended * trackAR ) {
         wzh[ih+nHits] = 1.0/(rZ*rZ);
         rh[ih+nHits] = float(sqrt(xh[ih+nHits]*xh[ih+nHits]+yh[ih+nHits]*yh[ih+nHits]));
         ph[ih+nHits] = float(atan2(yh[ih+nHits],xh[ih+nHits]));
-        rphi_reso[ih+nHits] = rR;
-        z_reso[ih+nHits] = rZ;
-        ityp_h[ih+nHits] = hitVecOld[ih]->getType();
-        idet_h[ih+nHits] = hitVecOld[ih]->getDet();
+
       }
       int NPT = nTotHits;
       int iopt = 3;
@@ -1665,30 +1623,22 @@ void SiliconTracking_MarlinTrk::CreateTrack(TrackExtended * trackAR ) {
       if (chi2Min < _chi2FitCut) {
         found = 1;
       }
-      else {
+      else { // SJA:FIXME: UH What is going on here? setting weights to 0 and refitting?
         float * wzhOld = new float[nTotHits];
         double * wrhOld = new double[nTotHits];
-        float * rphi_resoOld = new float[nTotHits];
-        float * z_resoOld = new float[nTotHits];
         for (int i=0;i<nTotHits;++i) {
           wzhOld[i] = wzh[i];
           wrhOld[i] = wrh[i];
-          rphi_resoOld[i] = rphi_reso[i];
-          z_resoOld[i] = z_reso[i];
         }
         for (int i=0; i<nTotHits; ++i) {
           for (int j=0;j<nTotHits;++j) {
             if (i == j) {
               wrh[j] = 0.0;
               wzh[j] = 0.0;
-              z_reso[j] = 1.0e+20;
-              rphi_reso[j] = 1.0e+20;
             } 
             else {
               wrh[j] = wrhOld[j];
               wzh[j] = wzhOld[j];
-              z_reso[j] = z_resoOld[j];
-              rphi_reso[j] = rphi_resoOld[j];
             }
           }
           
@@ -1722,8 +1672,6 @@ void SiliconTracking_MarlinTrk::CreateTrack(TrackExtended * trackAR ) {
         }
         delete[] wzhOld;
         delete[] wrhOld;
-        delete[] rphi_resoOld;
-        delete[] z_resoOld;
       }
       
       // Split track is found.
@@ -1774,13 +1722,6 @@ void SiliconTracking_MarlinTrk::CreateTrack(TrackExtended * trackAR ) {
       delete[] wzh;
       delete[] rh;
       delete[] ph;
-      delete[] xh_fl;
-      delete[] yh_fl;
-      delete[] idet_h;
-      delete[] ityp_h;
-      delete[] rphi_reso;
-      delete[] z_reso;
-      delete[] lhits;
       
     }
     if (found == 1)
@@ -1842,11 +1783,6 @@ void SiliconTracking_MarlinTrk::AttachRemainingVTXHitsFast() {
             double cosTheta = pos[2]/radius;
             double Phi = atan2(pos[1],pos[0]);
             if (Phi < 0.) Phi = Phi + TWOPI;
-            int layer = hit->getType() - 1;
-            if (layer < 0) {
-              streamlog_out(ERROR) << "Fatal error; layer < 0 : " << layer << std::endl;
-              exit(1);
-            }
             int iPhi = int(Phi/_dPhi);
             int iTheta = int ((cosTheta + double(1.0))/_dTheta);
             int iCode = iPhi + _nDivisionsInPhi*iTheta;      
@@ -1898,8 +1834,12 @@ void SiliconTracking_MarlinTrk::AttachRemainingVTXHitsFast() {
                 TrackerHitExtendedVec& hitVector = trackAR->getTrackerHitExtendedVec();
                 int NHITS = int(hitVector.size());
                 for (int IHIT=0;IHIT<NHITS;++IHIT) {
-                  if (hit->getTrackerHit()->getType() == 
-                      hitVector[IHIT]->getTrackerHit()->getType()) {
+
+                  // Here we are trying to find if a hits are too close i.e. closer than _minDistToDelta
+                  TrackerHit* trkhit1 = hit->getTrackerHit();
+                  TrackerHit* trkhit2 = hitVector[IHIT]->getTrackerHit();                  
+
+                  if ( trkhit1->getCellID0() == trkhit2->getCellID0() ){ // i.e. they are in the same sensor
                     float distance = 0.;
                     for (int iC=0;iC<3;++iC) {
                       float posFirst = float(hit->getTrackerHit()->getPosition()[iC]);
@@ -1923,7 +1863,7 @@ void SiliconTracking_MarlinTrk::AttachRemainingVTXHitsFast() {
                 float tanlambda = trackAR->getTanLambda();
                 HelixClass helix;
                 helix.Initialize_Canonical(phi0,d0,z0,omega,tanlambda,_bField);
-                int layer = hit->getTrackerHit()->getType() - 1;
+                int layer = getLayerID(hit->getTrackerHit());
                 if (layer > _minimalLayerToAttach) {
                   float pos[3];
                   for (int i=0; i<3; ++i) 
@@ -1985,7 +1925,7 @@ void SiliconTracking_MarlinTrk::AttachRemainingVTXHitsSlow() {
   int nTrk = int(_trackImplVec.size()); 
   for (int iHit=0; iHit<nNotAttached; ++iHit) {
     TrackerHitExtended * hit = nonAttachedHits[iHit];
-    int layer = hit->getTrackerHit()->getType() - 1;
+    int layer = getLayerID( hit->getTrackerHit() );
     if (layer > _minimalLayerToAttach) {
       float pos[3];
       for (int i=0; i<3; ++i) 
@@ -1999,8 +1939,13 @@ void SiliconTracking_MarlinTrk::AttachRemainingVTXHitsSlow() {
           TrackerHitExtendedVec& hitVector = trackAR->getTrackerHitExtendedVec();
           int NHITS = int(hitVector.size());
           for (int IHIT=0;IHIT<NHITS;++IHIT) {
-            if (hit->getTrackerHit()->getType() == 
-                hitVector[IHIT]->getTrackerHit()->getType()) {
+            
+            // Here we are trying to find if a hits are too close i.e. closer than _minDistToDelta
+            TrackerHit* trkhit1 = hit->getTrackerHit();
+            TrackerHit* trkhit2 = hitVector[IHIT]->getTrackerHit();                  
+            
+            if ( trkhit1->getCellID0() == trkhit2->getCellID0() ){ // i.e. they are in the same sensor
+              
               float distance = 0.;
               for (int iC=0;iC<3;++iC) {
                 float posFirst = float(hit->getTrackerHit()->getPosition()[iC]);
@@ -2067,7 +2012,6 @@ void SiliconTracking_MarlinTrk::AttachRemainingFTDHitsSlow() {
   int nTrk = int(_trackImplVec.size()); 
   for (int iHit=0; iHit<nNotAttached; ++iHit) {
     TrackerHitExtended * hit = nonAttachedHits[iHit];
-    int layer = hit->getTrackerHit()->getType();
     float pos[3];
     for (int i=0; i<3; ++i) 
       pos[i] = hit->getTrackerHit()->getPosition()[i];      
@@ -2078,13 +2022,19 @@ void SiliconTracking_MarlinTrk::AttachRemainingFTDHitsSlow() {
       bool consider = true;
       TrackerHitExtendedVec& hitVector = trackAR->getTrackerHitExtendedVec();
       int NHITS = int(hitVector.size());
+
       for (int IHIT=0;IHIT<NHITS;++IHIT) {
-        if (hit->getTrackerHit()->getType() == 
-            hitVector[IHIT]->getTrackerHit()->getType()) {
+        
+        // SJA:FIXME: check to see if allowing no hits in the same sensor vs no hits in the same layer works 
+        //        if (hit->getTrackerHit()->getType() == hitVector[IHIT]->getTrackerHit()->getType()) {
+        if (hit->getTrackerHit()->getCellID0() == hitVector[IHIT]->getTrackerHit()->getCellID0()) {
+
           consider = false;
           break;
         }
       }
+      
+      
       if (consider) {
         HelixClass helix;
         float phi0 = trackAR->getPhi();
@@ -2092,7 +2042,7 @@ void SiliconTracking_MarlinTrk::AttachRemainingFTDHitsSlow() {
         float z0 = trackAR->getZ0();
         float omega = trackAR->getOmega();
         float tanlambda = trackAR->getTanLambda();
-        if (tanlambda*float(layer) > 0) {
+        if (tanlambda*float(getSideID(hit->getTrackerHit())) > 0) {
           helix.Initialize_Canonical(phi0,d0,z0,omega,tanlambda,_bField);
           float distance[3];
           float time = helix.getDistanceToPoint(pos,distance);
@@ -2157,13 +2107,17 @@ void SiliconTracking_MarlinTrk::AttachRemainingFTDHitsFast() {
           bool consider = true;
           TrackerHitExtendedVec& hitVector = trackAR->getTrackerHitExtendedVec();
           int NHITS = int(hitVector.size());
+
+          // SJA:FIXME: check to see if allowing no hits in the same sensor vs no hits in the same layer works 
           for (int IHIT=0;IHIT<NHITS;++IHIT) {
-            if (hit->getTrackerHit()->getType() == 
-                hitVector[IHIT]->getTrackerHit()->getType()) {
+            //            if (hit->getTrackerHit()->getType() == hitVector[IHIT]->getTrackerHit()->getType()) {
+            if (hit->getTrackerHit()->getCellID0() == hitVector[IHIT]->getTrackerHit()->getCellID0()) {
               consider = false;
               break;
             }
           }
+
+          
           if (consider) {
             float pos[3];
             for (int i=0;i<3;++i) {
@@ -2483,16 +2437,13 @@ void SiliconTracking_MarlinTrk::FinalRefit() {
       // get the pointer to the lcio trackerhit for this hit
       TrackerHit * trkHit = hitVec[ihit]->getTrackerHit();
       
-      // check is this hit is VXD(100), FTD(200) or SIT(400)
-      int det = trkHit->getType()/100;
+      int det = getDetectorID(trkHit);
       
-      if (det <= 4) { // only accept VXD, FTD or SIT
+      if (det == ILDDetID::VXD || det == ILDDetID::FTD || det == ILDDetID::SIT) { // only accept VXD, FTD or SIT
         
-        UTIL::BitField64 encoder( ILDCellID0::encoder_string ) ;
-        encoder.setValue(trkHit->getCellID0());
         
-        int layer = encoder[ILDCellID0::layer] ;
-        int petalIndex = encoder[ILDCellID0::module] ;
+//        int layer = getLayerID(trkHit);
+//        int moduleIndex = getModuleID(trkHit);
         
         // start a double loop over the hits which have already been checked 
         for (int lhit=0;lhit<ihit;++lhit) {
@@ -2500,18 +2451,18 @@ void SiliconTracking_MarlinTrk::FinalRefit() {
           // get the pointer to the lcio trackerhit for the previously checked hit
           TrackerHit * trkHitS = hitVec[lhit]->getTrackerHit();
           
-          encoder.setValue(trkHitS->getCellID0());
           
-          int layerS = encoder[ILDCellID0::layer] ;
-          int petalIndexS = encoder[ILDCellID0::module] ;
+//          int layerS = getLayerID(trkHitS);
+//          int moduleIndexS = getModuleID(trkHitS);
           
+          // SJA:FIXME: check to see if allowing no hits in the same sensor vs no hits in the same layer works 
           // if they are on the same layer and the previously checked hits has been declared good for fitting
           //          if ((trkHitS->getType() == trkHit->getType()) && (lh[lhit] == 1)) {
           // check if the hits have the same layer and petal number
           //          hitVec[ihit]->
-          if ((layer == layerS) && (petalIndex==petalIndexS) && (lh[lhit] == 1)) {
-            
-            
+          //          if ((layer == layerS) && (moduleIndex==moduleIndexS) && (lh[lhit] == 1)) {
+          if ( (trkHit->getCellID0() == trkHitS->getCellID0()) && (lh[lhit] == 1)) {
+
             // get the position of the hits 
             float xP[3];
             float xPS[3];
@@ -2523,7 +2474,7 @@ void SiliconTracking_MarlinTrk::FinalRefit() {
             // get the intersection of the helix with the either the cylinder or plane containing the hit
             float Point[3];
             float PointS[3];
-            if (det == 2) {
+            if (det == ILDDetID::FTD) {
               float time = helix->getPointInZ(xP[2],Pos,Point);
               time = helix->getPointInZ(xPS[2],Pos,PointS);
             }
@@ -2567,6 +2518,7 @@ void SiliconTracking_MarlinTrk::FinalRefit() {
         trkHits.push_back(trkHit);
       }
       else { // reject hit 
+             // SJA:FIXME missuse of type find a better way to signal rejected hits
         hitVec[i]->setType(int(0));
       }
     }

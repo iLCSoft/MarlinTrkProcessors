@@ -45,6 +45,7 @@ FullLDCTracking_MarlinTrk aFullLDCTracking_MarlinTrk ;
 FullLDCTracking_MarlinTrk::FullLDCTracking_MarlinTrk() : Processor("FullLDCTracking_MarlinTrk") {  
   _description = "Performs full tracking in LDC detector" ;  
   
+  _encoder = new UTIL::BitField64(ILDCellID0::encoder_string);
   
   // Input tracker hit collections
   
@@ -539,19 +540,20 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
       bool isUsedInFit = hitExt->getUsedInFit();
       if (_storeHitsInFit==0)
         track->addHit(hit);
-      int det = hitExt->getDet();
-      if (det == 3)
+      int det = getDetectorID(hit);
+      if (det == ILDDetID::VXD)
         nHitsVTX++;
-      if (det == 2)
+      if (det == ILDDetID::FTD)
         nHitsFTD++;
-      if (det == 7)
+      if (det == ILDDetID::SIT)
         nHitsSIT++;
-      if (det == 1)
+      if (det == ILDDetID::TPC)
         nHitsTPC++;
-      if (det == 8)
+      if (det == ILDDetID::SET)
         nHitsSET++;
-      if (det == 9)
+      if (det == ILDDetID::ETD)
         nHitsETD++;
+
       float hitX = float(hit->getPosition()[0]);
       float hitY = float(hit->getPosition()[1]);
       float hitR2 = hitX*hitX+hitY*hitY;
@@ -560,17 +562,17 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
       if (isUsedInFit) {
         if (_storeHitsInFit!=0)
           track->addHit(hit);
-        if (det == 3)
+        if (det == ILDDetID::VXD)
           nHitsVTXInFit++;
-        if (det == 2)
+        if (det == ILDDetID::FTD)
           nHitsFTDInFit++;
-        if (det == 7)
+        if (det == ILDDetID::SIT)
           nHitsSITInFit++;
-        if (det == 1)
+        if (det == ILDDetID::TPC)
           nHitsTPCInFit++;
-        if (det == 8)
+        if (det == ILDDetID::SET)
           nHitsSETInFit++;
-        if (det == 9)
+        if (det == ILDDetID::ETD)
           nHitsETDInFit++;
       }
       
@@ -621,20 +623,19 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
     track->setReferencePoint(RefPoint);
     track->setRadiusOfInnermostHit(sqrt(r2Min));
     
-    track->subdetectorHitNumbers().resize(12);
-    track->subdetectorHitNumbers()[0] = nHitsVTXInFit;
-    track->subdetectorHitNumbers()[1] = nHitsFTDInFit;
-    track->subdetectorHitNumbers()[2] = nHitsSITInFit;
-    track->subdetectorHitNumbers()[3] = nHitsTPCInFit;
-    track->subdetectorHitNumbers()[4] = nHitsSETInFit;
-    track->subdetectorHitNumbers()[5] = nHitsETDInFit;    
-    track->subdetectorHitNumbers()[6] = nHitsVTX;
-    track->subdetectorHitNumbers()[7] = nHitsFTD;
-    track->subdetectorHitNumbers()[8] = nHitsSIT;
-    track->subdetectorHitNumbers()[9] = nHitsTPC;
-    track->subdetectorHitNumbers()[10]= nHitsSET;
-    track->subdetectorHitNumbers()[11]= nHitsETD;
-    
+    track->subdetectorHitNumbers().resize(2 * ILDDetID::ETD);
+    track->subdetectorHitNumbers()[2*(ILDDetID::VXD - 1)] = nHitsVTX;
+    track->subdetectorHitNumbers()[2*(ILDDetID::FTD - 1)] = nHitsFTD;
+    track->subdetectorHitNumbers()[2*(ILDDetID::SIT - 1)] = nHitsSIT;
+    track->subdetectorHitNumbers()[2*(ILDDetID::TPC - 1)] = nHitsTPC;
+    track->subdetectorHitNumbers()[2*(ILDDetID::SET - 1)] = nHitsSET;
+    track->subdetectorHitNumbers()[2*(ILDDetID::ETD - 1)] = nHitsETD;
+    track->subdetectorHitNumbers()[2*ILDDetID::VXD - 1] = nHitsVTXInFit;
+    track->subdetectorHitNumbers()[2*ILDDetID::FTD - 1] = nHitsFTDInFit;
+    track->subdetectorHitNumbers()[2*ILDDetID::SIT - 1] = nHitsSITInFit;
+    track->subdetectorHitNumbers()[2*ILDDetID::TPC - 1] = nHitsTPCInFit;
+    track->subdetectorHitNumbers()[2*ILDDetID::SET - 1] = nHitsSETInFit;
+    track->subdetectorHitNumbers()[2*ILDDetID::ETD - 1] = nHitsETDInFit;
     
     int nHitsSiInFit = nHitsVTXInFit+nHitsFTDInFit+nHitsSITInFit;
     bool rejectTrack = (nHitsTPCInFit<_cutOnTPCHits) && (nHitsSiInFit<=0);
@@ -736,8 +737,9 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
       hitExt->setResolutionRPhi(float(tpcRPhiRes));
       hitExt->setResolutionZ(float(tpcZRes));
       
-      hitExt->setType(int(3));
-      hitExt->setDet(int(1));
+      // type and det are no longer used, set to INT_MAX to try and catch any missuse
+      hitExt->setType(int(INT_MAX));
+      hitExt->setDet(int(INT_MAX));
       _allTPCHits.push_back( hitExt );
       mapTrackerHits[hit] = hitExt;
     }
@@ -780,11 +782,9 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
       // SJA:FIXME why is this needed? 
       hitExt->setResolutionZ(0.1);
       
-      UTIL::BitField64 encoder( ILDCellID0::encoder_string ) ;
-      encoder.setValue(hit->getCellID0());
-      
-      hitExt->setType(int(2));
-      hitExt->setDet(int(2));
+      // type and det are no longer used, set to INT_MAX to try and catch any missuse
+      hitExt->setType(int(INT_MAX));            
+      hitExt->setDet(int(INT_MAX));
       
       _allFTDHits.push_back( hitExt );
       mapTrackerHits[hit] = hitExt;
@@ -807,8 +807,9 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
   //      hitExt->setResolutionZ(0.1);
   //      //      hitExt->setResolutionRPhi(_resolutionRPhi_FTD);
   //      //      hitExt->setResolutionZ(_resolutionZ_FTD);
-  //      hitExt->setType(int(2));
-  //      hitExt->setDet(int(9));
+  //      // type and det are no longer used, set to INT_MAX to try and catch any missuse
+  //      hitExt->setType(int(INT_MAX));
+  //      hitExt->setDet(int(INT_MAX));
   //      _allETDHits.push_back( hitExt );
   //      mapTrackerHits[hit] = hitExt;
   //    }
@@ -828,9 +829,10 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
       // SJA:FIXME: just use planar res for now
       hitExt->setResolutionRPhi(hit->getdU());
       hitExt->setResolutionZ(hit->getdV());
-      
-      hitExt->setType(int(3));
-      hitExt->setDet(int(7));
+
+      // type and det are no longer used, set to INT_MAX to try and catch any missuse
+      hitExt->setType(int(INT_MAX));
+      hitExt->setDet(int(INT_MAX));
       _allSITHits.push_back( hitExt );
       mapTrackerHits[hit] = hitExt;
     }
@@ -867,8 +869,9 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
   //      //       streamlog_out(DEBUG4) << strg;
   //
   //      //       std::cout << hit << std::endl;
-  //      hitExt->setType(int(3));
-  //      hitExt->setDet(int(8));
+  //      // type and det are no longer used, set to INT_MAX to try and catch any missuse
+  //      hitExt->setType(int(INT_MAX));
+  //      hitExt->setDet(int(INT_MAX));
   //      _allSETHits.push_back( hitExt );
   //      mapTrackerHits[hit] = hitExt;
   //    }
@@ -888,9 +891,10 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
       // SJA:FIXME: just use planar res for now
       hitExt->setResolutionRPhi(hit->getdU());
       hitExt->setResolutionZ(hit->getdV());
-      
-      hitExt->setType(int(3));
-      hitExt->setDet(int(3));
+
+      // type and det are no longer used, set to INT_MAX to try and catch any missuse
+      hitExt->setType(int(INT_MAX));      
+      hitExt->setDet(int(INT_MAX));
       _allVTXHits.push_back( hitExt );
       mapTrackerHits[hit] = hitExt;
     }
@@ -2177,7 +2181,9 @@ void FullLDCTracking_MarlinTrk::CheckTracks() {
         int nTpcFirst(0);
         int nUsedFirst(0);
         for(unsigned int ihit = 0;ihit<firstHitVec.size();ihit++){
-          if(firstHitVec[ihit]->getDet()==1)nTpcFirst++;
+
+          if( getDetectorID(firstHitVec[ihit]->getTrackerHit()) == ILDDetID::TPC) nTpcFirst++;
+
           if(firstHitVec[ihit]->getUsedInFit()==true)nUsedFirst++;
         }
         
@@ -2185,8 +2191,8 @@ void FullLDCTracking_MarlinTrk::CheckTracks() {
         int nTpcSecond(0);
         int nUsedSecond(0);
         for(unsigned int ihit = 0;ihit<secondHitVec.size();ihit++){
-          if(secondHitVec[ihit]->getDet()==1)nTpcSecond++;
-          if(secondHitVec[ihit]->getUsedInFit()==true)nUsedSecond++;
+          if( getDetectorID(secondHitVec[ihit]->getTrackerHit()) == ILDDetID::TPC) ++nTpcSecond;
+          if( secondHitVec[ihit]->getUsedInFit()==true ) ++nUsedSecond;
         }
         delete combinedTrack->getGroupTracks();
         delete combinedTrack;
@@ -2632,7 +2638,7 @@ void FullLDCTracking_MarlinTrk::AddNotAssignedHits() {
   //    for (int iSET=0;iSET<nSETHits;++iSET) {
   //      TrackerHitExtended * trkHit = _allSETHits[iSET];
   //      TrackerHit * hit = trkHit->getTrackerHit();
-  //      int layer = hit->getType() - 401;
+  //      int layer = getLayerID(trkHit);
   //      if (layer>=0&&layer<nLayersSET) 
   //        SETHits[layer].push_back(trkHit);   
   //    }
@@ -2655,7 +2661,7 @@ void FullLDCTracking_MarlinTrk::AddNotAssignedHits() {
   //    for (int iETD=0;iETD<nETDHits;++iETD) {
   //      TrackerHitExtended * trkHit = _allETDHits[iETD];
   //      TrackerHit * hit = trkHit->getTrackerHit();
-  //      int layer = hit->getType() - 201;
+  //      int layer = getLayerID(trkHit);
   //      if (layer>=0 && layer < nLayersETD) 
   //        ETDHits[layer].push_back(trkHit);
   //    }
@@ -2688,11 +2694,8 @@ void FullLDCTracking_MarlinTrk::AddNotAssignedHits() {
       if (trkExt == NULL) {
         TrackerHit * trkHit = trkHitExt->getTrackerHit();
         
-        UTIL::BitField64 encoder( ILDCellID0::encoder_string ) ;
-        encoder.setValue(trkHit->getCellID0());
         
-        //        int layer = trkHit->getType() - 401;
-        int layer = encoder[ILDCellID0::layer];
+        int layer = getLayerID(trkHit);
         
         if (layer >=0 && layer < _nLayersSIT) {
           nonAssignedSITHits[layer].push_back(trkHitExt);
@@ -2724,14 +2727,10 @@ void FullLDCTracking_MarlinTrk::AddNotAssignedHits() {
       if (trkExt == NULL) {
         TrackerHit * trkHit = trkHitExt->getTrackerHit();
         
-        UTIL::BitField64 encoder( ILDCellID0::encoder_string ) ;
-        encoder.setValue(trkHit->getCellID0());
-        
-        //        int layer = trkHit->getType() - 201;
         
         // get the layer number
-        int layer = encoder[ILDCellID0::layer] ;
-        int petalIndex = encoder[ILDCellID0::module] ;
+        int layer = getLayerID(trkHit);
+        int petalIndex = getModuleID(trkHit);
         // as we are dealing with staggered petals we will use 2*nlayers in each directions +/- z
         // the layers will follow the even odd numbering of the petals 
         if ( petalIndex % 2 == 0 ) {
@@ -2747,9 +2746,13 @@ void FullLDCTracking_MarlinTrk::AddNotAssignedHits() {
       }
     }
     for (int iL=_nLayersFTD-1;iL>=0;--iL) {
-      TrackerHitExtendedVec hitVec = nonAssignedFTDHits[iL];
-      AssignSiHitsToTracks(hitVec,
-                           _distCutForFTDHits);     
+      if ( nonAssignedFTDHits[iL].size()!=0 ) {
+
+        TrackerHitExtendedVec hitVec = nonAssignedFTDHits[iL];
+        AssignSiHitsToTracks(hitVec,
+                             _distCutForFTDHits);     
+
+      }
     }
   }
   
@@ -2772,11 +2775,7 @@ void FullLDCTracking_MarlinTrk::AddNotAssignedHits() {
       if (trkExt == NULL) {
         TrackerHit * trkHit = trkHitExt->getTrackerHit();
         
-        UTIL::BitField64 encoder( ILDCellID0::encoder_string ) ;
-        encoder.setValue(trkHit->getCellID0());
-        
-        //        int layer = trkHit->getType() - 101;
-        int layer = encoder[ILDCellID0::layer];
+        int layer = getLayerID(trkHit);
         
         if (layer >=0 && layer < _nLayersVTX)
           nonAssignedVTXHits[layer].push_back(trkHitExt);
@@ -3978,7 +3977,12 @@ bool FullLDCTracking_MarlinTrk::VetoMerge(TrackExtended* firstTrackExt, TrackExt
 
 
 void FullLDCTracking_MarlinTrk::check(LCEvent * evt) { }
-void FullLDCTracking_MarlinTrk::end() {}
+
+void FullLDCTracking_MarlinTrk::end() { 
+  
+  delete _encoder ;
+ 
+}
 
 
 void FullLDCTracking_MarlinTrk::setupGearGeom( const gear::GearMgr* gearMgr ){
