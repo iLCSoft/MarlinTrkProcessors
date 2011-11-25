@@ -482,9 +482,7 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
   trkFlag.setBit( LCIO::TRBIT_HITS ) ;
   colTRK->setFlag( trkFlag.getFlag()  ) ;  
   
-  if (_debug >= 2)
-    std::cout << "Collection " << TrkColName
-    << " is being added to event " << std::endl;
+  streamlog_out(DEBUG4)<< "Collection " << TrkColName << " is being added to event " << std::endl;
   
   LCCollectionVec * colRel = NULL;
   
@@ -900,8 +898,7 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
     }
   }
   catch( DataNotAvailableException &e ) {
-    if (_debug >=2 )
-      std::cout << _VTXTrackerHitCollection.c_str() << " collection is unavailable" << std::endl;
+      streamlog_out(DEBUG4) << _VTXTrackerHitCollection.c_str() << " collection is unavailable" << std::endl;
   }
   
   
