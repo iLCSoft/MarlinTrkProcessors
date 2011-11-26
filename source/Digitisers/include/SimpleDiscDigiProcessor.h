@@ -32,7 +32,7 @@ namespace EVENT{
  * @param PointResolution Point resolution in (x,y) for the planar detectors (in mm) <br>
  * (default value 0.01) <br>
  * @param Sub_Detector_ID ID of Sub-Detector using UTIL/ILDConf.h from lcio <br>
- * (default value ILDDetID::FTD) <br>
+ * (default value lcio::ILDDetID::FTD) <br>
  * @param keepHitsFromDeltas Whether to include hits from secondary particles. Mokka also stores hits from secondary particles. 
  * Due to the way they are created by SensitiveDetector class in Mokka they are
  * not on the exact detector measurement  surface as the surface of a hit is calculated as (entrypoint+exitpoint)/2.

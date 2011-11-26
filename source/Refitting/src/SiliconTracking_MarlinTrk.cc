@@ -133,7 +133,7 @@ SiliconTracking_MarlinTrk::SiliconTracking_MarlinTrk() : Processor("SiliconTrack
   
   _fastfitter = new MarlinTrk::HelixFit();
   
-  _encoder = new UTIL::BitField64(ILDCellID0::encoder_string);
+  _encoder = new UTIL::BitField64(lcio::ILDCellID0::encoder_string);
   
   std::vector<int> combinations;
   
@@ -637,11 +637,11 @@ void SiliconTracking_MarlinTrk::processEvent( LCEvent * evt ) {
             TrackerHit * trkHit = hitVec[iHit]->getTrackerHit();
             trackImpl->addHit(trkHit);
             int det = getDetectorID(trkHit);
-            if (det == ILDDetID::VXD)
+            if (det == lcio::ILDDetID::VXD)
               nHitsVTX++;
-            if (det == ILDDetID::FTD)
+            if (det == lcio::ILDDetID::FTD)
               nHitsFTD++;
-            if (det == ILDDetID::SIT)
+            if (det == lcio::ILDDetID::SIT)
               nHitsSIT++;
             if (_createMap > 0) {
               int nSH = int(trkHit->getRawHits().size());
@@ -669,20 +669,20 @@ void SiliconTracking_MarlinTrk::processEvent( LCEvent * evt ) {
         
         // SJA:FIXME for now there is no distiction between hits used and rejected ...
 
-        trackImpl->subdetectorHitNumbers().resize(2 * ILDDetID::ETD);
+        trackImpl->subdetectorHitNumbers().resize(2 * lcio::ILDDetID::ETD);
         
-        trackImpl->subdetectorHitNumbers()[ 2 * ILDDetID::VXD - 1 ] = nHitsVTX;
-        trackImpl->subdetectorHitNumbers()[ 2 * ILDDetID::FTD - 1 ] = nHitsFTD;
-        trackImpl->subdetectorHitNumbers()[ 2 * ILDDetID::SIT - 1 ] = nHitsSIT;
-        trackImpl->subdetectorHitNumbers()[ 2 * ILDDetID::TPC - 1 ] = nHitsTPC;
-        trackImpl->subdetectorHitNumbers()[ 2 * ILDDetID::SET - 1 ] = 0;
-        trackImpl->subdetectorHitNumbers()[ 2 * ILDDetID::ETD - 1 ] = 0;
-        trackImpl->subdetectorHitNumbers()[ 2 * ILDDetID::VXD - 2 ] = nHitsVTX;
-        trackImpl->subdetectorHitNumbers()[ 2 * ILDDetID::FTD - 2 ] = nHitsFTD;
-        trackImpl->subdetectorHitNumbers()[ 2 * ILDDetID::SIT - 2 ] = nHitsSIT;
-        trackImpl->subdetectorHitNumbers()[ 2 * ILDDetID::TPC - 2 ] = nHitsTPC;
-        trackImpl->subdetectorHitNumbers()[ 2 * ILDDetID::SET - 2 ] = 0;
-        trackImpl->subdetectorHitNumbers()[ 2 * ILDDetID::ETD - 2 ] = 0;
+        trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::VXD - 1 ] = nHitsVTX;
+        trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::FTD - 1 ] = nHitsFTD;
+        trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SIT - 1 ] = nHitsSIT;
+        trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::TPC - 1 ] = nHitsTPC;
+        trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SET - 1 ] = 0;
+        trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::ETD - 1 ] = 0;
+        trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::VXD - 2 ] = nHitsVTX;
+        trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::FTD - 2 ] = nHitsFTD;
+        trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SIT - 2 ] = nHitsSIT;
+        trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::TPC - 2 ] = nHitsTPC;
+        trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SET - 2 ] = 0;
+        trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::ETD - 2 ] = 0;
         
         nSiSegments++;
         float omega = trackAR->getOmega();
@@ -2440,7 +2440,7 @@ void SiliconTracking_MarlinTrk::FinalRefit() {
       
       int det = getDetectorID(trkHit);
       
-      if (det == ILDDetID::VXD || det == ILDDetID::FTD || det == ILDDetID::SIT) { // only accept VXD, FTD or SIT
+      if (det == lcio::ILDDetID::VXD || det == lcio::ILDDetID::FTD || det == lcio::ILDDetID::SIT) { // only accept VXD, FTD or SIT
         
         
 //        int layer = getLayerID(trkHit);
@@ -2475,7 +2475,7 @@ void SiliconTracking_MarlinTrk::FinalRefit() {
             // get the intersection of the helix with the either the cylinder or plane containing the hit
             float Point[3];
             float PointS[3];
-            if (det == ILDDetID::FTD) {
+            if (det == lcio::ILDDetID::FTD) {
               float time = helix->getPointInZ(xP[2],Pos,Point);
               time = helix->getPointInZ(xPS[2],Pos,PointS);
             }

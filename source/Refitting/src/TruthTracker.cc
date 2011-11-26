@@ -540,10 +540,10 @@ TrackImpl* TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_
   
   std::map<int, int> hitNumbers; 
   
-  hitNumbers[ILDDetID::VXD] = 0;
-  hitNumbers[ILDDetID::SIT] = 0;
-  hitNumbers[ILDDetID::FTD] = 0;
-  hitNumbers[ILDDetID::TPC] = 0;
+  hitNumbers[lcio::ILDDetID::VXD] = 0;
+  hitNumbers[lcio::ILDDetID::SIT] = 0;
+  hitNumbers[lcio::ILDDetID::FTD] = 0;
+  hitNumbers[lcio::ILDDetID::TPC] = 0;
   
   
   for(unsigned int j=0; j<_hit_list.size(); ++j) {
@@ -556,19 +556,19 @@ TrackImpl* TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_
   }
   
   //SJA:FIXME no distiction made for hits in fit or not
-  Track->subdetectorHitNumbers().resize(2 * ILDDetID::ETD);
-  Track->subdetectorHitNumbers()[ 2 * ILDDetID::VXD - 2 ] = hitNumbers[ILDDetID::VXD];
-  Track->subdetectorHitNumbers()[ 2 * ILDDetID::FTD - 2 ] = hitNumbers[ILDDetID::FTD];
-  Track->subdetectorHitNumbers()[ 2 * ILDDetID::SIT - 2 ] = hitNumbers[ILDDetID::SIT];
-  Track->subdetectorHitNumbers()[ 2 * ILDDetID::TPC - 2 ] = hitNumbers[ILDDetID::TPC];
-  Track->subdetectorHitNumbers()[ 2 * ILDDetID::SET - 2 ] = 0;
-  Track->subdetectorHitNumbers()[ 2 * ILDDetID::ETD - 2 ] = 0;
-  Track->subdetectorHitNumbers()[ 2 * ILDDetID::VXD - 1 ] = hitNumbers[ILDDetID::VXD];
-  Track->subdetectorHitNumbers()[ 2 * ILDDetID::FTD - 1 ] = hitNumbers[ILDDetID::FTD];
-  Track->subdetectorHitNumbers()[ 2 * ILDDetID::SIT - 1 ] = hitNumbers[ILDDetID::SIT];
-  Track->subdetectorHitNumbers()[ 2 * ILDDetID::TPC - 1 ] = hitNumbers[ILDDetID::TPC];
-  Track->subdetectorHitNumbers()[ 2 * ILDDetID::SET - 1 ] = 0;
-  Track->subdetectorHitNumbers()[ 2 * ILDDetID::ETD - 1 ] = 0;
+  Track->subdetectorHitNumbers().resize(2 * lcio::ILDDetID::ETD);
+  Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::VXD - 2 ] = hitNumbers[lcio::ILDDetID::VXD];
+  Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::FTD - 2 ] = hitNumbers[lcio::ILDDetID::FTD];
+  Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SIT - 2 ] = hitNumbers[lcio::ILDDetID::SIT];
+  Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::TPC - 2 ] = hitNumbers[lcio::ILDDetID::TPC];
+  Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SET - 2 ] = 0;
+  Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::ETD - 2 ] = 0;
+  Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::VXD - 1 ] = hitNumbers[lcio::ILDDetID::VXD];
+  Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::FTD - 1 ] = hitNumbers[lcio::ILDDetID::FTD];
+  Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SIT - 1 ] = hitNumbers[lcio::ILDDetID::SIT];
+  Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::TPC - 1 ] = hitNumbers[lcio::ILDDetID::TPC];
+  Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SET - 1 ] = 0;
+  Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::ETD - 1 ] = 0;
 
   
   

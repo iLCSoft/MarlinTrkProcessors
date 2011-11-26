@@ -43,7 +43,7 @@ SimpleDiscDigiProcessor::SimpleDiscDigiProcessor() : Processor("SimpleDiscDigiPr
   registerProcessorParameter( "Sub_Detector_ID" , 
                              "ID of Sub-Detector using UTIL/ILDConf.h from lcio." ,
                              _sub_det_id ,
-                             int(ILDDetID::FTD));
+                             int(lcio::ILDDetID::FTD));
                            
   
   registerProcessorParameter( "SimHits_encoded_with_cellID" , 
@@ -139,7 +139,7 @@ void SimpleDiscDigiProcessor::process_hits_loi( LCEvent * evt, LCCollection* STH
   if( STHcol != 0 ){    
     
     LCCollectionVec* trkhitVec = new LCCollectionVec( LCIO::TRACKERHITPLANE )  ;
-    CellIDEncoder<TrackerHitPlaneImpl> cellid_encoder( ILDCellID0::encoder_string , trkhitVec ) ;
+    CellIDEncoder<TrackerHitPlaneImpl> cellid_encoder( lcio::ILDCellID0::encoder_string , trkhitVec ) ;
     
     int nSimHits = STHcol->getNumberOfElements()  ;
     
@@ -187,19 +187,19 @@ void SimpleDiscDigiProcessor::process_hits_loi( LCEvent * evt, LCCollection* STH
         int sensorNumber = getSensorNumber( layerNumber , smearedPos[0] , smearedPos[1] );
         
         
-        cellid_encoder[ ILDCellID0::subdet ] = _sub_det_id ;
-        cellid_encoder[ ILDCellID0::side   ] = side ;
-        cellid_encoder[ ILDCellID0::layer  ] = layerNumber ;
-        cellid_encoder[ ILDCellID0::module ] = petalNumber ;
-        cellid_encoder[ ILDCellID0::sensor ] = sensorNumber ;
+        cellid_encoder[ lcio::ILDCellID0::subdet ] = _sub_det_id ;
+        cellid_encoder[ lcio::ILDCellID0::side   ] = side ;
+        cellid_encoder[ lcio::ILDCellID0::layer  ] = layerNumber ;
+        cellid_encoder[ lcio::ILDCellID0::module ] = petalNumber ;
+        cellid_encoder[ lcio::ILDCellID0::sensor ] = sensorNumber ;
         
         cellid_encoder.setValue( lcio::long64(cellid_encoder.lowWord() ) << 32 );
         
-        cellid_encoder[ ILDCellID0::subdet ] = _sub_det_id ;
-        cellid_encoder[ ILDCellID0::side   ] = side ;
-        cellid_encoder[ ILDCellID0::layer  ] = layerNumber ;
-        cellid_encoder[ ILDCellID0::module ] = 0 ;
-        cellid_encoder[ ILDCellID0::sensor ] = 0 ;
+        cellid_encoder[ lcio::ILDCellID0::subdet ] = _sub_det_id ;
+        cellid_encoder[ lcio::ILDCellID0::side   ] = side ;
+        cellid_encoder[ lcio::ILDCellID0::layer  ] = layerNumber ;
+        cellid_encoder[ lcio::ILDCellID0::module ] = 0 ;
+        cellid_encoder[ lcio::ILDCellID0::sensor ] = 0 ;
         
         cellid_encoder.setCellID( trkHit ) ;
         
@@ -264,7 +264,7 @@ void SimpleDiscDigiProcessor::process_hits_new( LCEvent * evt, LCCollection* STH
   if( STHcol != 0 ){    
     
     LCCollectionVec* trkhitVec = new LCCollectionVec( LCIO::TRACKERHITPLANE )  ;
-    CellIDEncoder<TrackerHitPlaneImpl> cellid_encoder( ILDCellID0::encoder_string , trkhitVec ) ;
+    CellIDEncoder<TrackerHitPlaneImpl> cellid_encoder( lcio::ILDCellID0::encoder_string , trkhitVec ) ;
     
     int nSimHits = STHcol->getNumberOfElements()  ;
     
@@ -281,19 +281,19 @@ void SimpleDiscDigiProcessor::process_hits_new( LCEvent * evt, LCCollection* STH
       int petal(0);
       int side(0);
       
-      UTIL::BitField64 encoder( ILDCellID0::encoder_string ) ;       
+      UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ;       
       
       encoder.setValue(celId) ;  
       
-      layerNumber = encoder[ILDCellID0::layer];
+      layerNumber = encoder[lcio::ILDCellID0::layer];
       
       
       streamlog_out( DEBUG2 ) << "CelId : " << celId <<
-      " subdet = " << encoder[ILDCellID0::subdet] <<
-      " side = " << encoder[ILDCellID0::side] <<
-      " layer = " << encoder[ILDCellID0::layer] <<
-      " module = " << encoder[ILDCellID0::module] <<
-      " sensor = " << encoder[ILDCellID0::sensor] <<
+      " subdet = " << encoder[lcio::ILDCellID0::subdet] <<
+      " side = " << encoder[lcio::ILDCellID0::side] <<
+      " layer = " << encoder[lcio::ILDCellID0::layer] <<
+      " module = " << encoder[lcio::ILDCellID0::module] <<
+      " sensor = " << encoder[lcio::ILDCellID0::sensor] <<
       std::endl ;
         
       
@@ -426,27 +426,27 @@ bool SimpleDiscDigiProcessor::hasCorrectZPos ( SimTrackerHit* hit ){
   
   if(_use_FTDLayerLayout_from_GEAR){
     
-    UTIL::BitField64 encoder( ILDCellID0::encoder_string ) ; 
+    UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ; 
     encoder.setValue(hit->getCellID0()) ;  
    
-    if( encoder[ILDCellID0::sensor] < 1 || encoder[ILDCellID0::sensor] > 4 ) {
+    if( encoder[lcio::ILDCellID0::sensor] < 1 || encoder[lcio::ILDCellID0::sensor] > 4 ) {
       
-      streamlog_out(ERROR) << "FTD sensor value is not in the range 1-4 : value = " << encoder[ILDCellID0::sensor] << std::endl;
+      streamlog_out(ERROR) << "FTD sensor value is not in the range 1-4 : value = " << encoder[lcio::ILDCellID0::sensor] << std::endl;
       return false;
       
     }
     
-    if( encoder[ILDCellID0::sensor] == 3 || encoder[ILDCellID0::sensor] == 4 ) {
+    if( encoder[lcio::ILDCellID0::sensor] == 3 || encoder[lcio::ILDCellID0::sensor] == 4 ) {
       
-      streamlog_out(DEBUG4) << "FTD sensor value is not in the range 1-2 : Hit Skipped: value = " << encoder[ILDCellID0::sensor] << " Currently only the sensitive faces facing the IP are taken" << std::endl;
+      streamlog_out(DEBUG4) << "FTD sensor value is not in the range 1-2 : Hit Skipped: value = " << encoder[lcio::ILDCellID0::sensor] << " Currently only the sensitive faces facing the IP are taken" << std::endl;
       return false;
       
     }
 
     
-    int layer = encoder[ILDCellID0::layer];
-    int petal = encoder[ILDCellID0::module];
-    int sensor = encoder[ILDCellID0::sensor];
+    int layer = encoder[lcio::ILDCellID0::layer];
+    int petal = encoder[lcio::ILDCellID0::module];
+    int sensor = encoder[lcio::ILDCellID0::sensor];
     
     double zSensitive = Global::GEAR->getFTDParameters().getFTDLayerLayout().getSensitiveZposition(layer, petal, sensor);
     

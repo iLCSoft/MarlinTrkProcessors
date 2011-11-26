@@ -182,37 +182,37 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
         
         gear::Vector3D xing_point ; 
         
-        UTIL::BitField64 encoder( ILDCellID0::encoder_string ) ; 
+        UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ; 
         
         encoder.reset() ;  // reset to 0
         
-        encoder[ILDCellID0::subdet] = ILDDetID::TPC ;
-        encoder[ILDCellID0::side] = 0 ;
-        encoder[ILDCellID0::layer]  = 200 ;
-        encoder[ILDCellID0::module] = 0 ;
-        encoder[ILDCellID0::sensor] = 0 ;
+        encoder[lcio::ILDCellID0::subdet] = lcio::ILDDetID::TPC ;
+        encoder[lcio::ILDCellID0::side] = 0 ;
+        encoder[lcio::ILDCellID0::layer]  = 200 ;
+        encoder[lcio::ILDCellID0::module] = 0 ;
+        encoder[lcio::ILDCellID0::sensor] = 0 ;
         
         
         int layerID = encoder.lowWord() ;  
         int elementID = 0 ;
         marlin_trk->intersectionWithLayer( layerID, xing_point, elementID, IMarlinTrack::modeForward ); 
         
-        encoder[ILDCellID0::subdet] = ILDDetID::VXD ;
-        encoder[ILDCellID0::layer]  = 0 ;
+        encoder[lcio::ILDCellID0::subdet] = lcio::ILDDetID::VXD ;
+        encoder[lcio::ILDCellID0::layer]  = 0 ;
         layerID = encoder.lowWord() ;  
         
         marlin_trk->intersectionWithLayer( layerID, xing_point, elementID ); // first VXD layer         
         
-        encoder[ILDCellID0::layer]  = 1 ;
+        encoder[lcio::ILDCellID0::layer]  = 1 ;
         layerID = encoder.lowWord() ;  
         marlin_trk->intersectionWithLayer( layerID, xing_point, elementID, IMarlinTrack::modeForward ); // second VXD layer     
         
-        encoder[ILDCellID0::layer]  = 2 ;
+        encoder[lcio::ILDCellID0::layer]  = 2 ;
         layerID = encoder.lowWord() ;  
         marlin_trk->intersectionWithLayer( layerID, xing_point, elementID, IMarlinTrack::modeForward ); // third VXD layer      
         
-        encoder[ILDCellID0::subdet] = ILDDetID::SIT ;
-        encoder[ILDCellID0::layer]  = 0 ;
+        encoder[lcio::ILDCellID0::subdet] = lcio::ILDDetID::SIT ;
+        encoder[lcio::ILDCellID0::layer]  = 0 ;
         layerID = encoder.lowWord() ;  
         int intersects = marlin_trk->intersectionWithLayer( layerID, xing_point, elementID, IMarlinTrack::modeBackward ); // first SIT layer      
         
@@ -255,6 +255,7 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
           refittedTrack->addTrackState(trkState);
           refittedTrack->setChi2(chi2) ;
           refittedTrack->setNdf(ndf) ;
+          
           
           for( it = trkHits.begin() ; it != trkHits.end() ; ++it )
             {

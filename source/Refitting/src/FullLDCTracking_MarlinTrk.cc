@@ -45,7 +45,7 @@ FullLDCTracking_MarlinTrk aFullLDCTracking_MarlinTrk ;
 FullLDCTracking_MarlinTrk::FullLDCTracking_MarlinTrk() : Processor("FullLDCTracking_MarlinTrk") {  
   _description = "Performs full tracking in LDC detector" ;  
   
-  _encoder = new UTIL::BitField64(ILDCellID0::encoder_string);
+  _encoder = new UTIL::BitField64(lcio::ILDCellID0::encoder_string);
   
   // Input tracker hit collections
   
@@ -539,17 +539,17 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
       if (_storeHitsInFit==0)
         track->addHit(hit);
       int det = getDetectorID(hit);
-      if (det == ILDDetID::VXD)
+      if (det == lcio::ILDDetID::VXD)
         nHitsVTX++;
-      if (det == ILDDetID::FTD)
+      if (det == lcio::ILDDetID::FTD)
         nHitsFTD++;
-      if (det == ILDDetID::SIT)
+      if (det == lcio::ILDDetID::SIT)
         nHitsSIT++;
-      if (det == ILDDetID::TPC)
+      if (det == lcio::ILDDetID::TPC)
         nHitsTPC++;
-      if (det == ILDDetID::SET)
+      if (det == lcio::ILDDetID::SET)
         nHitsSET++;
-      if (det == ILDDetID::ETD)
+      if (det == lcio::ILDDetID::ETD)
         nHitsETD++;
 
       float hitX = float(hit->getPosition()[0]);
@@ -560,17 +560,17 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
       if (isUsedInFit) {
         if (_storeHitsInFit!=0)
           track->addHit(hit);
-        if (det == ILDDetID::VXD)
+        if (det == lcio::ILDDetID::VXD)
           nHitsVTXInFit++;
-        if (det == ILDDetID::FTD)
+        if (det == lcio::ILDDetID::FTD)
           nHitsFTDInFit++;
-        if (det == ILDDetID::SIT)
+        if (det == lcio::ILDDetID::SIT)
           nHitsSITInFit++;
-        if (det == ILDDetID::TPC)
+        if (det == lcio::ILDDetID::TPC)
           nHitsTPCInFit++;
-        if (det == ILDDetID::SET)
+        if (det == lcio::ILDDetID::SET)
           nHitsSETInFit++;
-        if (det == ILDDetID::ETD)
+        if (det == lcio::ILDDetID::ETD)
           nHitsETDInFit++;
       }
       
@@ -621,20 +621,20 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
     track->setReferencePoint(RefPoint);
     track->setRadiusOfInnermostHit(sqrt(r2Min));
     
-    track->subdetectorHitNumbers().resize(2 * ILDDetID::ETD);
+    track->subdetectorHitNumbers().resize(2 * lcio::ILDDetID::ETD);
     
-    track->subdetectorHitNumbers()[ 2 * ILDDetID::VXD - 1 ] = nHitsVTXInFit;
-    track->subdetectorHitNumbers()[ 2 * ILDDetID::FTD - 1 ] = nHitsFTDInFit;
-    track->subdetectorHitNumbers()[ 2 * ILDDetID::SIT - 1 ] = nHitsSITInFit;
-    track->subdetectorHitNumbers()[ 2 * ILDDetID::TPC - 1 ] = nHitsTPCInFit;
-    track->subdetectorHitNumbers()[ 2 * ILDDetID::SET - 1 ] = nHitsSETInFit;
-    track->subdetectorHitNumbers()[ 2 * ILDDetID::ETD - 1 ] = nHitsETDInFit;
-    track->subdetectorHitNumbers()[ 2 * ILDDetID::VXD - 2 ] = nHitsVTX;
-    track->subdetectorHitNumbers()[ 2 * ILDDetID::FTD - 2 ] = nHitsFTD;
-    track->subdetectorHitNumbers()[ 2 * ILDDetID::SIT - 2 ] = nHitsSIT;
-    track->subdetectorHitNumbers()[ 2 * ILDDetID::TPC - 2 ] = nHitsTPC;
-    track->subdetectorHitNumbers()[ 2 * ILDDetID::SET - 2 ] = nHitsSET;
-    track->subdetectorHitNumbers()[ 2 * ILDDetID::ETD - 2 ] = nHitsETD;
+    track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::VXD - 1 ] = nHitsVTXInFit;
+    track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::FTD - 1 ] = nHitsFTDInFit;
+    track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SIT - 1 ] = nHitsSITInFit;
+    track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::TPC - 1 ] = nHitsTPCInFit;
+    track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SET - 1 ] = nHitsSETInFit;
+    track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::ETD - 1 ] = nHitsETDInFit;
+    track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::VXD - 2 ] = nHitsVTX;
+    track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::FTD - 2 ] = nHitsFTD;
+    track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SIT - 2 ] = nHitsSIT;
+    track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::TPC - 2 ] = nHitsTPC;
+    track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SET - 2 ] = nHitsSET;
+    track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::ETD - 2 ] = nHitsETD;
 
     
     int nHitsSiInFit = nHitsVTXInFit+nHitsFTDInFit+nHitsSITInFit;
@@ -2181,7 +2181,7 @@ void FullLDCTracking_MarlinTrk::CheckTracks() {
         int nUsedFirst(0);
         for(unsigned int ihit = 0;ihit<firstHitVec.size();ihit++){
 
-          if( getDetectorID(firstHitVec[ihit]->getTrackerHit()) == ILDDetID::TPC) nTpcFirst++;
+          if( getDetectorID(firstHitVec[ihit]->getTrackerHit()) == lcio::ILDDetID::TPC) nTpcFirst++;
 
           if(firstHitVec[ihit]->getUsedInFit()==true)nUsedFirst++;
         }
@@ -2190,7 +2190,7 @@ void FullLDCTracking_MarlinTrk::CheckTracks() {
         int nTpcSecond(0);
         int nUsedSecond(0);
         for(unsigned int ihit = 0;ihit<secondHitVec.size();ihit++){
-          if( getDetectorID(secondHitVec[ihit]->getTrackerHit()) == ILDDetID::TPC) ++nTpcSecond;
+          if( getDetectorID(secondHitVec[ihit]->getTrackerHit()) == lcio::ILDDetID::TPC) ++nTpcSecond;
           if( secondHitVec[ihit]->getUsedInFit()==true ) ++nUsedSecond;
         }
         delete combinedTrack->getGroupTracks();

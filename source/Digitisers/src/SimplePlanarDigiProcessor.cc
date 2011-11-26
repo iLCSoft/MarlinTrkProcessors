@@ -61,7 +61,7 @@ SimplePlanarDigiProcessor::SimplePlanarDigiProcessor() : Processor("SimplePlanar
   registerProcessorParameter( "Sub_Detector_ID" , 
                              "ID of Sub-Detector using UTIL/ILDConf.h from lcio. Either VXD, SIT or SET" ,
                              _sub_det_id ,
-                             int(ILDDetID::VXD));
+                             int(lcio::ILDDetID::VXD));
   
   
   // Input collections
@@ -123,7 +123,7 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
     LCCollectionVec* trkhitVec = new LCCollectionVec( LCIO::TRACKERHITPLANE )  ;
     
     
-    CellIDEncoder<TrackerHitPlaneImpl> cellid_encoder( ILDCellID0::encoder_string , trkhitVec ) ;
+    CellIDEncoder<TrackerHitPlaneImpl> cellid_encoder( lcio::ILDCellID0::encoder_string , trkhitVec ) ;
     
     
     int nSimHits = STHcol->getNumberOfElements()  ;
@@ -135,15 +135,15 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
     
     
     int det_id_for_type = 0 ;
-    if( _sub_det_id == ILDDetID::VXD ) {      
+    if( _sub_det_id == lcio::ILDDetID::VXD ) {      
       gearDet = &(Global::GEAR->getVXDParameters()) ;
       det_id_for_type = 100 ;
     }
-    else if(_sub_det_id == ILDDetID::SIT) {
+    else if(_sub_det_id == lcio::ILDDetID::SIT) {
       gearDet = &(Global::GEAR->getSITParameters()) ;
       det_id_for_type = 400 ;
     }
-    else if(_sub_det_id == ILDDetID::SET) {
+    else if(_sub_det_id == lcio::ILDDetID::SET) {
       gearDet = &(Global::GEAR->getSETParameters()) ;
     }
     else{
@@ -180,10 +180,10 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
       
       if(_ladder_Number_encoded_in_cellID) {
         streamlog_out( DEBUG3 ) << "Get Layer Number using Standard ILD Encoding from ILDConf.h : celId = " << celId << std::endl ;
-        UTIL::BitField64 encoder( ILDCellID0::encoder_string ) ; 
+        UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ; 
         encoder.setValue(celId) ;
-        layerNumber  = encoder[ILDCellID0::layer] ;
-        ladderNumber = encoder[ILDCellID0::module] ;
+        layerNumber  = encoder[lcio::ILDCellID0::layer] ;
+        ladderNumber = encoder[lcio::ILDCellID0::module] ;
         streamlog_out( DEBUG3 ) << "layerNumber = " <<  layerNumber << std::endl ;
         streamlog_out( DEBUG3 ) << "ladderNumber = " << ladderNumber << std::endl ;
         
@@ -310,11 +310,11 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
       << std::endl ;
       
       
-      cellid_encoder[ ILDCellID0::subdet ] = _sub_det_id ;
-      cellid_encoder[ ILDCellID0::side   ] = 0 ;
-      cellid_encoder[ ILDCellID0::layer  ] = layerNumber ;
-      cellid_encoder[ ILDCellID0::module ] = ladderNumber ;
-      cellid_encoder[ ILDCellID0::sensor ] = 0 ;
+      cellid_encoder[ lcio::ILDCellID0::subdet ] = _sub_det_id ;
+      cellid_encoder[ lcio::ILDCellID0::side   ] = 0 ;
+      cellid_encoder[ lcio::ILDCellID0::layer  ] = layerNumber ;
+      cellid_encoder[ lcio::ILDCellID0::module ] = ladderNumber ;
+      cellid_encoder[ lcio::ILDCellID0::sensor ] = 0 ;
       
       cellid_encoder.setCellID( trkHit ) ;
       

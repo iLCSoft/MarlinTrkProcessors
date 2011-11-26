@@ -35,7 +35,7 @@ using namespace marlin ;
  * @param Ladder_Number_encoded_in_cellID ladder number has been encoded in the cellID <br>
  * (default value false) <br>
  * @param Sub_Detector_ID ID of Sub-Detector using UTIL/ILDConf.h from lcio <br>
- * (default value ILDDetID::VXD) <br>
+ * (default value lcio::ILDDetID::VXD) <br>
  * <br>
  * 
  */
