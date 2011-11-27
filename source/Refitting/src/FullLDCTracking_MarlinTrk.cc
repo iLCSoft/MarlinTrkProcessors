@@ -36,6 +36,8 @@
 #include <UTIL/BitField64.h>
 #include <UTIL/ILDConf.h>
 
+#include <climits>
+
 using namespace lcio ;
 using namespace marlin ;
 using namespace MarlinTrk ;
