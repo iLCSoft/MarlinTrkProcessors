@@ -7,6 +7,7 @@
 
 #include <EVENT/TrackerHit.h>
 #include <EVENT/SimTrackerHit.h>
+#include <IMPL/LCCollectionVec.h>
 
 using namespace lcio ;
 using namespace marlin ;
@@ -104,7 +105,7 @@ protected:
   /* helper function to get collection using try catch block */
   void SetupInputCollections( LCEvent * evt ) ;
   
-  TrackImpl* createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encoder );
+  void createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encoder );
   
   /** input MCParticle collection name.
    */
@@ -141,10 +142,12 @@ protected:
   /** output track collection 
    */
   std::string _output_track_col_name ;
+  LCCollectionVec* _trackVec;
   
   /** Output track relations
    */
   std::string _output_track_rel_name ;
+  LCCollectionVec* _trackRelVec;
   
   std::map< MCParticle*, std::vector<TrackerHit*> > _MCParticleTrkHitMap;
   

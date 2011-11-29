@@ -251,15 +251,15 @@ void TruthTracker::processEvent( LCEvent * evt ) {
   this->SetupInputCollections(evt) ;
   
   // establish the track collection that will be created 
-  LCCollectionVec* trackVec = new LCCollectionVec( LCIO::TRACK )  ;    
+  _trackVec = new LCCollectionVec( LCIO::TRACK )  ;    
   
   // if we want to point back to the hits we need to set the flag
   LCFlagImpl trkFlag(0) ;
   trkFlag.setBit( LCIO::TRBIT_HITS ) ;
-  trackVec->setFlag( trkFlag.getFlag()  ) ;
+  _trackVec->setFlag( trkFlag.getFlag()  ) ;
   
   // establish the track relations collection that will be created 
-  LCCollectionVec* trackRelVec = new LCCollectionVec( LCIO::LCRELATION )  ;
+  _trackRelVec = new LCCollectionVec( LCIO::LCRELATION )  ;
   
   // create the encoder to decode cellID0
   UTIL::BitField64 cellID_encoder( ILDCellID0::encoder_string ) ;
@@ -332,7 +332,7 @@ void TruthTracker::processEvent( LCEvent * evt ) {
         if (_hit_list.size() >= 3) {
           // create track from vector of hits                           
           streamlog_out( DEBUG2 ) << "Create New Track for MCParticle " << mcplast << std::endl;
-          trackVec->addElement( this->createTrack(mcplast, cellID_encoder) );
+          this->createTrack(mcplast, cellID_encoder);
           _hit_list.clear();      
         }
         else { 
@@ -356,15 +356,17 @@ void TruthTracker::processEvent( LCEvent * evt ) {
     if( _hit_list.size() >= 3 ) { 
       // then create a new track
       streamlog_out( DEBUG4 ) << "Create New Track for Last MCParticle " << mcplast << std::endl;
-      trackVec->addElement( this->createTrack(mcplast, cellID_encoder) );
+      this->createTrack(mcplast, cellID_encoder);
+
+      
       _hit_list.clear();      
     }
     
     
   }    
   
-  evt->addCollection( trackVec , _output_track_col_name) ;
-  evt->addCollection( trackRelVec , _output_track_rel_name) ;
+  evt->addCollection( _trackVec , _output_track_col_name) ;
+  evt->addCollection( _trackRelVec , _output_track_rel_name) ;
   
   
   ++_n_evt ;
@@ -461,7 +463,7 @@ void TruthTracker::SetupInputCollections( LCEvent * evt ) {
 }
 
 
-TrackImpl* TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encoder ) {
+void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encoder ) {
   
   TrackImpl* Track = new TrackImpl ; 
   
@@ -571,8 +573,13 @@ TrackImpl* TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_
   Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SET - 1 ] = 0;
   Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::ETD - 1 ] = 0;
 
-  
-  
-  return Track;
+  _trackVec->addElement(Track);
+
+  LCRelationImpl* rel = new LCRelationImpl;
+  rel->setFrom (Track);
+  rel->setTo (mcp);
+  rel->setWeight(1.0);
+  _trackRelVec->addElement(rel);
+
   
 }
