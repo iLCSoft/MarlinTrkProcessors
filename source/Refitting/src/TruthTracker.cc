@@ -405,21 +405,21 @@ LCCollection* TruthTracker::GetCollection(  LCEvent * evt, std::string colName )
   
 }
 
-LCRelationNavigator* TruthTracker::GetRelations( EVENT::LCEvent * evt , std::string RelName ) {
-  
-  LCRelationNavigator* nav = NULL ;
-  
-  try {
-    nav = new LCRelationNavigator(evt->getCollection( RelName.c_str() ));
-    streamlog_out( DEBUG2 ) << "TruthTracker --> " << RelName << " track relation collection in event = " << nav << std::endl;
-  }
-  catch(DataNotAvailableException &e) {
-    streamlog_out( DEBUG2 ) << "TruthTracker --> " << RelName.c_str() << " track relation collection absent in event" << std::endl;     
-  }
-  
-  return nav;
-  
-}
+//LCRelationNavigator* TruthTracker::GetRelations( EVENT::LCEvent * evt , std::string RelName ) {
+//  
+//  LCRelationNavigator* nav = NULL ;
+//  
+//  try {
+//    nav = new LCRelationNavigator(evt->getCollection( RelName.c_str() ));
+//    streamlog_out( DEBUG2 ) << "TruthTracker --> " << RelName << " track relation collection in event = " << nav << std::endl;
+//  }
+//  catch(DataNotAvailableException &e) {
+//    streamlog_out( DEBUG2 ) << "TruthTracker --> " << RelName.c_str() << " track relation collection absent in event" << std::endl;     
+//  }
+//  
+//  return nav;
+//  
+//}
 
 
 void TruthTracker::SetupInputCollections( LCEvent * evt ) {
@@ -508,7 +508,8 @@ TrackImpl* TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_
         
       }
     }
-    
+
+    delete marlin_trk;
     
   }
   else {
