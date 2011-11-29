@@ -504,83 +504,174 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
   float pyTot = 0.0;
   float pzTot = 0.0;
   
+  //SJA:FIXME: So here we are going to do one final refit. This can certainly be optimised, but rather than worry about the mememory management right now lets make it work, and optimise it later ...
+  
+  
   for (int iTRK=0;iTRK<nTrkCand;++iTRK) {
+    
     TrackExtended * trkCand = trkVec[iTRK];
-    TrackImpl * track = new TrackImpl();
-    track->setOmega(trkCand->getOmega());
-    track->setTanLambda(trkCand->getTanLambda());
-    track->setPhi(trkCand->getPhi());
-    track->setZ0(trkCand->getZ0());
-    track->setD0(trkCand->getD0());
-    track->setChi2(trkCand->getChi2());
-    track->setNdf(trkCand->getNDF());
-    track->setCovMatrix(trkCand->getCovMatrix());
-    TrackerHitExtendedVec hitVec = trkCand->getTrackerHitExtendedVec();
+    TrackerHitExtendedVec& hitVec = trkCand->getTrackerHitExtendedVec();
+    
+    EVENT::TrackerHitVec trkHits;
+    
     int nHits = int(hitVec.size());
+    for (int ihit=0;ihit<nHits;++ihit) {
+      trkHits.push_back(hitVec[ihit]->getTrackerHit());
+    }
+    
+    
+    if( trkHits.size() < 3 ) continue ;
+    
+    MarlinTrk::IMarlinTrack* marlin_trk = _trksystem->createTrack();
+    
+    // hits are in reverse order 
+    
+    sort(trkHits.begin(), trkHits.end(), FullLDCTracking_MarlinTrk::compare_r() );
+    
+    EVENT::TrackerHitVec::iterator it = trkHits.begin();
+    
+    streamlog_out(DEBUG2) << "Start Fitting: AddHits: number of hits to fit " << trkHits.size() << std::endl;
+    
+    int number_of_added_hits = 0;
+    for( it = trkHits.begin() ; it != trkHits.end() ; ++it )
+        {
+      
+      if (marlin_trk->addHit(*it) == 0){
+        ++number_of_added_hits;
+      }
+      else{
+        streamlog_out(DEBUG4) << "Hit " << it - trkHits.begin() << " Dropped " << std::endl;
+      }
+      
+        }
+    
+    if( number_of_added_hits < 3 ) {
+      delete marlin_trk ;
+      continue ;
+    }
+    
+    marlin_trk->initialise( IMarlinTrack::backward ) ;
+    int fit_status = marlin_trk->fit() ; 
+    
+    if( fit_status != 0 ){ 
+      delete marlin_trk ;
+      continue;
+    }
+    
+    const gear::Vector3D point(0.,0.,0.); // nominal IP
+    int return_code = 0;
+    
+    double chi2;
+    int ndf;
+    
+    TrackImpl * track_lcio = new TrackImpl();
+    
+    TrackStateImpl* trkStateIP = new TrackStateImpl;
+    return_code = marlin_trk->propagate(point, *trkStateIP, chi2, ndf ) ;
+    
+    if (return_code !=MarlinTrk::IMarlinTrack::success ) {
+      streamlog_out( ERROR ) << "  >>>>>>>>>>> FinalRefit :  could not get TrackState at IP" << std::endl ;
+      delete marlin_trk ;
+      delete trkStateIP;
+      delete track_lcio;
+      continue;
+    }
+    
+    TrackStateImpl* trkStateFirstHit = new TrackStateImpl;
+    return_code = marlin_trk->getTrackState(trkHits.front(), *trkStateFirstHit, chi2, ndf ) ;
+    
+    if (return_code !=MarlinTrk::IMarlinTrack::success ) {
+      streamlog_out( ERROR ) << "  >>>>>>>>>>> FinalRefit :  could not get TrackState at First Hit " << std::endl ;
+      delete marlin_trk ;
+      delete trkStateFirstHit;
+      delete track_lcio;
+      continue;
+    }
+    
+    TrackStateImpl* trkStateLastHit = new TrackStateImpl;
+    return_code = marlin_trk->getTrackState(trkHits.back(), *trkStateLastHit, chi2, ndf ) ;
+    
+    if (return_code !=MarlinTrk::IMarlinTrack::success ) {
+      streamlog_out( ERROR ) << "  >>>>>>>>>>> FinalRefit :  could not get TrackState at Last Hit " << std::endl ;
+      delete marlin_trk ;
+      delete trkStateLastHit;
+      delete track_lcio;
+      continue;
+    }
+    
+    TrackStateImpl* trkStateCalo = new TrackStateImpl;
+    
+    UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ; 
+    encoder.reset() ;  // reset to 0
+    
+    encoder[lcio::ILDCellID0::subdet] = lcio::ILDDetID::ECAL ;
+    encoder[lcio::ILDCellID0::side] = lcio::ILDDetID::barrel;
+    encoder[lcio::ILDCellID0::layer]  = 0 ;
+    
+    int detElementID = 0;
+    return_code = marlin_trk->propagateToLayer(encoder.lowWord(), trkHits.back(), *trkStateCalo, chi2, ndf, detElementID, IMarlinTrack::modeForward ) ;
+    
+    if (return_code == MarlinTrk::IMarlinTrack::no_intersection ) { // try forward or backward
+      if (trkStateLastHit->getTanLambda()>0) {
+        encoder[lcio::ILDCellID0::side] = lcio::ILDDetID::fwd;
+      }
+      else{
+        encoder[lcio::ILDCellID0::side] = lcio::ILDDetID::bwd;
+      }
+      return_code = marlin_trk->propagateToLayer(encoder.lowWord(), trkHits.back(), *trkStateCalo, chi2, ndf, detElementID, IMarlinTrack::modeForward ) ;
+    }
+    
+    if (return_code !=MarlinTrk::IMarlinTrack::success ) {
+      streamlog_out( ERROR ) << "  >>>>>>>>>>> FinalRefit :  could not get TrackState at Calo Face" << std::endl ;
+      delete marlin_trk ;
+      delete trkStateCalo;
+      delete track_lcio;
+      continue;
+    }
+    
+    
+    
+    trkStateIP->setLocation(  lcio::TrackState::AtIP ) ;
+    trkStateFirstHit->setLocation(  lcio::TrackState::AtFirstHit ) ;
+    trkStateLastHit->setLocation(  lcio::TrackState::AtLastHit) ;
+    trkStateCalo->setLocation(  lcio::TrackState::AtCalorimeter ) ;
+    
+    track_lcio->trackStates().push_back(trkStateIP);
+    track_lcio->trackStates().push_back(trkStateFirstHit);
+    track_lcio->trackStates().push_back(trkStateLastHit);
+    track_lcio->trackStates().push_back(trkStateCalo);
+    
+    track_lcio->setChi2(chi2);
+    track_lcio->setNdf(ndf);
+    
+    const double* pos = trkHits.front()->getPosition();
+    
+    double r = sqrt(pos[0]*pos[0]+pos[1]*pos[1]);
+    track_lcio->setRadiusOfInnermostHit(r);
+    
+    std::map<int, int> hitNumbers; 
+    
+    hitNumbers[lcio::ILDDetID::VXD] = 0;
+    hitNumbers[lcio::ILDDetID::SIT] = 0;
+    hitNumbers[lcio::ILDDetID::FTD] = 0;
+    hitNumbers[lcio::ILDDetID::TPC] = 0;
+    hitNumbers[lcio::ILDDetID::SET] = 0;
+    hitNumbers[lcio::ILDDetID::ETD] = 0;
+    
+    
     std::vector<MCParticle*> mcPointers ;
     std::vector<int> mcHits ;
     mcPointers.clear();
     mcHits.clear();
-    int nHitsVTX = 0;
-    int nHitsFTD = 0;
-    int nHitsSIT = 0;
-    int nHitsTPC = 0;
-    int nHitsSET = 0;
-    int nHitsETD = 0;
-    int nHitsVTXInFit = 0;
-    int nHitsFTDInFit = 0;
-    int nHitsSITInFit = 0;
-    int nHitsTPCInFit = 0;
-    int nHitsSETInFit = 0;
-    int nHitsETDInFit = 0;
-    float r2Min = 1.0e+30;
-    for (int iH=0;iH<nHits;++iH) {
-      TrackerHitExtended * hitExt = hitVec[iH];
-      TrackerHit * hit = hitExt->getTrackerHit();
-      bool isUsedInFit = hitExt->getUsedInFit();
-      if (_storeHitsInFit==0)
-        track->addHit(hit);
-      int det = getDetectorID(hit);
-      if (det == lcio::ILDDetID::VXD)
-        nHitsVTX++;
-      if (det == lcio::ILDDetID::FTD)
-        nHitsFTD++;
-      if (det == lcio::ILDDetID::SIT)
-        nHitsSIT++;
-      if (det == lcio::ILDDetID::TPC)
-        nHitsTPC++;
-      if (det == lcio::ILDDetID::SET)
-        nHitsSET++;
-      if (det == lcio::ILDDetID::ETD)
-        nHitsETD++;
-
-      float hitX = float(hit->getPosition()[0]);
-      float hitY = float(hit->getPosition()[1]);
-      float hitR2 = hitX*hitX+hitY*hitY;
-      if (hitR2<r2Min)
-        r2Min = hitR2;
-      if (isUsedInFit) {
-        if (_storeHitsInFit!=0)
-          track->addHit(hit);
-        if (det == lcio::ILDDetID::VXD)
-          nHitsVTXInFit++;
-        if (det == lcio::ILDDetID::FTD)
-          nHitsFTDInFit++;
-        if (det == lcio::ILDDetID::SIT)
-          nHitsSITInFit++;
-        if (det == lcio::ILDDetID::TPC)
-          nHitsTPCInFit++;
-        if (det == lcio::ILDDetID::SET)
-          nHitsSETInFit++;
-        if (det == lcio::ILDDetID::ETD)
-          nHitsETDInFit++;
-      }
-      
+    
+    for(int j=trkHits.size()-1; j>=0; --j) {
+      track_lcio->addHit(trkHits.at(j)) ;
+      ++hitNumbers[ getDetectorID(trkHits.at(j)) ];
       
       if (_createMap > 0) {
-        int nSH = int(hit->getRawHits().size());
+        int nSH = int(trkHits.at(j)->getRawHits().size());
         for (int ish=0;ish<nSH;++ish) {
-          SimTrackerHit * simHit = dynamic_cast<SimTrackerHit*>(hit->getRawHits()[ish]);
+          SimTrackerHit * simHit = dynamic_cast<SimTrackerHit*>(trkHits.at(j)->getRawHits()[ish]);
           MCParticle * mcp = simHit->getMCParticle();
           bool found = false;
           int nMCP = int(mcPointers.size());
@@ -598,13 +689,31 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
         }
       }
     }
+    
+    //SJA:FIXME no distiction made for hits in fit or not
+    track_lcio->subdetectorHitNumbers().resize(2 * lcio::ILDDetID::ETD);
+    track_lcio->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::VXD - 2 ] = hitNumbers[lcio::ILDDetID::VXD];
+    track_lcio->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::FTD - 2 ] = hitNumbers[lcio::ILDDetID::FTD];
+    track_lcio->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SIT - 2 ] = hitNumbers[lcio::ILDDetID::SIT];
+    track_lcio->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::TPC - 2 ] = hitNumbers[lcio::ILDDetID::TPC];
+    track_lcio->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SET - 2 ] = hitNumbers[lcio::ILDDetID::SET];
+    track_lcio->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::ETD - 2 ] = hitNumbers[lcio::ILDDetID::ETD];
+    track_lcio->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::VXD - 1 ] = hitNumbers[lcio::ILDDetID::VXD];
+    track_lcio->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::FTD - 1 ] = hitNumbers[lcio::ILDDetID::FTD];
+    track_lcio->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SIT - 1 ] = hitNumbers[lcio::ILDDetID::SIT];
+    track_lcio->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::TPC - 1 ] = hitNumbers[lcio::ILDDetID::TPC];
+    track_lcio->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SET - 1 ] = hitNumbers[lcio::ILDDetID::SET];
+    track_lcio->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::ETD - 1 ] = hitNumbers[lcio::ILDDetID::ETD];
+    
+    
     GroupTracks * group = trkCand->getGroupTracks();
+    
     if (group != NULL) {
       TrackExtendedVec trkVecGrp = group->getTrackExtendedVec();
       int nGrTRK = int(trkVecGrp.size());
       for (int iGr=0;iGr<nGrTRK;++iGr) {
         TrackExtended * subTrack = trkVecGrp[iGr];
-        track->addTrack(subTrack->getTrack());
+        track_lcio->addTrack(subTrack->getTrack());
       }
     }
     
@@ -612,69 +721,52 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
     float z0TrkCand = trkCand->getZ0();
     //    float phi0TrkCand = trkCand->getPhi();
     
-    float RefPoint[3];
     
-    // all tracks will for now have been propagated to the IP 
-    // as TrackExtended has no refpoint memember variable just set the values to 0.0
-    RefPoint[0] = 0.0;
-    RefPoint[1] = 0.0;
-    RefPoint[2] = 0.0;
+    int nHitsSi = hitNumbers[lcio::ILDDetID::VXD]+hitNumbers[lcio::ILDDetID::FTD]+hitNumbers[lcio::ILDDetID::SIT];
     
-    track->setReferencePoint(RefPoint);
-    track->setRadiusOfInnermostHit(sqrt(r2Min));
+    bool rejectTrack = (hitNumbers[lcio::ILDDetID::TPC]<_cutOnTPCHits) && (nHitsSi<=0);
     
-    track->subdetectorHitNumbers().resize(2 * lcio::ILDDetID::ETD);
-    
-    track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::VXD - 1 ] = nHitsVTXInFit;
-    track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::FTD - 1 ] = nHitsFTDInFit;
-    track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SIT - 1 ] = nHitsSITInFit;
-    track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::TPC - 1 ] = nHitsTPCInFit;
-    track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SET - 1 ] = nHitsSETInFit;
-    track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::ETD - 1 ] = nHitsETDInFit;
-    track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::VXD - 2 ] = nHitsVTX;
-    track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::FTD - 2 ] = nHitsFTD;
-    track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SIT - 2 ] = nHitsSIT;
-    track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::TPC - 2 ] = nHitsTPC;
-    track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SET - 2 ] = nHitsSET;
-    track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::ETD - 2 ] = nHitsETD;
-
-    
-    int nHitsSiInFit = nHitsVTXInFit+nHitsFTDInFit+nHitsSITInFit;
-    bool rejectTrack = (nHitsTPCInFit<_cutOnTPCHits) && (nHitsSiInFit<=0);
-    rejectTrack = rejectTrack || ( (nHitsTPCInFit<=0) && (nHitsSiInFit<_cutOnSiHits) );
+    rejectTrack = rejectTrack || ( (hitNumbers[lcio::ILDDetID::TPC]<=0) && (nHitsSi<_cutOnSiHits) );
     rejectTrack = rejectTrack || ( fabs(d0TrkCand) > _d0TrkCut ) || ( fabs(z0TrkCand) > _z0TrkCut );
     
     if ( rejectTrack ) {
-      delete track;
+      delete track_lcio;
     }
+    
     else {
-      float omega = trkCand->getOmega();
-      float tanLambda = trkCand->getTanLambda();
-      float phi0 = trkCand->getPhi();
-      float d0 = trkCand->getD0();
-      float z0 = trkCand->getZ0();
+      
+      float omega = trkStateIP->getOmega();
+      float tanLambda = trkStateIP->getTanLambda();
+      float phi0 = trkStateIP->getPhi();
+      float d0 = trkStateIP->getD0();
+      float z0 = trkStateIP->getZ0();
+      
       HelixClass helix;
       helix.Initialize_Canonical(phi0,d0,z0,omega,tanLambda,_bField);
+      
       float trkPx = helix.getMomentum()[0];
       float trkPy = helix.getMomentum()[1];
       float trkPz = helix.getMomentum()[2];
       float trkP = sqrt(trkPx*trkPx+trkPy*trkPy+trkPz*trkPz);
+      
       eTot += trkP;
       pxTot += trkPx;
       pyTot += trkPy;
       pzTot += trkPz;   
       nTotTracks++;
-      colTRK->addElement(track);
+      
+      colTRK->addElement(track_lcio);
+      
       if (_createMap > 0) {
         int nRel = int(mcPointers.size());
         for (int k=0;k<nRel;++k) {
-          LCRelationImpl* tpclcRel = new LCRelationImpl;
+          LCRelationImpl* rel = new LCRelationImpl;
           MCParticle * mcp = mcPointers[k];
-          tpclcRel->setFrom (track);
-          tpclcRel->setTo (mcp);
-          float weight = (float)(mcHits[k])/(float)(track->getTrackerHits().size());
-          tpclcRel->setWeight(weight);
-          colRel->addElement(tpclcRel);
+          rel->setFrom (track_lcio);
+          rel->setTo (mcp);
+          float weight = (float)(mcHits[k])/(float)(track_lcio->getTrackerHits().size());
+          rel->setWeight(weight);
+          colRel->addElement(rel);
         }
       }
     }
@@ -831,7 +923,7 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
       // SJA:FIXME: just use planar res for now
       hitExt->setResolutionRPhi(hit->getdU());
       hitExt->setResolutionZ(hit->getdV());
-
+      
       // type and det are no longer used, set to INT_MAX to try and catch any missuse
       hitExt->setType(int(INT_MAX));
       hitExt->setDet(int(INT_MAX));
@@ -893,7 +985,7 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
       // SJA:FIXME: just use planar res for now
       hitExt->setResolutionRPhi(hit->getdU());
       hitExt->setResolutionZ(hit->getdV());
-
+      
       // type and det are no longer used, set to INT_MAX to try and catch any missuse
       hitExt->setType(int(INT_MAX));      
       hitExt->setDet(int(INT_MAX));
@@ -902,7 +994,7 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
     }
   }
   catch( DataNotAvailableException &e ) {
-      streamlog_out(DEBUG4) << _VTXTrackerHitCollection.c_str() << " collection is unavailable" << std::endl;
+    streamlog_out(DEBUG4) << _VTXTrackerHitCollection.c_str() << " collection is unavailable" << std::endl;
   }
   
   
@@ -2182,9 +2274,9 @@ void FullLDCTracking_MarlinTrk::CheckTracks() {
         int nTpcFirst(0);
         int nUsedFirst(0);
         for(unsigned int ihit = 0;ihit<firstHitVec.size();ihit++){
-
+          
           if( getDetectorID(firstHitVec[ihit]->getTrackerHit()) == lcio::ILDDetID::TPC) nTpcFirst++;
-
+          
           if(firstHitVec[ihit]->getUsedInFit()==true)nUsedFirst++;
         }
         
@@ -2603,11 +2695,11 @@ float FullLDCTracking_MarlinTrk::CompareTrk(TrackExtended * first, TrackExtended
            (fcloseSecond > _maxFractionOfOutliersCutHighPtMerge || fcloseFirst > _maxFractionOfOutliersCutHighPtMerge) 
            && 
            ntpcFirst+ntpcSecond < _tpc_pad_height+10.) {
-
+          
           split = true;        
-  
+          
         }
-  
+        
         if(split){
           result = dpOverP;
         }
@@ -2748,11 +2840,11 @@ void FullLDCTracking_MarlinTrk::AddNotAssignedHits() {
     }
     for (int iL=_nLayersFTD-1;iL>=0;--iL) {
       if ( nonAssignedFTDHits[iL].size()!=0 ) {
-
+        
         TrackerHitExtendedVec hitVec = nonAssignedFTDHits[iL];
         AssignSiHitsToTracks(hitVec,
                              _distCutForFTDHits);     
-
+        
       }
     }
   }
@@ -2788,7 +2880,7 @@ void FullLDCTracking_MarlinTrk::AddNotAssignedHits() {
                            _distCutForVTXHits);     
     }
   }
-    
+  
   streamlog_out(DEBUG4) << "Assign TPC hits *********************************" << std::endl;
   
   if (_assignTPCHits) {// Treatment of left-over TPC hits
@@ -3982,7 +4074,7 @@ void FullLDCTracking_MarlinTrk::check(LCEvent * evt) { }
 void FullLDCTracking_MarlinTrk::end() { 
   
   delete _encoder ;
- 
+  
 }
 
 

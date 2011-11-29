@@ -274,7 +274,8 @@ protected:
   void TrackingInFTD();
   int BuildTrackFTD(TrackExtended* trackAR, int* nLR, int iS);
   int AttachHitToTrack(TrackExtended * trackAR, TrackerHitExtended * hit, int iopt);
-  void FinalRefit();
+
+  void FinalRefit(LCCollectionVec* trk_col, LCCollectionVec* rel_col);
   
   float _bField;
   float _chi2WRPhiTriplet;
