@@ -570,7 +570,7 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
     return_code = marlin_trk->propagate(point, *trkStateIP, chi2, ndf ) ;
     
     if (return_code !=MarlinTrk::IMarlinTrack::success ) {
-      streamlog_out( ERROR ) << "  >>>>>>>>>>> FinalRefit :  could not get TrackState at IP" << std::endl ;
+      streamlog_out( ERROR ) << "  >>>>>>>>>>> FinalRefit :  could not get TrackState at IP: Track Discarded" << std::endl ;
       delete marlin_trk ;
       delete trkStateIP;
       delete track_lcio;
@@ -581,22 +581,22 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
     return_code = marlin_trk->getTrackState(trkHits.front(), *trkStateFirstHit, chi2, ndf ) ;
     
     if (return_code !=MarlinTrk::IMarlinTrack::success ) {
-      streamlog_out( ERROR ) << "  >>>>>>>>>>> FinalRefit :  could not get TrackState at First Hit " << std::endl ;
-      delete marlin_trk ;
-      delete trkStateFirstHit;
-      delete track_lcio;
-      continue;
+      streamlog_out( WARNING ) << "  >>>>>>>>>>> FinalRefit :  could not get TrackState at First Hit " << std::endl ;
+//      delete marlin_trk ;
+//      delete trkStateFirstHit;
+//      delete track_lcio;
+//      continue;
     }
     
     TrackStateImpl* trkStateLastHit = new TrackStateImpl;
     return_code = marlin_trk->getTrackState(trkHits.back(), *trkStateLastHit, chi2, ndf ) ;
     
     if (return_code !=MarlinTrk::IMarlinTrack::success ) {
-      streamlog_out( ERROR ) << "  >>>>>>>>>>> FinalRefit :  could not get TrackState at Last Hit " << std::endl ;
-      delete marlin_trk ;
-      delete trkStateLastHit;
-      delete track_lcio;
-      continue;
+      streamlog_out( WARNING ) << "  >>>>>>>>>>> FinalRefit :  could not get TrackState at Last Hit " << std::endl ;
+//      delete marlin_trk ;
+//      delete trkStateLastHit;
+//      delete track_lcio;
+//      continue;
     }
     
     TrackStateImpl* trkStateCalo = new TrackStateImpl;
@@ -622,11 +622,11 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
     }
     
     if (return_code !=MarlinTrk::IMarlinTrack::success ) {
-      streamlog_out( ERROR ) << "  >>>>>>>>>>> FinalRefit :  could not get TrackState at Calo Face" << std::endl ;
-      delete marlin_trk ;
-      delete trkStateCalo;
-      delete track_lcio;
-      continue;
+      streamlog_out( WARNING ) << "  >>>>>>>>>>> FinalRefit :  could not get TrackState at Calo Face" << std::endl ;
+//      delete marlin_trk ;
+//      delete trkStateCalo;
+//      delete track_lcio;
+//      continue;
     }
     
     
