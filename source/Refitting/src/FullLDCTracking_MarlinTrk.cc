@@ -45,7 +45,7 @@ using namespace MarlinTrk ;
 FullLDCTracking_MarlinTrk aFullLDCTracking_MarlinTrk ;
 
 FullLDCTracking_MarlinTrk::FullLDCTracking_MarlinTrk() : Processor("FullLDCTracking_MarlinTrk") {  
-  _description = "Performs full tracking in LDC detector" ;  
+  _description = "Performs full tracking in ILD detector" ;  
   
   _encoder = new UTIL::BitField64(lcio::ILDCellID0::encoder_string);
   
@@ -516,7 +516,15 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
     
     int nHits = int(hitVec.size());
     for (int ihit=0;ihit<nHits;++ihit) {
-      trkHits.push_back(hitVec[ihit]->getTrackerHit());
+
+      EVENT::TrackerHit* trkHit = hitVec[ihit]->getTrackerHit();
+      if(trkHit) { 
+        trkHits.push_back(trkHit);   
+      }
+      else{
+        throw EVENT::Exception( std::string("FullLDCTracking_MarlinTrk::AddTrackColToEvt: TrackerHit pointer == NULL ")  ) ;
+      }
+      
     }
     
     
@@ -1353,17 +1361,23 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
   
   for (int ih=0;ih<nSiHits;++ih) {
     TrackerHit * trkHit = siHitVec[ih]->getTrackerHit();
-    if (trkHit==NULL) {
-      streamlog_out(ERROR) << "Silicon Hit " << ih << " is NULL " << std::endl;
+    if(trkHit) { 
+      trkHits.push_back(trkHit);   
     }
-    trkHits.push_back(trkHit);    
-  }      
+    else{
+      throw EVENT::Exception( std::string("FullLDCTracking_MarlinTrk::AddTrackColToEvt: TrackerHit pointer == NULL ")  ) ;
+    }
+  }  
+  
   for (int ih=0;ih<nTPCHits;++ih) {
+
     TrackerHit * trkHit = tpcHitVec[ih]->getTrackerHit();
-    if (trkHit==NULL) {
-      streamlog_out(ERROR) << "TPC Hit " << ih << " is NULL " << std::endl;
+    if(trkHit) { 
+      trkHits.push_back(trkHit);   
     }
-    trkHits.push_back(trkHit);    
+    else{
+      throw EVENT::Exception( std::string("FullLDCTracking_MarlinTrk::AddTrackColToEvt: TrackerHit pointer == NULL ")  ) ;
+    }
   }      
   
   double chi2_D;
@@ -1512,11 +1526,21 @@ TrackExtended * FullLDCTracking_MarlinTrk::TrialCombineTracks(TrackExtended * tp
   
   for (int ih=0;ih<nSiHits;++ih) {
     TrackerHit * trkHit = siHitVec[ih]->getTrackerHit();
-    trkHits.push_back(trkHit);    
+    if(trkHit) { 
+      trkHits.push_back(trkHit);   
+    }
+    else{
+      throw EVENT::Exception( std::string("FullLDCTracking_MarlinTrk::TrialCombineTracks: TrackerHit pointer == NULL ")  ) ;
+    }
   }      
   for (int ih=0;ih<nTPCHits;++ih) {
     TrackerHit * trkHit = tpcHitVec[ih]->getTrackerHit();
-    trkHits.push_back(trkHit);    
+    if(trkHit) { 
+      trkHits.push_back(trkHit);   
+    }
+    else{
+      throw EVENT::Exception( std::string("FullLDCTracking_MarlinTrk::TrialCombineTracks: TrackerHit pointer == NULL ")  ) ;
+    }
   }      
   
   double chi2_D;
@@ -3484,7 +3508,12 @@ void FullLDCTracking_MarlinTrk::AssignSiHitsToTracks(TrackerHitExtendedVec hitVe
           if (hitInTrack->getUsedInFit()) {
             TrackerHit * hit = hitInTrack->getTrackerHit();
             iHitInFit++;
-            trkHits.push_back(hit);
+            if(hit) { 
+              trkHits.push_back(hit);   
+            }
+            else{
+              throw EVENT::Exception( std::string("FullLDCTracking_MarlinTrk::AssignSiHitsToTracks: TrackerHit pointer == NULL ")  ) ;
+            }
           }
         }
         

@@ -2391,7 +2391,12 @@ void SiliconTracking_MarlinTrk::FinalRefit(LCCollectionVec* trk_col, LCCollectio
         if (lh[i] == 1) {
           TrackerHit * trkHit = hitVec[i]->getTrackerHit();
           nFit++;
-          trkHits.push_back(trkHit);
+          if(trkHit) { 
+            trkHits.push_back(trkHit);   
+          }
+          else{
+            throw EVENT::Exception( std::string("SiliconTracking_MarlinTrk::FinalRefit: TrackerHit pointer == NULL ")  ) ;
+          }
         }
         else { // reject hit 
                // SJA:FIXME missuse of type find a better way to signal rejected hits
