@@ -107,7 +107,7 @@ void SimpleDiscDigiProcessor::init() {
     
     const gear::FTDParameters& ftdParams = Global::GEAR->getFTDParameters() ;
     const gear::FTDLayerLayout& ftdlayers = ftdParams.getFTDLayerLayout() ;
-    streamlog_out( MESSAGE ) << "  SimpleDiscDigiProcessor - Use FTDLayerLayout" << std::endl ;
+    streamlog_out( MESSAGE ) << "  SimpleDiscDigiProcessor - Use FTDLayerLayout with " << ftdlayers.getNLayers() << " layers" << std::endl ;
     _use_FTDLayerLayout_from_GEAR = true ;
     
   } catch (gear::UnknownParameterException& e) {
@@ -278,8 +278,8 @@ void SimpleDiscDigiProcessor::process_hits_new( LCEvent * evt, LCCollection* STH
       const int celId = SimTHit->getCellID0() ;
       
       int layerNumber(0);
-      int petal(0);
-      int side(0);
+//      int petal(0);
+//      int side(0);
       
       UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ;       
       
