@@ -212,8 +212,8 @@ void SimpleDiscDigiProcessor::process_hits_loi( LCEvent * evt, LCCollection* STH
         trkHit->setPosition(  smearedPos  ) ;
         
         float u_direction[2] ; // x
-        u_direction[0] = 0.0 ; 
-        u_direction[1] = M_PI/2.0 ;
+        u_direction[0] = M_PI/2.0 ;
+        u_direction[1] = 0.0 ; 
         
         float v_direction[2] ; // y
         v_direction[0] = M_PI/2.0 ;
@@ -332,8 +332,8 @@ void SimpleDiscDigiProcessor::process_hits_new( LCEvent * evt, LCCollection* STH
         trkHit->setPosition(  smearedPos  ) ;
         
         float u_direction[2] ; // x
-        u_direction[0] = 0.0 ; 
-        u_direction[1] = M_PI/2.0 ;
+        u_direction[0] = M_PI/2.0 ;
+        u_direction[1] = 0.0 ; 
         
         float v_direction[2] ; // y
         v_direction[0] = M_PI/2.0 ;
