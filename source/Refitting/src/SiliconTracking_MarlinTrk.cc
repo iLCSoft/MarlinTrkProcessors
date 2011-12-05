@@ -682,16 +682,26 @@ int SiliconTracking_MarlinTrk::InitialiseFTD(LCEvent * evt) {
       // SJA: this assumes that U and V are in fact X and Y
       // Check that U and V have in fact been set to X and Y
       
-      float phi_u = hit->getU()[0];
-      float theta_u = hit->getU()[1];
-      float phi_v = hit->getV()[0];
-      float theta_v = hit->getV()[1];
+      gear::Vector3D U(1.0,hit->getU()[1],hit->getU()[0],gear::Vector3D::spherical);
+      gear::Vector3D V(1.0,hit->getV()[1],hit->getV()[0],gear::Vector3D::spherical);
+      gear::Vector3D X(1.0,0.0,0.0);
+      gear::Vector3D Y(0.0,1.0,0.0);
       
       const float eps = 1.0e-07;
-      if ( fabs(phi_u) > eps || fabs(theta_u - M_PI/2.0) > eps || fabs(phi_v - M_PI/2.0) > eps || fabs(theta_v - M_PI/2.0) > eps ) {
-        streamlog_out(ERROR) << " measurment vectors U and V are not equal to the global axis X and Y exit(1) called from file " << __FILE__ << " and line " << __LINE__ << std::endl;
+      // U must be the global X axis 
+      if( fabs(1.0 - U.dot(X)) > eps ) {
+        streamlog_out(ERROR) << "SiliconTracking_MarlinTrk: FTD Hit measurment vectors U is not equal to the global X axis. \n\n exit(1) called from file " << __FILE__ << " and line " << __LINE__ << std::endl;
         exit(1);
       }
+
+      // V must be the global X axis 
+      if( fabs(1.0 - V.dot(Y)) > eps ) {
+        streamlog_out(ERROR) << "SiliconTracking_MarlinTrk: FTD Hit measurment vectors V is not equal to the global Y axis. \n\n exit(1) called from file " << __FILE__ << " and line " << __LINE__ << std::endl;
+        exit(1);
+      }
+      
+
+      
       
       double point_res_rphi = sqrt( hit->getdU()*hit->getdU() + hit->getdV()*hit->getdV() );
       hitExt->setResolutionRPhi( point_res_rphi );
@@ -773,6 +783,23 @@ int SiliconTracking_MarlinTrk::InitialiseVTX(LCEvent * evt) {
     
     for (int ielem=0; ielem<nelem; ++ielem) {
       TrackerHitPlane * hit = dynamic_cast<TrackerHitPlane*>(hitCollection->getElementAt(ielem));
+            
+      gear::Vector3D U(1.0,hit->getU()[1],hit->getU()[0],gear::Vector3D::spherical);
+      gear::Vector3D V(1.0,hit->getV()[1],hit->getV()[0],gear::Vector3D::spherical);
+      gear::Vector3D Z(0.0,0.0,1.0);
+
+      const float eps = 1.0e-07;
+      // V must be the global z axis 
+      if( fabs(1.0 - V.dot(Z)) > eps ) {
+        streamlog_out(ERROR) << "SiliconTracking_MarlinTrk: VXD Hit measurment vectors V is not equal to the global Z axis. \n\n  exit(1) called from file " << __FILE__ << " and line " << __LINE__ << std::endl;
+        exit(1);
+      }
+
+      if( fabs(U.dot(Z)) > eps ) {
+        streamlog_out(ERROR) << "SiliconTracking_MarlinTrk: VXD Hit measurment vectors U is not in the global X-Y plane. \n\n exit(1) called from file " << __FILE__ << " and line " << __LINE__ << std::endl;
+        exit(1);
+      }
+
       
       TrackerHitExtended * hitExt = new TrackerHitExtended( hit );
       
@@ -834,6 +861,23 @@ int SiliconTracking_MarlinTrk::InitialiseVTX(LCEvent * evt) {
       for (int ielem=0; ielem<nelem; ++ielem) {
         
         TrackerHitPlane * hit = dynamic_cast<TrackerHitPlane*>(hitCollection->getElementAt(ielem));
+        
+        gear::Vector3D U(1.0,hit->getU()[1],hit->getU()[0],gear::Vector3D::spherical);
+        gear::Vector3D V(1.0,hit->getV()[1],hit->getV()[0],gear::Vector3D::spherical);
+        gear::Vector3D Z(0.0,0.0,1.0);
+        
+        const float eps = 1.0e-07;
+        // U must be the global z axis 
+        if( fabs(1.0 - V.dot(Z)) > eps ) {
+          streamlog_out(ERROR) << "SiliconTracking_MarlinTrk: SIT Hit measurment vectors V is not equal to the global Z axis. \n\n exit(1) called from file " << __FILE__ << " and line " << __LINE__ << std::endl;
+          exit(1);
+        }
+        
+        if( fabs(U.dot(Z)) > eps ) {
+          streamlog_out(ERROR) << "SiliconTracking_MarlinTrk: SIT measurment vectors U is not in the global X-Y plane. \n\n exit(1) called from file " << __FILE__ << " and line " << __LINE__ << std::endl;
+          exit(1);
+        }
+
         
         TrackerHitExtended * hitExt = new TrackerHitExtended( hit );
         

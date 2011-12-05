@@ -867,17 +867,24 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
       // SJA: this assumes that U and V are in fact X and Y
       // Check that U and V have in fact been set to X and Y
       
-      float phi_u = hit->getU()[0];
-      float theta_u = hit->getU()[1];
-      float phi_v = hit->getV()[0];
-      float theta_v = hit->getV()[1];
+      gear::Vector3D U(1.0,hit->getU()[1],hit->getU()[0],gear::Vector3D::spherical);
+      gear::Vector3D V(1.0,hit->getV()[1],hit->getV()[0],gear::Vector3D::spherical);
+      gear::Vector3D X(1.0,0.0,0.0);
+      gear::Vector3D Y(0.0,1.0,0.0);
       
       const float eps = 1.0e-07;
-      if ( fabs(phi_u) > eps || fabs(theta_u - M_PI/2.0) > eps || fabs(phi_v - M_PI/2.0) > eps || fabs(theta_v - M_PI/2.0) > eps ) {
-        streamlog_out(ERROR) << " measurment vectors U and V are not equal to the global axis X and Y exit(1) called from file " << __FILE__ << " and line " << __LINE__ << std::endl;
+      // U must be the global X axis 
+      if( fabs(1.0 - U.dot(X)) > eps ) {
+        streamlog_out(ERROR) << " measurment vectors U is not equal to the global X axis. exit(1) called from file " << __FILE__ << " and line " << __LINE__ << std::endl;
         exit(1);
       }
       
+      // V must be the global X axis 
+      if( fabs(1.0 - V.dot(Y)) > eps ) {
+        streamlog_out(ERROR) << " measurment vectors V is not equal to the global Y axis. exit(1) called from file " << __FILE__ << " and line " << __LINE__ << std::endl;
+        exit(1);
+      }
+
       double point_res_rphi = sqrt( hit->getdU()*hit->getdU() + hit->getdV()*hit->getdV() );
       hitExt->setResolutionRPhi( point_res_rphi );
       
