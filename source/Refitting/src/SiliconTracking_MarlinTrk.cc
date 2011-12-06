@@ -2559,6 +2559,8 @@ void SiliconTracking_MarlinTrk::FinalRefit(LCCollectionVec* trk_col, LCCollectio
 //        continue;
       }
       
+      delete marlin_trk;
+      
       trkStateIP->setLocation(  lcio::TrackState::AtIP ) ;
       trkStateFirstHit->setLocation(  lcio::TrackState::AtFirstHit ) ;
       trkStateLastHit->setLocation(  lcio::TrackState::AtLastHit ) ;

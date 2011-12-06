@@ -637,7 +637,7 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
 //      continue;
     }
     
-    
+    delete marlin_trk;
     
     trkStateIP->setLocation(  lcio::TrackState::AtIP ) ;
     trkStateFirstHit->setLocation(  lcio::TrackState::AtFirstHit ) ;
