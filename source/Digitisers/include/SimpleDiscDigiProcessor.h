@@ -96,20 +96,20 @@ protected:
    */
   std::string _inColName ;
   std::string _outColName ;
+  std::string _outRelColName ;
   
   int _sub_det_id ;
   
   int _nRun ;
   int _nEvt ;
   
-  //  int _nDisks;
-  //  double _bZ;
-  
   bool _SimHits_encoded_with_cellID;
+
   bool _use_FTDLayerLayout_from_GEAR;
 
   float _pointReso;
   bool _keepHitsFromDeltas;
+
   std::vector< double > _FTDZCoordinate;
   std::vector< double > _diskInnerRadius;
   std::vector< double > _diskOuterRadius;

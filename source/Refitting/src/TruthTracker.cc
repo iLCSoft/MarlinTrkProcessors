@@ -37,19 +37,6 @@ using namespace marlin ;
 
 using namespace MarlinTrk ;
 
-bool TrackerHitSortPredicate(const TrackerHit* hit1, const TrackerHit* hit2)
-{
-  // TrackerHits must be checked beforehand that they have one and only one SimTrackerHit
-  SimTrackerHit * simHit1 = dynamic_cast<SimTrackerHit*>(hit1->getRawHits().at(0)) ;
-  SimTrackerHit * simHit2 = dynamic_cast<SimTrackerHit*>(hit2->getRawHits().at(0)) ;
-  
-  if( simHit1->getMCParticle() == simHit2->getMCParticle() ) {
-    return simHit1->getTime() < simHit2->getTime() ;
-  }
-  else { 
-    return simHit1->getMCParticle() < simHit2->getMCParticle() ;
-  }
-}
 
 
 TruthTracker aTruthTracker ;
@@ -59,6 +46,8 @@ TruthTracker::TruthTracker() : Processor("TruthTracker") {
   
   // modify processor description
   _description = "Creates Track Collection from MC Truth" ;
+  
+  _encoder = new UTIL::BitField64(lcio::ILDCellID0::encoder_string);
   
   // register steering parameters: name, description, class-variable, default value
   
@@ -152,6 +141,37 @@ TruthTracker::TruthTracker() : Processor("TruthTracker") {
                              _SmoothOn,
                              bool(false));
   
+  
+  registerInputCollection( LCIO::LCRELATION,"VXDTrackerHitRelInputCollection" , 
+                          "Name of the rel collection for VXD TrackerHit collection"  ,
+                          _vxdTrackerHitRelInputColName ,
+                          std::string("VTXTrackerHitRelations") ) ;
+  
+  registerInputCollection( LCIO::LCRELATION,"FTDTrackerHitRelInputCollection" , 
+                          "Name of the rel collection for FTD TrackerHit collection"  ,
+                          _ftdTrackerHitRelInputColName ,
+                          std::string("FTDTrackerHitRelations") ) ;
+  
+  registerInputCollection( LCIO::LCRELATION,"SITTrackerHitRelInputCollection" , 
+                          "Name of the rel collection for SIT TrackerHit collection"  ,
+                          _sitTrackerHitRelInputColName ,
+                          std::string("SITTrackerHitRelations") ) ;
+  
+  registerInputCollection( LCIO::LCRELATION,"TPCTrackerHitRelInputCollection" , 
+                          "Name of the rel collection for TPC TrackerHit collection"  ,
+                          _tpcTrackerHitRelInputColName ,
+                          std::string("TPCTrackerHitRelations") ) ;
+  
+  registerInputCollection( LCIO::LCRELATION,"SETTrackerHitRelInputCollection" , 
+                          "Name of the rel collection for SET TrackerHit collection"  ,
+                          _setTrackerHitRelInputColName ,
+                          std::string("SETTrackerHitRelations") ) ;
+  
+  registerInputCollection( LCIO::LCRELATION,"ETDTrackerHitRelInputCollection" , 
+                          "Name of the rel collection for ETD TrackerHit collection"  ,
+                          _etdTrackerHitRelInputColName ,
+                          std::string("ETDTrackerHitRelations") ) ;
+
   
   
   _n_run = 0 ;
@@ -264,49 +284,64 @@ void TruthTracker::processEvent( LCEvent * evt ) {
   // create the encoder to decode cellID0
   UTIL::BitField64 cellID_encoder( ILDCellID0::encoder_string ) ;
   
-  // loop over all tracker hits and check which MCPartilce created them 
-  // check each TrackerHit to see that it has only one SimTrackerHit
-  std::vector<TrackerHit*> trkhits; 
+  std::vector< std::pair<SimTrackerHit*, TrackerHit* > > simTrackerHitAndTrackerHitList;
   
   for(int i=0; i< _nVTXTrkHits ; ++i) {
     TrackerHit * trkhit = dynamic_cast<TrackerHit*>(_VTXTrkHits->getElementAt( i ));      
-    if( trkhit->getRawHits().size()==1 ) {
-      trkhits.push_back(trkhit);
+    if(  this->getSimHits(trkhit)->size() == 1 )  {
+      SimTrackerHit* simhit = dynamic_cast<SimTrackerHit*>(this->getSimHits(trkhit)->at(0));
+      simTrackerHitAndTrackerHitList.push_back(std::make_pair(simhit, trkhit));
     }
   }
   
   for(int i=0; i< _nSITTrkHits ; ++i) {
     TrackerHit * trkhit = dynamic_cast<TrackerHit*>(_SITTrkHits->getElementAt( i ));      
-    if( trkhit->getRawHits().size()==1 ) {
-      trkhits.push_back(trkhit);
+    if(  this->getSimHits(trkhit)->size() == 1 )  {
+      SimTrackerHit* simhit = dynamic_cast<SimTrackerHit*>(this->getSimHits(trkhit)->at(0));
+      simTrackerHitAndTrackerHitList.push_back(std::make_pair(simhit, trkhit));
     }
   }
   
   for(int i=0; i< _nFTDTrkHits ; ++i) {
     TrackerHit * trkhit = dynamic_cast<TrackerHit*>(_FTDTrkHits->getElementAt( i ));      
-    if( trkhit->getRawHits().size()==1 ) {
-      trkhits.push_back(trkhit);
+    if(  this->getSimHits(trkhit)->size() == 1 )  {
+      SimTrackerHit* simhit = dynamic_cast<SimTrackerHit*>(this->getSimHits(trkhit)->at(0));
+      simTrackerHitAndTrackerHitList.push_back(std::make_pair(simhit, trkhit));
     }
   }
   
   for(int i=0; i< _nTPCTrkHits ; ++i) {
     TrackerHit * trkhit = dynamic_cast<TrackerHit*>(_TPCTrkHits->getElementAt( i ));      
-    if( trkhit->getRawHits().size()==1 ) {
-      trkhits.push_back(trkhit);
+    if(  this->getSimHits(trkhit)->size() == 1 )  {
+      SimTrackerHit* simhit = dynamic_cast<SimTrackerHit*>(this->getSimHits(trkhit)->at(0));
+      simTrackerHitAndTrackerHitList.push_back(std::make_pair(simhit, trkhit));
     }
   }
   
   
+  
+  // now order the hits by MCParticle and then in time  
+//  std::sort(trkhits.begin(), trkhits.end(), TruthTracker::SimTrackerHitSortPredicate() );
+  
+  std::sort( simTrackerHitAndTrackerHitList.begin(),simTrackerHitAndTrackerHitList.end(), SimTrackerHitSortPredicate() );
+  
+
+  // loop over all tracker hits and check which MCPartilce created them 
+  // check each TrackerHit to see that it has only one SimTrackerHit
+  std::vector<TrackerHit*> trkhits; 
+
+  std::vector< std::pair<SimTrackerHit*, TrackerHit* > >::iterator it;
+  for ( it = simTrackerHitAndTrackerHitList.begin(); it != simTrackerHitAndTrackerHitList.end(); ++it) {
+    trkhits.push_back((*it).second);
+  }
+
   streamlog_out( DEBUG4 ) << "Number of Tracker hits = " << trkhits.size() << std::endl;     
   
   for(unsigned int i=0; i< trkhits.size() ; ++i) {
-    SimTrackerHit * simHit = dynamic_cast<SimTrackerHit*>(trkhits[i]->getRawHits().at(0)) ;
+    SimTrackerHit * simHit = dynamic_cast<SimTrackerHit*>(this->getSimHits(trkhits[i])->at(0)) ;
     streamlog_out( DEBUG1 ) << "Tracker hit: = " << trkhits[i] << "  mcp = " << simHit->getMCParticle() << " time = " << simHit->getTime() << std::endl;     
   }
-  
-  // now order the hits by MCParticle and then in time  
-  std::sort(trkhits.begin(), trkhits.end(), TrackerHitSortPredicate);
-  
+
   
   streamlog_out( DEBUG4 ) << "Add Tracker hits to Tracks" << std::endl;
   
@@ -315,9 +350,10 @@ void TruthTracker::processEvent( LCEvent * evt ) {
   if( trkhits.size() > 0) {
     MCParticle* mcplast = NULL;
     
-    for(unsigned int i=0; i< trkhits.size() ; ++i) {
+    //    for(unsigned int i=0; i< trkhits.size() ; ++i) {
+      for(unsigned int i=0; i< trkhits.size() ; ++i) {
       
-      MCParticle* mcp = dynamic_cast<SimTrackerHit*>(trkhits.at(i)->getRawHits().at(0))->getMCParticle();
+      MCParticle* mcp = dynamic_cast<SimTrackerHit*>(this->getSimHits(trkhits[i])->at(0))->getMCParticle();
       double const* p    = mcp->getMomentum() ;
       float  const pt2   = p[0]*p[0] + p[1]*p[1] ;
       //float  const pmag2 =  p[0]*p[0] + p[1]*p[1] + p[2]*p[2] ; 
@@ -385,6 +421,8 @@ void TruthTracker::end() {
   streamlog_out(DEBUG4) << "TruthTracker::end()  " << name() 
   << " processed " << _n_evt << " events in " << _n_run << " runs "
   << std::endl ;
+
+  delete _encoder ;
   
 }
 
@@ -459,6 +497,21 @@ void TruthTracker::SetupInputCollections( LCEvent * evt ) {
   streamlog_out( DEBUG2 ) << "number of FTDTrkHits: " << _nFTDTrkHits << std::endl ;
   streamlog_out( DEBUG2 ) << "number of TPCTrkHits: " << _nTPCTrkHits << std::endl ;
   
+  _navVXDTrackerHitRel = GetRelations( evt, _vxdTrackerHitRelInputColName );
+  _navSITTrackerHitRel = GetRelations( evt, _sitTrackerHitRelInputColName );
+  _navFTDTrackerHitRel = GetRelations( evt, _ftdTrackerHitRelInputColName );
+  _navTPCTrackerHitRel = GetRelations( evt, _tpcTrackerHitRelInputColName );
+  _navSETTrackerHitRel = GetRelations( evt, _setTrackerHitRelInputColName );
+  _navETDTrackerHitRel = GetRelations( evt, _etdTrackerHitRelInputColName );
+  
+  _hit_rels_map.clear();
+  
+  if (_navVXDTrackerHitRel) _hit_rels_map[ILDDetID::VXD]=_navVXDTrackerHitRel;
+  if (_navSITTrackerHitRel) _hit_rels_map[ILDDetID::SIT]=_navSITTrackerHitRel;
+  if (_navFTDTrackerHitRel) _hit_rels_map[ILDDetID::FTD]=_navFTDTrackerHitRel;
+  if (_navTPCTrackerHitRel) _hit_rels_map[ILDDetID::TPC]=_navTPCTrackerHitRel;
+  if (_navSETTrackerHitRel) _hit_rels_map[ILDDetID::SET]=_navSETTrackerHitRel;
+  if (_navETDTrackerHitRel) _hit_rels_map[ILDDetID::ETD]=_navETDTrackerHitRel;
   
 }
 
@@ -479,6 +532,8 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
   int ndf = 0 ;
   
   float ref[3];
+
+  TrackerHitVec added_hits;
   
   if(_FitTracksWithMarlinTrk) {
     
@@ -486,16 +541,17 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
     
     
     // sort the hits in R, so here we are assuming that the track came from the IP and that we want to fit out to in. 
-    sort(_hit_list.begin(), _hit_list.end(), TruthTracker::compare_time() );
-    //sort(_hit_list.begin(), _hit_list.end(), TruthTracker::compare_r() );
-    
+    //sort(_hit_list.begin(), _hit_list.end(), TruthTracker::compare_time() );
+    sort(_hit_list.begin(), _hit_list.end(), TruthTracker::compare_r() );
+
     for(unsigned int j=0; j<_hit_list.size(); ++j) {
       marlin_trk->addHit( _hit_list[j] );
+      added_hits.push_back( _hit_list[j] );
     }  
-    
+        
     marlin_trk->initialise( IMarlinTrack::backward ) ;
     int fit_status = marlin_trk->fit() ; 
-    
+        
     if( fit_status == 0 ) { 
       
       const gear::Vector3D point(0.,0.,0.); // nominal IP
@@ -549,10 +605,10 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
   hitNumbers[lcio::ILDDetID::TPC] = 0;
   
   
-  for(unsigned int j=0; j<_hit_list.size(); ++j) {
-    Track->addHit(_hit_list.at(j)) ;
+  for(unsigned int j=0; j<added_hits.size(); ++j) {
+    Track->addHit(added_hits.at(j)) ;
     
-    cellID_encoder.setValue(_hit_list.at(j)->getCellID0()) ;
+    cellID_encoder.setValue(added_hits.at(j)->getCellID0()) ;
     int detID = cellID_encoder[ILDCellID0::subdet];
     ++hitNumbers[detID];
     //    streamlog_out( DEBUG1 ) << "Hit from Detector " << detID << std::endl;     
@@ -581,5 +637,38 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
   rel->setWeight(1.0);
   _trackRelVec->addElement(rel);
 
+  
+}
+
+const LCObjectVec* TruthTracker::getSimHits( TrackerHit* trkhit, const FloatVec* weights ){
+  
+  std::map<int, LCRelationNavigator*>::iterator it;
+  
+  it = _hit_rels_map.find( getDetectorID(trkhit));
+  
+  if (it != _hit_rels_map.end()) {
+    if(weights) weights = &(it->second->getRelatedToWeights(trkhit));
+    return &(it->second->getRelatedToObjects(trkhit));
+  }
+  else{
+    streamlog_out(ERROR) << "Relations not present for Hit Collection from Detector ID " << this->getDetectorID(trkhit) << "  : exit(1) "<< std::endl;
+    exit(1);
+  }
+  
+}
+
+LCRelationNavigator* TruthTracker::GetRelations(LCEvent * evt , std::string RelName ) {
+  
+  LCRelationNavigator* nav = NULL ;
+  
+  try{
+    nav = new LCRelationNavigator(evt->getCollection( RelName.c_str() ));
+    streamlog_out( DEBUG2 ) << "TruthTracker --> " << RelName << " track relation collection in event = " << nav << std::endl;
+  }
+  catch(DataNotAvailableException &e){
+    streamlog_out( DEBUG2 ) << "TruthTracker --> " << RelName.c_str() << " track relation collection absent in event" << std::endl;     
+  }
+  
+  return nav;
   
 }

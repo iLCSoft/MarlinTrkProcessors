@@ -79,7 +79,8 @@ protected:
   std::string _inColName ;
   
   std::string _outColName ;
-  
+  std::string _outRelColName ;
+ 
   int _sub_det_id ;
   
   int _nRun ;

@@ -9,8 +9,8 @@
 #include <EVENT/SimTrackerHit.h>
 #include <IMPL/LCCollectionVec.h>
 
-using namespace lcio ;
-using namespace marlin ;
+#include <UTIL/BitField64.h>
+#include <UTIL/ILDConf.h>
 
 namespace EVENT{
   class MCParticle ;
@@ -23,7 +23,6 @@ namespace IMPL {
 
 namespace UTIL{
   class LCRelationNavigator ;
-  class BitField64 ;
 }
 
 
@@ -46,11 +45,11 @@ namespace MarlinTrk{
  * @author S. J. Aplin, DESY
  */
 
-class TruthTracker : public Processor {
+class TruthTracker : public marlin::Processor {
   
 public:
   
-  virtual Processor*  newProcessor() { return new TruthTracker ; }
+  virtual marlin::Processor*  newProcessor() { return new TruthTracker ; }
   
   
   TruthTracker() ;
@@ -76,13 +75,30 @@ public:
    */
   virtual void end() ;
   
-  struct compare_time {
-    bool operator()( EVENT::TrackerHit* a, EVENT::TrackerHit* b)  const { 
-      SimTrackerHit* hita = dynamic_cast<SimTrackerHit*>(a->getRawHits().at(0));
-      SimTrackerHit* hitb = dynamic_cast<SimTrackerHit*>(b->getRawHits().at(0));
-      return ( hita->getTime() < hitb->getTime() ) ; 
+  struct SimTrackerHitSortPredicate {
+    bool operator()(std::pair<SimTrackerHit*, TrackerHit* > p1, std::pair<SimTrackerHit*, TrackerHit* > p2) {
+      
+      SimTrackerHit* simHit1 = p1.first;
+      SimTrackerHit* simHit2 = p1.first;
+      
+      
+      if( simHit1->getMCParticle() == simHit2->getMCParticle() ) {
+        return simHit1->getTime() < simHit2->getTime() ;
+      }
+      else { 
+        return simHit1->getMCParticle() < simHit2->getMCParticle() ;
+      }
     }
   };
+
+  
+//  struct compare_time {
+//    bool operator()( EVENT::TrackerHit* a, EVENT::TrackerHit* b)  const { 
+//      SimTrackerHit* hita = dynamic_cast<SimTrackerHit*>(a->getRawHits().at(0));
+//      SimTrackerHit* hitb = dynamic_cast<SimTrackerHit*>(b->getRawHits().at(0));
+//      return ( hita->getTime() < hitb->getTime() ) ; 
+//    }
+//  };
   
   
   struct compare_r {
@@ -92,9 +108,31 @@ public:
       return ( r_a_sqd < r_b_sqd ) ; 
     }
   } ;
+  
+  struct compare_time_reverse {
+    bool operator()( EVENT::TrackerHit* a, EVENT::TrackerHit* b)  const { 
+      double r_a_sqd = a->getPosition()[0] * a->getPosition()[0] + a->getPosition()[1] * a->getPosition()[1] ; 
+      double r_b_sqd = b->getPosition()[0] * b->getPosition()[0] + b->getPosition()[1] * b->getPosition()[1] ; 
+      return ( r_a_sqd > r_b_sqd ) ; 
+    }
+  } ;
+
+  
+
 
   
 protected:
+  
+  
+  const LCObjectVec* getSimHits( TrackerHit* trkhit, const FloatVec* weights = NULL);
+  
+  UTIL::BitField64* _encoder;
+  int getDetectorID(TrackerHit* hit) { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::ILDCellID0::subdet]; }
+  int getSideID(TrackerHit* hit)     { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::ILDCellID0::side]; };
+  int getLayerID(TrackerHit* hit)    { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::ILDCellID0::layer]; };
+  int getModuleID(TrackerHit* hit)   { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::ILDCellID0::module]; };
+  int getSensorID(TrackerHit* hit)   { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::ILDCellID0::sensor]; };
+
   
   /* helper function to get collection using try catch block */
   LCCollection* GetCollection(  LCEvent * evt, std::string colName ) ;
@@ -106,6 +144,9 @@ protected:
   void SetupInputCollections( LCEvent * evt ) ;
   
   void createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encoder );
+  
+
+
   
   /** input MCParticle collection name.
    */
@@ -137,7 +178,21 @@ protected:
   LCCollection* _FTDTrkHits;
   LCCollection* _TPCTrkHits;
   
-  
+ 
+  std::string _vxdTrackerHitRelInputColName;
+  std::string _ftdTrackerHitRelInputColName;
+  std::string _sitTrackerHitRelInputColName;
+  std::string _tpcTrackerHitRelInputColName;
+  std::string _setTrackerHitRelInputColName;
+  std::string _etdTrackerHitRelInputColName;
+
+  LCRelationNavigator* _navVXDTrackerHitRel;
+  LCRelationNavigator* _navSITTrackerHitRel;
+  LCRelationNavigator* _navFTDTrackerHitRel;
+  LCRelationNavigator* _navTPCTrackerHitRel;
+  LCRelationNavigator* _navSETTrackerHitRel;
+  LCRelationNavigator* _navETDTrackerHitRel;
+
   
   /** output track collection 
    */
@@ -152,6 +207,8 @@ protected:
   std::map< MCParticle*, std::vector<TrackerHit*> > _MCParticleTrkHitMap;
   
   std::vector<TrackerHit*> _hit_list;
+  
+  std::map<int, LCRelationNavigator*> _hit_rels_map;
   
   int _nMCP;
   

@@ -5,6 +5,7 @@
 
 #include <EVENT/LCCollection.h>
 #include <IMPL/LCCollectionVec.h>
+#include <IMPL/LCRelationImpl.h>
 #include <EVENT/SimTrackerHit.h>
 #include <IMPL/TrackerHitPlaneImpl.h>
 #include <EVENT/MCParticle.h>
@@ -68,6 +69,13 @@ SimpleDiscDigiProcessor::SimpleDiscDigiProcessor() : Processor("SimpleDiscDigiPr
                            "Name of the TrackerHit output collection"  ,
                            _outColName ,
                            std::string("FTDTrackerHits") ) ;
+  
+ 
+  registerOutputCollection(LCIO::LCRELATION,
+                           "SimTrkHitRelCollection",
+                           "Name of TrackerHit SimTrackHit relation collection",
+                           _outRelColName,
+                           std::string("FTDTrackerHitRelations"));
   
   
   registerProcessorParameter( "keepHitsFromDeltas" ,
@@ -139,6 +147,14 @@ void SimpleDiscDigiProcessor::process_hits_loi( LCEvent * evt, LCCollection* STH
   if( STHcol != 0 ){    
     
     LCCollectionVec* trkhitVec = new LCCollectionVec( LCIO::TRACKERHITPLANE )  ;
+
+    LCCollectionVec * relCol = new LCCollectionVec(LCIO::LCRELATION);
+    
+    // to store the weights
+    LCFlagImpl lcFlag(0) ;
+    lcFlag.setBit( LCIO::LCREL_WEIGHTED ) ;
+    relCol->setFlag( lcFlag.getFlag()  ) ;
+    
     CellIDEncoder<TrackerHitPlaneImpl> cellid_encoder( lcio::ILDCellID0::encoder_string , trkhitVec ) ;
     
     int nSimHits = STHcol->getNumberOfElements()  ;
@@ -180,8 +196,7 @@ void SimpleDiscDigiProcessor::process_hits_loi( LCEvent * evt, LCCollection* STH
         //store hit variables
         TrackerHitPlaneImpl* trkHit = new TrackerHitPlaneImpl ;        
         
-        trkHit->setType( 200+layerNumber );  // needed for FullLDCTracking et al.
-        
+        //        trkHit->setType( 200+layerNumber );  // needed for FullLDCTracking et al.
         
         int petalNumber = getPetalNumber( layerNumber , smearedPos[0] , smearedPos[1] );
         int sensorNumber = getSensorNumber( layerNumber , smearedPos[0] , smearedPos[1] );
@@ -228,14 +243,21 @@ void SimpleDiscDigiProcessor::process_hits_loi( LCEvent * evt, LCCollection* STH
         trkHit->setEDep( SimTHit->getEDep() ) ;
         trkHit->setTime( SimTHit->getTime() ) ;
         
-        MCParticle *mcp ;
-        mcp = SimTHit->getMCParticle() ;
-        if( mcp != 0 )  {
-          trkHit->rawHits().push_back( SimTHit ) ;
-        }
-        else{
-          streamlog_out( DEBUG0 ) << " ignore simhit pointer as MCParticle pointer is NULL ! " << std::endl ;
-        }
+        LCRelationImpl* rel = new LCRelationImpl;
+        
+        rel->setFrom (trkHit);
+        rel->setTo (SimTHit);
+        rel->setWeight( 1.0 );
+        relCol->addElement(rel);
+        
+//        MCParticle *mcp ;
+//        mcp = SimTHit->getMCParticle() ;
+//        if( mcp != 0 )  {
+//          trkHit->rawHits().push_back( SimTHit ) ;
+//        }
+//        else{
+//          streamlog_out( DEBUG0 ) << " ignore simhit pointer as MCParticle pointer is NULL ! " << std::endl ;
+//        }
         
         trkhitVec->addElement( trkHit ) ; 
         
@@ -255,6 +277,8 @@ void SimpleDiscDigiProcessor::process_hits_loi( LCEvent * evt, LCCollection* STH
     }
     
     evt->addCollection( trkhitVec ,  _outColName ) ;
+    evt->addCollection( relCol , _outRelColName ) ;
+    
   }
   
 }
@@ -264,6 +288,12 @@ void SimpleDiscDigiProcessor::process_hits_new( LCEvent * evt, LCCollection* STH
   if( STHcol != 0 ){    
     
     LCCollectionVec* trkhitVec = new LCCollectionVec( LCIO::TRACKERHITPLANE )  ;
+    LCCollectionVec * relCol = new LCCollectionVec(LCIO::LCRELATION);
+    // to store the weights
+    LCFlagImpl lcFlag(0) ;
+    lcFlag.setBit( LCIO::LCREL_WEIGHTED ) ;
+    relCol->setFlag( lcFlag.getFlag()  ) ;
+    
     CellIDEncoder<TrackerHitPlaneImpl> cellid_encoder( lcio::ILDCellID0::encoder_string , trkhitVec ) ;
     
     int nSimHits = STHcol->getNumberOfElements()  ;
@@ -347,14 +377,21 @@ void SimpleDiscDigiProcessor::process_hits_new( LCEvent * evt, LCCollection* STH
         
         trkHit->setEDep( SimTHit->getEDep() ) ;
         
-        MCParticle *mcp ;
-        mcp = SimTHit->getMCParticle() ;
-        if( mcp != 0 )  {
-          trkHit->rawHits().push_back( SimTHit ) ;
-        }
-        else{
-          streamlog_out( DEBUG0 ) << " ignore simhit pointer as MCParticle pointer is NULL ! " << std::endl ;
-        }
+        LCRelationImpl* rel = new LCRelationImpl;
+        
+        rel->setFrom (trkHit);
+        rel->setTo (SimTHit);
+        rel->setWeight( 1.0 );
+        relCol->addElement(rel);
+        
+//        MCParticle *mcp ;
+//        mcp = SimTHit->getMCParticle() ;
+//        if( mcp != 0 )  {
+//          trkHit->rawHits().push_back( SimTHit ) ;
+//        }
+//        else{
+//          streamlog_out( DEBUG0 ) << " ignore simhit pointer as MCParticle pointer is NULL ! " << std::endl ;
+//        }
         
         trkhitVec->addElement( trkHit ) ; 
         
@@ -374,6 +411,9 @@ void SimpleDiscDigiProcessor::process_hits_new( LCEvent * evt, LCCollection* STH
     }
     
     evt->addCollection( trkhitVec ,  _outColName ) ;
+    evt->addCollection( relCol , _outRelColName ) ;
+    
+  
   }
 
   

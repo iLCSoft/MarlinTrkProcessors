@@ -4,6 +4,7 @@
 
 #include <EVENT/LCCollection.h>
 #include <IMPL/LCCollectionVec.h>
+#include <IMPL/LCRelationImpl.h>
 #include <EVENT/SimTrackerHit.h>
 #include <IMPL/TrackerHitPlaneImpl.h>
 #include <EVENT/MCParticle.h>
@@ -56,10 +57,10 @@ SimplePlanarDigiProcessor::SimplePlanarDigiProcessor() : Processor("SimplePlanar
   registerProcessorParameter( "Ladder_Number_encoded_in_cellID" , 
                              "Mokka has encoded the ladder number in the cellID" ,
                              _ladder_Number_encoded_in_cellID ,
-                             bool(false));
+                             bool(true));
   
   registerProcessorParameter( "Sub_Detector_ID" , 
-                             "ID of Sub-Detector using UTIL/ILDConf.h from lcio. Either VXD, SIT or SET" ,
+                             "ID of Sub-Detector from UTIL/ILDConf.h from lcio. Either for VXD, SIT or SET. Only used if Ladder_Number_encoded_in_cellID == false" ,
                              _sub_det_id ,
                              int(lcio::ILDDetID::VXD));
   
@@ -78,6 +79,12 @@ SimplePlanarDigiProcessor::SimplePlanarDigiProcessor() : Processor("SimplePlanar
                            "Name of the TrackerHit output collection"  ,
                            _outColName ,
                            std::string("VTXTrackerHits") ) ;
+  
+  registerOutputCollection(LCIO::LCRELATION,
+                           "SimTrkHitRelCollection",
+                           "Name of TrackerHit SimTrackHit relation collection",
+                           _outRelColName,
+                           std::string("VTXTrackerHitRelations"));
   
   
   // setup the list of supported detectors
@@ -122,33 +129,49 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
     
     LCCollectionVec* trkhitVec = new LCCollectionVec( LCIO::TRACKERHITPLANE )  ;
     
+    LCCollectionVec* relCol = new LCCollectionVec(LCIO::LCRELATION);
+
+    // to store the weights
+    LCFlagImpl lcFlag(0) ;
+    lcFlag.setBit( LCIO::LCREL_WEIGHTED ) ;
+    relCol->setFlag( lcFlag.getFlag()  ) ;
+
     
     CellIDEncoder<TrackerHitPlaneImpl> cellid_encoder( lcio::ILDCellID0::encoder_string , trkhitVec ) ;
     
-    
     int nSimHits = STHcol->getNumberOfElements()  ;
-    
-    
+      
     //get geometry info
     
     const gear::ZPlanarParameters* gearDet = NULL ;
     
+    int det_id = 0 ;
+    UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ;
     
-    int det_id_for_type = 0 ;
-    if( _sub_det_id == lcio::ILDDetID::VXD ) {      
+    if ( nSimHits>0 ) {
+      SimTrackerHit* SimTHit = dynamic_cast<SimTrackerHit*>( STHcol->getElementAt( 0 ) ) ;
+      if (_ladder_Number_encoded_in_cellID) {
+        encoder.setValue(SimTHit->getCellID0()) ;
+        det_id  = encoder[lcio::ILDCellID0::subdet] ;
+      }
+      else {
+        det_id = _sub_det_id;
+      }
+    }
+    
+        
+    if( det_id == lcio::ILDDetID::VXD ) {      
       gearDet = &(Global::GEAR->getVXDParameters()) ;
-      det_id_for_type = 100 ;
     }
-    else if(_sub_det_id == lcio::ILDDetID::SIT) {
+    else if(det_id == lcio::ILDDetID::SIT) {
       gearDet = &(Global::GEAR->getSITParameters()) ;
-      det_id_for_type = 400 ;
     }
-    else if(_sub_det_id == lcio::ILDDetID::SET) {
+    else if(det_id == lcio::ILDDetID::SET) {
       gearDet = &(Global::GEAR->getSETParameters()) ;
     }
     else{
       std::stringstream errorMsg;
-      errorMsg << "SimplePlanarDigiProcessor::processEvent: unknown detector ID: file " << __FILE__ << " line " << __LINE__ ;
+      errorMsg << "SimplePlanarDigiProcessor::processEvent: unsupported detector ID = " << det_id << ": file " << __FILE__ << " line " << __LINE__ ;
       throw Exception( errorMsg.str() );  
     }
     
@@ -174,13 +197,14 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
       gear::Vector3D hitvec(pos[0],pos[1],pos[2]);
       gear::Vector3D smearedhitvec(pos[0],pos[1],pos[2]);
       
-      
       int layerNumber = 0 ;
       int ladderNumber = 0 ;
       
+      encoder.setValue(celId) ;
+      
       if(_ladder_Number_encoded_in_cellID) {
         streamlog_out( DEBUG3 ) << "Get Layer Number using Standard ILD Encoding from ILDConf.h : celId = " << celId << std::endl ;
-        UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ; 
+      
         encoder.setValue(celId) ;
         layerNumber  = encoder[lcio::ILDCellID0::layer] ;
         ladderNumber = encoder[lcio::ILDCellID0::module] ;
@@ -231,8 +255,7 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
       double PhiInLocal = hitvec.phi() - ladderPhi;
       
       double u = (hitvec.rho() * sin(PhiInLocal) - sensitive_offset );
-      //double u = (hitvec.rho() * sin(PhiInLocal) );
-      
+       
       streamlog_out(DEBUG3) << "Hit = "<< i << " has celId " << celId << " layer number = " << layerNumber << " ladderNumber = " << ladderNumber << endl;
       
       streamlog_out(DEBUG3) <<"Position of hit before smearing = "<<pos[0]<<" "<<pos[1]<<" "<<pos[2]<< " r = " << hitvec.rho() << endl;
@@ -300,9 +323,8 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
       //store hit variables
       TrackerHitPlaneImpl* trkHit = new TrackerHitPlaneImpl ;
       
-      trkHit->setType(det_id_for_type+layerNumber );         // needed for FullLDCTracking et al.
-      
-      
+      //      trkHit->setType(det_id+layerNumber );         // needed for FullLDCTracking et al.
+            
       streamlog_out(DEBUG3) <<"Position of hit after smearing = "<<smearedPos[0]<<" "<<smearedPos[1]<<" "<<smearedPos[2]
       << " :" 
       << "  u: " <<  u+rPhiSmear
@@ -343,14 +365,22 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
       //          push back the SimTHit for this TrackerHit
       // fg: only if we have a sim hit with proper link to MC truth
       
-      MCParticle *mcp ;
-      mcp = SimTHit->getMCParticle() ;
-      if( mcp != 0 )  {
-        trkHit->rawHits().push_back( SimTHit ) ;
-      }
-      else{
-        streamlog_out( DEBUG0 ) << " ignore simhit pointer as MCParticle pointer is NULL ! " << std::endl ;
-      }
+      LCRelationImpl* rel = new LCRelationImpl;
+
+      rel->setFrom (trkHit);
+      rel->setTo (SimTHit);
+      rel->setWeight( 1.0 );
+      relCol->addElement(rel);
+
+      
+//      MCParticle *mcp ;
+//      mcp = SimTHit->getMCParticle() ;
+//      if( mcp != 0 )  {
+//        trkHit->rawHits().push_back( SimTHit ) ;
+//      }
+//      else{
+//        streamlog_out( DEBUG0 ) << " ignore simhit pointer as MCParticle pointer is NULL ! " << std::endl ;
+//      }
       
       
       trkhitVec->addElement( trkHit ) ; 
@@ -361,6 +391,7 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
     
     
     evt->addCollection( trkhitVec , _outColName ) ;
+    evt->addCollection( relCol , _outRelColName ) ;
     
   }
   _nEvt ++ ;
