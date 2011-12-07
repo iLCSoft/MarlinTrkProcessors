@@ -217,6 +217,16 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
         layerNumber = celId  - 1 ;
       }
       
+      if (layerNumber > layerLayout.getNLayers()) {
+        streamlog_out( ERROR ) << "Layer Number " << layerNumber << " greater than that in Gear File: exit(1) called from " << __FILE__ << " line " << __LINE__ << std::endl ;
+        exit(1);
+      }
+      if (ladderNumber > layerLayout.getNLadders(layerNumber)) {
+        streamlog_out( ERROR ) << "Ladder Number " << ladderNumber << " greater than that in Gear File for layer "<< layerNumber << " : exit(1) called from " << __FILE__ << " line " << __LINE__ << std::endl ;
+        exit(1);
+      }
+
+      
       float edep = SimTHit->getEDep() ;
       
       //phi between each ladder
