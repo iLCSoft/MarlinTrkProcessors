@@ -64,7 +64,7 @@ SimpleDiscDigiProcessor::SimpleDiscDigiProcessor() : Processor("SimpleDiscDigiPr
                              _pointReso ,
                              (float)0.010) ;
   
-  registerOutputCollection( LCIO::TRACKERHIT,
+  registerOutputCollection( LCIO::TRACKERHITPLANE,
                            "OutputCollectionName" , 
                            "Name of the TrackerHit output collection"  ,
                            _outColName ,
@@ -351,9 +351,6 @@ void SimpleDiscDigiProcessor::process_hits_new( LCEvent * evt, LCCollection* STH
         
         //store hit variables
         TrackerHitPlaneImpl* trkHit = new TrackerHitPlaneImpl ;        
-        
-        trkHit->setType( 200+layerNumber);  // needed for FullLDCTracking et al.
-        
               
         cellid_encoder.setValue(encoder.getValue());
         

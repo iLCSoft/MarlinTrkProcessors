@@ -74,7 +74,7 @@ SimplePlanarDigiProcessor::SimplePlanarDigiProcessor() : Processor("SimplePlanar
   
   
   // Output collections
-  registerOutputCollection( LCIO::TRACKERHIT,
+  registerOutputCollection( LCIO::TRACKERHITPLANE,
                            "TrackerHitCollectionName" , 
                            "Name of the TrackerHit output collection"  ,
                            _outColName ,
@@ -342,7 +342,7 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
       << std::endl ;
       
       
-      cellid_encoder[ lcio::ILDCellID0::subdet ] = _sub_det_id ;
+      cellid_encoder[ lcio::ILDCellID0::subdet ] = det_id ;
       cellid_encoder[ lcio::ILDCellID0::side   ] = 0 ;
       cellid_encoder[ lcio::ILDCellID0::layer  ] = layerNumber ;
       cellid_encoder[ lcio::ILDCellID0::module ] = ladderNumber ;

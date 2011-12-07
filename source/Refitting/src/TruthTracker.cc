@@ -545,10 +545,15 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
     sort(_hit_list.begin(), _hit_list.end(), TruthTracker::compare_r() );
 
     for(unsigned int j=0; j<_hit_list.size(); ++j) {
-      marlin_trk->addHit( _hit_list[j] );
-      added_hits.push_back( _hit_list[j] );
+      if( IMarlinTrack::success == marlin_trk->addHit( _hit_list[j] ) ) added_hits.push_back( _hit_list[j] );
     }  
-        
+
+    if (added_hits.size() < 4) {
+      delete Track;
+      delete marlin_trk;
+      return;
+    }
+    
     marlin_trk->initialise( IMarlinTrack::backward ) ;
     int fit_status = marlin_trk->fit() ; 
         
