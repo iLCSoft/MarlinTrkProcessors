@@ -10,8 +10,8 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.6 FATAL_ERROR)
 PROJECT( MarlinTrkProcessors )
 
 # project version
-SET( ${PROJECT_NAME}_VERSION_MAJOR 0 )
-SET( ${PROJECT_NAME}_VERSION_MINOR 2 )
+SET( ${PROJECT_NAME}_VERSION_MAJOR 1 )
+SET( ${PROJECT_NAME}_VERSION_MINOR 0 )
 SET( ${PROJECT_NAME}_VERSION_PATCH 0 )
 
 cmake_policy(SET CMP0008 NEW)
@@ -78,7 +78,7 @@ ADD_DEFINITIONS( "-Wall -ansi -pedantic" )
 ADD_DEFINITIONS( "-Wno-long-long" )
 
 # include directories
-INCLUDE_DIRECTORIES( ./source/Digitisers/include ./source/Refitting/include ./source/Utils/include )
+INCLUDE_DIRECTORIES( ./source/Digitisers/include ./source/Refitting/include ./source/Utils/include ./source/ftf/include )
 #INSTALL_DIRECTORY( ./include DESTINATION . FILES_MATCHING PATTERN "*.h" )
 
 # add library

@@ -1,0 +1,48 @@
+############################################################################################################
+#
+#    MarlinTrkProcessors
+#
+#    Collection of Tracking Relelated Processors Based on MarlinTrk
+#
+#    S. Aplin, F. Gaede DESY, 2011
+#
+#
+############################################################################################################
+
+  ==== This is still Work in Progress =======
+
+
+------------------------------------------------------------
+ 
+
+ =============================================================================================================
+
+
+  --------
+ | v01-00 |
+  -------- 
+
+  SimplePlanarDigiProcessor:  
+  			      Creates TrackerHits from SimTrackerHits, smearing them according to the input parameters. 
+ 			      The plannar geometry should be either VXD, SIT or SET described using ZPlannarLayout
+ 			      The positions of "digitized" TrackerHits are obtained by gaussian smearing positions
+ 			      of SimTrackerHits perpendicular and along the ladder according to the specified point resolutions.
+
+  SimpleDiscDigiProcessor: 
+  			      Produces a TrackerHit collection from SimTrackerHit collection. Intended for use with the FTD.
+			      The positions of "digitized" TrackerHits are obtained by gaussian smearing positions
+			      of SimTrackerHits in (x,y) plane according to the specified point resolution. 
+	
+  SiliconTracking_MarlinTrk:  Processor performing stand-alone pattern recognition in the VTX, FTD and SIT.
+  			      Adaption of the of the original SiliconTracking from A. Raspereza, to use MarlinTrk.
+
+  FullLDCTracking_MarlinTrk:  Processor performing track finding procedure in the entire ILD detector by linking track segments found 
+                              by the SiliconTracking module in the silicon detectors and by Clupatra in the TPC. 
+			      Adaption of the of the original SiliconTracking from A. Raspereza, to use MarlinTrk.
+
+  RefitProcessor:             Track Refitter processor for marlin. Refits an input track collection using MarlinTrk, 
+                              producing a new collection of tracks. Primarily to demonstrate the use of MarlinTrk.
+
+  TruthTracker:     	      Track creation based on MC truth. Uses Relations between TrackerHits and SimTrackerHits to produce a track 
+  			      collection. It can also fit the tracks using MarlinTrk or fill the track collection with the helix parameters
+                              of the MCParticle.			   
