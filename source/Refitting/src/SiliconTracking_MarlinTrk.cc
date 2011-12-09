@@ -2511,7 +2511,7 @@ void SiliconTracking_MarlinTrk::FinalRefit(LCCollectionVec* trk_col, LCCollectio
       return_code = marlin_trk->getTrackState(trkHits.front(), *trkStateFirstHit, chi2, ndf ) ;
       
       if(return_code !=MarlinTrk::IMarlinTrack::success){
-        streamlog_out( WARNING ) << "  >>>>>>>>>>> FinalRefit :  could not get TrackState at First Hit " << std::endl ;
+        streamlog_out( DEBUG5 ) << "  >>>>>>>>>>> FinalRefit :  could not get TrackState at First Hit " << std::endl ;
 //        delete marlin_trk ;
 //        delete trkStateFirstHit;
 //        delete track_lcio;
@@ -2522,7 +2522,7 @@ void SiliconTracking_MarlinTrk::FinalRefit(LCCollectionVec* trk_col, LCCollectio
       return_code = marlin_trk->getTrackState(trkHits.back(), *trkStateLastHit, chi2, ndf ) ;
       
       if (return_code !=MarlinTrk::IMarlinTrack::success ) {
-        streamlog_out( WARNING ) << "  >>>>>>>>>>> FinalRefit :  could not get TrackState at Last Hit " << std::endl ;
+        streamlog_out( DEBUG5 ) << "  >>>>>>>>>>> FinalRefit :  could not get TrackState at Last Hit " << std::endl ;
 //        delete marlin_trk ;
 //        delete trkStateLastHit;
 //        delete track_lcio;
@@ -2552,7 +2552,7 @@ void SiliconTracking_MarlinTrk::FinalRefit(LCCollectionVec* trk_col, LCCollectio
       }
       
       if (return_code !=MarlinTrk::IMarlinTrack::success ) {
-        streamlog_out( WARNING ) << "  >>>>>>>>>>> FinalRefit :  could not get TrackState at Calo Face" << std::endl ;
+        streamlog_out( DEBUG5 ) << "  >>>>>>>>>>> FinalRefit :  could not get TrackState at Calo Face" << std::endl ;
 //        delete marlin_trk ;
 //        delete trkStateCalo;
 //        delete track_lcio;
