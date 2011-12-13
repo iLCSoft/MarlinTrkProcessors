@@ -17,6 +17,13 @@
 
  =============================================================================================================
 
+  --------
+ | v01-01 |
+  -------- 
+
+ SiliconTracking_MarlinTrk &   Modified to use getHitsInFit from MarlinTrk to get the correct TrackState for the first and last hits. 
+ FullLDCTracking_MarlinTrk:    SiliconTracking has had the work around applied for the optimization problem of compare_r as applied 
+                               to FullLDCTracking. 
 
   --------
  | v01-00 |
