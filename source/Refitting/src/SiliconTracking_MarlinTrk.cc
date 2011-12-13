@@ -2507,8 +2507,32 @@ void SiliconTracking_MarlinTrk::FinalRefit(LCCollectionVec* trk_col, LCCollectio
         continue;
       }
       
+      // fitting finished get hit in the fit
+      
+      std::vector<std::pair<EVENT::TrackerHit*, double> > hits_in_fit;
+      
+      // remember the hits are ordered in the order in which they were fitted
+      // here we are fitting inwards to the first is the last and vice verse
+      
+      marlin_trk->getHitsInFit(hits_in_fit);
+      
+      EVENT::TrackerHit* last_hit_in_fit = hits_in_fit.front().first;
+      if (!last_hit_in_fit) {
+        throw EVENT::Exception( std::string("SiliconTracking_MarlinTrk::FinalRefit: TrackerHit pointer == NULL ")  ) ;
+      }
+      
+      EVENT::TrackerHit* first_hit_in_fit = hits_in_fit.back().first;
+      if (!first_hit_in_fit) {
+        throw EVENT::Exception( std::string("SiliconTracking_MarlinTrk::FinalRefit: TrackerHit pointer == NULL ")  ) ;
+      }
+      
+      
+      // SJA:FIXME: As we are not smoothing back then the fits at the last hit will probably still be rubbish 
+      // must find a method to control smoothing ...
+      
+      
       TrackStateImpl* trkStateFirstHit = new TrackStateImpl;
-      return_code = marlin_trk->getTrackState(trkHits.front(), *trkStateFirstHit, chi2, ndf ) ;
+      return_code = marlin_trk->getTrackState(first_hit_in_fit, *trkStateFirstHit, chi2, ndf ) ;
       
       if(return_code !=MarlinTrk::IMarlinTrack::success){
         streamlog_out( DEBUG5 ) << "  >>>>>>>>>>> FinalRefit :  could not get TrackState at First Hit " << std::endl ;
@@ -2519,7 +2543,7 @@ void SiliconTracking_MarlinTrk::FinalRefit(LCCollectionVec* trk_col, LCCollectio
       }
       
       TrackStateImpl* trkStateLastHit = new TrackStateImpl;
-      return_code = marlin_trk->getTrackState(trkHits.back(), *trkStateLastHit, chi2, ndf ) ;
+      return_code = marlin_trk->getTrackState(last_hit_in_fit, *trkStateLastHit, chi2, ndf ) ;
       
       if (return_code !=MarlinTrk::IMarlinTrack::success ) {
         streamlog_out( DEBUG5 ) << "  >>>>>>>>>>> FinalRefit :  could not get TrackState at Last Hit " << std::endl ;
@@ -2539,7 +2563,7 @@ void SiliconTracking_MarlinTrk::FinalRefit(LCCollectionVec* trk_col, LCCollectio
       encoder[lcio::ILDCellID0::layer]  = 0 ;
       
       int detElementID = 0;
-      return_code = marlin_trk->propagateToLayer(encoder.lowWord(), trkHits.back(), *trkStateCalo, chi2, ndf, detElementID, IMarlinTrack::modeForward ) ;
+      return_code = marlin_trk->propagateToLayer(encoder.lowWord(), last_hit_in_fit, *trkStateCalo, chi2, ndf, detElementID, IMarlinTrack::modeForward ) ;
       
       if (return_code == MarlinTrk::IMarlinTrack::no_intersection ) { // try forward or backward
         if (trkStateLastHit->getTanLambda()>0) {
@@ -2548,12 +2572,12 @@ void SiliconTracking_MarlinTrk::FinalRefit(LCCollectionVec* trk_col, LCCollectio
         else{
           encoder[lcio::ILDCellID0::side] = lcio::ILDDetID::bwd;
         }
-        return_code = marlin_trk->propagateToLayer(encoder.lowWord(), trkHits.back(), *trkStateCalo, chi2, ndf, detElementID, IMarlinTrack::modeForward ) ;
+        return_code = marlin_trk->propagateToLayer(encoder.lowWord(), last_hit_in_fit, *trkStateCalo, chi2, ndf, detElementID, IMarlinTrack::modeForward ) ;
       }
       
       if (return_code !=MarlinTrk::IMarlinTrack::success ) {
-        streamlog_out( DEBUG5 ) << "  >>>>>>>>>>> FinalRefit :  could not get TrackState at Calo Face" << std::endl ;
-//        delete marlin_trk ;
+        streamlog_out( DEBUG5 ) << "  >>>>>>>>>>> FinalRefit :  could not get TrackState at Calo Face: return_code = " << return_code << std::endl ;
+        //        delete marlin_trk ;
 //        delete trkStateCalo;
 //        delete track_lcio;
 //        continue;
@@ -2636,7 +2660,7 @@ void SiliconTracking_MarlinTrk::FinalRefit(LCCollectionVec* trk_col, LCCollectio
       track_lcio->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::ETD - 1 ] = hitNumbers[lcio::ILDDetID::ETD];
       
       trk_col->addElement(track_lcio);
-      
+            
       // note trackAR which is of type TrackExtended, only takes fits set for ref point = 0,0,0 
       trackAR->setOmega(trkStateIP->getOmega());
       trackAR->setTanLambda(trkStateIP->getTanLambda());
@@ -2668,7 +2692,7 @@ void SiliconTracking_MarlinTrk::FinalRefit(LCCollectionVec* trk_col, LCCollectio
       pxTot += trkPx;
       pyTot += trkPy;
       pzTot += trkPz;
-      
+
       if (_createMap > 0) {
         int nRel = int(mcPointers.size());
         for (int k=0;k<nRel;++k) {
@@ -2681,12 +2705,7 @@ void SiliconTracking_MarlinTrk::FinalRefit(LCCollectionVec* trk_col, LCCollectio
           rel_col->addElement(rel);
         }
       }
-      
     }
-    
-    
-    
-    
   }
   
   streamlog_out(DEBUG4) << "SiliconTracking_MarlinTrk -> run " << _nRun

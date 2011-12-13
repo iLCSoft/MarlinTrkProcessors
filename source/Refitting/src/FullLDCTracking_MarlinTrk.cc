@@ -585,11 +585,36 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
       continue;
     }
     
+    // fitting finished get hit in the fit
+    
+    std::vector<std::pair<EVENT::TrackerHit*, double> > hits_in_fit;
+    
+    // remember the hits are ordered in the order in which they were fitted
+    // here we are fitting inwards to the first is the last and vice verse
+    
+    marlin_trk->getHitsInFit(hits_in_fit);
+    
+    EVENT::TrackerHit* last_hit_in_fit = hits_in_fit.front().first;
+    if (!last_hit_in_fit) {
+      throw EVENT::Exception( std::string("SiliconTracking_MarlinTrk::FinalRefit: TrackerHit pointer == NULL ")  ) ;
+    }
+    
+    EVENT::TrackerHit* first_hit_in_fit = hits_in_fit.back().first;
+    if (!first_hit_in_fit) {
+      throw EVENT::Exception( std::string("SiliconTracking_MarlinTrk::FinalRefit: TrackerHit pointer == NULL ")  ) ;
+    }
+    
+    
+    // SJA:FIXME: As we are not smoothing back then the fits at the last hit will probably still be rubbish 
+    // must find a method to control smoothing ...
+
+    
+    
     TrackStateImpl* trkStateFirstHit = new TrackStateImpl;
-    return_code = marlin_trk->getTrackState(trkHits.front(), *trkStateFirstHit, chi2, ndf ) ;
+    return_code = marlin_trk->getTrackState(first_hit_in_fit, *trkStateFirstHit, chi2, ndf ) ;
     
     if (return_code !=MarlinTrk::IMarlinTrack::success ) {
-      streamlog_out( DEBUG5 ) << "  >>>>>>>>>>> FinalRefit :  could not get TrackState at First Hit " << std::endl ;
+      streamlog_out( DEBUG5 ) << "  >>>>>>>>>>> FinalRefit :  could not get TrackState at First Hit return_code = " << return_code << std::endl ;
 //      delete marlin_trk ;
 //      delete trkStateFirstHit;
 //      delete track_lcio;
@@ -597,10 +622,10 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
     }
     
     TrackStateImpl* trkStateLastHit = new TrackStateImpl;
-    return_code = marlin_trk->getTrackState(trkHits.back(), *trkStateLastHit, chi2, ndf ) ;
+    return_code = marlin_trk->getTrackState(last_hit_in_fit, *trkStateLastHit, chi2, ndf ) ;
     
     if (return_code !=MarlinTrk::IMarlinTrack::success ) {
-      streamlog_out( DEBUG5 ) << "  >>>>>>>>>>> FinalRefit :  could not get TrackState at Last Hit " << std::endl ;
+      streamlog_out( DEBUG5 ) << "  >>>>>>>>>>> FinalRefit :  could not get TrackState at Last Hit : return_code = " << return_code << std::endl ;
 //      delete marlin_trk ;
 //      delete trkStateLastHit;
 //      delete track_lcio;
@@ -617,7 +642,7 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
     encoder[lcio::ILDCellID0::layer]  = 0 ;
     
     int detElementID = 0;
-    return_code = marlin_trk->propagateToLayer(encoder.lowWord(), trkHits.back(), *trkStateCalo, chi2, ndf, detElementID, IMarlinTrack::modeForward ) ;
+    return_code = marlin_trk->propagateToLayer(encoder.lowWord(), last_hit_in_fit, *trkStateCalo, chi2, ndf, detElementID, IMarlinTrack::modeForward ) ;
     
     if (return_code == MarlinTrk::IMarlinTrack::no_intersection ) { // try forward or backward
       if (trkStateLastHit->getTanLambda()>0) {
@@ -626,15 +651,17 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
       else{
         encoder[lcio::ILDCellID0::side] = lcio::ILDDetID::bwd;
       }
-      return_code = marlin_trk->propagateToLayer(encoder.lowWord(), trkHits.back(), *trkStateCalo, chi2, ndf, detElementID, IMarlinTrack::modeForward ) ;
+      return_code = marlin_trk->propagateToLayer(encoder.lowWord(), last_hit_in_fit, *trkStateCalo, chi2, ndf, detElementID, IMarlinTrack::modeForward ) ;
     }
     
     if (return_code !=MarlinTrk::IMarlinTrack::success ) {
-      streamlog_out( DEBUG5 ) << "  >>>>>>>>>>> FinalRefit :  could not get TrackState at Calo Face" << std::endl ;
-//      delete marlin_trk ;
-//      delete trkStateCalo;
-//      delete track_lcio;
-//      continue;
+      streamlog_out( DEBUG5 ) << "  >>>>>>>>>>> FinalRefit :  could not get TrackState at Calo Face : return_code = " << 
+      return_code << std::endl ;
+      
+      //      delete marlin_trk ;
+      //      delete trkStateCalo;
+      //      delete track_lcio;
+      //      continue;
     }
     
     delete marlin_trk;
