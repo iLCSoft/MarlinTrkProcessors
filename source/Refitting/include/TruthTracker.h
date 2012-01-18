@@ -79,7 +79,7 @@ public:
     bool operator()(std::pair<SimTrackerHit*, TrackerHit* > p1, std::pair<SimTrackerHit*, TrackerHit* > p2) {
       
       SimTrackerHit* simHit1 = p1.first;
-      SimTrackerHit* simHit2 = p1.first;
+      SimTrackerHit* simHit2 = p2.first;
       
       
       if( simHit1->getMCParticle() == simHit2->getMCParticle() ) {
