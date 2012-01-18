@@ -187,11 +187,13 @@ void SimpleDiscDigiProcessor::process_hits_loi( LCEvent * evt, LCCollection* STH
         double smearedPos[3] ;
         smearedPos[0] = pos[0] + xSmear;
         smearedPos[1] = pos[1] + ySmear;
+
         // No semaring of Z coordinate
-        smearedPos[2] = pos[2] ;
+        //smearedPos[2] = pos[2] ;
+
+        smearedPos[2] = side*_FTDZCoordinate[layerNumber] ;
         
-        streamlog_out(DEBUG) <<"Position of hit after smearing = "<<smearedPos[0]<<" "<<smearedPos[1]<<" "<<smearedPos[2] << std::endl ;
-        
+        streamlog_out(DEBUG) <<"Position of hit after smearing with z set to disk z-coord. = "<<smearedPos[0]<<" "<<smearedPos[1]<<" "<<smearedPos[2] << std::endl ;
         
         //store hit variables
         TrackerHitPlaneImpl* trkHit = new TrackerHitPlaneImpl ;        
@@ -222,7 +224,6 @@ void SimpleDiscDigiProcessor::process_hits_loi( LCEvent * evt, LCCollection* STH
         streamlog_out(DEBUG2) <<"layerNumber = "<< layerNumber << std::endl ;
         streamlog_out(DEBUG2) <<"moduleNumber = "<< petalNumber << std::endl ;
         streamlog_out(DEBUG2) <<"sensorNumber = "<< sensorNumber << std::endl ;
-        
         
         trkHit->setPosition(  smearedPos  ) ;
         
@@ -463,6 +464,8 @@ bool SimpleDiscDigiProcessor::hasCorrectZPos ( SimTrackerHit* hit ){
   
   if(_use_FTDLayerLayout_from_GEAR){
     
+    streamlog_out(DEBUG) << "SimpleDiscDigiProcessor::hasCorrectZPos using FTDLayerLayout_from_GEAR" << std::endl;
+    
     UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ; 
     encoder.setValue(hit->getCellID0()) ;  
    
@@ -494,15 +497,17 @@ bool SimpleDiscDigiProcessor::hasCorrectZPos ( SimTrackerHit* hit ){
     
   }
   else{
+
+    streamlog_out(DEBUG) << "SimpleDiscDigiProcessor::hasCorrectZPos using FTD ZCoordinate only " << std::endl;
     
     for (unsigned int i=0; i < _FTDZCoordinate.size(); i++){
       
       streamlog_out(DEBUG) << " zSensitive = " << _FTDZCoordinate[i];
-      streamlog_out(DEBUG) << " zPos = " << zPos << std::endl;
+      streamlog_out(DEBUG) << " zPos = " << zPos << " dz = " << fabs ( _FTDZCoordinate[i] - zPos ) << std::endl;
       
       //      if ( (fabs ( _FTDZCoordinate[i] - zPos ) < 0.0001) || (fabs ( _FTDZCoordinate[i] - 0.275 - zPos ) < 0.0001) ) return true;
       //if ((fabs ( _FTDZCoordinate[i] - 0.275 - zPos ) < 0.0001) ) return true;
-      if ((fabs ( _FTDZCoordinate[i] - zPos ) < 0.0001) ) return true;
+      if ((fabs ( _FTDZCoordinate[i] - zPos ) < 0.01) ) return true;
       
     }
   }
