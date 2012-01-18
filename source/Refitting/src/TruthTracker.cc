@@ -339,10 +339,9 @@ void TruthTracker::processEvent( LCEvent * evt ) {
   
   for(unsigned int i=0; i< trkhits.size() ; ++i) {
     SimTrackerHit * simHit = dynamic_cast<SimTrackerHit*>(this->getSimHits(trkhits[i])->at(0)) ;
-    streamlog_out( DEBUG1 ) << "Tracker hit: = " << trkhits[i] << "  mcp = " << simHit->getMCParticle() << " time = " << simHit->getTime() << std::endl;     
+    streamlog_out( DEBUG1 ) << "Tracker hit: [" << i << "] = " << trkhits[i] << "  mcp = " << simHit->getMCParticle() << " time = " << simHit->getTime() << " cellid = " << simHit->getCellID0() << std::endl;     
   }
 
-  
   streamlog_out( DEBUG4 ) << "Add Tracker hits to Tracks" << std::endl;
   
   _hit_list.clear();
@@ -352,8 +351,10 @@ void TruthTracker::processEvent( LCEvent * evt ) {
     
     //    for(unsigned int i=0; i< trkhits.size() ; ++i) {
       for(unsigned int i=0; i< trkhits.size() ; ++i) {
-      
-      MCParticle* mcp = dynamic_cast<SimTrackerHit*>(this->getSimHits(trkhits[i])->at(0))->getMCParticle();
+
+        SimTrackerHit* simhit = dynamic_cast<SimTrackerHit*>(this->getSimHits(trkhits[i])->at(0));
+        
+        MCParticle* mcp = simhit->getMCParticle();
       double const* p    = mcp->getMomentum() ;
       float  const pt2   = p[0]*p[0] + p[1]*p[1] ;
       //float  const pmag2 =  p[0]*p[0] + p[1]*p[1] + p[2]*p[2] ; 
@@ -379,7 +380,7 @@ void TruthTracker::processEvent( LCEvent * evt ) {
       
       if( pt2  > (_MCpThreshold*_MCpThreshold) ) {
         // if momentum is greater than cut add hit to list
-        streamlog_out( DEBUG3 ) << "Add hit to track from MCParticle " << mcp << std::endl;
+        streamlog_out( DEBUG3 ) << "Add hit from det " <<  simhit->getCellID0()  << " to track from MCParticle " << mcp << " : current number of hits = " << _hit_list.size() << std::endl;
         _hit_list.push_back(trkhits.at(i)) ;
       }
       
@@ -549,6 +550,7 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
     }  
 
     if (added_hits.size() < 4) {
+      streamlog_out( DEBUG3 ) << "Less than 4 hits: only " << _hit_list.size() << " hits skip" << std::endl;  
       delete Track;
       delete marlin_trk;
       return;
