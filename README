@@ -18,6 +18,20 @@
  =============================================================================================================
 
   --------
+ | v01-02 |
+  -------- 
+
+SiliconTracking_MarlinTrk &	First version which is able to reconstruct LOI data.
+ FullLDCTracking_MarlinTrk:
+
+ SimpleCylinderDigiProcessor:	New - Uses simple gaussian smearing for cylinders.
+
+ TruthTracker:			Fixed bug in SimTrackerHitSortPredicate.
+
+ SimpleDiscDigiProcessor:	For LOI data the z coordinate is now set to that of the disk and the tolerance for dz has been increased to 10 microns.
+
+
+  --------
  | v01-01 |
   -------- 
 
