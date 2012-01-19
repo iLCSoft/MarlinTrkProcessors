@@ -2,6 +2,7 @@
 #include <EVENT/LCObject.h>
 #include <EVENT/LCCollection.h>
 #include <EVENT/TrackerHitPlane.h>
+#include <EVENT/TrackerHitZCylinder.h>
 #include <EVENT/Track.h>
 #include <EVENT/SimTrackerHit.h>
 #include <EVENT/MCParticle.h>
@@ -391,7 +392,11 @@ FullLDCTracking_MarlinTrk::FullLDCTracking_MarlinTrk() : Processor("FullLDCTrack
                              _SmoothOn,
                              bool(true));
   
-  
+  registerProcessorParameter("ReadingLoiData",
+                             "Legacy mode for reading loi data",
+                             _reading_loi_data,
+                             bool(false));
+
   
 }
 
@@ -596,12 +601,12 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
     
     EVENT::TrackerHit* last_hit_in_fit = hits_in_fit.front().first;
     if (!last_hit_in_fit) {
-      throw EVENT::Exception( std::string("SiliconTracking_MarlinTrk::FinalRefit: TrackerHit pointer == NULL ")  ) ;
+      throw EVENT::Exception( std::string("FullLDCTracking_MarlinTrk::FinalRefit: TrackerHit pointer == NULL ")  ) ;
     }
     
     EVENT::TrackerHit* first_hit_in_fit = hits_in_fit.back().first;
     if (!first_hit_in_fit) {
-      throw EVENT::Exception( std::string("SiliconTracking_MarlinTrk::FinalRefit: TrackerHit pointer == NULL ")  ) ;
+      throw EVENT::Exception( std::string("FullLDCTracking_MarlinTrk::FinalRefit: TrackerHit pointer == NULL ")  ) ;
     }
     
     
@@ -956,15 +961,74 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
   
   // Reading SIT Hits
   try {
+
     LCCollection * col = event->getCollection(_SITTrackerHitCollection.c_str());
+    
     int nelem = col->getNumberOfElements();
+    
     for (int ielem=0;ielem<nelem;++ielem) {
-      TrackerHitPlane * hit = dynamic_cast<TrackerHitPlane*>(col->getElementAt(ielem));
+    
+      double drphi(NAN);
+      double dz(NAN);
+      
+      TrackerHit* hit(NULL);
+
+      if (_reading_loi_data) { // uses cylindrical hits
+        
+        TrackerHitZCylinder * hit_c = dynamic_cast<TrackerHitZCylinder*>(col->getElementAt(ielem));
+        
+        if (hit_c) {
+          hit= hit_c;
+        }
+        else{
+          streamlog_out(ERROR) << "FullLDCTracking_MarlinTrk: Dynamic cast to TrackerHitZCylinder failed. \n\n exit(1) called from file " << __FILE__ << " and line " << __LINE__ << std::endl;
+          exit(1);
+        }
+        
+        drphi = hit_c->getdRPhi();
+        dz    = hit_c->getdZ();
+        
+      }
+      
+      else{
+        
+        
+        TrackerHitPlane * hit_p = dynamic_cast<TrackerHitPlane*>(col->getElementAt(ielem));
+        
+        if (hit_p) {
+          hit= hit_p;
+        }
+        else{
+          streamlog_out(ERROR) << "FullLDCTracking_MarlinTrk: Dynamic cast to TrackerHitPlane failed. \n\n exit(1) called from file " << __FILE__ << " and line " << __LINE__ << std::endl;
+          exit(1);
+        }
+        
+        
+        gear::Vector3D U(1.0,hit_p->getU()[1],hit_p->getU()[0],gear::Vector3D::spherical);
+        gear::Vector3D V(1.0,hit_p->getV()[1],hit_p->getV()[0],gear::Vector3D::spherical);
+        gear::Vector3D Z(0.0,0.0,1.0);
+        
+        const float eps = 1.0e-07;
+        // U must be the global z axis 
+        if( fabs(1.0 - V.dot(Z)) > eps ) {
+          streamlog_out(ERROR) << "FullLDCTracking_MarlinTrk: SIT Hit measurment vectors V is not equal to the global Z axis. \n\n exit(1) called from file " << __FILE__ << " and line " << __LINE__ << std::endl;
+          exit(1);
+        }
+        
+        if( fabs(U.dot(Z)) > eps ) {
+          streamlog_out(ERROR) << "FullLDCTracking_MarlinTrk: SIT measurment vectors U is not in the global X-Y plane. \n\n exit(1) called from file " << __FILE__ << " and line " << __LINE__ << std::endl;
+          exit(1);
+        }
+        
+      }
+      
+
+      
       TrackerHitExtended * hitExt = new TrackerHitExtended(hit);
       
       // SJA:FIXME: just use planar res for now
-      hitExt->setResolutionRPhi(hit->getdU());
-      hitExt->setResolutionZ(hit->getdV());
+      hitExt->setResolutionRPhi(drphi);
+      hitExt->setResolutionZ(dz);
       
       // type and det are no longer used, set to INT_MAX to try and catch any missuse
       hitExt->setType(int(INT_MAX));
@@ -4145,172 +4209,393 @@ void FullLDCTracking_MarlinTrk::setupGearGeom( const gear::GearMgr* gearMgr ){
   
   _bField = gearMgr->getBField().at( gear::Vector3D( 0.,0.,0.)  ).z() ;
   
-  
-  try {
+  if( _reading_loi_data ){
+    
+    streamlog_out( MESSAGE ) << "  MarlinKalTest - Simple Disc Based FTD using parameters defined by SFtd05 Mokka driver " << std::endl ;
+    
+    // VXD
     
     const gear::ZPlanarParameters& pVXDDetMain = gearMgr->getVXDParameters();
     const gear::ZPlanarLayerLayout& pVXDLayerLayout = pVXDDetMain.getVXDLayerLayout();
     
     _nLayersVTX = pVXDLayerLayout.getNLayers(); 
-    _VXDgeo.resize(_nLayersVTX);
     
-    //SJA:FIXME: for now the support is taken as the same size the sensitive
-    //           if this is not done then the exposed areas of the support would leave a carbon - air boundary,
-    //           which if traversed in the reverse direction to the next boundary then the track be propagated through carbon
-    //           for a significant distance 
     
-    for( unsigned int layer=0; layer < _nLayersVTX; ++layer){
-      _VXDgeo[layer].nLadders = pVXDLayerLayout.getNLadders(layer); 
-      _VXDgeo[layer].phi0 = pVXDLayerLayout.getPhi0(layer); 
-      _VXDgeo[layer].dphi = 2*M_PI / _VXDgeo[layer].nLadders; 
-      _VXDgeo[layer].senRMin = pVXDLayerLayout.getSensitiveDistance(layer); 
-      _VXDgeo[layer].supRMin = pVXDLayerLayout.getLadderDistance(layer); 
-      _VXDgeo[layer].length = pVXDLayerLayout.getSensitiveLength(layer); 
-      _VXDgeo[layer].width = pVXDLayerLayout.getSensitiveWidth(layer); 
-      _VXDgeo[layer].offset = pVXDLayerLayout.getSensitiveOffset(layer); 
-      _VXDgeo[layer].senThickness = pVXDLayerLayout.getSensitiveThickness(layer); 
-      _VXDgeo[layer].supThickness = pVXDLayerLayout.getLadderThickness(layer); 
+    
+    
+    // SIT
+    
+    const gear::GearParameters& pSIT = gearMgr->getGearParameters("SIT");
+    
+    const EVENT::DoubleVec& SIT_r   =  pSIT.getDoubleVals("SITLayerRadius" )  ;
+    const EVENT::DoubleVec& SIT_hl  =  pSIT.getDoubleVals("SITSupportLayerHalfLength" )  ;
+    
+    _nLayersSIT = SIT_r.size() ; 
+    
+    if (_nLayersSIT != SIT_r.size() || _nLayersSIT != SIT_hl.size()) {
+      
+      streamlog_out( ERROR ) << "ILDSITCylinderKalDetector miss-match between DoubleVec and nlayers exit(1) called from file " << __FILE__ << " line " << __LINE__  << std::endl ;
+      exit(1);
+      
     }
     
-  } catch (gear::UnknownParameterException& e) {
-    streamlog_out( MESSAGE ) << "  MarlinKalTest - VXD missing in gear file: VXD Not Built " << std::endl ;
-  }
-  
-  try {
     
-    const gear::ZPlanarParameters& pSITDetMain = gearMgr->getSITParameters();
-    const gear::ZPlanarLayerLayout& pSITLayerLayout = pSITDetMain.getZPlanarLayerLayout();
+    // FTD
     
-    _nLayersSIT = pSITLayerLayout.getNLayers(); 
-    _SITgeo.resize(_nLayersSIT);
+    const gear::GearParameters& pFTD = gearMgr->getGearParameters("FTD");
     
-    //SJA:FIXME: for now the support is taken as the same size the sensitive
-    //           if this is not done then the exposed areas of the support would leave a carbon - air boundary,
-    //           which if traversed in the reverse direction to the next boundary then the track be propagated through carbon
-    //           for a significant distance 
+    const EVENT::DoubleVec* pFTD_si  = NULL;
+    const EVENT::DoubleVec* pFTD_sp  = NULL;
+    const EVENT::DoubleVec* pFTD_ri  = NULL;
+    const EVENT::DoubleVec* pFTD_ro  = NULL;
+    const EVENT::DoubleVec* pFTD_z   = NULL;
     
-    for( unsigned int layer=0; layer < _nLayersSIT; ++layer){
-      _SITgeo[layer].nLadders = pSITLayerLayout.getNLadders(layer); 
-      _SITgeo[layer].phi0 = pSITLayerLayout.getPhi0(layer); 
-      _SITgeo[layer].dphi = 2*M_PI / _SITgeo[layer].nLadders; 
-      _SITgeo[layer].senRMin = pSITLayerLayout.getSensitiveDistance(layer); 
-      _SITgeo[layer].supRMin = pSITLayerLayout.getLadderDistance(layer); 
-      _SITgeo[layer].length = pSITLayerLayout.getSensitiveLength(layer); 
-      _SITgeo[layer].width = pSITLayerLayout.getSensitiveWidth(layer); 
-      _SITgeo[layer].offset = pSITLayerLayout.getSensitiveOffset(layer); 
-      _SITgeo[layer].senThickness = pSITLayerLayout.getSensitiveThickness(layer); 
-      _SITgeo[layer].supThickness = pSITLayerLayout.getLadderThickness(layer); 
+    streamlog_out( MESSAGE ) << " For FTD using parameters defined by SFtd05 Mokka driver " << std::endl ;
+    
+    pFTD_si  =  &pFTD.getDoubleVals("FTDDiskSiThickness" )  ;
+    pFTD_sp  =  &pFTD.getDoubleVals("FTDDiskSupportThickness" )  ;
+    pFTD_ri  =  &pFTD.getDoubleVals("FTDInnerRadius" )  ;
+    pFTD_ro  =  &pFTD.getDoubleVals("FTDOuterRadius" )  ;
+    pFTD_z   =  &pFTD.getDoubleVals("FTDZCoordinate" )  ;
+    
+    _nLayersFTD = pFTD_z->size();
+    
+    for (int i = 0; i<_nLayersFTD; ++i) {
+      _zLayerFTD.push_back((*pFTD_z)[i]);
     }
     
-  } 
-  catch (gear::UnknownParameterException& e) {
-    streamlog_out( MESSAGE ) << "  MarlinKalTest - SIT missing in gear file: SIT Not Built " << std::endl ;
   }
   
-  try {
+  else {
     
-    
-    const gear::FTDParameters& ftdParams = gearMgr->getFTDParameters() ;
-    const gear::FTDLayerLayout& ftdlayers = ftdParams.getFTDLayerLayout() ;
-    
-    
-    _nLayersFTD = ftdlayers.getNLayers() ; 
-    _FTDgeo.resize(_nLayersFTD);
-    
-    //SJA:FIXME: for now the support is taken as the same size the sensitive
-    //           if this is not done then the exposed areas of the support would leave a carbon - air boundary,
-    //           which if traversed in the reverse direction to the next boundary then the track be propagated through carbon
-    //           for a significant distance 
-    
-    for(int disk=0; disk< _nLayersFTD; ++disk){
+    try {
       
-      // numbers taken from the ILD_01 gear file for the sensitive part 
-      _FTDgeo[disk].nPetals = ftdlayers.getNPetals(disk) ;    
-      _FTDgeo[disk].dphi = 2*M_PI /  _FTDgeo[disk].nPetals ;
-      _FTDgeo[disk].phi0 = ftdlayers.getPhi0(disk) ;
-      _FTDgeo[disk].alpha = ftdlayers.getAlpha(disk) ;
-      _FTDgeo[disk].rInner = ftdlayers.getSensitiveRinner(disk) ;
-      _FTDgeo[disk].height = ftdlayers.getSensitiveWidth(disk) ;
-      _FTDgeo[disk].innerBaseLength =  ftdlayers.getSensitiveLengthMin(disk) ;
-      _FTDgeo[disk].outerBaseLength =  ftdlayers.getSensitiveLengthMax(disk) ;
-      _FTDgeo[disk].senThickness =  ftdlayers.getSensitiveThickness(disk) ;
-      _FTDgeo[disk].supThickness =  ftdlayers.getSupportThickness(disk) ;
+      const gear::ZPlanarParameters& pVXDDetMain = gearMgr->getVXDParameters();
+      const gear::ZPlanarLayerLayout& pVXDLayerLayout = pVXDDetMain.getVXDLayerLayout();
       
-      _FTDgeo[disk].senZPos_even_petal1 = ftdlayers.getSensitiveZposition(disk, 0, 1) ; 
-      _FTDgeo[disk].senZPos_even_petal2 = ftdlayers.getSensitiveZposition(disk, 0, 2) ; 
-      _FTDgeo[disk].senZPos_even_petal3 = ftdlayers.getSensitiveZposition(disk, 0, 3) ; 
-      _FTDgeo[disk].senZPos_even_petal4 = ftdlayers.getSensitiveZposition(disk, 0, 4) ; 
+      _nLayersVTX = pVXDLayerLayout.getNLayers(); 
       
-      // currently the design assumes that the petal on the same side are at the same z
-      assert(_FTDgeo[disk].senZPos_even_petal1==_FTDgeo[disk].senZPos_even_petal2);
-      assert(_FTDgeo[disk].senZPos_even_petal3==_FTDgeo[disk].senZPos_even_petal4);
+      _VXDgeo.resize(_nLayersVTX);
       
-      _FTDgeo[disk].senZPos_odd_petal1 = ftdlayers.getSensitiveZposition(disk, 1, 1) ; 
-      _FTDgeo[disk].senZPos_odd_petal2 = ftdlayers.getSensitiveZposition(disk, 1, 2) ; 
-      _FTDgeo[disk].senZPos_odd_petal3 = ftdlayers.getSensitiveZposition(disk, 1, 3) ; 
-      _FTDgeo[disk].senZPos_odd_petal4 = ftdlayers.getSensitiveZposition(disk, 1, 4) ; 
+      //SJA:FIXME: for now the support is taken as the same size the sensitive
+      //           if this is not done then the exposed areas of the support would leave a carbon - air boundary,
+      //           which if traversed in the reverse direction to the next boundary then the track be propagated through carbon
+      //           for a significant distance 
       
-      // currently the design assumes that the petal on the same side are at the same z
-      assert(_FTDgeo[disk].senZPos_odd_petal1==_FTDgeo[disk].senZPos_odd_petal2);
-      assert(_FTDgeo[disk].senZPos_odd_petal3==_FTDgeo[disk].senZPos_odd_petal4);
-      
-      _FTDgeo[disk].supZPos_even_petal1 = ftdlayers.getSensitiveZposition(disk, 0, 1) ; 
-      _FTDgeo[disk].supZPos_even_petal2 = ftdlayers.getSensitiveZposition(disk, 0, 2) ; 
-      _FTDgeo[disk].supZPos_even_petal3 = ftdlayers.getSensitiveZposition(disk, 0, 3) ; 
-      _FTDgeo[disk].supZPos_even_petal4 = ftdlayers.getSensitiveZposition(disk, 0, 4) ; 
-      
-      assert(_FTDgeo[disk].supZPos_even_petal1==_FTDgeo[disk].supZPos_even_petal2);
-      assert(_FTDgeo[disk].supZPos_even_petal3==_FTDgeo[disk].supZPos_even_petal4);
-      
-      _FTDgeo[disk].supZPos_odd_petal1 = ftdlayers.getSensitiveZposition(disk, 1, 1) ; 
-      _FTDgeo[disk].supZPos_odd_petal2 = ftdlayers.getSensitiveZposition(disk, 1, 2) ; 
-      _FTDgeo[disk].supZPos_odd_petal3 = ftdlayers.getSensitiveZposition(disk, 1, 3) ; 
-      _FTDgeo[disk].supZPos_odd_petal4 = ftdlayers.getSensitiveZposition(disk, 1, 4) ; 
-      
-      assert(_FTDgeo[disk].supZPos_odd_petal1==_FTDgeo[disk].supZPos_odd_petal2);
-      assert(_FTDgeo[disk].supZPos_odd_petal3==_FTDgeo[disk].supZPos_odd_petal4);
-      
-      
-      
-      
-      
-      // rough check to see if the petal is rotated
-      if( fabs(_FTDgeo[disk].alpha) > fabs(FLT_MIN)  ) { 
-        streamlog_out( ERROR ) << "  SiliconTracking_MarlinTrk - tilted design not supported exit(1) " << std::endl ;
-        exit(1);
+      for( unsigned int layer=0; layer < _nLayersVTX; ++layer){
+        _VXDgeo[layer].nLadders = pVXDLayerLayout.getNLadders(layer); 
+        _VXDgeo[layer].phi0 = pVXDLayerLayout.getPhi0(layer); 
+        _VXDgeo[layer].dphi = 2*M_PI / _VXDgeo[layer].nLadders; 
+        _VXDgeo[layer].senRMin = pVXDLayerLayout.getSensitiveDistance(layer); 
+        _VXDgeo[layer].supRMin = pVXDLayerLayout.getLadderDistance(layer); 
+        _VXDgeo[layer].length = pVXDLayerLayout.getSensitiveLength(layer); 
+        _VXDgeo[layer].width = pVXDLayerLayout.getSensitiveWidth(layer); 
+        _VXDgeo[layer].offset = pVXDLayerLayout.getSensitiveOffset(layer); 
+        _VXDgeo[layer].senThickness = pVXDLayerLayout.getSensitiveThickness(layer); 
+        _VXDgeo[layer].supThickness = pVXDLayerLayout.getLadderThickness(layer); 
       }
       
+    } catch (gear::UnknownParameterException& e) {
+      streamlog_out( MESSAGE ) << "  MarlinKalTest - VXD missing in gear file: VXD Not Built " << std::endl ;
     }
     
-    for (int disk=0; disk < _nLayersFTD; ++disk) {
-      _zLayerFTD.push_back(_FTDgeo[disk].senZPos_even_petal1); // front petal even numbered
-      _zLayerFTD.push_back(_FTDgeo[disk].senZPos_odd_petal1);  // front petal odd numbered
+    try {
+      
+      const gear::ZPlanarParameters& pSITDetMain = gearMgr->getSITParameters();
+      const gear::ZPlanarLayerLayout& pSITLayerLayout = pSITDetMain.getZPlanarLayerLayout();
+      
+      _nLayersSIT = pSITLayerLayout.getNLayers(); 
+      _SITgeo.resize(_nLayersSIT);
+      
+      //SJA:FIXME: for now the support is taken as the same size the sensitive
+      //           if this is not done then the exposed areas of the support would leave a carbon - air boundary,
+      //           which if traversed in the reverse direction to the next boundary then the track be propagated through carbon
+      //           for a significant distance 
+      
+      for( unsigned int layer=0; layer < _nLayersSIT; ++layer){
+        _SITgeo[layer].nLadders = pSITLayerLayout.getNLadders(layer); 
+        _SITgeo[layer].phi0 = pSITLayerLayout.getPhi0(layer); 
+        _SITgeo[layer].dphi = 2*M_PI / _SITgeo[layer].nLadders; 
+        _SITgeo[layer].senRMin = pSITLayerLayout.getSensitiveDistance(layer); 
+        _SITgeo[layer].supRMin = pSITLayerLayout.getLadderDistance(layer); 
+        _SITgeo[layer].length = pSITLayerLayout.getSensitiveLength(layer); 
+        _SITgeo[layer].width = pSITLayerLayout.getSensitiveWidth(layer); 
+        _SITgeo[layer].offset = pSITLayerLayout.getSensitiveOffset(layer); 
+        _SITgeo[layer].senThickness = pSITLayerLayout.getSensitiveThickness(layer); 
+        _SITgeo[layer].supThickness = pSITLayerLayout.getLadderThickness(layer); 
+      }
+      
+    } 
+    catch (gear::UnknownParameterException& e) {
+      streamlog_out( MESSAGE ) << "  MarlinKalTest - SIT missing in gear file: SIT Not Built " << std::endl ;
     }
     
-    // SJA as disks are staggered lets treat them internally as 2*ndisksFTD
-    _nLayersFTD =_zLayerFTD.size() ;
+    try {
+      
+      
+      const gear::FTDParameters& ftdParams = gearMgr->getFTDParameters() ;
+      const gear::FTDLayerLayout& ftdlayers = ftdParams.getFTDLayerLayout() ;
+      
+      
+      _nLayersFTD = ftdlayers.getNLayers() ; 
+      _FTDgeo.resize(_nLayersFTD);
+      
+      //SJA:FIXME: for now the support is taken as the same size the sensitive
+      //           if this is not done then the exposed areas of the support would leave a carbon - air boundary,
+      //           which if traversed in the reverse direction to the next boundary then the track be propagated through carbon
+      //           for a significant distance 
+      
+      for(int disk=0; disk< _nLayersFTD; ++disk){
+        
+        // numbers taken from the ILD_01 gear file for the sensitive part 
+        _FTDgeo[disk].nPetals = ftdlayers.getNPetals(disk) ;    
+        _FTDgeo[disk].dphi = 2*M_PI /  _FTDgeo[disk].nPetals ;
+        _FTDgeo[disk].phi0 = ftdlayers.getPhi0(disk) ;
+        _FTDgeo[disk].alpha = ftdlayers.getAlpha(disk) ;
+        _FTDgeo[disk].rInner = ftdlayers.getSensitiveRinner(disk) ;
+        _FTDgeo[disk].height = ftdlayers.getSensitiveWidth(disk) ;
+        _FTDgeo[disk].innerBaseLength =  ftdlayers.getSensitiveLengthMin(disk) ;
+        _FTDgeo[disk].outerBaseLength =  ftdlayers.getSensitiveLengthMax(disk) ;
+        _FTDgeo[disk].senThickness =  ftdlayers.getSensitiveThickness(disk) ;
+        _FTDgeo[disk].supThickness =  ftdlayers.getSupportThickness(disk) ;
+        
+        _FTDgeo[disk].senZPos_even_petal1 = ftdlayers.getSensitiveZposition(disk, 0, 1) ; 
+        _FTDgeo[disk].senZPos_even_petal2 = ftdlayers.getSensitiveZposition(disk, 0, 2) ; 
+        _FTDgeo[disk].senZPos_even_petal3 = ftdlayers.getSensitiveZposition(disk, 0, 3) ; 
+        _FTDgeo[disk].senZPos_even_petal4 = ftdlayers.getSensitiveZposition(disk, 0, 4) ; 
+        
+        // currently the design assumes that the petal on the same side are at the same z
+        assert(_FTDgeo[disk].senZPos_even_petal1==_FTDgeo[disk].senZPos_even_petal2);
+        assert(_FTDgeo[disk].senZPos_even_petal3==_FTDgeo[disk].senZPos_even_petal4);
+        
+        _FTDgeo[disk].senZPos_odd_petal1 = ftdlayers.getSensitiveZposition(disk, 1, 1) ; 
+        _FTDgeo[disk].senZPos_odd_petal2 = ftdlayers.getSensitiveZposition(disk, 1, 2) ; 
+        _FTDgeo[disk].senZPos_odd_petal3 = ftdlayers.getSensitiveZposition(disk, 1, 3) ; 
+        _FTDgeo[disk].senZPos_odd_petal4 = ftdlayers.getSensitiveZposition(disk, 1, 4) ; 
+        
+        // currently the design assumes that the petal on the same side are at the same z
+        assert(_FTDgeo[disk].senZPos_odd_petal1==_FTDgeo[disk].senZPos_odd_petal2);
+        assert(_FTDgeo[disk].senZPos_odd_petal3==_FTDgeo[disk].senZPos_odd_petal4);
+        
+        _FTDgeo[disk].supZPos_even_petal1 = ftdlayers.getSensitiveZposition(disk, 0, 1) ; 
+        _FTDgeo[disk].supZPos_even_petal2 = ftdlayers.getSensitiveZposition(disk, 0, 2) ; 
+        _FTDgeo[disk].supZPos_even_petal3 = ftdlayers.getSensitiveZposition(disk, 0, 3) ; 
+        _FTDgeo[disk].supZPos_even_petal4 = ftdlayers.getSensitiveZposition(disk, 0, 4) ; 
+        
+        assert(_FTDgeo[disk].supZPos_even_petal1==_FTDgeo[disk].supZPos_even_petal2);
+        assert(_FTDgeo[disk].supZPos_even_petal3==_FTDgeo[disk].supZPos_even_petal4);
+        
+        _FTDgeo[disk].supZPos_odd_petal1 = ftdlayers.getSensitiveZposition(disk, 1, 1) ; 
+        _FTDgeo[disk].supZPos_odd_petal2 = ftdlayers.getSensitiveZposition(disk, 1, 2) ; 
+        _FTDgeo[disk].supZPos_odd_petal3 = ftdlayers.getSensitiveZposition(disk, 1, 3) ; 
+        _FTDgeo[disk].supZPos_odd_petal4 = ftdlayers.getSensitiveZposition(disk, 1, 4) ; 
+        
+        assert(_FTDgeo[disk].supZPos_odd_petal1==_FTDgeo[disk].supZPos_odd_petal2);
+        assert(_FTDgeo[disk].supZPos_odd_petal3==_FTDgeo[disk].supZPos_odd_petal4);
+        
+        
+        
+        
+        
+        // rough check to see if the petal is rotated
+        if( fabs(_FTDgeo[disk].alpha) > fabs(FLT_MIN)  ) { 
+          streamlog_out( ERROR ) << "  FullLDCTracking_MarlinTrk - tilted design not supported exit(1) " << std::endl ;
+          exit(1);
+        }
+        
+      }
+      
+      for (int disk=0; disk < _nLayersFTD; ++disk) {
+        _zLayerFTD.push_back(_FTDgeo[disk].senZPos_even_petal1); // front petal even numbered
+        _zLayerFTD.push_back(_FTDgeo[disk].senZPos_odd_petal1);  // front petal odd numbered
+      }
+      
+      // SJA as disks are staggered lets treat them internally as 2*ndisksFTD
+      _nLayersFTD =_zLayerFTD.size() ;
+      
+    } 
     
-  } 
-  
-  catch (gear::UnknownParameterException& e) {
-    streamlog_out( MESSAGE ) << "  SiliconTracking_MarlinTrk - FTD missing in gear file: FTD Not Built " << std::endl ;
-  }
-  
-  try {
-    const gear::TPCParameters& pTPC = Global::GEAR->getTPCParameters();
-    const gear::PadRowLayout2D& pTPCpads = pTPC.getPadLayout();
-    _tpc_inner_r = pTPCpads.getPlaneExtent()[0];
-    _tpc_outer_r = pTPCpads.getPlaneExtent()[1];
-    _tpc_nrows = pTPCpads.getNRows();
-    _tpc_pad_height = (_tpc_outer_r-_tpc_inner_r)/(double)_tpc_nrows;
+    catch (gear::UnknownParameterException& e) {
+      streamlog_out( MESSAGE ) << "  FullLDCTracking_MarlinTrk - FTD missing in gear file: FTD Not Built " << std::endl ;
+    }
     
-  } catch (gear::UnknownParameterException& e) {
-    streamlog_out( MESSAGE ) << "  MarlinKalTest - TPC missing in gear file: TPC Not Built " << std::endl ;
   }
-  
   
   
   
 }
 
 
+//void FullLDCTracking_MarlinTrk::setupGearGeom( const gear::GearMgr* gearMgr ){
+//  
+//  _bField = gearMgr->getBField().at( gear::Vector3D( 0.,0.,0.)  ).z() ;
+//  
+//  
+//  try {
+//    
+//    const gear::ZPlanarParameters& pVXDDetMain = gearMgr->getVXDParameters();
+//    const gear::ZPlanarLayerLayout& pVXDLayerLayout = pVXDDetMain.getVXDLayerLayout();
+//    
+//    _nLayersVTX = pVXDLayerLayout.getNLayers(); 
+//    _VXDgeo.resize(_nLayersVTX);
+//    
+//    //SJA:FIXME: for now the support is taken as the same size the sensitive
+//    //           if this is not done then the exposed areas of the support would leave a carbon - air boundary,
+//    //           which if traversed in the reverse direction to the next boundary then the track be propagated through carbon
+//    //           for a significant distance 
+//    
+//    for( unsigned int layer=0; layer < _nLayersVTX; ++layer){
+//      _VXDgeo[layer].nLadders = pVXDLayerLayout.getNLadders(layer); 
+//      _VXDgeo[layer].phi0 = pVXDLayerLayout.getPhi0(layer); 
+//      _VXDgeo[layer].dphi = 2*M_PI / _VXDgeo[layer].nLadders; 
+//      _VXDgeo[layer].senRMin = pVXDLayerLayout.getSensitiveDistance(layer); 
+//      _VXDgeo[layer].supRMin = pVXDLayerLayout.getLadderDistance(layer); 
+//      _VXDgeo[layer].length = pVXDLayerLayout.getSensitiveLength(layer); 
+//      _VXDgeo[layer].width = pVXDLayerLayout.getSensitiveWidth(layer); 
+//      _VXDgeo[layer].offset = pVXDLayerLayout.getSensitiveOffset(layer); 
+//      _VXDgeo[layer].senThickness = pVXDLayerLayout.getSensitiveThickness(layer); 
+//      _VXDgeo[layer].supThickness = pVXDLayerLayout.getLadderThickness(layer); 
+//    }
+//    
+//  } catch (gear::UnknownParameterException& e) {
+//    streamlog_out( MESSAGE ) << "  MarlinKalTest - VXD missing in gear file: VXD Not Built " << std::endl ;
+//  }
+//  
+//  try {
+//    
+//    const gear::ZPlanarParameters& pSITDetMain = gearMgr->getSITParameters();
+//    const gear::ZPlanarLayerLayout& pSITLayerLayout = pSITDetMain.getZPlanarLayerLayout();
+//    
+//    _nLayersSIT = pSITLayerLayout.getNLayers(); 
+//    _SITgeo.resize(_nLayersSIT);
+//    
+//    //SJA:FIXME: for now the support is taken as the same size the sensitive
+//    //           if this is not done then the exposed areas of the support would leave a carbon - air boundary,
+//    //           which if traversed in the reverse direction to the next boundary then the track be propagated through carbon
+//    //           for a significant distance 
+//    
+//    for( unsigned int layer=0; layer < _nLayersSIT; ++layer){
+//      _SITgeo[layer].nLadders = pSITLayerLayout.getNLadders(layer); 
+//      _SITgeo[layer].phi0 = pSITLayerLayout.getPhi0(layer); 
+//      _SITgeo[layer].dphi = 2*M_PI / _SITgeo[layer].nLadders; 
+//      _SITgeo[layer].senRMin = pSITLayerLayout.getSensitiveDistance(layer); 
+//      _SITgeo[layer].supRMin = pSITLayerLayout.getLadderDistance(layer); 
+//      _SITgeo[layer].length = pSITLayerLayout.getSensitiveLength(layer); 
+//      _SITgeo[layer].width = pSITLayerLayout.getSensitiveWidth(layer); 
+//      _SITgeo[layer].offset = pSITLayerLayout.getSensitiveOffset(layer); 
+//      _SITgeo[layer].senThickness = pSITLayerLayout.getSensitiveThickness(layer); 
+//      _SITgeo[layer].supThickness = pSITLayerLayout.getLadderThickness(layer); 
+//    }
+//    
+//  } 
+//  catch (gear::UnknownParameterException& e) {
+//    streamlog_out( MESSAGE ) << "  MarlinKalTest - SIT missing in gear file: SIT Not Built " << std::endl ;
+//  }
+//  
+//  try {
+//    
+//    
+//    const gear::FTDParameters& ftdParams = gearMgr->getFTDParameters() ;
+//    const gear::FTDLayerLayout& ftdlayers = ftdParams.getFTDLayerLayout() ;
+//    
+//    
+//    _nLayersFTD = ftdlayers.getNLayers() ; 
+//    _FTDgeo.resize(_nLayersFTD);
+//    
+//    //SJA:FIXME: for now the support is taken as the same size the sensitive
+//    //           if this is not done then the exposed areas of the support would leave a carbon - air boundary,
+//    //           which if traversed in the reverse direction to the next boundary then the track be propagated through carbon
+//    //           for a significant distance 
+//    
+//    for(int disk=0; disk< _nLayersFTD; ++disk){
+//      
+//      // numbers taken from the ILD_01 gear file for the sensitive part 
+//      _FTDgeo[disk].nPetals = ftdlayers.getNPetals(disk) ;    
+//      _FTDgeo[disk].dphi = 2*M_PI /  _FTDgeo[disk].nPetals ;
+//      _FTDgeo[disk].phi0 = ftdlayers.getPhi0(disk) ;
+//      _FTDgeo[disk].alpha = ftdlayers.getAlpha(disk) ;
+//      _FTDgeo[disk].rInner = ftdlayers.getSensitiveRinner(disk) ;
+//      _FTDgeo[disk].height = ftdlayers.getSensitiveWidth(disk) ;
+//      _FTDgeo[disk].innerBaseLength =  ftdlayers.getSensitiveLengthMin(disk) ;
+//      _FTDgeo[disk].outerBaseLength =  ftdlayers.getSensitiveLengthMax(disk) ;
+//      _FTDgeo[disk].senThickness =  ftdlayers.getSensitiveThickness(disk) ;
+//      _FTDgeo[disk].supThickness =  ftdlayers.getSupportThickness(disk) ;
+//      
+//      _FTDgeo[disk].senZPos_even_petal1 = ftdlayers.getSensitiveZposition(disk, 0, 1) ; 
+//      _FTDgeo[disk].senZPos_even_petal2 = ftdlayers.getSensitiveZposition(disk, 0, 2) ; 
+//      _FTDgeo[disk].senZPos_even_petal3 = ftdlayers.getSensitiveZposition(disk, 0, 3) ; 
+//      _FTDgeo[disk].senZPos_even_petal4 = ftdlayers.getSensitiveZposition(disk, 0, 4) ; 
+//      
+//      // currently the design assumes that the petal on the same side are at the same z
+//      assert(_FTDgeo[disk].senZPos_even_petal1==_FTDgeo[disk].senZPos_even_petal2);
+//      assert(_FTDgeo[disk].senZPos_even_petal3==_FTDgeo[disk].senZPos_even_petal4);
+//      
+//      _FTDgeo[disk].senZPos_odd_petal1 = ftdlayers.getSensitiveZposition(disk, 1, 1) ; 
+//      _FTDgeo[disk].senZPos_odd_petal2 = ftdlayers.getSensitiveZposition(disk, 1, 2) ; 
+//      _FTDgeo[disk].senZPos_odd_petal3 = ftdlayers.getSensitiveZposition(disk, 1, 3) ; 
+//      _FTDgeo[disk].senZPos_odd_petal4 = ftdlayers.getSensitiveZposition(disk, 1, 4) ; 
+//      
+//      // currently the design assumes that the petal on the same side are at the same z
+//      assert(_FTDgeo[disk].senZPos_odd_petal1==_FTDgeo[disk].senZPos_odd_petal2);
+//      assert(_FTDgeo[disk].senZPos_odd_petal3==_FTDgeo[disk].senZPos_odd_petal4);
+//      
+//      _FTDgeo[disk].supZPos_even_petal1 = ftdlayers.getSensitiveZposition(disk, 0, 1) ; 
+//      _FTDgeo[disk].supZPos_even_petal2 = ftdlayers.getSensitiveZposition(disk, 0, 2) ; 
+//      _FTDgeo[disk].supZPos_even_petal3 = ftdlayers.getSensitiveZposition(disk, 0, 3) ; 
+//      _FTDgeo[disk].supZPos_even_petal4 = ftdlayers.getSensitiveZposition(disk, 0, 4) ; 
+//      
+//      assert(_FTDgeo[disk].supZPos_even_petal1==_FTDgeo[disk].supZPos_even_petal2);
+//      assert(_FTDgeo[disk].supZPos_even_petal3==_FTDgeo[disk].supZPos_even_petal4);
+//      
+//      _FTDgeo[disk].supZPos_odd_petal1 = ftdlayers.getSensitiveZposition(disk, 1, 1) ; 
+//      _FTDgeo[disk].supZPos_odd_petal2 = ftdlayers.getSensitiveZposition(disk, 1, 2) ; 
+//      _FTDgeo[disk].supZPos_odd_petal3 = ftdlayers.getSensitiveZposition(disk, 1, 3) ; 
+//      _FTDgeo[disk].supZPos_odd_petal4 = ftdlayers.getSensitiveZposition(disk, 1, 4) ; 
+//      
+//      assert(_FTDgeo[disk].supZPos_odd_petal1==_FTDgeo[disk].supZPos_odd_petal2);
+//      assert(_FTDgeo[disk].supZPos_odd_petal3==_FTDgeo[disk].supZPos_odd_petal4);
+//      
+//      
+//      
+//      
+//      
+//      // rough check to see if the petal is rotated
+//      if( fabs(_FTDgeo[disk].alpha) > fabs(FLT_MIN)  ) { 
+//        streamlog_out( ERROR ) << "  FullLDCTracking_MarlinTrk - tilted design not supported exit(1) " << std::endl ;
+//        exit(1);
+//      }
+//      
+//    }
+//    
+//    for (int disk=0; disk < _nLayersFTD; ++disk) {
+//      _zLayerFTD.push_back(_FTDgeo[disk].senZPos_even_petal1); // front petal even numbered
+//      _zLayerFTD.push_back(_FTDgeo[disk].senZPos_odd_petal1);  // front petal odd numbered
+//    }
+//    
+//    // SJA as disks are staggered lets treat them internally as 2*ndisksFTD
+//    _nLayersFTD =_zLayerFTD.size() ;
+//    
+//  } 
+//  
+//  catch (gear::UnknownParameterException& e) {
+//    streamlog_out( MESSAGE ) << "  FullLDCTracking_MarlinTrk - FTD missing in gear file: FTD Not Built " << std::endl ;
+//  }
+//  
+//  try {
+//    const gear::TPCParameters& pTPC = Global::GEAR->getTPCParameters();
+//    const gear::PadRowLayout2D& pTPCpads = pTPC.getPadLayout();
+//    _tpc_inner_r = pTPCpads.getPlaneExtent()[0];
+//    _tpc_outer_r = pTPCpads.getPlaneExtent()[1];
+//    _tpc_nrows = pTPCpads.getNRows();
+//    _tpc_pad_height = (_tpc_outer_r-_tpc_inner_r)/(double)_tpc_nrows;
+//    
+//  } catch (gear::UnknownParameterException& e) {
+//    streamlog_out( MESSAGE ) << "  MarlinKalTest - TPC missing in gear file: TPC Not Built " << std::endl ;
+//  }
+//  
+//  
+//  
+//  
+//}
+//
+//

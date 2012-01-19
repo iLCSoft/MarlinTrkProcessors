@@ -331,6 +331,7 @@ protected:
   
   bool _MSOn, _ElossOn, _SmoothOn ;
   
+  bool _reading_loi_data;
   
   struct compare_r {
     bool operator()( EVENT::TrackerHit* a, EVENT::TrackerHit* b)  const { 

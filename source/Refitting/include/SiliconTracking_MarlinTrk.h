@@ -224,7 +224,7 @@ protected:
   
   bool _MSOn, _ElossOn, _SmoothOn ;
   
-  
+  bool _reading_loi_data;
   
   struct compare_r {
     bool operator()( EVENT::TrackerHit* a, EVENT::TrackerHit* b)  const { 
@@ -381,7 +381,6 @@ protected:
   
   
   
-  
   struct FTD_Disk {
     int nPetals;
     double phi0;
@@ -420,6 +419,7 @@ protected:
   };
 
   std::vector<FTD_Disk> _FTDgeo;
+
   std::vector<float> _zLayerFTD;
   
   unsigned int _nlayersFTD;
