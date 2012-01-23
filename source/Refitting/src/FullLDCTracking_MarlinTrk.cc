@@ -533,7 +533,10 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
     }
     
     
-    if( trkHits.size() < 3 ) continue ;
+    if( trkHits.size() < 3 ) {
+      streamlog_out(DEBUG3) << "FullLDCTracking_MarlinTrk::AddTrackColToEvt: Cannot fit less than 3 hits. Number of hits =  " << trkHits.size() << std::endl;
+      continue ; 
+    }
     
     MarlinTrk::IMarlinTrack* marlin_trk = _trksystem->createTrack();
     
@@ -559,6 +562,7 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
         }
     
     if( number_of_added_hits < 3 ) {
+      streamlog_out(DEBUG3) << "FullLDCTracking_MarlinTrk::AddTrackColToEvt: Cannot fit less than 3 hits. Number of hits =  " << number_of_added_hits << std::endl;
       delete marlin_trk ;
       continue ;
     }
@@ -598,6 +602,15 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
     // here we are fitting inwards to the first is the last and vice verse
     
     marlin_trk->getHitsInFit(hits_in_fit);
+    
+    if( hits_in_fit.size() < 3 ) {
+      streamlog_out(DEBUG3) << "FullLDCTracking_MarlinTrk::AddTrackColToEvt: Less than 3 hits in fit: Track Discarded. Number of hits =  " << trkHits.size() << std::endl;
+      delete marlin_trk ;
+      delete trkStateIP;
+      delete track_lcio;
+      continue ; 
+    }
+
     
     EVENT::TrackerHit* last_hit_in_fit = hits_in_fit.front().first;
     if (!last_hit_in_fit) {
