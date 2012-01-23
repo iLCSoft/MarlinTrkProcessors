@@ -22,7 +22,8 @@
   -------- 
 
 SiliconTracking_MarlinTrk &	First version which is able to reconstruct LOI data.
- FullLDCTracking_MarlinTrk:
+ FullLDCTracking_MarlinTrk:     Fixed situation where, although more that 3 hits are excepted for fitting, 
+ 				less than 3 actually are included in the fit, by the kalman filter.
 
  SimpleCylinderDigiProcessor:	New - Uses simple gaussian smearing for cylinders.
 
