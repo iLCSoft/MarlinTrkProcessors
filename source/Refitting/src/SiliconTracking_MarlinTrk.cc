@@ -535,7 +535,7 @@ void SiliconTracking_MarlinTrk::processEvent( LCEvent * evt ) {
       for (int iTheta=0; iTheta<_nDivisionsInTheta;++iTheta)
         ProcessOneSector(iPhi,iTheta); // Process one VXD sector     
     
-    streamlog_out(DEBUG4) << "End of Processing VXD sectors" << std::endl;
+    streamlog_out(DEBUG4) << "End of Processing VXD and SIT sectors" << std::endl;
     
   }
   
@@ -1312,14 +1312,21 @@ int SiliconTracking_MarlinTrk::BuildTrack(TrackerHitExtended * outerHit,
   for (int layer = innerLayer-1; layer>=0; layer--) { // loop over remaining layers
     float distMin = 1.0e+20;
     TrackerHitExtended * assignedhit = NULL;
+
     for (int ipInner=iPhiLow; ipInner<iPhiUp+1;ipInner++) { // loop over phi in the Inner region
+    
       for (int itInner=iThetaLow; itInner<iThetaUp+1;itInner++) { // loop over theta in the Inner region 
+      
         int iPhiInner = ipInner;
         if (ipInner < 0) iPhiInner = _nDivisionsInPhi-1;
         if (ipInner >= _nDivisionsInPhi) iPhiInner = ipInner - _nDivisionsInPhi;
         int iCode = layer + _nLayers*iPhiInner +  _nLayers*_nDivisionsInPhi*itInner;
         TrackerHitExtendedVec& hitVecInner = _sectors[iCode];
+        
         int nHitsInner = int(hitVecInner.size());
+
+        //        std::cout << "######## number of nHitsInner = " << nHitsInner << std::endl; 
+        
         for (int iInner=0;iInner<nHitsInner;iInner++) { // loop over hits in the Inner sector
           TrackerHitExtended * currentHit = hitVecInner[iInner];
           float pos[3];
@@ -1395,6 +1402,8 @@ int SiliconTracking_MarlinTrk::BuildTrack(TrackerHitExtended * outerHit,
       float chi2Z;
       float chi2_D;
       int ndf_D;
+      
+      std::cout << "######## number of hits to fit with _fastfitter = " << NPT << std::endl; 
       
       _fastfitter->fastHelixFit(NPT, xh, yh, rh, ph, wrh, zh, wzh,iopt, par, epar, chi2RPhi, chi2Z);
       par[3] = par[3]*par[0]/fabs(par[0]);

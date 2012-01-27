@@ -1467,6 +1467,9 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
   int nTPCHits = int(tpcHitVec.size());
   int nHits = nTPCHits + nSiHits;
   
+  std::cout << "FullLDCTracking_MarlinTrk::CombineTracks nSiHits = " << nSiHits << std::endl;
+  std::cout << "FullLDCTracking_MarlinTrk::CombineTracks nTPCHits = " << nTPCHits << std::endl;
+  
   EVENT::TrackerHitVec trkHits;
   trkHits.reserve(nHits);
   
@@ -1500,6 +1503,7 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
     
   }
   
+  
   MarlinTrk::IMarlinTrack* marlin_trk = _trksystem->createTrack();
   
   sort(trkHits.begin(), trkHits.end(), FullLDCTracking_MarlinTrk::compare_r() );
@@ -1526,6 +1530,8 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
     return NULL;
     
   }
+  
+  streamlog_out(DEBUG2) << "Start Fitting: number_of_added_hits  = " << number_of_added_hits << std::endl;
   
   // SJA:FIXME: Here we could initialise the fit using the previous fits 
   marlin_trk->initialise( IMarlinTrack::backward ) ;
@@ -2987,6 +2993,8 @@ void FullLDCTracking_MarlinTrk::AddNotAssignedHits() {
   
   
   if (_assignVTXHits>0) { // Treatment of left-over VTX hits
+    
+     streamlog_out(DEBUG4) << "Assign VXD hits *********************************" << std::endl;
     
     std::vector<TrackerHitExtendedVec> nonAssignedVTXHits;
     nonAssignedVTXHits.resize(_nLayersVTX);
