@@ -14,6 +14,13 @@
 using namespace lcio ;
 using namespace marlin ;
 
+namespace EVENT {
+  class SimTrackerHit;
+}
+
+namespace gear {
+  class ZPlanarParameters;
+}
 
 /** ======= SimplePlanarDigiProcessor ========== <br>
  * Creates TrackerHits from SimTrackerHits, smearing them according to the input parameters. 
@@ -69,12 +76,15 @@ public:
    */
   virtual void end() ;
   
-  // find phi in correct range, taken from gear::VXDParameters
-  double correctPhiRange( double Phi ) const ;  
   
-  //  void fillMapTVolumeChildren(TGeoVolume* volume) ;
+
   
 protected:
+  
+  // find phi in correct range, taken from gear::VXDParameters
+  double correctPhiRange( double Phi ) const ;  
+
+  int getLadderNumber( const gear::ZPlanarParameters* det, SimTrackerHit* sh, int layerNumber );
   
   std::string _inColName ;
   
@@ -86,8 +96,8 @@ protected:
   int _nRun ;
   int _nEvt ;
   
-  float _pointResoRPhi ;
-  float _pointResoZ ;
+  float _pointResU ;
+  float _pointResV ;
   
   bool _ladder_Number_encoded_in_cellID;
   
