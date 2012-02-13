@@ -18,6 +18,10 @@ using namespace marlin ;
 /** ======= SimplePlanarTestDigiProcessor ========== <br>
  * Creates TrackerHits from SimTrackerHits, smearing them according to the input parameters. 
  * The SimTrackerHits should come from a planar detector like VXD, SIT, SET or FTD.
+ * 
+ * WARNING: this processor depends on correctly set CellID0s and is NOT backwards compatible to 
+ * SimTrackerHit output with wrong CellID0s!!!
+ * 
  * The positions of "digitized" TrackerHits are obtained by gaussian smearing positions
  * of SimTrackerHits in u and v direction. 
  * <h4>Input collections and prerequisites</h4> 
