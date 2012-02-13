@@ -1,6 +1,7 @@
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 #include "SimplePlanarDigiProcessor.h"
 #include <iostream>
+#include <climits>
 
 #include <EVENT/LCCollection.h>
 #include <IMPL/LCCollectionVec.h>
