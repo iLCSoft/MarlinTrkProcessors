@@ -1467,8 +1467,8 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
   int nTPCHits = int(tpcHitVec.size());
   int nHits = nTPCHits + nSiHits;
   
-  std::cout << "FullLDCTracking_MarlinTrk::CombineTracks nSiHits = " << nSiHits << std::endl;
-  std::cout << "FullLDCTracking_MarlinTrk::CombineTracks nTPCHits = " << nTPCHits << std::endl;
+  //std::cout << "FullLDCTracking_MarlinTrk::CombineTracks nSiHits = " << nSiHits << std::endl;
+  //std::cout << "FullLDCTracking_MarlinTrk::CombineTracks nTPCHits = " << nTPCHits << std::endl;
   
   EVENT::TrackerHitVec trkHits;
   trkHits.reserve(nHits);

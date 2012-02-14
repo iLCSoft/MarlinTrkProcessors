@@ -637,7 +637,7 @@ void SiliconTracking_MarlinTrk::CleanUp() {
         int iCode = il + _nLayers*ip + _nLayers*_nDivisionsInPhi*it;      
 
         if( iCode >= _sectors.size()){          
-          std::cout << "iCode index out of range: iCode =   " << iCode << " _sectors.size() = " << _sectors.size() << " exit(1) called from file " << __FILE__ << " line " << __LINE__<< std::endl;
+          std::cerr<< "iCode index out of range: iCode =   " << iCode << " _sectors.size() = " << _sectors.size() << " exit(1) called from file " << __FILE__ << " line " << __LINE__<< std::endl;
           exit(1);
         }
 
@@ -658,7 +658,7 @@ void SiliconTracking_MarlinTrk::CleanUp() {
         int iCode = iS + 2*layer + 2*_nlayersFTD*ip;
         
         if( iCode >= _sectorsFTD.size()){          
-          std::cout << "iCode index out of range: iCode =   " << iCode << " _sectorsFTD.size() = " << _sectorsFTD.size() << " exit(1) called from file " << __FILE__ << " line " << __LINE__<< std::endl;
+          std::cerr<< "iCode index out of range: iCode =   " << iCode << " _sectorsFTD.size() = " << _sectorsFTD.size() << " exit(1) called from file " << __FILE__ << " line " << __LINE__<< std::endl;
           exit(1);
         }
 
@@ -1403,7 +1403,7 @@ int SiliconTracking_MarlinTrk::BuildTrack(TrackerHitExtended * outerHit,
       float chi2_D;
       int ndf_D;
       
-      std::cout << "######## number of hits to fit with _fastfitter = " << NPT << std::endl; 
+      //std::cout << "######## number of hits to fit with _fastfitter = " << NPT << std::endl; 
       
       _fastfitter->fastHelixFit(NPT, xh, yh, rh, ph, wrh, zh, wzh,iopt, par, epar, chi2RPhi, chi2Z);
       par[3] = par[3]*par[0]/fabs(par[0]);
