@@ -44,6 +44,12 @@ using namespace marlin ;
  * @param SpacePointsCollection The name of the output collection of the created spacepoints <br>
  * (default name FTDSpacePoints) <br>
  * 
+ * @param TrackerHitSimHitRelCollection The name of the input collection of the relations of the TrackerHits to SimHits<br>
+ * (default name FTDTrackerHitRelations)<br>
+ * 
+ * @param SimHitSpacePointRelCollection The name of the SpacePoint SimTrackerHit relation output collection <br>
+ * (default name VTXTrackerHitRelations) <br>
+ * 
  * @author Robin Glattauer HEPHY, Vienna
  *
  */
@@ -88,9 +94,17 @@ class SpacePointBuilder : public Processor {
   */
   std::string _TrackerHitCollection;
 
+  /** Input relation collection name.
+   */
+  std::string _TrackerHitSimHitRelCollection;
+  
   /** Output collection name.
   */
   std::string _SpacePointsCollection;
+  
+  /** Output relations collection name.
+   */
+  std::string _relColName;
 
   /** Calculates the 2 dimensional crossing point of two lines.
    * Each line is specified by a point (x,y) and a direction vector (ex,ey).

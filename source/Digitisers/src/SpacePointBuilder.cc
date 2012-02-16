@@ -1,24 +1,28 @@
 #include "SpacePointBuilder.h"
 
-#include <EVENT/TrackerHit.h>
-#include <EVENT/TrackerHitPlane.h>
-#include <EVENT/LCCollection.h>
-#include <IMPL/LCCollectionVec.h>
-#include <IMPL/TrackerHitImpl.h>
-#include <IMPL/TrackerHitPlaneImpl.h>
+#include "EVENT/TrackerHit.h"
+#include "EVENT/TrackerHitPlane.h"
+#include "EVENT/LCCollection.h"
+#include "EVENT/SimTrackerHit.h"
+#include "IMPL/LCCollectionVec.h"
+#include "IMPL/TrackerHitImpl.h"
+#include "IMPL/TrackerHitPlaneImpl.h"
 #include "IMPL/LCFlagImpl.h"
+#include "IMPL/LCRelationImpl.h"
 #include "UTIL/ILDConf.h"
+#include "UTIL/LCRelationNavigator.h"
+
 
 #include "marlin/VerbosityLevels.h"
 
-#include <gear/GEAR.h>
-#include <gear/GearParameters.h>
+#include "gear/GEAR.h"
+#include "gear/GearParameters.h"
 #include "gear/FTDParameters.h"
 #include "gear/FTDLayerLayout.h"
-#include <gear/ZPlanarParameters.h>
-#include <gear/ZPlanarLayerLayout.h>
+#include "gear/ZPlanarParameters.h"
+#include "gear/ZPlanarLayerLayout.h"
 #include "marlin/Global.h"
-#include <UTIL/ILDConf.h>
+#include "UTIL/ILDConf.h"
 
 //FIXME:SJA: if we want the surface store to be filled we need to create an instance of MarlinTrk implemented with KalTest/KalDet
 #include "MarlinTrk/Factory.h"
@@ -51,15 +55,24 @@ SpacePointBuilder::SpacePointBuilder() : Processor("SpacePointBuilder") {
                            _TrackerHitCollection,
                            std::string("FTDTrackerHits")); 
 
-
+   registerInputCollection(LCIO::LCRELATION,
+                           "TrackerHitSimHitRelCollection",
+                           "The name of the input collection of the relations of the TrackerHits to SimHits",
+                           _TrackerHitSimHitRelCollection,
+                           std::string("FTDTrackerHitRelations")); 
+   
    registerOutputCollection(LCIO::TRACKERHIT,
                             "SpacePointsCollection",
                             "SpacePointsCollection",
                             _SpacePointsCollection,
                             std::string("FTDSpacePoints"));
 
-
-  
+   registerOutputCollection(LCIO::LCRELATION,
+                            "SimHitSpacePointRelCollection",
+                            "Name of the SpacePoint SimTrackerHit relation collection",
+                            _relColName,
+                            std::string("FTDSimHitSpacepointRelations"));
+    
    
 }
 
@@ -107,7 +120,7 @@ void SpacePointBuilder::processEvent( LCEvent * evt ) {
 
 
   LCCollection* col = evt->getCollection( _TrackerHitCollection ) ;
-
+  LCRelationNavigator* nav = new LCRelationNavigator(evt->getCollection( _TrackerHitSimHitRelCollection ));
 
   if( col != NULL ){
     
@@ -120,7 +133,13 @@ void SpacePointBuilder::processEvent( LCEvent * evt ) {
     _nPlanesNotParallel = 0;
     
     
-    LCCollectionVec * spCol = new LCCollectionVec(LCIO::TRACKERHIT);
+    LCCollectionVec * spCol = new LCCollectionVec(LCIO::TRACKERHIT);    // output spacepoint collection
+    LCCollectionVec* relCol = new LCCollectionVec(LCIO::LCRELATION);    // outpur relation collection
+    
+    // to store the weights
+    LCFlagImpl lcFlag(0) ;
+    lcFlag.setBit( LCIO::LCREL_WEIGHTED ) ;
+    relCol->setFlag( lcFlag.getFlag()  ) ;
     
     
     unsigned nHits = col->getNumberOfElements()  ;
@@ -198,6 +217,40 @@ void SpacePointBuilder::processEvent( LCEvent * evt ) {
             createdSpacePoints++;
             
             
+            ///////////////////////////////
+            // make the relations
+            const LCObjectVec& simHitsFront = nav->getRelatedToObjects( hitFront );
+            
+            if( simHitsFront.size() == 1 ){
+              
+              SimTrackerHit* simHit = dynamic_cast< SimTrackerHit* >( simHitsFront[0] );
+              
+              if( simHit != NULL ){
+                LCRelationImpl* rel = new LCRelationImpl;
+                rel->setFrom (spacePoint);
+                rel->setTo  (simHit);
+                rel->setWeight( 0.5 );
+                relCol->addElement(rel);
+              }
+            }
+            
+            const LCObjectVec& rawObjectsBack = nav->getRelatedToObjects( hitBack );
+            
+            if( rawObjectsBack.size() == 1 ){
+              
+              SimTrackerHit* simHit = dynamic_cast< SimTrackerHit* >( rawObjectsBack[0] );
+              
+              if( simHit != NULL ){
+                LCRelationImpl* rel = new LCRelationImpl;
+                rel->setFrom (spacePoint);
+                rel->setTo  (simHit);
+                rel->setWeight( 0.5 );
+                relCol->addElement(rel);
+              }
+            }
+            //////////////////////////////////
+            
+            
           }
           
         }
@@ -206,7 +259,8 @@ void SpacePointBuilder::processEvent( LCEvent * evt ) {
       
     }
     
-    evt->addCollection(spCol,_SpacePointsCollection.c_str());
+    evt->addCollection( spCol, _SpacePointsCollection);
+    evt->addCollection( relCol , _relColName ) ;
     
     streamlog_out( DEBUG4 )<< "\nCreated " << createdSpacePoints
       << " space points ( raw strip hits: " << rawStripHits << ")\n";
@@ -225,6 +279,8 @@ void SpacePointBuilder::processEvent( LCEvent * evt ) {
 
 
   _nEvt ++ ;
+  
+  delete nav;
   
 }
 
