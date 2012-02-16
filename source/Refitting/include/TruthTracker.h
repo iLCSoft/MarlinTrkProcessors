@@ -39,12 +39,38 @@ namespace MarlinTrk{
  *  <h4>Output</h4> 
  *  LCIO Track Collection
  * 
- * @param InputTrackerHitCollectionName Name of the TrackerHit collections 
- * @param OutputTrackCollectionName Name of the output Track collection
+ * @param TrackerHitsInputCollections Name of the tracker hit input collections <br>
+ * (default value: FTDTrackerHits SITTrackerHits TPCTrackerHits VXDTrackerHits )
  * 
- * @author S. J. Aplin, DESY
+ * @param TrackerHitsRelInputCollections Name of the lcrelation collections, that link the TrackerHits to their SimTrackerHits. 
+ * Have to be in same order as TrackerHitsInputCollections!!! <br>
+ * (default value: FTDTrackerHitRelations SITTrackerHitRelations TPCTrackerHitRelations VXDTrackerHitRelations )
+ * 
+ * @param OutputTrackCollectionName Name of the output Track collection <br>
+ * (default value: TruthTracks )
+ * 
+ * @param OutputTrackRelCollection Name of the MCParticle-Track Relations collection for output tracks <br>
+ * (default value: TruthTracksMCP )
+ * 
+ * @param MCpThreshold Transverse Momentum Threshold MC particles which will produce tracks GeV <br>
+ * (default value: 0.1 )
+ * 
+ * @param FitTracksWithMarlinTrk Fit the Tracks with MarlinTrk, otherwise take track parameters from MCParticle <br>
+ * (default value: true )
+ * 
+ * @param MultipleScatteringOn Use MultipleScattering in Fit <br>
+ * (default value: true )
+ * 
+ * @param EnergyLossOn Use Energy Loss in Fit <br>
+ * (default value: true )
+ * 
+ * @param SmoothOn Smooth All Mesurement Sites in Fit <br>
+ * (default value: false )
+ * 
+ * 
+ * @author S. J. Aplin, DESY ; R. Glattauer, HEPHY
+ * 
  */
-
 class TruthTracker : public marlin::Processor {
   
 public:
@@ -134,65 +160,26 @@ protected:
   int getSensorID(TrackerHit* hit)   { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::ILDCellID0::sensor]; };
 
   
-  /* helper function to get collection using try catch block */
+  /** helper function to get collection using try catch block */
   LCCollection* GetCollection(  LCEvent * evt, std::string colName ) ;
   
-  /* helper function to get relations using try catch block */
+  /** helper function to get relations using try catch block */
   LCRelationNavigator* GetRelations( LCEvent * evt, std::string RelName ) ;
   
-  /* helper function to get collection using try catch block */
+  /** sets up the different collections */
   void SetupInputCollections( LCEvent * evt ) ;
   
-  void createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encoder );
+  void createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encoder, std::vector<TrackerHit*>& hit_list );
   
-
-
   
-  /** input MCParticle collection name.
-   */
-  std::string _colNameMC ;
-  
-  LCCollection* _colMCP;
-  
-  /** input SimTrackerHit collections
-   */
-  std::string _colNameSimTrkHitsVTX;
-  std::string _colNameSimTrkHitsSIT;
-  std::string _colNameSimTrkHitsFTD;
-  std::string _colNameSimTrkHitsTPC;
-  
-  LCCollection* _VTXSimHits;
-  LCCollection* _SITSimHits;
-  LCCollection* _FTDSimHits;
-  LCCollection* _TPCSimHits;
   
   /** input TrackerHit collections
    */
-  std::string _colNameTrkHitsVTX ;
-  std::string _colNameTrkHitsFTD ;
-  std::string _colNameTrkHitsSIT ;
-  std::string _colNameTrkHitsTPC ;
-  
-  LCCollection* _VTXTrkHits;
-  LCCollection* _SITTrkHits;
-  LCCollection* _FTDTrkHits;
-  LCCollection* _TPCTrkHits;
-  
+  std::vector< std::string > _colNamesTrackerHits;
  
-  std::string _vxdTrackerHitRelInputColName;
-  std::string _ftdTrackerHitRelInputColName;
-  std::string _sitTrackerHitRelInputColName;
-  std::string _tpcTrackerHitRelInputColName;
-  std::string _setTrackerHitRelInputColName;
-  std::string _etdTrackerHitRelInputColName;
-
-  LCRelationNavigator* _navVXDTrackerHitRel;
-  LCRelationNavigator* _navSITTrackerHitRel;
-  LCRelationNavigator* _navFTDTrackerHitRel;
-  LCRelationNavigator* _navTPCTrackerHitRel;
-  LCRelationNavigator* _navSETTrackerHitRel;
-  LCRelationNavigator* _navETDTrackerHitRel;
-
+  /** input relation collections 
+   */
+  std::vector< std::string > _colNamesTrackerHitRelations;
   
   /** output track collection 
    */
@@ -204,25 +191,10 @@ protected:
   std::string _output_track_rel_name ;
   LCCollectionVec* _trackRelVec;
   
-  std::map< MCParticle*, std::vector<TrackerHit*> > _MCParticleTrkHitMap;
-  
-  std::vector<TrackerHit*> _hit_list;
-  
-  std::map<int, LCRelationNavigator*> _hit_rels_map;
   
   int _nMCP;
   
-  int _nVTXSimHits ;
-  int _nSITSimHits ;
-  int _nFTDSimHits ;
-  int _nTPCSimHits ;
-  
-  int _nVTXTrkHits ;
-  int _nSITTrkHits ;
-  int _nFTDTrkHits ;
-  int _nTPCTrkHits ;
-  
-  int _nEventPrintout ;
+//   int _nEventPrintout ;
   int _n_run ;
   int _n_evt ;
   
@@ -238,6 +210,12 @@ protected:
   bool _SmoothOn ;
 
 
+  std::vector< LCCollection* > _colTrackerHits;
+  std::vector< LCRelationNavigator* > _navTrackerHitRel;
+  
+  
+  unsigned _nCreatedTracks;
+  
   
 } ;
 
