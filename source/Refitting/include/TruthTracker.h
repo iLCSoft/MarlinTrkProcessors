@@ -209,6 +209,7 @@ protected:
   bool _ElossOn ;
   bool _SmoothOn ;
 
+  double _Bz;
 
   std::vector< LCCollection* > _colTrackerHits;
   std::vector< LCRelationNavigator* > _navTrackerHitRel;

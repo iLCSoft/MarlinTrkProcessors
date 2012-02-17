@@ -157,6 +157,8 @@ void TruthTracker::init() {
   _trksystem->init() ;  
   
   
+  _Bz = Global::GEAR->getBField().at( gear::Vector3D(0., 0., 0.) ).z();    //The B field in z direction
+  
 }
 
 void TruthTracker::processRunHeader( LCRunHeader* run) { 
@@ -483,8 +485,29 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
       return;
     }
     
+    // make a helix from 3 hits to get a trackstate
+    const double* x1 = added_hits[0]->getPosition();
+    const double* x2 = added_hits[ added_hits.size()/2 ]->getPosition();
+    const double* x3 = added_hits.back()->getPosition();
     
-    marlin_trk->initialise( IMarlinTrack::backward ) ;
+    HelixTrack helixTrack( x1, x2, x3, _Bz, IMarlinTrack::backward );
+    
+    const float referencePoint[3] = { helixTrack.getRefPointX() , helixTrack.getRefPointY() , helixTrack.getRefPointZ() };
+    std::vector< float > covMatrix;
+    for( unsigned i=0; i<=14; i++ ) covMatrix.push_back( 1.e2 );
+    
+    TrackStateImpl trackState( TrackState::AtOther, 
+                               helixTrack.getD0(), 
+                               helixTrack.getPhi0(), 
+                               helixTrack.getOmega(), 
+                               helixTrack.getZ0(), 
+                               helixTrack.getTanLambda(), 
+                               covMatrix, 
+                               referencePoint) ;
+    
+    
+    
+    marlin_trk->initialise( trackState, _Bz, IMarlinTrack::backward ) ;
     int fit_status = marlin_trk->fit() ; 
         
     if( fit_status == 0 ) { 
@@ -507,9 +530,9 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
   }
   else {
     
-    float bZ = float(marlin::Global::GEAR->getBField().at( gear::Vector3D( 0., 0., 0.) ).z()) ;
+    
     // use mcp pos and mom to set the track parameters
-    HelixTrack hel(mcp->getVertex(), mcp->getMomentum(), mcp->getCharge(), bZ );
+    HelixTrack hel(mcp->getVertex(), mcp->getMomentum(), mcp->getCharge(), _Bz );
     d0    = hel.getD0();
     phi0  = hel.getPhi0();
     omega = hel.getOmega();
