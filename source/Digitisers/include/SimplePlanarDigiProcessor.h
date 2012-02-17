@@ -35,10 +35,12 @@ namespace gear {
  * (default name VXDCollection) <br>
  * @param TrackerHitCollectionName The name of output collection of smeared TrackerHits <br>
  * (default name VTXTrackerHits) <br>
- * @param PointResolutionRPhi_Inner Point resolution perpendicular to the ladder (in mm) <br>
+ * @param ResolutionU resolution in direction of u (in mm) <br>
  * (default value 0.004) <br>
- * @param PointResolutionZ_Inner Point resolution along the ladder (in mm) <br>
+ * @param ResolutionV Resolution in direction of v (in mm) <br>
  * (default value 0.004) <br>
+ * @param IsStrip whether the hits are 1 dimensional strip measurements <br>
+ * (default value false)
  * @param Ladder_Number_encoded_in_cellID ladder number has been encoded in the cellID <br>
  * (default value false) <br>
  * @param Sub_Detector_ID ID of Sub-Detector using UTIL/ILDConf.h from lcio <br>
@@ -100,6 +102,7 @@ protected:
   float _pointResV ;
   
   bool _ladder_Number_encoded_in_cellID;
+  bool _isStrip;
   
   gsl_rng* _rng ;
   

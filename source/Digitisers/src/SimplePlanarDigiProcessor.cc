@@ -54,15 +54,20 @@ SimplePlanarDigiProcessor::SimplePlanarDigiProcessor() : Processor("SimplePlanar
   
   // register steering parameters: name, description, class-variable, default value
   
-  registerProcessorParameter( "PointResolutionRPhi" ,
-                             "R-Phi Resolution"  ,
+  registerProcessorParameter( "PointResolutionU" ,
+                             "U Resolution"  ,
                              _pointResU ,
                              float(0.0040)) ;
   
-  registerProcessorParameter( "PointResolutionZ" , 
-                             "Z Resolution" ,
+  registerProcessorParameter( "PointResolutionV" , 
+                             "V Resolution" ,
                              _pointResV ,
                              float(0.0040));
+  
+  registerProcessorParameter( "IsStrip",
+                              "whether hits are 1D strip hits",
+                              _isStrip,
+                              bool(false) );
   
   registerProcessorParameter( "Ladder_Number_encoded_in_cellID" , 
                              "Mokka has encoded the ladder number in the cellID" ,
@@ -395,7 +400,11 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
         ++nDismissedHits;
         continue; 
       } 
-
+      
+      // for 1D strip measurements: set v to 0! Only the measurement in u counts!
+      if( _isStrip ) localPoint.setY( 0. );
+      
+      
       //**************************************************************************
       // Convert back to global pos for TrackerHitPlaneImpl
       //**************************************************************************
@@ -462,8 +471,11 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
       trkHit->setV( v_direction ) ;
       
       trkHit->setdU( _pointResU ) ;
-      trkHit->setdV( _pointResV ) ;
+      if( _isStrip ) trkHit->setdV( 0 ); // no error in v direction for strip hits as there is no meesurement information in v direction
+      else trkHit->setdV( _pointResV ) ;
       
+      
+      if( _isStrip ) trkHit->setType( UTIL::ILDTrkHitType::ONE_DIMENSIONAL ); // if it is a 1D measurement store this information in the hit
       
       //**************************************************************************
       // Set Relation to SimTrackerHit
