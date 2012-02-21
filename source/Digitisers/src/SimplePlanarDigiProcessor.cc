@@ -11,6 +11,7 @@
 #include <EVENT/MCParticle.h>
 #include <UTIL/CellIDEncoder.h>
 #include <UTIL/ILDConf.h>
+#include <UTIL/BitSet32.h>
 
 // STUFF needed for GEAR
 #include <marlin/Global.h>
@@ -475,8 +476,10 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
       else trkHit->setdV( _pointResV ) ;
       
       
-      if( _isStrip ) trkHit->setType( UTIL::ILDTrkHitType::ONE_DIMENSIONAL ); // if it is a 1D measurement store this information in the hit
-      
+      if( _isStrip ){
+        trkHit->setType( UTIL::set_bit( trkHit->getType() ,  UTIL::ILDTrkHitTypeBit::ONE_DIMENSIONAL ) ) ;
+      }
+
       //**************************************************************************
       // Set Relation to SimTrackerHit
       //**************************************************************************    

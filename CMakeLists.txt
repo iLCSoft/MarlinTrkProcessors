@@ -83,6 +83,7 @@ INCLUDE_DIRECTORIES( ./source/Digitisers/include ./source/Refitting/include ./so
 
 # add library
 FILE( GLOB_RECURSE library_sources "source/*.cc" )
+
 # needed for adding header files to xcode project
 IF(CMAKE_GENERATOR MATCHES "Xcode")
   FILE( GLOB_RECURSE library_headers "*.h" )

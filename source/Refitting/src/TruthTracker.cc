@@ -31,6 +31,7 @@
 
 #include <UTIL/BitField64.h>
 #include <UTIL/ILDConf.h>
+#include <UTIL/BitSet32.h>
 
 using namespace lcio ;
 using namespace marlin ;
@@ -222,7 +223,7 @@ void TruthTracker::processEvent( LCEvent * evt ) {
      
       const LCObjectVec& to = nav->getRelatedToObjects( trkhit );
       
-      if( trkhit->getType() == UTIL::ILDTrkHitType::COMPOSITE_SPACEPOINT ){ //it is a composite spacepoint
+      if( BitSet32( trkhit->getType() )[ UTIL::ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT ]   ){ //it is a composite spacepoint
         
         if( to.size() == 2 ){
           
@@ -446,8 +447,8 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
       TrackerHit* trkHit = hit_list[j];
       
       // Check for spacepoints
-      if( trkHit->getType() == UTIL::ILDTrkHitType::COMPOSITE_SPACEPOINT ){
-        
+      if( BitSet32( trkHit->getType() )[ UTIL::ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT ]   ){ //it is a composite spacepoint
+       
         //Split it up and add both hits to the MarlinTrk
         const LCObjectVec rawObjects = trkHit->getRawHits();
         

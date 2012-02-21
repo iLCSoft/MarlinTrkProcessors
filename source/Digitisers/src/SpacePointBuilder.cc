@@ -210,8 +210,8 @@ void SpacePointBuilder::processEvent( LCEvent * evt ) {
             spacePoint->rawHits().push_back( hitFront );
             spacePoint->rawHits().push_back( hitBack );
             
-            spacePoint->setType( ILDTrkHitType::COMPOSITE_SPACEPOINT );
-            
+            spacePoint->setType( UTIL::set_bit( spacePoint->getType() ,  ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT ) ) ;
+           
             spCol->addElement( spacePoint ) ; 
             
             createdSpacePoints++;
