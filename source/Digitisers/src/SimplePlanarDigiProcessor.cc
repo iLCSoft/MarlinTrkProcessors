@@ -403,7 +403,7 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
       } 
       
       // for 1D strip measurements: set v to 0! Only the measurement in u counts!
-      if( _isStrip ) localPoint.setY( 0. );
+      if( _isStrip ) localPoint[1] = 0. ;
       
       
       //**************************************************************************
@@ -472,6 +472,7 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
       trkHit->setV( v_direction ) ;
       
       trkHit->setdU( _pointResU ) ;
+
       if( _isStrip ) trkHit->setdV( 0 ); // no error in v direction for strip hits as there is no meesurement information in v direction
       else trkHit->setdV( _pointResV ) ;
       
