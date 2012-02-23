@@ -119,10 +119,25 @@ void SpacePointBuilder::processRunHeader( LCRunHeader* run) {
 void SpacePointBuilder::processEvent( LCEvent * evt ) { 
 
 
-  LCCollection* col = evt->getCollection( _TrackerHitCollection ) ;
-  LCRelationNavigator* nav = new LCRelationNavigator(evt->getCollection( _TrackerHitSimHitRelCollection ));
+  LCCollection* col = 0 ;
+  LCRelationNavigator* nav = 0 ; 
 
-  if( col != NULL ){
+  try{
+    col = evt->getCollection( _TrackerHitCollection ) ;
+  }
+  catch(DataNotAvailableException &e){
+    streamlog_out(DEBUG4) << "Collection " << _TrackerHitCollection.c_str() << " is unavailable in event " << _nEvt << std::endl;
+  }
+
+  try{
+    nav = new LCRelationNavigator(evt->getCollection( _TrackerHitSimHitRelCollection ));
+  }
+  catch(DataNotAvailableException &e){
+    streamlog_out(DEBUG4) << "Collection " << _TrackerHitSimHitRelCollection.c_str() << " is unavailable in event " << _nEvt << std::endl;
+  }
+
+    
+  if( col != NULL && nav != NULL ){
     
     
     unsigned createdSpacePoints = 0;
