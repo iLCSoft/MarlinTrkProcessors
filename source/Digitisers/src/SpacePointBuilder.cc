@@ -32,6 +32,9 @@
 #include "gear/gearsurf/ICoordinateSystem.h"
 #include "gear/gearsurf/CartesianCoordinateSystem.h"
 
+#include "CLHEP/Matrix/SymMatrix.h"
+#include "CLHEP/Matrix/Matrix.h"
+
 #include <cmath>
 #include <sstream>
 
@@ -318,25 +321,27 @@ TrackerHitImpl* SpacePointBuilder::createSpacePoint( TrackerHitPlane* a , Tracke
   double y1 = p1[1];
   double z1 = p1[2];
   Hep3Vector P1( x1,y1,z1 );
-  
+  double du_a = a->getdU();  
   
   
   gear::MeasurementSurface const* ms1 = Global::GEAR->getMeasurementSurfaceStore().GetMeasurementSurface( a->getCellID0() );
   gear::CartesianCoordinateSystem* ccs1 = dynamic_cast< gear::CartesianCoordinateSystem* >( ms1->getCoordinateSystem() );
   CLHEP::Hep3Vector W1 = ccs1->getLocalZAxis(); // the vector W of the local coordinate system the measurement surface has
-  CLHEP::Hep3Vector V1 = ccs1->getLocalYAxis(); // the vector W of the local coordinate system the measurement surface has
+  CLHEP::Hep3Vector V1 = ccs1->getLocalYAxis(); // the vector V of the local coordinate system the measurement surface has
+  CLHEP::Hep3Vector U1 = ccs1->getLocalXAxis(); // the vector V of the local coordinate system the measurement surface has
   
   const double* p2 = b->getPosition();
   double x2 = p2[0];
   double y2 = p2[1];
   double z2 = p2[2];
-  Hep3Vector P2( x2,y2,z2 );
+  Hep3Vector P2( x2,y2,z2 );  
+  double du_b = b->getdU();  
   
   gear::MeasurementSurface const* ms2 = Global::GEAR->getMeasurementSurfaceStore().GetMeasurementSurface( b->getCellID0() );
   gear::CartesianCoordinateSystem* ccs2 = dynamic_cast< gear::CartesianCoordinateSystem* >( ms2->getCoordinateSystem() );
   CLHEP::Hep3Vector W2 = ccs2->getLocalZAxis(); // the vector W of the local coordinate system the measurement surface has
-  CLHEP::Hep3Vector V2 = ccs2->getLocalYAxis(); // the vector W of the local coordinate system the measurement surface has
-  
+  CLHEP::Hep3Vector V2 = ccs2->getLocalYAxis(); // the vector V of the local coordinate system the measurement surface has
+  CLHEP::Hep3Vector U2 = ccs2->getLocalXAxis(); // the vector V of the local coordinate system the measurement surface has
   
   streamlog_out( DEBUG2 ) << "\t ( " << x1 << " " << y1 << " " << z1 << " ) <--> ( " << x2 << " " << y2 << " " << z2 << " )\n";
   
@@ -367,7 +372,8 @@ TrackerHitImpl* SpacePointBuilder::createSpacePoint( TrackerHitPlane* a , Tracke
     
   }
   //////////////////////////////////////////////////////////////////////////////////////////////////////
-  
+ 
+
   //////////////////////////////////////////////////////////////////////////////////////////////////////
   // Next we want to calculate the crossing point.
   
@@ -389,7 +395,7 @@ TrackerHitImpl* SpacePointBuilder::createSpacePoint( TrackerHitPlane* a , Tracke
   if( !ms1->isLocalInBoundary( localPoint1 ) ){
     
     _nOutOfBoundary++;
-    streamlog_out( DEBUG2 ) << "\tFirst hit is out of boundary: local coordinates are ( " 
+    streamlog_out( DEBUG2 ) << "\tSpacePoint position lies outside the boundary of the first layer: local coordinates are ( " 
     << localPoint1.x() << " " << localPoint1.y() << " " << localPoint1.z() << " )\n\n";
     
     return NULL;
@@ -411,6 +417,59 @@ TrackerHitImpl* SpacePointBuilder::createSpacePoint( TrackerHitPlane* a , Tracke
   
   double pos[3] = {point.x(), point.y(), point.z() };
   spacePoint->setPosition(  pos  ) ;
+  
+  
+  // set error treating the strips as stereo with equal and opposite rotation -- for reference see Karimaki NIM A 374 p367-370
+
+  // first calculate the covariance matrix in the cartisian coordinate system defined by the sensor 
+  // here we assume that du is the same for both sides
+  
+  if( fabs(du_a - du_b) > 1.0e-06 ){
+    streamlog_out( ERROR ) << "\tThe measurement errors of the two 1D hits must be equal \n\n";    
+    assert( fabs(du_a - du_b) > 1.0e-06 == false );
+    return NULL; //measurement plane non parallel or orthogonal don't create a spacepoint
+  }
+ 
+  
+  double du2 = du_a*du_a;
+  
+  // rotate the strip system back to double-layer wafer system
+  CLHEP::Hep3Vector u_sensor = U1 + U2;
+  CLHEP::Hep3Vector v_sensor = V1 + V2;
+  CLHEP::Hep3Vector w_sensor = W1 + W2;
+  
+  HepRotation rot_sensor( u_sensor, v_sensor, w_sensor );
+  CLHEP::HepMatrix rot_sensor_matrix;
+  rot_sensor_matrix = rot_sensor;
+  
+  double cos2_alpha = V1.cos2Theta(v_sensor) ; // alpha = strip angle   
+  double sin2_alpha = 1 - cos2_alpha ; 
+  
+  CLHEP::HepSymMatrix cov_plane(3,0); // u,v,w
+  
+  cov_plane(1,1) = (0.5 * du2) / cos2_alpha;
+  cov_plane(2,2) = (0.5 * du2) / sin2_alpha;
+  
+  streamlog_out( DEBUG2 ) << "\t cov_plane  = " << cov_plane << "\n\n";  
+  streamlog_out( DEBUG2 ) << "\tstrip_angle  = " << acos(sqrt(cos2_alpha))/(M_PI/180) << "\n\n";
+  
+  CLHEP::HepSymMatrix cov_xyz= cov_plane.similarity(rot_sensor_matrix);
+  
+  streamlog_out( DEBUG2 ) << "\t cov_xyz  = " << cov_xyz << "\n\n";
+  
+  EVENT::FloatVec cov( 9 )  ; 
+  int icov = 0 ;
+  
+  for(int irow=0; irow<3; ++irow ){
+    for(int jcol=0; jcol<irow+1; ++jcol){
+      //      std::cout << "row = " << irow << " col = " << jcol << std::endl ;
+      cov[icov] = cov_xyz[irow][jcol] ;
+//      std::cout << "cov["<< icov << "] = " << cov[icov] << std::endl ;
+      ++icov ;
+    }
+  }
+  
+  spacePoint->setCovMatrix(cov);
   
   streamlog_out( DEBUG2 ) << "\tHit accepted\n\n";
   
