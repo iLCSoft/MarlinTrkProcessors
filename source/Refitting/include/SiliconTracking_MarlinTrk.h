@@ -6,7 +6,6 @@
 #include "lcio.h"
 #include <string>
 #include <vector>
-#include <cmath>
 #include <IMPL/TrackImpl.h>
 #include "ClusterExtended.h"
 #include "TrackExtended.h"
@@ -163,9 +162,6 @@ namespace MarlinTrk {
  * (default value is 0.1) <br>
  * @param MinimalHits minimal number of hits in track required <br>
  * (default value is 3) <br>
- * @param NHitsChi2 Maximal number of hits for which a track with n hits is aways better than one with n-1 hits.
- * For tracks with equal or more than NHitsChi2 the track  with the lower \f$\chi^2\f$ is better.
- * (default value is 5) <br>
  * @param FastAttachment if this flag is set to 1, less accurate but fast procedure to merge additional hits to tracks is used <br> 
  * if set to 0, a more accurate, but slower procedure is invoked <br>
  * (default value is 0) <br>
@@ -242,14 +238,7 @@ protected:
               ( b->getPosition()[0] * b->getPosition()[0] + b->getPosition()[1] * b->getPosition()[1] ) ) ; 
     }
   } ;
-  
-  /// Compare tracks according to their chi2/ndf
-  struct compare_TrackExtended{
-    // n.b.: a and b should be TrackExtended const *, but the getters are not const :-(
-    bool operator()(TrackExtended *a, TrackExtended *b) const {
-      return (a->getChi2()/a->getNDF() <= b->getChi2()/b->getNDF() );
-    }
-  };
+
   
   
   std::string _VTXHitCollection;
@@ -261,42 +250,9 @@ protected:
   std::vector<TrackerHitExtendedVec> _sectors;
   std::vector<TrackerHitExtendedVec> _sectorsFTD;
   
-  /**
-   * A helper class to allow good code readability by accessing tracks with N hits.
-   * As the smalest valid track contains three hits, but the first index in a vector is 0,
-   * this class hides the index-3 calculation. As the vector access is inline there should be
-   * no performance penalty.
-   */
-  class TracksWithNHitsContainer {
-  public:
-    /// Empty all the vectors and delete the tracks contained in it.
-    void clear();
-    
-    /// Set the size to allow a maximum of maxHit hits.
-    inline void resize(size_t maxHits) {
-      _tracksNHits.resize(maxHits-2);
-      _maxIndex=(maxHits-3);
-    }
-    
-    // Sort all track vectors according to chi2/nDof
-    //      void sort();
-    
-    /// Returns the  TrackExtendedVec for track with n hits. 
-    /// In case n is larger than the maximal number the vector with the largest n ist returned.
-    /// \attention The smallest valid number is three! For
-    /// performance reasons there is no safety check!
-    inline TrackExtendedVec & getTracksWithNHitsVec( size_t nHits ) {
-      //return _tracksNHits[ std::min(nHits-3, _maxIndex) ];
-      // for debugging: with boundary check
-      return _tracksNHits.at(std::min(nHits-3, _maxIndex));
-    }
-    
-  protected:
-    std::vector< TrackExtendedVec > _tracksNHits;
-    size_t _maxIndex; /// local cache variable to avoid calculation overhead
-  };
-  
-  TracksWithNHitsContainer _tracksWithNHitsContainer;
+  TrackExtendedVec _tracks5Hits;
+  TrackExtendedVec _tracks4Hits;
+  TrackExtendedVec _tracks3Hits;
   
   int InitialiseVTX(LCEvent * evt);
   int InitialiseFTD(LCEvent * evt);
@@ -325,7 +281,7 @@ protected:
   void TrackingInFTD();
   int BuildTrackFTD(TrackExtended* trackAR, int* nLR, int iS);
   int AttachHitToTrack(TrackExtended * trackAR, TrackerHitExtended * hit, int iopt);
-  
+
   void FinalRefit(LCCollectionVec* trk_col, LCCollectionVec* rel_col);
   
   float _bField;
@@ -338,9 +294,7 @@ protected:
   float _minDistCutAttach;
   int _minimalLayerToAttach;
   
-  // two pi is not a constant in cmath. Calculate it, once!
-  static const double TWOPI;
-  
+  double PI,TWOPI,PIOVER2;
   double _dPhi;
   double _dTheta;
   double _dPhiFTD;
@@ -378,7 +332,6 @@ protected:
   float _cutOnD0, _cutOnZ0, _cutOnOmega, _cutOnPt;
   
   int _minimalHits;
-  int _nHitsChi2;
   int _attachFast;
   
   int _nTotalVTXHits,_nTotalFTDHits,_nTotalSITHits;
@@ -464,9 +417,9 @@ protected:
     
     
   };
-  
+
   std::vector<FTD_Disk> _FTDgeo;
-  
+
   std::vector<float> _zLayerFTD;
   
   unsigned int _nlayersFTD;

@@ -451,7 +451,7 @@ TrackerHitImpl* SpacePointBuilder::createSpacePoint( TrackerHitPlane* a , Tracke
   cov_plane(2,2) = (0.5 * du2) / sin2_alpha;
   
   streamlog_out( DEBUG2 ) << "\t cov_plane  = " << cov_plane << "\n\n";  
-  streamlog_out( DEBUG2 ) << "\tstrip_angle = " << V1.angle(V2)/(M_PI/180) / 2.0 << " degrees \n\n";
+  streamlog_out( DEBUG2 ) << "\tstrip_angle  = " << acos(sqrt(cos2_alpha))/(M_PI/180) << "\n\n";
   
   CLHEP::HepSymMatrix cov_xyz= cov_plane.similarity(rot_sensor_matrix);
   

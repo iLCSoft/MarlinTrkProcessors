@@ -472,19 +472,19 @@ protected:
   
   unsigned int _nLayersVTX;
   
-//  struct SIT_Layer {
-//    int nLadders;
-//    double phi0;
-//    double dphi;
-//    double senRMin;
-//    double supRMin;
-//    double length;
-//    double width;
-//    double offset;
-//    double senThickness;
-//    double supThickness;
-//  };
-//  std::vector<SIT_Layer> _SITgeo;
+  struct SIT_Layer {
+    int nLadders;
+    double phi0;
+    double dphi;
+    double senRMin;
+    double supRMin;
+    double length;
+    double width;
+    double offset;
+    double senThickness;
+    double supThickness;
+  };
+  std::vector<SIT_Layer> _SITgeo;
   
   unsigned int _nLayersSIT;
   

@@ -14,8 +14,6 @@
 #include <EVENT/SimTrackerHit.h>
 #include <EVENT/MCParticle.h>
 
-
-
 #include <IMPL/LCRelationImpl.h>
 #include <UTIL/LCRelationNavigator.h>
 
@@ -30,7 +28,6 @@
 #include "MarlinTrk/Factory.h"
 #include "MarlinTrk/IMarlinTrack.h"
 #include "MarlinTrk/HelixTrack.h"
-#include "MarlinTrk/LCIOTrackPropagators.h"
 
 #include <UTIL/BitField64.h>
 #include <UTIL/ILDConf.h>
@@ -420,15 +417,6 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
   
   streamlog_out( DEBUG3 ) << "Create track with " << hit_list.size() << " hits" << std::endl;  
   
-  HelixTrack hel(mcp->getVertex(), mcp->getMomentum(), mcp->getCharge(), _Bz );
-  streamlog_out( DEBUG3 ) << "\n MCParticle paramters: " 
-  << " d0 " <<  hel.getD0()
-  << " phi0 " << hel.getPhi0()
-  << " omega "<< hel.getOmega()
-  << " z0 "<< hel.getZ0()
-  << " tanl "<< hel.getTanLambda()
-  << "\n" << std::endl;
-  
   double d0;
   double phi0;
   double omega;
@@ -505,95 +493,36 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
     
     HelixTrack helixTrack( x1, x2, x3, _Bz, IMarlinTrack::backward );
     
-    helixTrack.moveRefPoint(0.0, 0.0, 0.0);
-    
     const float referencePoint[3] = { helixTrack.getRefPointX() , helixTrack.getRefPointY() , helixTrack.getRefPointZ() };
+    std::vector< float > covMatrix;
+    for( unsigned i=0; i<=14; i++ ) covMatrix.push_back( 1.e2 );
     
-//    const float referencePoint[3] = { hel.getRefPointX() , hel.getRefPointY() , hel.getRefPointZ() };
-    
-    EVENT::FloatVec covMatrix;
-        
-    covMatrix.resize(15);
-
-    for (int icov = 0; icov<covMatrix.size(); ++icov) {
-      covMatrix[icov] = 0;
-    }
-    
-    covMatrix[0]  = ( 1.e4 ); //sigma_d0^2
-    covMatrix[2]  = ( 1.e4 ); //sigma_phi0^2
-    covMatrix[5]  = ( 1.e4 ); //sigma_omega^2
-    covMatrix[9]  = ( 1.e4 ); //sigma_z0^2
-    covMatrix[14] = ( 1.e4 ); //sigma_tanl^2
-
-    
-    TrackStateImpl* trackState = new TrackStateImpl( lcio::TrackState::AtIP, 
-                                                    helixTrack.getD0(), 
-                                                    helixTrack.getPhi0(), 
-                                                    helixTrack.getOmega(), 
-                                                    helixTrack.getZ0(), 
-                                                    helixTrack.getTanLambda(), 
-//                                                    hel.getD0(), 
-//                                                    hel.getPhi0(), 
-//                                                    hel.getOmega(), 
-//                                                    hel.getZ0(), 
-//                                                    hel.getTanLambda(), 
-                                                    covMatrix, 
-                                                    referencePoint) ;
+    TrackStateImpl trackState( TrackState::AtOther, 
+                               helixTrack.getD0(), 
+                               helixTrack.getPhi0(), 
+                               helixTrack.getOmega(), 
+                               helixTrack.getZ0(), 
+                               helixTrack.getTanLambda(), 
+                               covMatrix, 
+                               referencePoint) ;
     
     
-    streamlog_out( DEBUG3 ) << "\n Helix for prefit: " 
-    <<  " d0 =  " << trackState->getD0()
-    <<  " phi0 =  " << trackState->getPhi() 
-    <<  " omega =  " << trackState->getOmega() 
-    <<  " z0 =  " << trackState->getZ0() 
-    <<  " tanl =  " << trackState->getTanLambda() 
-    <<  " ref =  " <<  trackState->getReferencePoint()[0] << " " << trackState->getReferencePoint()[1] << " " << trackState->getReferencePoint()[2]
-    << "\n" << std::endl;
-
-
-//    for (int ihit = 0; ihit < added_hits.size(); ++ihit) {
-//      
-//      double x = added_hits[ihit]->getPosition()[0];
-//      double y = added_hits[ihit]->getPosition()[1];
-//      double z = added_hits[ihit]->getPosition()[2];
-//      
-//      LCIOTrackPropagators::PropagateLCIOToNewRef(*trackState, x, y, z);
-//      
-//      streamlog_out( DEBUG3 ) << "\n Helix parameters at hit " << ihit <<" : " 
-//      <<  " d0 =  " << trackState->getD0()
-//      <<  " phi0 =  " << trackState->getPhi() 
-//      <<  " omega =  " << trackState->getOmega() 
-//      <<  " z0 =  " << trackState->getZ0() 
-//      <<  " tanl =  " << trackState->getTanLambda() 
-//      <<  " ref =  " <<  trackState->getReferencePoint()[0] << " " << trackState->getReferencePoint()[1] << " " << trackState->getReferencePoint()[2]
-//      << "\n" << std::endl;
-//
-//      
-//      
-//    }
     
-    
-    marlin_trk->initialise( *trackState, _Bz, IMarlinTrack::backward ) ;
-    //marlin_trk->initialise( *trackState, _Bz, IMarlinTrack::forward ) ;
-    //marlin_trk->initialise( IMarlinTrack::backward ) ;
+    marlin_trk->initialise( trackState, _Bz, IMarlinTrack::backward ) ;
     int fit_status = marlin_trk->fit() ; 
         
     if( fit_status == 0 ) { 
       
       const gear::Vector3D point(0.,0.,0.); // nominal IP
       
-      TrackStateImpl* trkStateIP = new TrackStateImpl() ;
-      int return_code = marlin_trk->propagate(point, *trkStateIP, chi2, ndf ) ;
+      TrackStateImpl* trkState = new TrackStateImpl() ;
+      int return_code = marlin_trk->propagate(point, *trkState, chi2, ndf ) ;
       if ( return_code == 0 ) {
         
-        trkStateIP->setLocation(  lcio::TrackState::AtIP ) ;
-        Track->addTrackState(trkStateIP);
-        //Track->addTrackState(trackState);
+        Track->addTrackState(trkState);
         Track->setChi2(chi2) ;
         Track->setNdf(ndf) ;
         
-      } else {
-        delete trkStateIP;
       }
     }
     
