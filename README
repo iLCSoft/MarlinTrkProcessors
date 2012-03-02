@@ -17,6 +17,27 @@
 
  =============================================================================================================
 
+  --------
+ | v01-03 |
+  -------- 
+
+  General:			Make use of MeasurementSurface classes from GEAR, as well as new UTIL::BitSet32 and 
+   				UTIL::ILDTrkHitTypeBit from ILDConf (LCIO). 			
+
+  SiliconTracking_MarlinTrk: 	Adapted to use composite Space-points composed from strip hits. 
+     			    	Added new parameter NHitsChi2 which controls the maximal number of hits for which a track 
+				with n hits is aways better than one with n-1 hits.
+				General Cleanup and merger from changes from CLIC CDR. 				
+
+  FullLDCTracking_MarlinTrk:	Adapted to use composite Space-points composed from strip hits.
+	
+  SimplePlanarDigiProcessor:	Adapted to have option to produce strip hits.
+
+  TruthTracker:			Flexible collection input and able to construct track including composite Space-points.
+
+  SpacePointBuilder:		New - Builds 3D composite Space-points from strip hits.
+
+
 
   --------
  | v01-02 |
