@@ -1,20 +1,19 @@
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 #include "SimplePlanarTestDigiProcessor.h"
-#include <iostream>
+
 #include <EVENT/LCCollection.h>
+#include <EVENT/SimTrackerHit.h>
 #include <IMPL/LCCollectionVec.h>
 #include <IMPL/LCRelationImpl.h>
-#include <EVENT/SimTrackerHit.h>
 #include <IMPL/TrackerHitPlaneImpl.h>
-#include <EVENT/MCParticle.h>
+
 #include <UTIL/CellIDEncoder.h>
 #include <UTIL/ILDConf.h>
 
 // STUFF needed for GEAR
 #include <marlin/Global.h>
 #include <gear/GEAR.h>
-#include <gear/ZPlanarParameters.h>
-#include <gear/ZPlanarLayerLayout.h>
+
 
 //FIXME:SJA: if we want the surface store to be filled we need to create an instance of MarlinTrk implemented with KalTest/KalDet
 #include "MarlinTrk/Factory.h"
@@ -29,6 +28,7 @@
 #include "marlin/ProcessorEventSeeder.h"
 
 #include "UTIL/ILDConf.h"
+#include "UTIL/BitSet32.h"
 
 #include "CLHEP/Vector/TwoVector.h"
 
@@ -61,6 +61,10 @@ SimplePlanarTestDigiProcessor::SimplePlanarTestDigiProcessor() : Processor("Simp
                              _resV ,
                              float(0.0040));
   
+  registerProcessorParameter( "IsStrip",
+                              "whether hits are 1D strip hits",
+                              _isStrip,
+                              bool(false) );
 
   
   // Input collections
@@ -211,7 +215,7 @@ void SimplePlanarTestDigiProcessor::processEvent( LCEvent * evt ) {
       
       //      GearSurfaces::MeasurementSurface* ms = GearSurfaces::MeasurementSurfaceStore::Instance().GetMeasurementSurface( SimTHit->getCellID0() );
       
-      gear::MeasurementSurface const* ms = NULL;
+      gear::MeasurementSurface const* ms = Global::GEAR->getMeasurementSurfaceStore().GetMeasurementSurface( encoder.lowWord() );;
       CLHEP::Hep3Vector globalPoint(pos[0],pos[1],pos[2]);
       CLHEP::Hep3Vector localPoint = ms->getCoordinateSystem()->getLocalPoint(globalPoint);
       CLHEP::Hep3Vector localPointSmeared = localPoint;
@@ -262,9 +266,10 @@ void SimplePlanarTestDigiProcessor::processEvent( LCEvent * evt ) {
         
       }  
       
+      // for 1D strip measurements: set v to 0! Only the measurement in u counts!
+      if( _isStrip ) localPointSmeared[1] = 0. ;
       
       // convert back to global position for TrackerHitPlaneImpl
-      // TODO: for strip hits this needs to be done properly where the local v coordinate is set to the centre of the strip
       CLHEP::Hep3Vector globalPointSmeared = ms->getCoordinateSystem()->getGlobalPoint(localPointSmeared);
       
       streamlog_out(DEBUG3) <<"Position of hit after smearing global: ( "  
@@ -305,7 +310,13 @@ void SimplePlanarTestDigiProcessor::processEvent( LCEvent * evt ) {
       trkHit->setV( v_direction ) ;
       
       trkHit->setdU( _resU ) ;
-      trkHit->setdV( _resV ) ;
+      
+      if( _isStrip ) trkHit->setdV( 0 ); // no error in v direction for strip hits as there is no meesurement information in v direction
+      else trkHit->setdV( _resV ) ;
+      
+      if( _isStrip ){
+        trkHit->setType( UTIL::set_bit( trkHit->getType() , UTIL::ILDTrkHitTypeBit::ONE_DIMENSIONAL ) ) ;
+      }
       
       trkHit->setEDep( SimTHit->getEDep() );
       

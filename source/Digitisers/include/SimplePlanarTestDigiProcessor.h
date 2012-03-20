@@ -38,6 +38,8 @@ using namespace marlin ;
  * (default value 0.004) <br>
  * @param ResolutionV Resolution in direction of v (in mm) <br>
  * (default value 0.004) <br>
+ * @param IsStrip whether the hits are 1 dimensional strip measurements <br>
+ * (default value false)<br>
  * <br>
  * 
  */
@@ -85,7 +87,7 @@ protected:
   
   float _resU ;
   float _resV ;
-  
+  bool _isStrip;
 
   gsl_rng* _rng ;
   
