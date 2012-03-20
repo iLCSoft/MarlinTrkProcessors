@@ -105,7 +105,7 @@ protected:
   int _n_run ;
   int _n_evt ;
   
-  
+  float _bField;
   
 } ;
 

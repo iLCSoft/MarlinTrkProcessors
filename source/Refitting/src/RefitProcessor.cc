@@ -1,5 +1,5 @@
 #include "RefitProcessor.h"
-#include <iostream>
+
 #include <algorithm>
 
 #include <EVENT/LCCollection.h>
@@ -22,10 +22,11 @@
 //---- GEAR ----
 #include "marlin/Global.h"
 #include "gear/GEAR.h"
-
+#include "gear/BField.h"
 
 #include "MarlinTrk/Factory.h"
 #include "MarlinTrk/IMarlinTrack.h"
+#include "MarlinTrk/HelixTrack.h"
 
 using namespace lcio ;
 using namespace marlin ;
@@ -95,6 +96,9 @@ void RefitProcessor::init() {
   // usually a good idea to
   printParameters() ;
   
+  
+  _bField = Global::GEAR->getBField().at( gear::Vector3D(0., 0., 0.) ).z();    //The B field in z direction
+  
   // set up the geometery needed by KalTest
   //FIXME: for now do KalTest only - make this a steering parameter to use other fitters
   _trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( "KalTest" , marlin::Global::GEAR , "" ) ;
@@ -126,7 +130,7 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
   
   //-- note: this will not be printed if compiled w/o MARLINDEBUG=1 !
   
-  streamlog_out(DEBUG) << "   processing event: " << _n_evt 
+  streamlog_out(DEBUG4) << "   processing event: " << _n_evt 
   << std::endl ;
   
   // get input collection and relations 
@@ -135,6 +139,7 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
   LCRelationNavigator* input_track_rels = this->GetRelations( evt, _input_track_rel_name ) ;
   
   if( input_track_col != 0 ){
+    
     
     // establish the track collection that will be created 
     LCCollectionVec* trackVec = new LCCollectionVec( LCIO::TRACK )  ;    
@@ -149,9 +154,11 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
     
     int nTracks = input_track_col->getNumberOfElements()  ;
     
+    streamlog_out(DEBUG4) << "Processing input collection " << _input_track_col_name << " with " << nTracks << " tracks\n";
+    
     // loop over the input tacks and refit using KalTest    
-    for(int i=0; i< nTracks ; ++i)
-      {
+    for(int i=0; i< nTracks ; ++i){
+      
       
       Track* track = dynamic_cast<Track*>( input_track_col->getElementAt( i ) ) ;
       
@@ -164,134 +171,255 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
       
       EVENT::TrackerHitVec::iterator it = trkHits.begin();
       
-      for( it = trkHits.begin() ; it != trkHits.end() ; ++it )
-        {
-        
-        marlin_trk->addHit(*it);
-
-        }
+      int number_of_added_hits = 0;
+      int ndof_added = 0;
+      TrackerHitVec added_hits;
       
-      marlin_trk->initialise( IMarlinTrack::backward ) ;
+      for( it = trkHits.begin() ; it != trkHits.end() ; ++it ){
+        
+        TrackerHit* trkHit = *it;
+        bool isSuccessful = false; 
+          
+        if( BitSet32( trkHit->getType() )[ UTIL::ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT ]   ){ //it is a composite spacepoint
+          
+          //Split it up and add both hits to the MarlinTrk
+          const LCObjectVec rawObjects = trkHit->getRawHits();                    
+          
+          for( unsigned k=0; k< rawObjects.size(); k++ ){
+            
+            TrackerHit* rawHit = dynamic_cast< TrackerHit* >( rawObjects[k] );
+            
+            if( marlin_trk->addHit( rawHit ) == IMarlinTrack::success ){
+              
+              isSuccessful = true; //if at least one hit from the spacepoint gets added
+              ++ndof_added;
+            }
+          }
+        }
+        else{ // normal non composite hit
+         
+          if (marlin_trk->addHit( trkHit ) == 0){
+            isSuccessful = true;
+            ndof_added += 2;
+          }
+          
+        }
+        
+        if (isSuccessful) {
+          added_hits.push_back(trkHit);
+          ++number_of_added_hits;
+        }
+        
+        
+        else{
+          streamlog_out(DEBUG4) << "Hit " << it - trkHits.begin() << " Dropped " << std::endl;          
+        }
+        
+      }
+      
+      if( ndof_added < 8 ) {
+        streamlog_out(DEBUG3) << "RefitProcessor: Cannot fit less with less than 8 degrees of freedom. Number of hits =  " << number_of_added_hits << " ndof = " << ndof_added << std::endl;
+        delete marlin_trk ;
+        continue ;
+      }
+      
+      // initialise with space-points not strips 
+      // make a helix from 3 hits to get a trackstate
+      const double* x1 = added_hits[0]->getPosition();
+      const double* x2 = added_hits[ added_hits.size()/2 ]->getPosition();
+      const double* x3 = added_hits.back()->getPosition();
+      
+      HelixTrack helixTrack( x1, x2, x3, _bField, IMarlinTrack::backward );
+      
+      helixTrack.moveRefPoint(0.0, 0.0, 0.0);
+      
+      const float referencePoint[3] = { helixTrack.getRefPointX() , helixTrack.getRefPointY() , helixTrack.getRefPointZ() };
+      
+      
+      EVENT::FloatVec covMatrix;
+      
+      covMatrix.resize(15);
+      
+      for (unsigned icov = 0; icov<covMatrix.size(); ++icov) {
+        covMatrix[icov] = 0;
+      }
+      
+      covMatrix[0]  = ( 1.e4 ); //sigma_d0^2
+      covMatrix[2]  = ( 1.e4 ); //sigma_phi0^2
+      covMatrix[5]  = ( 1.e4 ); //sigma_omega^2
+      covMatrix[9]  = ( 1.e4 ); //sigma_z0^2
+      covMatrix[14] = ( 1.e4 ); //sigma_tanl^2
+      
+      
+      TrackStateImpl trackState( TrackState::AtOther, 
+                                 helixTrack.getD0(), 
+                                 helixTrack.getPhi0(), 
+                                 helixTrack.getOmega(), 
+                                 helixTrack.getZ0(), 
+                                 helixTrack.getTanLambda(), 
+                                 covMatrix, 
+                                 referencePoint) ;
+                                 
+      marlin_trk->initialise( trackState, _bField, IMarlinTrack::backward ) ;
+      
+      
       int fit_status = marlin_trk->fit() ; 
       
       streamlog_out(DEBUG4) << "fit_status = " << fit_status << std::endl ;
-    
-      if( fit_status == 0 ){ 
-        
-        marlin_trk->smooth(trkHits.back());
-        
-        gear::Vector3D xing_point ; 
-        
-        UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ; 
-        
-        encoder.reset() ;  // reset to 0
-        
-        encoder[lcio::ILDCellID0::subdet] = lcio::ILDDetID::TPC ;
-        encoder[lcio::ILDCellID0::side] = 0 ;
-        encoder[lcio::ILDCellID0::layer]  = 200 ;
-        encoder[lcio::ILDCellID0::module] = 0 ;
-        encoder[lcio::ILDCellID0::sensor] = 0 ;
-        
-        
-        int layerID = encoder.lowWord() ;  
-        int elementID = 0 ;
-        marlin_trk->intersectionWithLayer( layerID, xing_point, elementID, IMarlinTrack::modeForward ); 
-        
-        encoder[lcio::ILDCellID0::subdet] = lcio::ILDDetID::VXD ;
-        encoder[lcio::ILDCellID0::layer]  = 0 ;
-        layerID = encoder.lowWord() ;  
-        
-        marlin_trk->intersectionWithLayer( layerID, xing_point, elementID ); // first VXD layer         
-        
-        encoder[lcio::ILDCellID0::layer]  = 1 ;
-        layerID = encoder.lowWord() ;  
-        marlin_trk->intersectionWithLayer( layerID, xing_point, elementID, IMarlinTrack::modeForward ); // second VXD layer     
-        
-        encoder[lcio::ILDCellID0::layer]  = 2 ;
-        layerID = encoder.lowWord() ;  
-        marlin_trk->intersectionWithLayer( layerID, xing_point, elementID, IMarlinTrack::modeForward ); // third VXD layer      
-        
-        encoder[lcio::ILDCellID0::subdet] = lcio::ILDDetID::SIT ;
-        encoder[lcio::ILDCellID0::layer]  = 0 ;
-        layerID = encoder.lowWord() ;  
-        int intersects = marlin_trk->intersectionWithLayer( layerID, xing_point, elementID, IMarlinTrack::modeBackward ); // first SIT layer      
-        
-        
-        streamlog_out(DEBUG4) << "elementID = " << elementID << std::endl ;
-        if( intersects == IMarlinTrack::success ) {
-          marlin_trk->intersectionWithDetElement( elementID, xing_point, IMarlinTrack::modeBackward ); // just as an example get the intersection again using the elementID returned 
-        }
-        
-        
-        
-        double chi2 = 0 ;
-        int ndf = 0 ;
-        // get track state at SIT outer  layer  
-        TrackStateImpl trkState_at_sit;   
-        marlin_trk->extrapolateToLayer( layerID, trkState_at_sit, chi2, ndf, elementID, IMarlinTrack::modeBackward); 
-        
-        // get track state at the first and last measurement sites
-        TrackStateImpl trkState_at_begin;         
-        
-        marlin_trk->getTrackState( trkState_at_begin, chi2, ndf ) ;
-        
-        TrackStateImpl trkState_at_end;
-        
-        marlin_trk->getTrackState(  trkHits.back(), trkState_at_end, chi2, ndf ) ;      
-        
-        const gear::Vector3D point(0.,0.,0.); // nominal IP
-        
-        // use extrapolate, i.e. do not include material during propagation of the cov matrix 
-        TrackStateImpl trkState_extrapolated;
-        int return_code = marlin_trk->extrapolate(point, trkState_extrapolated, chi2, ndf ) ;   
-        
-        // use propagate, i.e. include material during propagation of the cov matrix 
-        TrackStateImpl* trkState = new TrackStateImpl() ;
-        return_code = marlin_trk->propagate(point, *trkState, chi2, ndf ) ;
-        
-        if ( return_code == 0 ) {
-          IMPL::TrackImpl* refittedTrack = new IMPL::TrackImpl();
-          
-          refittedTrack->addTrackState(trkState);
-          refittedTrack->setChi2(chi2) ;
-          refittedTrack->setNdf(ndf) ;
-          
-          
-          for( it = trkHits.begin() ; it != trkHits.end() ; ++it )
-            {
-            
-            refittedTrack->addHit(*it);
-            
-            }
-          
-          
-          // assign the relations previously assigned to the input tracks  
-          LCObjectVec objVec = input_track_rels->getRelatedToObjects( track );
-          FloatVec weights   = input_track_rels->getRelatedToWeights( track ); 
-          
-          for( unsigned int irel=0 ; irel < objVec.size() ; ++irel )
-            {
-            LCRelationImpl* rel = new LCRelationImpl ;
-            rel->setFrom (refittedTrack) ;
-            rel->setTo ( objVec[irel] ) ;
-            rel->setWeight(weights[irel]) ; 
-            trackRelVec->addElement( rel );
-            }
-          
-          unsigned int size_of_vec = track->getSubdetectorHitNumbers().size() ;
-          refittedTrack->subdetectorHitNumbers().resize(size_of_vec) ;
-          for ( unsigned int detIndex = 0 ;  detIndex < size_of_vec ; detIndex++ ) 
-            {
-            refittedTrack->subdetectorHitNumbers()[detIndex] = track->getSubdetectorHitNumbers()[detIndex] ;
-            }
-          
-          trackVec->addElement( refittedTrack );
-        }
+      
+      if( fit_status != 0 ){ 
+        delete marlin_trk ;
+        continue;
+      }
+      
+      const gear::Vector3D point(0.,0.,0.); // nominal IP
+      int return_code = 0;
+      
+      double chi2;
+      int ndf;
+      
+      TrackImpl * refittedTrack = new TrackImpl();
+      
+      TrackStateImpl* trkStateIP = new TrackStateImpl;
+      return_code = marlin_trk->propagate(point, *trkStateIP, chi2, ndf ) ;
+      
+      if (return_code !=MarlinTrk::IMarlinTrack::success ) {
+        streamlog_out( ERROR ) << "  >>>>>>>>>>> could not get TrackState at IP: Track Discarded" << std::endl ;
+        delete marlin_trk ;
+        delete trkStateIP;
+        delete refittedTrack;
+        continue;
+      }
+      
+      // fitting finished get hit in the fit
+      
+      std::vector<std::pair<EVENT::TrackerHit*, double> > hits_in_fit;
+      
+      // remember the hits are ordered in the order in which they were fitted
+      // here we are fitting inwards to the first is the last and vice verse
+      
+      marlin_trk->getHitsInFit(hits_in_fit);
+      
+      if( hits_in_fit.size() < 3 ) {
+        streamlog_out(DEBUG3) << "RefitProcessor: Less than 3 hits in fit: Track Discarded. Number of hits =  " << trkHits.size() << std::endl;
+        delete marlin_trk ;
+        delete trkStateIP;
+        delete refittedTrack;
+        continue ; 
+      }
+      
+      
+      EVENT::TrackerHit* last_hit_in_fit = hits_in_fit.front().first;
+      if (!last_hit_in_fit) {
+        throw EVENT::Exception( std::string("RefitProcessor: TrackerHit pointer == NULL ")  ) ;
+      }
+      
+      EVENT::TrackerHit* first_hit_in_fit = hits_in_fit.back().first;
+      if (!first_hit_in_fit) {
+        throw EVENT::Exception( std::string("RefitProcessor: TrackerHit pointer == NULL ")  ) ;
+      }
+      
+      
+      
+      TrackStateImpl* trkStateFirstHit = new TrackStateImpl;
+      return_code = marlin_trk->getTrackState(first_hit_in_fit, *trkStateFirstHit, chi2, ndf ) ;
+      
+      if(return_code !=MarlinTrk::IMarlinTrack::success){
+        streamlog_out( DEBUG5 ) << "  >>>>>>>>>>> could not get TrackState at First Hit " << std::endl ;
+        //        delete marlin_trk ;
+        //        delete trkStateFirstHit;
+        //        delete refittedTrack;
+        //        continue;
+      }
+      
+      TrackStateImpl* trkStateLastHit = new TrackStateImpl;
+      return_code = marlin_trk->getTrackState(last_hit_in_fit, *trkStateLastHit, chi2, ndf ) ;
+      
+      if (return_code !=MarlinTrk::IMarlinTrack::success ) {
+        streamlog_out( DEBUG5 ) << "  >>>>>>>>>>> could not get TrackState at Last Hit " << std::endl ;
+        //        delete marlin_trk ;
+        //        delete trkStateLastHit;
+        //        delete refittedTrack;
+        //        continue;
+      }
+      
+      TrackStateImpl* trkStateCalo = new TrackStateImpl;
+      
+      UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ; 
+      encoder.reset() ;  // reset to 0
+      
+      encoder[lcio::ILDCellID0::subdet] = lcio::ILDDetID::ECAL ;
+      encoder[lcio::ILDCellID0::side] = lcio::ILDDetID::barrel;
+      encoder[lcio::ILDCellID0::layer]  = 0 ;
+      
+      int detElementID = 0;
+      return_code = marlin_trk->propagateToLayer(encoder.lowWord(), last_hit_in_fit, *trkStateCalo, chi2, ndf, detElementID, IMarlinTrack::modeForward ) ;
+      
+      if (return_code == MarlinTrk::IMarlinTrack::no_intersection ) { // try forward or backward
+       if (trkStateLastHit->getTanLambda()>0) {
+         encoder[lcio::ILDCellID0::side] = lcio::ILDDetID::fwd;
+       }
+       else{
+         encoder[lcio::ILDCellID0::side] = lcio::ILDDetID::bwd;
+       }
+       return_code = marlin_trk->propagateToLayer(encoder.lowWord(), last_hit_in_fit, *trkStateCalo, chi2, ndf, detElementID, IMarlinTrack::modeForward ) ;
+      }
+      
+      if (return_code !=MarlinTrk::IMarlinTrack::success ) {
+        streamlog_out( DEBUG5 ) << "  >>>>>>>>>>> could not get TrackState at Calo Face: return_code = " << return_code << std::endl ;
+        //        delete marlin_trk ;
+        //        delete trkStateCalo;
+        //        delete refittedTrack;
+        //        continue;
       }
       
       delete marlin_trk;
       
-      } 
+      trkStateIP->setLocation(  lcio::TrackState::AtIP ) ;
+      trkStateFirstHit->setLocation(  lcio::TrackState::AtFirstHit ) ;
+      trkStateLastHit->setLocation(  lcio::TrackState::AtLastHit ) ;
+      trkStateCalo->setLocation(  lcio::TrackState::AtCalorimeter ) ;
+      
+      refittedTrack->trackStates().push_back(trkStateIP);
+      refittedTrack->trackStates().push_back(trkStateFirstHit);
+      refittedTrack->trackStates().push_back(trkStateLastHit);
+      refittedTrack->trackStates().push_back(trkStateCalo);
+      
+      refittedTrack->setChi2(chi2);
+      refittedTrack->setNdf(ndf);
+      
+      const double* pos = trkHits.front()->getPosition();
+      
+      double r = sqrt(pos[0]*pos[0]+pos[1]*pos[1]);
+      refittedTrack->setRadiusOfInnermostHit(r);
+      
+      
+      unsigned size_of_vec = track->getSubdetectorHitNumbers().size() ;
+      refittedTrack->subdetectorHitNumbers().resize(size_of_vec) ;
+      for ( unsigned detIndex = 0 ;  detIndex < size_of_vec ; detIndex++ ) 
+      {
+        refittedTrack->subdetectorHitNumbers()[detIndex] = track->getSubdetectorHitNumbers()[detIndex] ;
+      }
+      
+      trackVec->addElement(refittedTrack);
+      
+      // assign the relations previously assigned to the input tracks  
+      LCObjectVec objVec = input_track_rels->getRelatedToObjects( track );
+      FloatVec weights   = input_track_rels->getRelatedToWeights( track ); 
+      
+      for( unsigned int irel=0 ; irel < objVec.size() ; ++irel ){
+        
+        LCRelationImpl* rel = new LCRelationImpl ;
+        rel->setFrom (refittedTrack) ;
+        rel->setTo ( objVec[irel] ) ;
+        rel->setWeight(weights[irel]) ; 
+        trackRelVec->addElement( rel );
+        
+      }
+      
+      
+      
+    } 
     
     evt->addCollection( trackVec , _output_track_col_name) ;
     evt->addCollection( trackRelVec , _output_track_rel_name) ;
