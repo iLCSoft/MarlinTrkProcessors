@@ -578,6 +578,8 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
     //marlin_trk->initialise( IMarlinTrack::backward ) ;
     int fit_status = marlin_trk->fit() ; 
         
+    streamlog_out(DEBUG4) << "fit_status = " << fit_status << std::endl ;
+    
     if( fit_status == 0 ) { 
       
       const gear::Vector3D point(0.,0.,0.); // nominal IP
