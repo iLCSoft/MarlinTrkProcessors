@@ -253,7 +253,8 @@ protected:
   
   
   std::string _VTXHitCollection;
-  std::string _FTDHitCollection;
+  std::string _FTDPixelHitCollection;
+  std::string _FTDSpacePointCollection;
   std::string _SITHitCollection;
   std::string _siTrkCollection;
   std::string _siTrkMCPCollection;

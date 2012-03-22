@@ -217,19 +217,25 @@ SiliconTracking_MarlinTrk::SiliconTracking_MarlinTrk() : Processor("SiliconTrack
 
  // Input Collections
  // ^^^^^^^^^^^^^^^^^
- registerInputCollection(LCIO::TRACKERHIT,
+ registerInputCollection(LCIO::TRACKERHITPLANE,
                          "VTXHitCollectionName",
                          "VTX Hit Collection Name",
                          _VTXHitCollection,
                          std::string("VTXTrackerHits"));
 
 
- registerInputCollection(LCIO::TRACKERHIT,
-                         "FTDHitCollectionName",
-                         "FTD Hit Collection Name",
-                         _FTDHitCollection,
-                         std::string("FTDTrackerHits"));  
+ registerInputCollection(LCIO::TRACKERHITPLANE,
+                         "FTDPixelHitCollectionName",
+                         "FTD Pixel Hit Collection Name",
+                         _FTDPixelHitCollection,
+                         std::string("FTDPixelTrackerHits"));  
 
+  registerInputCollection(LCIO::TRACKERHIT,
+                          "FTDSpacePointCollectionName",
+                          "FTD FTDSpacePoint Collection Name",
+                          _FTDSpacePointCollection,
+                          std::string("FTDSpacePoints"));  
+  
 
  registerInputCollection(LCIO::TRACKERHIT,
                          "SITHitCollectionName",
@@ -464,8 +470,8 @@ void SiliconTracking_MarlinTrk::processEvent( LCEvent * evt ) {
  streamlog_out(DEBUG4) << "SiliconTracking_MarlinTrk -> run = " << _nRun 
  << "  event = " << _nEvt << std::endl;
 
- int successVTX = InitialiseVTX( evt );
-  // int successFTD = InitialiseFTD( evt );
+  int successVTX = InitialiseVTX( evt );
+  int successFTD = InitialiseFTD( evt );
 
  if (successVTX == 1) {
 
@@ -481,18 +487,18 @@ void SiliconTracking_MarlinTrk::processEvent( LCEvent * evt ) {
 
  }
 
-// if (successFTD == 1) {
-//   TrackingInFTD(); // Perform tracking in the FTD
-//   streamlog_out(DEBUG4) << "End of Processing FTD sectors" << std::endl;
-// }
+ if (successFTD == 1) {
+   TrackingInFTD(); // Perform tracking in the FTD
+   streamlog_out(DEBUG4) << "End of Processing FTD sectors" << std::endl;
+ }
 
-  //  if (successVTX == 1 || successFTD == 1) {
-  if (successVTX == 1 ) {
+  if (successVTX == 1 || successFTD == 1) {
+    //if (successVTX == 1 ) {
 
     for (int nHits = _nHitsChi2; nHits >= 3 ;// the three is hard coded, sorry.
                                                       // It's the minimal number to form a track
-	 nHits--) {
-     Sorting( _tracksWithNHitsContainer.getTracksWithNHitsVec( nHits ) );
+         nHits--) {
+      Sorting( _tracksWithNHitsContainer.getTracksWithNHitsVec( nHits ) );
    }
    streamlog_out(DEBUG4) <<  "End of Sorting " << std::endl;
 
@@ -509,11 +515,11 @@ void SiliconTracking_MarlinTrk::processEvent( LCEvent * evt ) {
 
    if (_attachFast == 0) {
      AttachRemainingVTXHitsSlow();
-     //     AttachRemainingFTDHitsSlow();
+     AttachRemainingFTDHitsSlow();
    }
    else {
      AttachRemainingVTXHitsFast();
-     //     AttachRemainingFTDHitsFast();
+     AttachRemainingFTDHitsFast();
    }
    streamlog_out(DEBUG4) <<  "End of picking up remaining hits " << std::endl;
 
@@ -573,26 +579,26 @@ void SiliconTracking_MarlinTrk::CleanUp() {
    }
  }
 
-// for (int iS=0;iS<2;++iS) {
-//   for (unsigned int layer=0;layer<_nlayersFTD;++layer) {
-//     for (int ip=0;ip<_nPhiFTD;++ip) {
-//       unsigned int iCode = iS + 2*layer + 2*_nlayersFTD*ip;
-//
-//       if( iCode >= _sectorsFTD.size()){          
-//         std::cerr<< "iCode index out of range: iCode =   " << iCode << " _sectorsFTD.size() = " << _sectorsFTD.size() << " exit(1) called from file " << __FILE__ << " line " << __LINE__<< std::endl;
-//         exit(1);
-//       }
-//
-//
-//       TrackerHitExtendedVec& hitVec = _sectorsFTD[iCode];
-//       int nH = int(hitVec.size());
-//       for (int iH=0; iH<nH; ++iH) {
-//         TrackerHitExtended * hit = hitVec[iH];
-//         delete hit;
-//       }
-//     }
-//   }
-// }
+ for (int iS=0;iS<2;++iS) {
+   for (unsigned int layer=0;layer<_nlayersFTD;++layer) {
+     for (int ip=0;ip<_nPhiFTD;++ip) {
+       unsigned int iCode = iS + 2*layer + 2*_nlayersFTD*ip;
+
+       if( iCode >= _sectorsFTD.size()){          
+         std::cerr<< "iCode index out of range: iCode =   " << iCode << " _sectorsFTD.size() = " << _sectorsFTD.size() << " exit(1) called from file " << __FILE__ << " line " << __LINE__<< std::endl;
+         exit(1);
+       }
+
+
+       TrackerHitExtendedVec& hitVec = _sectorsFTD[iCode];
+       int nH = int(hitVec.size());
+       for (int iH=0; iH<nH; ++iH) {
+         TrackerHitExtended * hit = hitVec[iH];
+         delete hit;
+       }
+     }
+   }
+ }
 
 }
 
@@ -604,46 +610,103 @@ int SiliconTracking_MarlinTrk::InitialiseFTD(LCEvent * evt) {
  _sectorsFTD.clear();
  _sectorsFTD.resize(2*_nlayersFTD*_nPhiFTD);
 
+  // Reading in FTD Pixel Hits Collection
+  //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  try {
+    
+    LCCollection * hitCollection = evt->getCollection(_FTDPixelHitCollection.c_str());
+    
+    int nelem = hitCollection->getNumberOfElements();
+    
+    streamlog_out(DEBUG4) << "Number of FTD Pixel Hits = " << nelem << std::endl;
+    _nTotalFTDHits = nelem;
+    
+    for (int ielem=0; ielem<nelem; ++ielem) {
+      
+      TrackerHitPlane * hit = dynamic_cast<TrackerHitPlane*>(hitCollection->getElementAt(ielem));
+      
+      TrackerHitExtended * hitExt = new TrackerHitExtended( hit );
+                  
+      double point_res_rphi = sqrt( hit->getdU()*hit->getdU() + hit->getdV()*hit->getdV() );
+            
+      hitExt->setResolutionRPhi( point_res_rphi );
+      
+      // SJA:FIXME why is this needed? 
+      hitExt->setResolutionZ(0.1);
+      
+      // type is now only used in one place where it is set to 0 to reject hits from a fit, set to INT_MAX to try and catch any missuse
+      hitExt->setType(int(INT_MAX));
+      // det is no longer used set to INT_MAX to try and catch any missuse
+      hitExt->setDet(int(INT_MAX));
+      
+      double pos[3];
+      
+      for (int i=0; i<3; ++i) {
+        pos[i] = hit->getPosition()[i];
+      }
+      
+      double Phi = atan2(pos[1],pos[0]);
+      if (Phi < 0.) Phi = Phi + TWOPI;
+      
+      // get the layer number
+      unsigned int layer = static_cast<unsigned int>(getLayerID(hit));
+      unsigned int petalIndex = static_cast<unsigned int>(getModuleID(hit));
+      
+      if ( _reading_loi_data == false ) {
+        
+        // as we are dealing with staggered petals we will use 2*nlayers in each directions +/- z
+        // the layers will follow the even odd numbering of the petals 
+        if ( petalIndex % 2 == 0 ) {
+          layer = 2*layer;
+        }
+        else {
+          layer = 2*layer + 1;
+        }
+        
+      }
+      
+      if (layer >= _nlayersFTD) {
+        streamlog_out(ERROR) << "SiliconTracking_MarlinTrk => fatal error in FTD : layer is outside allowed range : " << layer << " number of layers = " << _nlayersFTD <<  std::endl;
+        exit(1);
+      }
+      
+      int iPhi = int(Phi/_dPhiFTD);
+      
+      int side = getSideID(hit);
+      int iSemiSphere = 0;
+      
+      if (side > 0) 
+        iSemiSphere = 1;
+      
+      int iCode = iSemiSphere + 2*layer + 2*_nlayersFTD*iPhi;
+      _sectorsFTD[iCode].push_back( hitExt );
+      
+    }
+  }
+  catch(DataNotAvailableException &e ) {
+    success = 0;
+  }
 
- // Reading out FTD Hits Collection
- //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+ // Reading out FTD SpacePoint Collection
+ //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
  try {
 
-   LCCollection * hitCollection = evt->getCollection(_FTDHitCollection.c_str());
+   LCCollection * hitCollection = evt->getCollection(_FTDSpacePointCollection.c_str());
 
    int nelem = hitCollection->getNumberOfElements();
 
-   streamlog_out(DEBUG4) << "Number of FTD hits = " << nelem << std::endl;
-   _nTotalFTDHits = nelem;
+   streamlog_out(DEBUG4) << "Number of FTD SpacePoints = " << nelem << std::endl;
+   _nTotalFTDHits += nelem;
 
    for (int ielem=0; ielem<nelem; ++ielem) {
-     TrackerHitPlane * hit = dynamic_cast<TrackerHitPlane*>(hitCollection->getElementAt(ielem));
+     
+     TrackerHit * hit = dynamic_cast<TrackerHit*>(hitCollection->getElementAt(ielem));
 
      TrackerHitExtended * hitExt = new TrackerHitExtended( hit );
 
-     // SJA: this assumes that U and V are in fact X and Y
-     // Check that U and V have in fact been set to X and Y
-
-     gear::Vector3D U(1.0,hit->getU()[1],hit->getU()[0],gear::Vector3D::spherical);
-     gear::Vector3D V(1.0,hit->getV()[1],hit->getV()[0],gear::Vector3D::spherical);
-     gear::Vector3D X(1.0,0.0,0.0);
-     gear::Vector3D Y(0.0,1.0,0.0);
-
-     const float eps = 1.0e-07;
-     // U must be the global X axis 
-     if( fabs(1.0 - U.dot(X)) > eps ) {
-       streamlog_out(ERROR) << "SiliconTracking_MarlinTrk: FTD Hit measurment vectors U is not equal to the global X axis. \n\n exit(1) called from file " << __FILE__ << " and line " << __LINE__ << std::endl;
-       exit(1);
-     }
-
-     // V must be the global X axis 
-     if( fabs(1.0 - V.dot(Y)) > eps ) {
-       streamlog_out(ERROR) << "SiliconTracking_MarlinTrk: FTD Hit measurment vectors V is not equal to the global Y axis. \n\n exit(1) called from file " << __FILE__ << " and line " << __LINE__ << std::endl;
-       exit(1);
-     }
-
-
-     double point_res_rphi = sqrt( hit->getdU()*hit->getdU() + hit->getdV()*hit->getdV() );
+     double point_res_rphi = sqrt( hit->getCovMatrix()[0] );
+     
      hitExt->setResolutionRPhi( point_res_rphi );
 
      // SJA:FIXME why is this needed? 
@@ -695,12 +758,13 @@ int SiliconTracking_MarlinTrk::InitialiseFTD(LCEvent * evt) {
 
      int iCode = iSemiSphere + 2*layer + 2*_nlayersFTD*iPhi;
      _sectorsFTD[iCode].push_back( hitExt );
+
    }
  }
  catch(DataNotAvailableException &e ) {
    success = 0;
  }
-
+  
  return success;
 }
 

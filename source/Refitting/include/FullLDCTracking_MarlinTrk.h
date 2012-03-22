@@ -86,8 +86,10 @@ namespace MarlinTrk {
  * Collection of relations has by default a name "LDCTracksMCP" 
  * @param VTXHitCollection name of input VTX TrackerHit collection <br>
  * (default parameter value : "VTXTrackerHits") <br>
- * @param FTDHitCollection name of input FTD TrackerHit collection <br>
- * (default parameter value : "FTDTrackerHits") <br>
+ * @param FTDPixelHitCollectionName name of input FTD Pixel TrackerHit collection <br>
+ * (default parameter value : "FTDPixelTrackerHits") <br>
+ * @param FTDSpacePointCollectionName name of input FTD Space Point TrackerHit collection <br>
+ * (default parameter value : "FTDSpacePoints") <br>
  * @param SITHitCollection name of input SIT TrackerHit collection <br>
  * (default parameter value : "SITTrackerHits") <br>
  * @param TPCHitCollection name of input TPC TrackerHit collection <br>
@@ -355,7 +357,8 @@ protected:
   std::string _VTXTrackerHitCollection;
   std::string _SITTrackerHitCollection;
   std::string _SETTrackerHitCollection;
-  std::string _FTDTrackerHitCollection;
+  std::string _FTDPixelHitCollection;
+  std::string _FTDSpacePointCollection;
   std::string _TPCTrackerHitCollection;
   std::string _ETDTrackerHitCollection;
   

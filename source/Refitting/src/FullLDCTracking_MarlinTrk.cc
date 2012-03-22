@@ -54,13 +54,19 @@ FullLDCTracking_MarlinTrk::FullLDCTracking_MarlinTrk() : Processor("FullLDCTrack
   
   // Input tracker hit collections
   
-  registerInputCollection(LCIO::TRACKERHIT,
-                          "FTDHitCollection",
-                          "FTD Hit Collection Name",
-                          _FTDTrackerHitCollection,
-                          std::string("FTDTrackerHits"));  
+  registerInputCollection(LCIO::TRACKERHITPLANE,
+                          "FTDPixelHitCollectionName",
+                          "FTD Pixel Hit Collection Name",
+                          _FTDPixelHitCollection,
+                          std::string("FTDPixelTrackerHits"));  
   
   registerInputCollection(LCIO::TRACKERHIT,
+                          "FTDSpacePointCollectionName",
+                          "FTD FTDSpacePoint Collection Name",
+                          _FTDSpacePointCollection,
+                          std::string("FTDSpacePoints"));  
+  
+  registerInputCollection(LCIO::TRACKERHITPLANE,
                           "VTXHitCollection",
                           "VTX Hit Collection Name",
                           _VTXTrackerHitCollection,
@@ -990,59 +996,77 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
     streamlog_out(DEBUG4) << _TPCTrackerHitCollection.c_str() << " collection is unavailable" << std::endl;
   };
   
-//  // Reading FTD Hits
-//  try {
-//    
-//    LCCollection * hitCollection = event->getCollection(_FTDTrackerHitCollection.c_str());
-//    
-//    int nelem = hitCollection->getNumberOfElements();
-//    
-//    streamlog_out(DEBUG4) << "Number of FTD hits = " << nelem << std::endl;
-//    
-//    for (int ielem=0; ielem<nelem; ++ielem) {
-//      TrackerHitPlane * hit = dynamic_cast<TrackerHitPlane*>(hitCollection->getElementAt(ielem));
-//      
-//      TrackerHitExtended * hitExt = new TrackerHitExtended( hit );
-//      
-//      // SJA: this assumes that U and V are in fact X and Y
-//      // Check that U and V have in fact been set to X and Y
-//      
-//      gear::Vector3D U(1.0,hit->getU()[1],hit->getU()[0],gear::Vector3D::spherical);
-//      gear::Vector3D V(1.0,hit->getV()[1],hit->getV()[0],gear::Vector3D::spherical);
-//      gear::Vector3D X(1.0,0.0,0.0);
-//      gear::Vector3D Y(0.0,1.0,0.0);
-//      
-//      const float eps = 1.0e-07;
-//      // U must be the global X axis 
-//      if( fabs(1.0 - U.dot(X)) > eps ) {
-//        streamlog_out(ERROR) << " measurment vectors U is not equal to the global X axis. exit(1) called from file " << __FILE__ << " and line " << __LINE__ << std::endl;
-//        exit(1);
-//      }
-//      
-//      // V must be the global X axis 
-//      if( fabs(1.0 - V.dot(Y)) > eps ) {
-//        streamlog_out(ERROR) << " measurment vectors V is not equal to the global Y axis. exit(1) called from file " << __FILE__ << " and line " << __LINE__ << std::endl;
-//        exit(1);
-//      }
-//
-//      double point_res_rphi = sqrt( hit->getdU()*hit->getdU() + hit->getdV()*hit->getdV() );
-//      hitExt->setResolutionRPhi( point_res_rphi );
-//      
-//      // SJA:FIXME why is this needed? 
-//      hitExt->setResolutionZ(0.1);
-//      
-//      // type and det are no longer used, set to INT_MAX to try and catch any missuse
-//      hitExt->setType(int(INT_MAX));            
-//      hitExt->setDet(int(INT_MAX));
-//      
-//      _allFTDHits.push_back( hitExt );
-//      mapTrackerHits[hit] = hitExt;
-//      
-//    }
-//  }
-//  catch(DataNotAvailableException &e ) {
-//    streamlog_out(DEBUG4) << _FTDTrackerHitCollection.c_str() << " collection is unavailable" << std::endl;
-//  }
+
+  // Reading in FTD Pixel Hits Collection
+  //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  try {
+    
+    LCCollection * hitCollection = event->getCollection(_FTDPixelHitCollection.c_str());
+    
+    int nelem = hitCollection->getNumberOfElements();
+    
+    streamlog_out(DEBUG4) << "Number of FTD Pixel hits = " << nelem << std::endl;
+    
+    for (int ielem=0; ielem<nelem; ++ielem) {
+      TrackerHitPlane * hit = dynamic_cast<TrackerHitPlane*>(hitCollection->getElementAt(ielem));
+      
+      TrackerHitExtended * hitExt = new TrackerHitExtended( hit );
+      
+      double point_res_rphi = sqrt( hit->getdU()*hit->getdU() + hit->getdV()*hit->getdV() );
+      hitExt->setResolutionRPhi( point_res_rphi );
+      
+      // SJA:FIXME why is this needed? 
+      hitExt->setResolutionZ(0.1);
+      
+      // type and det are no longer used, set to INT_MAX to try and catch any missuse
+      hitExt->setType(int(INT_MAX));            
+      hitExt->setDet(int(INT_MAX));
+      
+      _allFTDHits.push_back( hitExt );
+      mapTrackerHits[hit] = hitExt;
+      
+    }
+  }
+  catch(DataNotAvailableException &e ) {
+    streamlog_out(DEBUG4) << _FTDPixelHitCollection.c_str() << " collection is unavailable" << std::endl;
+  }
+  
+  // Reading in FTD SpacePoint Collection
+  //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  try {
+    
+    LCCollection * hitCollection = event->getCollection(_FTDSpacePointCollection.c_str());
+    
+    int nelem = hitCollection->getNumberOfElements();
+    
+    streamlog_out(DEBUG4) << "Number of FTD SpacePoints hits = " << nelem << std::endl;
+    
+    for (int ielem=0; ielem<nelem; ++ielem) {
+      
+      TrackerHit * hit = dynamic_cast<TrackerHit*>(hitCollection->getElementAt(ielem));
+      
+      TrackerHitExtended * hitExt = new TrackerHitExtended( hit );
+      
+      double point_res_rphi = sqrt( hit->getCovMatrix()[0] );
+      
+      hitExt->setResolutionRPhi( point_res_rphi );
+      
+      // SJA:FIXME why is this needed? 
+      hitExt->setResolutionZ(0.1);
+      
+      // type is now only used in one place where it is set to 0 to reject hits from a fit, set to INT_MAX to try and catch any missuse
+      hitExt->setType(int(INT_MAX));
+      // det is no longer used set to INT_MAX to try and catch any missuse
+      hitExt->setDet(int(INT_MAX));
+            
+      _allFTDHits.push_back( hitExt );
+      mapTrackerHits[hit] = hitExt;
+      
+    }
+  }
+  catch(DataNotAvailableException &e ) {
+    streamlog_out(DEBUG4) << _FTDSpacePointCollection.c_str() << " collection is unavailable" << std::endl;
+  }
   
   
   //  // Reading ETD Hits
@@ -4605,7 +4629,6 @@ void FullLDCTracking_MarlinTrk::setupGearGeom( const gear::GearMgr* gearMgr ){
   
   if( _reading_loi_data ){
     
-    streamlog_out( MESSAGE ) << "  MarlinKalTest - Simple Disc Based FTD using parameters defined by SFtd05 Mokka driver " << std::endl ;
     
     // VXD
     
