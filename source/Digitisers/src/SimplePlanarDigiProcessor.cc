@@ -2,6 +2,7 @@
 #include "SimplePlanarDigiProcessor.h"
 #include <iostream>
 #include <climits>
+#include <cfloat>
 
 #include <EVENT/LCCollection.h>
 #include <IMPL/LCCollectionVec.h>
@@ -255,7 +256,7 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
       else{
         streamlog_out( DEBUG3 ) << "Get Layer Number using celId - 1 : celId : " << celId << std::endl ;
         layerNumber = celId  - 1 ;
-        ladderNumber = this->getLadderNumber(gearDet, SimTHit, ladderNumber); 
+        ladderNumber = this->getLadderNumber(gearDet, SimTHit, layerNumber); 
         side = 0 ; // cannot be discerned unless set alla ILDConf.h
         sensor = 0 ; // cannot be discerned unless set alla ILDConf.h
       }
@@ -555,42 +556,55 @@ double SimplePlanarDigiProcessor::correctPhiRange( double Phi ) const {
 
 int SimplePlanarDigiProcessor::getLadderNumber(const gear::ZPlanarParameters* det, SimTrackerHit* sh, int layerNumber){
   
-  int ladderNumber = INT_MAX;
+  if ( _ladder_Number_encoded_in_cellID ) return INT_MAX;
   
   const gear::ZPlanarLayerLayout& layerLayout = det->getZPlanarLayerLayout() ;
-
+  
   gear::Vector3D hitvec(sh->getPosition()[0],sh->getPosition()[1],sh->getPosition()[2]);
   
   //phi between each ladder
   double deltaPhi = ( 2 * M_PI ) / layerLayout.getNLadders(layerNumber) ;
-
-  //  double sensitive_length  = layerLayout.getSensitiveLength(layerNumber) * 2.0 ; // note: gear for historical reasons uses the halflength 
-//  double sensitive_width  = layerLayout.getSensitiveWidth(layerNumber);
-//  double sensitive_offset = layerLayout.getSensitiveOffset(layerNumber);
-//  double ladder_r         = layerLayout.getSensitiveDistance(layerNumber);
   
-  if( ! _ladder_Number_encoded_in_cellID) {
+  // each hit has to have a layer. In case the hit is not in the active region return the one with the smalest distance
+  // and print a (debug?) warning.
+  // This pair caches the minimal distance value together with the according ladder number
+  std::pair<int, double> ladderNumber_minDistance(INT_MAX, DBL_MAX) ;
+  
+  for (int ic=0; ic < layerLayout.getNLadders(layerNumber); ++ic) {
     
-    for (int ic=0; ic < layerLayout.getNLadders(layerNumber); ++ic) {
-      
-      double ladderPhi = correctPhiRange( layerLayout.getPhi0( layerNumber ) + ic*deltaPhi ) ;
-      
-      double PhiInLocal = hitvec.phi() - ladderPhi;
-      double RXY = hitvec.rho();
-      
-      streamlog_out(DEBUG) << "ladderPhi = " << ladderPhi << " PhiInLocal = "<< PhiInLocal << " RXY = " << RXY << " (RXY*cos(PhiInLocal) = " << RXY*cos(PhiInLocal) << " layerLayout.getSensitiveDistance(layerNumber) = " << layerLayout.getSensitiveDistance(layerNumber) << endl;
-      
-      
-      // check if point is in range of ladder
-      if (RXY*cos(PhiInLocal) - layerLayout.getSensitiveDistance(layerNumber) > -layerLayout.getSensitiveThickness(layerNumber) && 
-          RXY*cos(PhiInLocal) - layerLayout.getSensitiveDistance(layerNumber) <  layerLayout.getSensitiveThickness(layerNumber) ) {
-        ladderNumber = ic;
-        break;
-      }
+    double ladderPhi = correctPhiRange( layerLayout.getPhi0( layerNumber ) + ic*deltaPhi ) ;
+    
+    double PhiInLocal = hitvec.phi() - ladderPhi;
+    double RXY = hitvec.rho();
+    
+    streamlog_out(DEBUG0) << "ladderPhi = " << ladderPhi << " PhiInLocal = "<< PhiInLocal << " RXY = " << RXY 
+    << " (RXY*cos(PhiInLocal) = " << RXY*cos(PhiInLocal) 
+    << " layerLayout.getSensitiveDistance(layerNumber) = " << layerLayout.getSensitiveDistance(layerNumber) 
+    << " SensitiveThickness = " << layerLayout.getSensitiveThickness(layerNumber)<<  endl;
+    
+    double distance = std::fabs( RXY*cos(PhiInLocal) - layerLayout.getSensitiveDistance(layerNumber) );
+    
+    // the 1e06 corresponds to 1 nm. It is a reasonable cut for rounding errors.
+    if ( distance < layerLayout.getSensitiveThickness(layerNumber) + 1e-6){
+      return ic;
     }
-  }
-
-
-  return ladderNumber ;
+    else{
+      if (distance < ladderNumber_minDistance.second){
+        ladderNumber_minDistance.first = ic;
+        ladderNumber_minDistance.second = distance;
+      }
+    }// else distance < SensitiveThickness
+    
+  }// for ic
+  
+  // The function should have returned by now if the hit is inside the active area of a ladder.
+  // Print a warning and return the ladder with the smalest distance 
+  streamlog_out(WARNING) << "Hit on ladder "  << ladderNumber_minDistance.first <<" in layer " << layerNumber 
+  << " has distance of "<< ladderNumber_minDistance.second
+  <<" while SensitiveThickness is only " << layerLayout.getSensitiveThickness(layerNumber)
+  << std::endl;
+  
+  return  ladderNumber_minDistance.first;
+  
   
 }
