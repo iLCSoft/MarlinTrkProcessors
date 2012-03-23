@@ -515,9 +515,9 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
     
     helixTrack.moveRefPoint(0.0, 0.0, 0.0);
     
-    const float referencePoint[3] = { helixTrack.getRefPointX() , helixTrack.getRefPointY() , helixTrack.getRefPointZ() };
+
     
-//    const float referencePoint[3] = { hel.getRefPointX() , hel.getRefPointY() , hel.getRefPointZ() };
+
     
     EVENT::FloatVec covMatrix;
         
@@ -537,6 +537,8 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
     
     if( _useMCParticleParametersFotInitOfFit ){
 
+      const float referencePoint[3] = { hel.getRefPointX() , hel.getRefPointY() , hel.getRefPointZ() };
+      
       trackState = new TrackStateImpl( lcio::TrackState::AtIP, 
                                       hel.getD0(), 
                                       hel.getPhi0(), 
@@ -548,6 +550,8 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
       
     } else {
 
+      const float referencePoint[3] = { helixTrack.getRefPointX() , helixTrack.getRefPointY() , helixTrack.getRefPointZ() };
+      
       trackState = new TrackStateImpl( lcio::TrackState::AtIP, 
                                       helixTrack.getD0(), 
                                       helixTrack.getPhi0(), 
