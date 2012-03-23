@@ -125,7 +125,15 @@ TruthTracker::TruthTracker() : Processor("TruthTracker") {
                              _SmoothOn,
                              bool(false));
   
+  registerProcessorParameter( "UseMCParticleParametersFotInitOfFit",
+                             "When fitting take track parameters from MCParticle for the initialisation of the Track Fit",
+                             _useMCParticleParametersFotInitOfFit,
+                             bool(false));
   
+  registerProcessorParameter( "InitialTrackErrors",
+                             "Values used for the initial diagonal elements of the trackfit",
+                             _initialTrackErrors,
+                             float(1.e4));
   
   _n_run = 0 ;
   _n_evt = 0 ;
@@ -519,26 +527,37 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
       covMatrix[icov] = 0;
     }
     
-    covMatrix[0]  = ( 1.e4 ); //sigma_d0^2
-    covMatrix[2]  = ( 1.e4 ); //sigma_phi0^2
-    covMatrix[5]  = ( 1.e4 ); //sigma_omega^2
-    covMatrix[9]  = ( 1.e4 ); //sigma_z0^2
-    covMatrix[14] = ( 1.e4 ); //sigma_tanl^2
+    covMatrix[0]  = ( _initialTrackErrors ); //sigma_d0^2
+    covMatrix[2]  = ( _initialTrackErrors ); //sigma_phi0^2
+    covMatrix[5]  = ( _initialTrackErrors ); //sigma_omega^2
+    covMatrix[9]  = ( _initialTrackErrors ); //sigma_z0^2
+    covMatrix[14] = ( _initialTrackErrors ); //sigma_tanl^2
 
+    TrackStateImpl* trackState = 0;
     
-    TrackStateImpl* trackState = new TrackStateImpl( lcio::TrackState::AtIP, 
-                                                    helixTrack.getD0(), 
-                                                    helixTrack.getPhi0(), 
-                                                    helixTrack.getOmega(), 
-                                                    helixTrack.getZ0(), 
-                                                    helixTrack.getTanLambda(), 
-//                                                    hel.getD0(), 
-//                                                    hel.getPhi0(), 
-//                                                    hel.getOmega(), 
-//                                                    hel.getZ0(), 
-//                                                    hel.getTanLambda(), 
-                                                    covMatrix, 
-                                                    referencePoint) ;
+    if( _useMCParticleParametersFotInitOfFit ){
+
+      trackState = new TrackStateImpl( lcio::TrackState::AtIP, 
+                                      hel.getD0(), 
+                                      hel.getPhi0(), 
+                                      hel.getOmega(), 
+                                      hel.getZ0(), 
+                                      hel.getTanLambda(), 
+                                      covMatrix, 
+                                      referencePoint) ;
+      
+    } else {
+
+      trackState = new TrackStateImpl( lcio::TrackState::AtIP, 
+                                      helixTrack.getD0(), 
+                                      helixTrack.getPhi0(), 
+                                      helixTrack.getOmega(), 
+                                      helixTrack.getZ0(), 
+                                      helixTrack.getTanLambda(), 
+                                      covMatrix, 
+                                      referencePoint) ;
+      
+    }
     
     
     streamlog_out( DEBUG3 ) << "\n Helix for prefit: " 

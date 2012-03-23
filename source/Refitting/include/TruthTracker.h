@@ -208,7 +208,9 @@ protected:
   bool _MSOn ;
   bool _ElossOn ;
   bool _SmoothOn ;
-
+  bool _useMCParticleParametersFotInitOfFit;
+  float _initialTrackErrors;
+  
   double _Bz;
 
   std::vector< LCCollection* > _colTrackerHits;
