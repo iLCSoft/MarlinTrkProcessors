@@ -428,6 +428,9 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
   
   streamlog_out( DEBUG3 ) << "Create track with " << hit_list.size() << " hits" << std::endl;  
   
+  // check that there are actually hits to fit
+  if ( hit_list.empty() ) return;
+  
   HelixTrack hel(mcp->getVertex(), mcp->getMomentum(), mcp->getCharge(), _Bz );
   streamlog_out( DEBUG3 ) << "\n MCParticle paramters: " 
   << " d0 " <<  hel.getD0()
@@ -450,77 +453,68 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
 
   TrackerHitVec added_hits;
   
-  if(_FitTracksWithMarlinTrk) {
+  if( _FitTracksWithMarlinTrk ) {
     
     MarlinTrk::IMarlinTrack* marlin_trk = _trksystem->createTrack();
     
-    
-    
-    // sort the hits in R, so here we are assuming that the track came from the IP and that we want to fit out to in. 
-    //sort(_hit_list.begin(), _hit_list.end(), TruthTracker::compare_time() );
+    // First sort the hits in R, so here we are assuming that the track came from the IP and that we want to fit out to in. 
     sort( hit_list.begin(), hit_list.end(), TruthTracker::compare_r() );
 
-    unsigned counter=0; // degrees of freedom for the fit (this is actually not the number of degrees of freedom. This number minus 5 is it. But how to name this?)
+    // used to keep track of whether hits are accepted by the fitter before fitting
+    bool isSuccessful = false; 
     
-    for(unsigned int j=0; j< hit_list.size(); ++j) {
-      
+    // needed to keep track of which hit should used for the first addandfit call
+    int index_of_next_hit_to_fit = hit_list.size() - 1; 
+    
+    
+    // to initialise we need to add at least one hit. 
+    // given that we need to also work with COMPOSITE_SPACEPOINT hits we will simply added both strip hits in this case.
+    // fit will then be called on the hits added and then addandFit will be used for the remaining hits to provide more feedback and control
+    
+    
+    // start by trying tp add the last hit and break at the first accepted hit
+    for(int j=index_of_next_hit_to_fit; j >= 0; --j) {
+  
       TrackerHit* trkHit = hit_list[j];
+  
+      --index_of_next_hit_to_fit; // first decrement the index of the next hit to fit
       
       // Check for spacepoints
       if( BitSet32( trkHit->getType() )[ UTIL::ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT ]   ){ //it is a composite spacepoint
-       
+        
         //Split it up and add both hits to the MarlinTrk
         const LCObjectVec rawObjects = trkHit->getRawHits();
         
-        bool isSuccessful = false; 
-        
         for( unsigned k=0; k< rawObjects.size(); k++ ){
-          
+                    
           TrackerHit* rawHit = dynamic_cast< TrackerHit* >( rawObjects[k] );
           if( marlin_trk->addHit( rawHit ) == IMarlinTrack::success ){
             
             isSuccessful = true; //if at least one hit from the spacepoint gets added
-            counter++; // one strip hit gives 1 degree of freedom
             
-          }
+          }          
         }
+      } 
+      else { // normal non-composite tracker hit
         
-        if ( isSuccessful ) added_hits.push_back( trkHit );
-        
+        isSuccessful = marlin_trk->addHit( trkHit ) == IMarlinTrack::success;
+                
       }
-      else{ // normal non composite tracker hit
+      
+      if ( isSuccessful ) { 
+        added_hits.push_back( trkHit ); 
+        // at this point one hit added successfully so break the for loop
+        break; 
+      }        
         
-        if( marlin_trk->addHit( trkHit ) == IMarlinTrack::success ){
-          
-          added_hits.push_back( trkHit );
-          counter += 2; // a spacepoint gives 2 degrees of freedom
-        }
-      }
-    }  
-    
-    // only fit tracks, that have enough degrees of freedom!
-    if ( counter < 8) {
-      streamlog_out( DEBUG3 ) << "Less than 8 degrees of freedom: only " << counter << "\n";  
-      delete Track;
-      delete marlin_trk;
-      return;
-    }
-    
-    // make a helix from 3 hits to get a trackstate
-    const double* x1 = added_hits[0]->getPosition();
-    const double* x2 = added_hits[ added_hits.size()/2 ]->getPosition();
-    const double* x3 = added_hits.back()->getPosition();
-    
-    HelixTrack helixTrack( x1, x2, x3, _Bz, IMarlinTrack::backward );
-    
-    helixTrack.moveRefPoint(0.0, 0.0, 0.0);
-    
+    } // end of reverse loop over hits 
 
     
+    // We now have either one 2-D hit or two 1-D hits added. 
+    // So proceed with initialisation.  
 
-    
+    // setup initial covariance matrix
     EVENT::FloatVec covMatrix;
-        
     covMatrix.resize(15);
 
     for (int icov = 0; icov<covMatrix.size(); ++icov) {
@@ -534,6 +528,8 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
     covMatrix[14] = ( _initialTrackErrors ); //sigma_tanl^2
 
     TrackStateImpl* trackState = 0;
+
+    // now either take the MCParticle parameters directly or create a helix from 3 2-D hits
     
     if( _useMCParticleParametersFotInitOfFit ){
 
@@ -549,7 +545,39 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
                                       referencePoint) ;
       
     } else {
+      
+      // loop over all the hits and take only 2D hits 
+      
+      TrackerHitVec twoD_hits;
+      
+      for (int ihit=0; ihit < hit_list.size(); ++ihit) {
 
+        // check if this a space point or 2D hit 
+        if(BitSet32( hit_list[ihit]->getType() )[ UTIL::ILDTrkHitTypeBit::ONE_DIMENSIONAL ] == false ){
+          // then add to the list 
+          twoD_hits.push_back(hit_list[ihit]);
+
+        }
+      }
+
+      // check that there are enough 2-D hits to create a helix 
+      if (twoD_hits.size() < 3) { // no chance to initialise print warning and return
+        streamlog_out(WARNING) << "TruthTracker::createTrack Cannot create helix from less than 3 2-D hits" << std::endl;
+        delete Track;
+        delete marlin_trk;
+        return;
+      }
+      
+      // make a helix from 3 hits to get a trackstate
+      // SJA:FIXME: this may not be the optimal 3 hits to take in certain cases where the 3 hits are not well spread over the track length 
+      const double* x1 = twoD_hits[0]->getPosition();
+      const double* x2 = twoD_hits[ twoD_hits.size()/2 ]->getPosition();
+      const double* x3 = twoD_hits.back()->getPosition();
+      
+      HelixTrack helixTrack( x1, x2, x3, _Bz, IMarlinTrack::backward );
+      
+      helixTrack.moveRefPoint(0.0, 0.0, 0.0);
+      
       const float referencePoint[3] = { helixTrack.getRefPointX() , helixTrack.getRefPointY() , helixTrack.getRefPointZ() };
       
       trackState = new TrackStateImpl( lcio::TrackState::AtIP, 
@@ -572,8 +600,8 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
     <<  " tanl =  " << trackState->getTanLambda() 
     <<  " ref =  " <<  trackState->getReferencePoint()[0] << " " << trackState->getReferencePoint()[1] << " " << trackState->getReferencePoint()[2]
     << "\n" << std::endl;
-
-
+ 
+ 
 //    for (int ihit = 0; ihit < added_hits.size(); ++ihit) {
 //      
 //      double x = added_hits[ihit]->getPosition()[0];
@@ -591,38 +619,155 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
 //      <<  " ref =  " <<  trackState->getReferencePoint()[0] << " " << trackState->getReferencePoint()[1] << " " << trackState->getReferencePoint()[2]
 //      << "\n" << std::endl;
 //
-//      
-//      
 //    }
     
-    
+    // set the initial track state for the track    
     marlin_trk->initialise( *trackState, _Bz, IMarlinTrack::backward ) ;
-    //marlin_trk->initialise( *trackState, _Bz, IMarlinTrack::forward ) ;
-    //marlin_trk->initialise( IMarlinTrack::backward ) ;
+
+    // filter the first 1 or 2 hits 
     int fit_status = marlin_trk->fit() ; 
-        
+                      
     streamlog_out(DEBUG4) << "fit_status = " << fit_status << std::endl ;
     
-    if( fit_status == 0 ) { 
+    // check that first hit is accepted by the fit, if this fails we bail here as there is little chance of recovering. 
+    
+    if ( fit_status != IMarlinTrack::success ) { // no chance to initialise print warning and return
+      streamlog_out(WARNING) << "TruthTracker::createTrack Initial Hit not accepted by the fit, track droped." << std::endl;
+      delete Track;
+      delete marlin_trk;
+      return;
+    }
+
+    
+    // now used addAndFit to add the remaining hits 
+    for(int j=index_of_next_hit_to_fit; j >= 0; --j) {
       
-      const gear::Vector3D point(0.,0.,0.); // nominal IP
-      
-      TrackStateImpl* trkStateIP = new TrackStateImpl() ;
-      int return_code = marlin_trk->propagate(point, *trkStateIP, chi2, ndf ) ;
-      if ( return_code == 0 ) {
+      TrackerHit* trkHit = hit_list[j];
+
+      isSuccessful = false;
+
+      // Check for spacepoints
+      if( BitSet32( trkHit->getType() )[ UTIL::ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT ]   ){ //it is a composite spacepoint
         
-        trkStateIP->setLocation(  lcio::TrackState::AtIP ) ;
-        Track->addTrackState(trkStateIP);
-        //Track->addTrackState(trackState);
-        Track->setChi2(chi2) ;
-        Track->setNdf(ndf) ;
+        //Split it up and add both hits to the MarlinTrk
+        const LCObjectVec rawObjects = trkHit->getRawHits();        
         
-      } else {
-        delete trkStateIP;
+        for( int k=rawObjects.size()-1 ; k >= 0; --k ){
+          
+          TrackerHit* rawHit = dynamic_cast< TrackerHit* >( rawObjects[k] );
+
+          double chi_incr=DBL_MAX;
+
+          if( marlin_trk->addAndFit(rawHit,chi_incr) == IMarlinTrack::success ){
+            
+            isSuccessful = true; //if at least one hit from the spacepoint gets added
+            
+          }
+        }      
       }
+      else { // normal non composite tracker hit
+
+        double chi_incr=DBL_MAX;
+
+        isSuccessful =  marlin_trk->addAndFit(trkHit,chi_incr) == IMarlinTrack::success ;                    
+        
+      }
+      if ( isSuccessful ) added_hits.push_back( trkHit );
+    }  
+    
+    
+    const gear::Vector3D point(0.,0.,0.); // nominal IP
+      
+    TrackStateImpl* trkStateIP = new TrackStateImpl() ;
+    
+    int return_code = marlin_trk->propagate(point, *trkStateIP, chi2, ndf ) ;
+
+    // make sure that the track state can be propagated to the IP and that the NDF is not less than 0
+    if ( return_code != 0 || ndf < 0 ) { 
+      streamlog_out(WARNING) << "TruthTracker::createTrack: Track droped return_code for propagation = " << return_code << " NDF = " << ndf << std::endl;
+      delete trkStateIP;
+      delete marlin_trk;
+      return;
+    }
+              
+    std::vector<std::pair<EVENT::TrackerHit*, double> > hits_in_fit;
+    
+    marlin_trk->getHitsInFit(hits_in_fit);
+    
+        
+    EVENT::TrackerHit* last_hit_in_fit = hits_in_fit.front().first;
+    if (!last_hit_in_fit) {
+      throw EVENT::Exception( std::string("TruthTracker::createTrack: TrackerHit pointer == NULL ")  ) ;
     }
     
-    delete marlin_trk;
+    EVENT::TrackerHit* first_hit_in_fit = hits_in_fit.back().first;
+    if (!first_hit_in_fit) {
+      throw EVENT::Exception( std::string("TruthTracker::createTrack: TrackerHit pointer == NULL ")  ) ;
+    }
+
+    
+    TrackStateImpl* trkStateFirstHit = new TrackStateImpl;
+    return_code = marlin_trk->getTrackState(first_hit_in_fit, *trkStateFirstHit, chi2, ndf ) ;
+    
+    if(return_code !=MarlinTrk::IMarlinTrack::success){
+      streamlog_out( DEBUG5 ) << "  >>>>>>>>>>> TruthTracker::createTrack:  could not get TrackState at First Hit " << std::endl ;
+    }
+
+    // SJA:FIXME: if the hit is 1D then the pivot will be set to 0,0,0 : what should we do? Probably propagate to the Space Point if there is one ....
+    TrackStateImpl* trkStateLastHit = new TrackStateImpl;
+    return_code = marlin_trk->getTrackState(last_hit_in_fit, *trkStateLastHit, chi2, ndf ) ;
+
+    std::cout << "###############*********** last_hit_in_fit->getPosition()[0] = " << last_hit_in_fit->getPosition()[0] << "***********###############" << std::endl;
+    std::cout << "###############*********** last_hit_in_fit->getPosition()[1] = " << last_hit_in_fit->getPosition()[1] << "***********###############" << std::endl;
+    std::cout << "###############*********** last_hit_in_fit->getPosition()[2] = " << last_hit_in_fit->getPosition()[2] << "***********###############" << std::endl;
+    
+    if (return_code !=MarlinTrk::IMarlinTrack::success ) {
+      streamlog_out( DEBUG5 ) << "  >>>>>>>>>>> TruthTracker::createTrack:  could not get TrackState at Last Hit " << std::endl ;
+    }
+        
+    
+    TrackStateImpl* trkStateCalo = new TrackStateImpl;
+    
+    UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ; 
+    encoder.reset() ;  // reset to 0
+    
+    encoder[lcio::ILDCellID0::subdet] = lcio::ILDDetID::ECAL ;
+    encoder[lcio::ILDCellID0::side] = lcio::ILDDetID::barrel;
+    encoder[lcio::ILDCellID0::layer]  = 0 ;
+    
+    int detElementID = 0;
+    return_code = marlin_trk->propagateToLayer(encoder.lowWord(), last_hit_in_fit, *trkStateCalo, chi2, ndf, detElementID, IMarlinTrack::modeForward ) ;
+    
+    if (return_code == MarlinTrk::IMarlinTrack::no_intersection ) { // try forward or backward
+      if (trkStateLastHit->getTanLambda()>0) {
+        encoder[lcio::ILDCellID0::side] = lcio::ILDDetID::fwd;
+      }
+      else{
+        encoder[lcio::ILDCellID0::side] = lcio::ILDDetID::bwd;
+      }
+      return_code = marlin_trk->propagateToLayer(encoder.lowWord(), last_hit_in_fit, *trkStateCalo, chi2, ndf, detElementID, IMarlinTrack::modeForward ) ;
+    }
+    
+    if (return_code !=MarlinTrk::IMarlinTrack::success ) {
+      streamlog_out( DEBUG5 ) << "  >>>>>>>>>>> FinalRefit :  could not get TrackState at Calo Face: return_code = " << return_code << std::endl ;
+    }
+
+    
+    trkStateIP->setLocation(  lcio::TrackState::AtIP ) ;
+    trkStateFirstHit->setLocation(  lcio::TrackState::AtFirstHit ) ;
+    trkStateLastHit->setLocation(  lcio::TrackState::AtLastHit ) ;
+    trkStateCalo->setLocation(  lcio::TrackState::AtCalorimeter ) ;
+    
+    Track->trackStates().push_back(trkStateIP);
+    Track->trackStates().push_back(trkStateFirstHit);
+    Track->trackStates().push_back(trkStateLastHit);
+    Track->trackStates().push_back(trkStateCalo);
+
+    Track->setChi2(chi2);
+    Track->setNdf(ndf);
+    
+    delete marlin_trk;    
+
     
   }
   else {
