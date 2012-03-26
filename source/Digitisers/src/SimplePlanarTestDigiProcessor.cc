@@ -80,7 +80,7 @@ SimplePlanarTestDigiProcessor::SimplePlanarTestDigiProcessor() : Processor("Simp
                            "TrackerHitCollectionName" , 
                            "Name of the TrackerHit output collection"  ,
                            _outColName ,
-                           std::string("VTXTrackerHits") ) ;
+                           std::string("VXDTrackerHits") ) ;
   
   registerOutputCollection(LCIO::LCRELATION,
                            "SimTrkHitRelCollection",
