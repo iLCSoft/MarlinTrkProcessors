@@ -18,7 +18,7 @@
  =============================================================================================================
 
   --------
- | v01-03 |
+ | v01-04 |
   -------- 
 
   SimplePlanarDigiProcessor:	 When calling getLadderNumber the "ladderNumber" was given as input instead of the "layerNumber" (typo).
