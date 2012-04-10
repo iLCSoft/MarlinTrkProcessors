@@ -261,7 +261,7 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
                                  referencePoint) ;
                                  
       marlin_trk->initialise( trackState, _bField, IMarlinTrack::backward ) ;
-      
+//       marlin_trk->initialise( IMarlinTrack::backward ) ;
       
       int fit_status = marlin_trk->fit() ; 
       
@@ -393,6 +393,8 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
       double r = sqrt(pos[0]*pos[0]+pos[1]*pos[1]);
       refittedTrack->setRadiusOfInnermostHit(r);
       
+      //add the hits to the track
+      for( unsigned j=0; j < trkHits.size(); j++ ) refittedTrack->addHit( trkHits[j] );
       
       unsigned size_of_vec = track->getSubdetectorHitNumbers().size() ;
       refittedTrack->subdetectorHitNumbers().resize(size_of_vec) ;
