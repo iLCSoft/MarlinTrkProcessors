@@ -138,7 +138,19 @@ void TrackSubsetProcessor::processEvent( LCEvent * evt ) {
   for( unsigned i=0; i < _trackInputColNames.size(); i++ ){
     
     
-    LCCollection* col = evt->getCollection( _trackInputColNames[i] );
+    LCCollection* col = NULL;
+    
+    try {
+      
+      col = evt->getCollection( _trackInputColNames[i] ) ;
+      
+    }
+    catch(DataNotAvailableException &e) {
+      
+      streamlog_out( ERROR ) << "Collection " << _trackInputColNames[i] <<  " is not available!\n";     
+      continue;
+      
+    }
     
     
     if( col != NULL ){
