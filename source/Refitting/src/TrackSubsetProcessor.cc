@@ -77,6 +77,11 @@ TrackSubsetProcessor::TrackSubsetProcessor() : Processor("TrackSubsetProcessor")
   /////////////////////////////////////////////////////////////////////////////////
   
   
+  registerProcessorParameter("Omega",
+                             "The parameter omega for the HNN. Controls the influence of the quality indicator.",
+                             _omega,
+                             double( 0.75 ) );
+  
 }
 
 
@@ -224,8 +229,9 @@ void TrackSubsetProcessor::processEvent( LCEvent * evt ) {
   
   SubsetHopfieldNN< Track* > subset;
   subset.add( tracks );
+  subset.setOmega( _omega );
   subset.calculateBestSet( comp, trackQI );
-  
+
   std::vector< Track* > accepted = subset.getAccepted();
   std::vector< Track* > rejected = subset.getRejected();
   

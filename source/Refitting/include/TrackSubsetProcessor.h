@@ -40,6 +40,9 @@ using namespace marlin ;
  * @param SmoothOn Whether to smooth all measurement sites in fit<br>
  * (default value false )
  * 
+ * @param Omega The parameter omega for the HNN. Controls the influence of the quality indicator. Between 0 and 1:
+ * 1 means high influence of quality indicator, 0 means no influence. 
+ * 
  * @author Robin Glattauer, HEPHY
  * 
  */
@@ -96,6 +99,9 @@ class TrackSubsetProcessor : public Processor {
 
   int _nRun ;
   int _nEvt ;
+  
+  double _omega;
+  
 } ;
 
 
