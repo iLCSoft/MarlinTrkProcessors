@@ -29,6 +29,14 @@
 
 #include "MarlinTrk/Factory.h"
 #include "MarlinTrk/IMarlinTrack.h"
+
+
+#include "MarlinTrk/MarlinTrkDiagnostics.h"
+#ifdef MARLINTRK_DIAGNOSTICS_ON
+#include "MarlinTrk/DiagnosticsController.h"
+#endif
+
+
 #include "MarlinTrk/HelixTrack.h"
 #include "MarlinTrk/LCIOTrackPropagators.h"
 
@@ -56,33 +64,38 @@ TruthTracker::TruthTracker() : Processor("TruthTracker") {
   // register steering parameters: name, description, class-variable, default value
   
   
-  std::vector< std::string > trackerHitsRelInputColNamesDefault;
-  trackerHitsRelInputColNamesDefault.push_back( "FTDTrackerHitRelations" );
-  trackerHitsRelInputColNamesDefault.push_back( "SITTrackerHitRelations" );
-  trackerHitsRelInputColNamesDefault.push_back( "TPCTrackerHitRelations" );
+  StringVec trackerHitsRelInputColNamesDefault;
   trackerHitsRelInputColNamesDefault.push_back( "VXDTrackerHitRelations" );
-//   trackerHitsRelInputColNamesDefault.push_back( "SETTrackerHitRelations" );
-//   trackerHitsRelInputColNamesDefault.push_back( "ETDTrackerHitRelations" );
+  trackerHitsRelInputColNamesDefault.push_back( "SITTrackerHitRelations" );
+  trackerHitsRelInputColNamesDefault.push_back( "FTDPixelTrackerHitRelations" );
+  trackerHitsRelInputColNamesDefault.push_back( "FTDSpacePointRelations" );
+  trackerHitsRelInputColNamesDefault.push_back( "TPCTrackerHitRelations" );
+  trackerHitsRelInputColNamesDefault.push_back( "SETTrackerHitRelations" );
+
   
-  registerProcessorParameter( "TrackerHitsRelInputCollections",
-                              "Name of the lcrelation collections, that link the TrackerHits to their SimTrackerHits. Have to be in same order as TrackerHitsInputCollections!!!",
-                              _colNamesTrackerHitRelations,
-                              trackerHitsRelInputColNamesDefault );
+  registerInputCollections("LCRelation",
+                           "TrackerHitsRelInputCollections",
+                           "Name of the lcrelation collections, that link the TrackerHits to their SimTrackerHits. Have to be in same order as TrackerHitsInputCollections!!!",
+                           _colNamesTrackerHitRelations,
+                           trackerHitsRelInputColNamesDefault );
+    
   
-  
-  std::vector< std::string > trackerHitsInputColNamesDefault;
-  trackerHitsInputColNamesDefault.push_back( "FTDTrackerHits" );
-  trackerHitsInputColNamesDefault.push_back( "SITTrackerHits" );
-  trackerHitsInputColNamesDefault.push_back( "TPCTrackerHits" );
+  StringVec trackerHitsInputColNamesDefault;
+
   trackerHitsInputColNamesDefault.push_back( "VXDTrackerHits" );
+  trackerHitsInputColNamesDefault.push_back( "SITTrackerHits" );
+  trackerHitsInputColNamesDefault.push_back( "FTDPixelTrackerHits" );
+  trackerHitsInputColNamesDefault.push_back( "FTDSpacePointRelations" );
+  trackerHitsInputColNamesDefault.push_back( "TPCTrackerHits" );
+  trackerHitsInputColNamesDefault.push_back( "SETTrackerHits" );
 
-  
-  registerProcessorParameter( "TrackerHitsInputCollections",
-                              "Name of the tracker hit input collections",
-                              _colNamesTrackerHits,
-                              trackerHitsInputColNamesDefault );
+  registerInputCollections("TrackerHit",
+                           "TrackerHitsInputCollections", 
+                           "Name of the tracker hit input collections",
+                           _colNamesTrackerHits,
+                           trackerHitsInputColNamesDefault);
 
-  
+        
   registerOutputCollection( LCIO::TRACK,
                            "OutputTrackCollectionName" , 
                            "Name of the output track collection"  ,
@@ -129,11 +142,46 @@ TruthTracker::TruthTracker() : Processor("TruthTracker") {
                              "When fitting take track parameters from MCParticle for the initialisation of the Track Fit",
                              _useMCParticleParametersFotInitOfFit,
                              bool(false));
+
   
-  registerProcessorParameter( "InitialTrackErrors",
-                             "Values used for the initial diagonal elements of the trackfit",
-                             _initialTrackErrors,
-                             float(1.e4));
+  registerProcessorParameter( "CreatePrefitUsingMarlinTrk",
+                             "When fitting take track parameters a full pre-fit for the initialisation of the Track Fit",
+                             _create_prefit_using_MarlinTrk,
+                             bool(false));
+  
+  
+  registerProcessorParameter( "InitialTrackErrorD0",
+                             "Value used for the initial d0 variance of the trackfit",
+                             _initialTrackError_d0,
+                             float(1.e6));
+  
+  registerProcessorParameter( "InitialTrackErrorPhi0",
+                             "Value used for the initial phi0 variance of the trackfit",
+                             _initialTrackError_phi0,
+                             float(1.e2));
+  
+  registerProcessorParameter( "InitialTrackErrorOmega",
+                             "Value used for the initial omega variance of the trackfit",
+                             _initialTrackError_omega,
+                             float(1.e-4));
+  
+  registerProcessorParameter( "InitialTrackErrorZ0",
+                             "Value used for the initial z0 variance of the trackfit",
+                             _initialTrackError_z0,
+                             float(1.e6));
+  
+  registerProcessorParameter( "InitialTrackErrorTanL",
+                             "Value used for the initial tanL variance of the trackfit",
+                             _initialTrackError_tanL,
+                             float(1.e2));
+  
+#ifdef MARLINTRK_DIAGNOSTICS_ON
+  
+  registerOptionalParameter("RunMarlinTrkDiagnostics", "Run MarlinTrk Diagnostics. MarlinTrk must be compiled with MARLINTRK_DIAGNOSTICS_ON defined", _runMarlinTrkDiagnostics, bool(true));
+  
+  registerOptionalParameter("DiagnosticsName", "Name of the root file and root tree if running Diagnostics", _MarlinTrkDiagnosticsName, std::string("TruthTrackerDiagnostics"));    
+
+#endif
   
   _n_run = 0 ;
   _n_evt = 0 ;
@@ -154,8 +202,8 @@ void TruthTracker::init() {
   printParameters() ;
   
   //FIXME: for now do KalTest only - make this a steering parameter to use other fitters
-  _trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( "KalTest" , marlin::Global::GEAR , "" ) ;
   
+  _trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( "KalTest" , marlin::Global::GEAR , "" ) ;
   
   if( _trksystem == 0 ) {
     
@@ -168,6 +216,14 @@ void TruthTracker::init() {
   _trksystem->setOption( IMarlinTrkSystem::CFG::useSmoothing,  _SmoothOn) ;
   _trksystem->init() ;  
   
+  
+#ifdef MARLINTRK_DIAGNOSTICS_ON
+
+  void * dcv = _trksystem->getDiagnositicsPointer();
+  DiagnosticsController* dc = static_cast<DiagnosticsController*>(dcv);
+  dc->init(_MarlinTrkDiagnosticsName,_MarlinTrkDiagnosticsName, _runMarlinTrkDiagnostics);
+  
+#endif
   
   _Bz = Global::GEAR->getBField().at( gear::Vector3D(0., 0., 0.) ).z();    //The B field in z direction
   
@@ -229,9 +285,21 @@ void TruthTracker::processEvent( LCEvent * evt ) {
     
     for( int j=0; j<nHits; j++ ){
       
-      TrackerHit * trkhit = dynamic_cast<TrackerHit*>( trackerHitCol->getElementAt( j ));      
+      if ( trackerHitCol->getElementAt( j ) == 0 ) {
+        streamlog_out( DEBUG0 ) << "Pointer to TrackerHit" << j << " is NULL " << std::endl; 
+      }
       
-     
+      TrackerHit * trkhit = dynamic_cast<TrackerHit*>( trackerHitCol->getElementAt( j ));      
+            
+      if ( trkhit == 0 ) {
+      
+        std::stringstream errorMsg;                
+        errorMsg << "dynamic_cast to TrackerHit for hit " << j << " failed. Pointer = " <<  trackerHitCol->getElementAt( j ) << std::endl; 
+
+        throw lcio::Exception(errorMsg.str());
+        
+      }
+      
       const LCObjectVec& to = nav->getRelatedToObjects( trkhit );
       
       if( BitSet32( trkhit->getType() )[ UTIL::ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT ]   ){ //it is a composite spacepoint
@@ -245,7 +313,37 @@ void TruthTracker::processEvent( LCEvent * evt ) {
           if( simhitA->getMCParticle() == simhitB->getMCParticle() ) simHitTrkHit.push_back(std::make_pair(simhitA, trkhit));
           else streamlog_out( DEBUG0 ) << "spacepoint discarded, because simHits are not equal " << simhitA->getMCParticle() << " != " 
             << simhitB->getMCParticle() << "\n";
+
           
+#ifdef MARLINTRK_DIAGNOSTICS_ON
+          
+          // set the pointer to the simhit via lcio extention MCTruth4HitExt
+                              
+          //Split it up and add both hits to the MarlinTrk
+          const LCObjectVec rawObjects = trkhit->getRawHits();
+            
+          for( unsigned k=0; k< rawObjects.size(); k++ ){
+            
+            TrackerHit* rawHit = dynamic_cast< TrackerHit* >( rawObjects[k] );
+            if( rawHit ){
+              
+              if( rawHit->getCellID0() == simhitA->getCellID0() ) {
+                streamlog_out( DEBUG4 ) << "link simhit = " << simhitA << " Cell ID = " << simhitA->getCellID0() << " with trkhit = " << rawHit << " Cell ID = " <<  rawHit->getCellID0() << std::endl;     
+                rawHit->ext<MarlinTrk::MCTruth4HitExt>() = new MarlinTrk::MCTruth4HitExtStruct;    
+                rawHit->ext<MarlinTrk::MCTruth4HitExt>()->simhit = simhitA;                 
+              }
+              if( rawHit->getCellID0() == simhitB->getCellID0() ) {
+                streamlog_out( DEBUG4 ) << "link simhit = " << simhitB << " Cell ID = " << simhitB->getCellID0() << " with trkhit = " << rawHit << " Cell ID = " <<  rawHit->getCellID0() << std::endl;     
+                rawHit->ext<MarlinTrk::MCTruth4HitExt>() = new MarlinTrk::MCTruth4HitExtStruct;    
+                rawHit->ext<MarlinTrk::MCTruth4HitExt>()->simhit = simhitB;                 
+              }
+
+            } 
+          }    
+#endif  
+
+          
+            
         }        
         else{ streamlog_out( DEBUG0 ) << "spacepoint discarded, because it is related to " << to.size() << "SimTrackerHits. It should be 2!\n"; } 
         
@@ -256,7 +354,11 @@ void TruthTracker::processEvent( LCEvent * evt ) {
           
           SimTrackerHit* simhit = dynamic_cast<SimTrackerHit*>(to.at(0));
           simHitTrkHit.push_back(std::make_pair(simhit, trkhit));
-          
+
+#ifdef MARLINTRK_DIAGNOSTICS_ON
+          trkhit->ext<MarlinTrk::MCTruth4HitExt>() = new MarlinTrk::MCTruth4HitExtStruct;    
+          trkhit->ext<MarlinTrk::MCTruth4HitExt>()->simhit = simhit;  
+#endif       
         }
         else{ streamlog_out( DEBUG0 ) << "TrackerHit discarded, because it is related to " << to.size() << "SimTrackerHits. It should be 1!\n"; }
       
@@ -279,6 +381,9 @@ void TruthTracker::processEvent( LCEvent * evt ) {
     
     SimTrackerHit * simHit = simHitTrkHit[i].first;
     TrackerHit* trackerHit = simHitTrkHit[i].second;
+
+        
+    
     streamlog_out( DEBUG2 ) << "Tracker hit: [" << i << "] = " << trackerHit << "  mcp = " << simHit->getMCParticle() << " time = " << simHit->getTime() << " cellid (trkHit) = " << trackerHit->getCellID0() 
     << " (de" << getDetectorID( trackerHit ) 
     << ",si" << getSideID( trackerHit ) 
@@ -380,6 +485,8 @@ void TruthTracker::end() {
 
   delete _encoder ;
   
+  delete _trksystem ;
+  
 }
 
 
@@ -455,10 +562,205 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
   
   if( _FitTracksWithMarlinTrk ) {
     
-    MarlinTrk::IMarlinTrack* marlin_trk = _trksystem->createTrack();
+    TrackStateImpl* prefit_trackState = 0;
+    
+        
+    // setup initial dummy covariance matrix
+    EVENT::FloatVec covMatrix;
+    covMatrix.resize(15);
+    
+    for (int icov = 0; icov<covMatrix.size(); ++icov) {
+      covMatrix[icov] = 0;
+    }
+    
+    covMatrix[0]  = ( _initialTrackError_d0    ); //sigma_d0^2
+    covMatrix[2]  = ( _initialTrackError_phi0  ); //sigma_phi0^2
+    covMatrix[5]  = ( _initialTrackError_omega ); //sigma_omega^2
+    covMatrix[9]  = ( _initialTrackError_z0    ); //sigma_z0^2
+    covMatrix[14] = ( _initialTrackError_tanL  ); //sigma_tanl^2
+
     
     // First sort the hits in R, so here we are assuming that the track came from the IP and that we want to fit out to in. 
     sort( hit_list.begin(), hit_list.end(), TruthTracker::compare_r() );
+    
+    
+    // loop over all the hits and create a list consisting only 2D hits 
+    
+    TrackerHitVec twoD_hits;
+    
+    for (int ihit=0; ihit < hit_list.size(); ++ihit) {
+      
+      // check if this a space point or 2D hit 
+      if(BitSet32( hit_list[ihit]->getType() )[ UTIL::ILDTrkHitTypeBit::ONE_DIMENSIONAL ] == false ){
+        // then add to the list 
+        twoD_hits.push_back(hit_list[ihit]);
+        
+      }
+    }
+
+    
+    // now either take the MCParticle parameters directly, use a full prefit or create a helix from 3 2-D hits
+
+    if( _useMCParticleParametersFotInitOfFit ){
+      
+      hel.moveRefPoint(hit_list.front()->getPosition()[0], hit_list.front()->getPosition()[1], hit_list.front()->getPosition()[2]);
+      
+      const float referencePoint[3] = { hel.getRefPointX() , hel.getRefPointY() , hel.getRefPointZ() };
+      
+      prefit_trackState = new TrackStateImpl( lcio::TrackState::AtIP, 
+                                             hel.getD0(), 
+                                             hel.getPhi0(), 
+                                             hel.getOmega(), 
+                                             hel.getZ0(), 
+                                             hel.getTanLambda(), 
+                                             covMatrix, 
+                                             referencePoint) ;
+      
+    }         
+    else { // use 2-D hits to start fit either simple helix construction or full prefit
+      
+      // check that there are enough 2-D hits to create a helix 
+      if (twoD_hits.size() < 3) { // no chance to initialise print warning and return
+        streamlog_out(WARNING) << "TruthTracker::createTrack Cannot create helix from less than 3 2-D hits" << std::endl;
+        delete Track;
+        return;
+      }
+      
+      // make a helix from 3 hits to get a trackstate
+      // SJA:FIXME: this may not be the optimal 3 hits to take in certain cases where the 3 hits are not well spread over the track length 
+      const double* x1 = twoD_hits[0]->getPosition();
+      const double* x2 = twoD_hits[ twoD_hits.size()/2 ]->getPosition();
+      const double* x3 = twoD_hits.back()->getPosition();
+      
+      HelixTrack helixTrack( x1, x2, x3, _Bz, IMarlinTrack::backward );
+            
+      helixTrack.moveRefPoint(hit_list.back()->getPosition()[0], hit_list.back()->getPosition()[1], hit_list.back()->getPosition()[2]);
+      
+      const float referencePoint[3] = { helixTrack.getRefPointX() , helixTrack.getRefPointY() , helixTrack.getRefPointZ() };
+      
+      prefit_trackState = new TrackStateImpl( lcio::TrackState::AtIP, 
+                                             helixTrack.getD0(), 
+                                             helixTrack.getPhi0(), 
+                                             helixTrack.getOmega(), 
+                                             helixTrack.getZ0(), 
+                                             helixTrack.getTanLambda(), 
+                                             covMatrix, 
+                                             referencePoint) ;
+      
+      
+      // if performing full pre fit use prefit_trackState and improve with full fit
+      
+      if ( _create_prefit_using_MarlinTrk){
+        
+        
+        
+        MarlinTrk::IMarlinTrack* prefit_trk = _trksystem->createTrack();
+        
+#ifdef MARLINTRK_DIAGNOSTICS_ON
+        
+        void * dcv = _trksystem->getDiagnositicsPointer();
+        DiagnosticsController* dc = static_cast<DiagnosticsController*>(dcv);
+        dc->skip_current_track();
+        
+#endif
+        
+        
+        EVENT::TrackerHitVec::iterator it = hit_list.begin();
+        
+        streamlog_out(DEBUG2) << "Start Pre Fit: AddHits: number of hits to fit " << hit_list.size() << std::endl;
+        
+        int pre_fit_ndof_added = 0;
+        TrackerHitVec pre_fit_added_hits;
+        
+        for( it = hit_list.begin() ; it != hit_list.end() ; ++it ) {
+          
+          TrackerHit* trkHit = *it;
+          bool isSuccessful = false; 
+          
+          if( BitSet32( trkHit->getType() )[ UTIL::ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT ]   ){ //it is a composite spacepoint
+            
+            //Split it up and add both hits to the MarlinTrk
+            const LCObjectVec rawObjects = trkHit->getRawHits();                    
+            
+            for( unsigned k=0; k< rawObjects.size(); k++ ){
+              
+              TrackerHit* rawHit = dynamic_cast< TrackerHit* >( rawObjects[k] );
+              
+              if( prefit_trk->addHit( rawHit ) == IMarlinTrack::success ){
+                
+                isSuccessful = true; //if at least one hit from the spacepoint gets added
+                ++pre_fit_ndof_added;
+              }
+            }
+          }
+          else { // normal non composite hit
+            
+            if (prefit_trk->addHit( trkHit ) == 0) {
+              isSuccessful = true;
+              pre_fit_ndof_added += 2;
+            }
+          }
+          
+          if (isSuccessful) {
+            pre_fit_added_hits.push_back(trkHit);
+          }
+          
+          
+          else{
+            streamlog_out(DEBUG4) << "Hit " << it - hit_list.begin() << " Dropped " << std::endl;          
+          }
+          
+        }
+        
+        if( pre_fit_ndof_added < 8 ) {
+          streamlog_out(DEBUG3) << "TruthTracker::Prefit failed: Cannot fit less with less than 8 degrees of freedom. Number of hits =  " << pre_fit_added_hits.size() << " ndof = " << pre_fit_ndof_added << std::endl;
+          delete prefit_trk ;
+          delete prefit_trackState;
+          return;
+        }
+        
+        prefit_trk->initialise( *prefit_trackState, _Bz, IMarlinTrack::backward ) ;
+        
+        delete prefit_trackState;
+        
+        int fit_status = prefit_trk->fit() ; 
+        
+        if( fit_status != 0 ){ 
+          streamlog_out(DEBUG3) << "TruthTracker::Prefit failed: fit_status = " << fit_status << std::endl; 
+          delete prefit_trk ;
+          return;
+        } else {
+          
+          prefit_trackState = new TrackStateImpl() ;
+                   
+          const gear::Vector3D point(hit_list.back()->getPosition()[0],hit_list.back()->getPosition()[1],hit_list.back()->getPosition()[2]); // position of outermost hit
+
+          int return_code = prefit_trk->propagate(point, *prefit_trackState, chi2, ndf ) ;
+                            
+          // make sure that the track state can be propagated to the IP and that the NDF is not less than 0
+          if ( return_code != 0 || ndf < 0 ) { 
+            streamlog_out(WARNING) << "TruthTracker::createTrack Prefit: Track droped return_code for prefit propagation = " << return_code << " NDF = " << ndf << std::endl;
+            delete prefit_trackState;
+            delete prefit_trk;
+            return;
+          }
+          
+          prefit_trackState->setLocation(  lcio::TrackState::AtLastHit ) ;
+          
+          // blow up covariance matrix
+          
+          prefit_trackState->setCovMatrix(covMatrix);
+          
+        }
+        
+        delete prefit_trk;
+        
+      }
+    
+    }
+    
+    MarlinTrk::IMarlinTrack* marlin_trk = _trksystem->createTrack();
+    
 
     // used to keep track of whether hits are accepted by the fitter before fitting
     bool isSuccessful = false; 
@@ -472,7 +774,7 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
     // fit will then be called on the hits added and then addandFit will be used for the remaining hits to provide more feedback and control
     
     
-    // start by trying tp add the last hit and break at the first accepted hit
+    // start by trying to add the last hit and break at the first accepted hit
     for(int j=index_of_next_hit_to_fit; j >= 0; --j) {
   
       TrackerHit* trkHit = hit_list[j];
@@ -508,122 +810,26 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
       }        
         
     } // end of reverse loop over hits 
-
     
     // We now have either one 2-D hit or two 1-D hits added. 
     // So proceed with initialisation.  
-
-    // setup initial covariance matrix
-    EVENT::FloatVec covMatrix;
-    covMatrix.resize(15);
-
-    for (int icov = 0; icov<covMatrix.size(); ++icov) {
-      covMatrix[icov] = 0;
-    }
     
-    covMatrix[0]  = ( _initialTrackErrors ); //sigma_d0^2
-    covMatrix[2]  = ( _initialTrackErrors ); //sigma_phi0^2
-    covMatrix[5]  = ( _initialTrackErrors ); //sigma_omega^2
-    covMatrix[9]  = ( _initialTrackErrors ); //sigma_z0^2
-    covMatrix[14] = ( _initialTrackErrors ); //sigma_tanl^2
-
-    TrackStateImpl* trackState = 0;
-
-    // now either take the MCParticle parameters directly or create a helix from 3 2-D hits
-    
-    if( _useMCParticleParametersFotInitOfFit ){
-
-      const float referencePoint[3] = { hel.getRefPointX() , hel.getRefPointY() , hel.getRefPointZ() };
-      
-      trackState = new TrackStateImpl( lcio::TrackState::AtIP, 
-                                      hel.getD0(), 
-                                      hel.getPhi0(), 
-                                      hel.getOmega(), 
-                                      hel.getZ0(), 
-                                      hel.getTanLambda(), 
-                                      covMatrix, 
-                                      referencePoint) ;
-      
-    } else {
-      
-      // loop over all the hits and take only 2D hits 
-      
-      TrackerHitVec twoD_hits;
-      
-      for (int ihit=0; ihit < hit_list.size(); ++ihit) {
-
-        // check if this a space point or 2D hit 
-        if(BitSet32( hit_list[ihit]->getType() )[ UTIL::ILDTrkHitTypeBit::ONE_DIMENSIONAL ] == false ){
-          // then add to the list 
-          twoD_hits.push_back(hit_list[ihit]);
-
-        }
-      }
-
-      // check that there are enough 2-D hits to create a helix 
-      if (twoD_hits.size() < 3) { // no chance to initialise print warning and return
-        streamlog_out(WARNING) << "TruthTracker::createTrack Cannot create helix from less than 3 2-D hits" << std::endl;
-        delete Track;
-        delete marlin_trk;
-        return;
-      }
-      
-      // make a helix from 3 hits to get a trackstate
-      // SJA:FIXME: this may not be the optimal 3 hits to take in certain cases where the 3 hits are not well spread over the track length 
-      const double* x1 = twoD_hits[0]->getPosition();
-      const double* x2 = twoD_hits[ twoD_hits.size()/2 ]->getPosition();
-      const double* x3 = twoD_hits.back()->getPosition();
-      
-      HelixTrack helixTrack( x1, x2, x3, _Bz, IMarlinTrack::backward );
-      
-      helixTrack.moveRefPoint(0.0, 0.0, 0.0);
-      
-      const float referencePoint[3] = { helixTrack.getRefPointX() , helixTrack.getRefPointY() , helixTrack.getRefPointZ() };
-      
-      trackState = new TrackStateImpl( lcio::TrackState::AtIP, 
-                                      helixTrack.getD0(), 
-                                      helixTrack.getPhi0(), 
-                                      helixTrack.getOmega(), 
-                                      helixTrack.getZ0(), 
-                                      helixTrack.getTanLambda(), 
-                                      covMatrix, 
-                                      referencePoint) ;
-      
-    }
-    
-    
+        
     streamlog_out( DEBUG3 ) << "\n Helix for prefit: " 
-    <<  " d0 =  " << trackState->getD0()
-    <<  " phi0 =  " << trackState->getPhi() 
-    <<  " omega =  " << trackState->getOmega() 
-    <<  " z0 =  " << trackState->getZ0() 
-    <<  " tanl =  " << trackState->getTanLambda() 
-    <<  " ref =  " <<  trackState->getReferencePoint()[0] << " " << trackState->getReferencePoint()[1] << " " << trackState->getReferencePoint()[2]
+    <<  " d0 =  " << prefit_trackState->getD0()
+    <<  " phi0 =  " << prefit_trackState->getPhi() 
+    <<  " omega =  " << prefit_trackState->getOmega() 
+    <<  " z0 =  " << prefit_trackState->getZ0() 
+    <<  " tanl =  " << prefit_trackState->getTanLambda() 
+    <<  " ref =  " <<  prefit_trackState->getReferencePoint()[0] << " " << prefit_trackState->getReferencePoint()[1] << " " << prefit_trackState->getReferencePoint()[2]
     << "\n" << std::endl;
  
- 
-//    for (int ihit = 0; ihit < added_hits.size(); ++ihit) {
-//      
-//      double x = added_hits[ihit]->getPosition()[0];
-//      double y = added_hits[ihit]->getPosition()[1];
-//      double z = added_hits[ihit]->getPosition()[2];
-//      
-//      LCIOTrackPropagators::PropagateLCIOToNewRef(*trackState, x, y, z);
-//      
-//      streamlog_out( DEBUG3 ) << "\n Helix parameters at hit " << ihit <<" : " 
-//      <<  " d0 =  " << trackState->getD0()
-//      <<  " phi0 =  " << trackState->getPhi() 
-//      <<  " omega =  " << trackState->getOmega() 
-//      <<  " z0 =  " << trackState->getZ0() 
-//      <<  " tanl =  " << trackState->getTanLambda() 
-//      <<  " ref =  " <<  trackState->getReferencePoint()[0] << " " << trackState->getReferencePoint()[1] << " " << trackState->getReferencePoint()[2]
-//      << "\n" << std::endl;
-//
-//    }
-    
+     
     // set the initial track state for the track    
-    marlin_trk->initialise( *trackState, _Bz, IMarlinTrack::backward ) ;
+    marlin_trk->initialise( *prefit_trackState, _Bz, IMarlinTrack::backward ) ;
 
+    delete prefit_trackState;
+    
     // filter the first 1 or 2 hits 
     int fit_status = marlin_trk->fit() ; 
                       
@@ -689,42 +895,57 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
       delete marlin_trk;
       return;
     }
-              
+    
+    trkStateIP->setLocation(  lcio::TrackState::AtIP ) ;
+    Track->trackStates().push_back(trkStateIP);
+    Track->setChi2(chi2);
+    Track->setNdf(ndf);
+    
     std::vector<std::pair<EVENT::TrackerHit*, double> > hits_in_fit;
     
     marlin_trk->getHitsInFit(hits_in_fit);
     
-        
-    EVENT::TrackerHit* last_hit_in_fit = hits_in_fit.front().first;
-    if (!last_hit_in_fit) {
-      throw EVENT::Exception( std::string("TruthTracker::createTrack: TrackerHit pointer == NULL ")  ) ;
-    }
-    
-    EVENT::TrackerHit* first_hit_in_fit = hits_in_fit.back().first;
-    if (!first_hit_in_fit) {
-      throw EVENT::Exception( std::string("TruthTracker::createTrack: TrackerHit pointer == NULL ")  ) ;
-    }
 
+    EVENT::TrackerHit* first_trkhit = hits_in_fit.front().first;
+    EVENT::TrackerHit* last_trkhit = hits_in_fit.back().first;
     
-    TrackStateImpl* trkStateFirstHit = new TrackStateImpl;
-    return_code = marlin_trk->getTrackState(first_hit_in_fit, *trkStateFirstHit, chi2, ndf ) ;
+    // now loop over the hits and get the track State there 
     
-    if(return_code !=MarlinTrk::IMarlinTrack::success){
-      streamlog_out( DEBUG5 ) << "  >>>>>>>>>>> TruthTracker::createTrack:  could not get TrackState at First Hit " << std::endl ;
-    }
+    for (unsigned ihit = 0; ihit < hits_in_fit.size(); ++ihit) {
+      
+      EVENT::TrackerHit* trkhit = hits_in_fit[ihit].first;
 
-    // SJA:FIXME: if the hit is 1D then the pivot will be set to 0,0,0 : what should we do? Probably propagate to the Space Point if there is one ....
-    TrackStateImpl* trkStateLastHit = new TrackStateImpl;
-    return_code = marlin_trk->getTrackState(last_hit_in_fit, *trkStateLastHit, chi2, ndf ) ;
+      if ( trkhit == 0 ) {
+        throw EVENT::Exception( std::string("TruthTracker::createTrack: TrackerHit pointer == NULL ")  ) ;
+      }
+      
+      TrackStateImpl* ts = new TrackStateImpl;
+      return_code = marlin_trk->getTrackState(trkhit, *ts, chi2, ndf ) ;
+      
+      if(return_code !=MarlinTrk::IMarlinTrack::success){
+        streamlog_out( DEBUG5 ) << "  >>>>>>>>>>> TruthTracker::createTrack:  could not get TrackState at Hit index " << ihit << std::endl ;
+      }
 
-    std::cout << "###############*********** last_hit_in_fit->getPosition()[0] = " << last_hit_in_fit->getPosition()[0] << "***********###############" << std::endl;
-    std::cout << "###############*********** last_hit_in_fit->getPosition()[1] = " << last_hit_in_fit->getPosition()[1] << "***********###############" << std::endl;
-    std::cout << "###############*********** last_hit_in_fit->getPosition()[2] = " << last_hit_in_fit->getPosition()[2] << "***********###############" << std::endl;
-    
-    if (return_code !=MarlinTrk::IMarlinTrack::success ) {
-      streamlog_out( DEBUG5 ) << "  >>>>>>>>>>> TruthTracker::createTrack:  could not get TrackState at Last Hit " << std::endl ;
+      // SJA:FIXME: if the hit is 1D then the pivot will be set to 0,0,0 : what should we do? Probably propagate to the Space Point if there is one ....      
+      // set the location for the first hit 
+      if ( trkhit == first_trkhit ) {                
+        ts->setLocation(  lcio::TrackState::AtFirstHit ) ;
+      } 
+      // set the location for the last hit 
+      else if( trkhit == last_trkhit ) {
+        ts->setLocation(  lcio::TrackState::AtLastHit ) ;      
+      } 
+      // set the location for the ihit'th  hit with an offset of lcio::TrackState::AtFirstHit + 1000
+      else {
+        ts->setLocation( lcio::TrackState::AtFirstHit + 1000 + ihit  ) ;        
+      }
+
+      Track->trackStates().push_back(ts);
+      
     }
-        
+  
+    
+    // now get the state at the calo face
     
     TrackStateImpl* trkStateCalo = new TrackStateImpl;
     
@@ -736,36 +957,26 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
     encoder[lcio::ILDCellID0::layer]  = 0 ;
     
     int detElementID = 0;
-    return_code = marlin_trk->propagateToLayer(encoder.lowWord(), last_hit_in_fit, *trkStateCalo, chi2, ndf, detElementID, IMarlinTrack::modeForward ) ;
+    return_code = marlin_trk->propagateToLayer(encoder.lowWord(), last_trkhit, *trkStateCalo, chi2, ndf, detElementID, IMarlinTrack::modeForward ) ;
     
     if (return_code == MarlinTrk::IMarlinTrack::no_intersection ) { // try forward or backward
-      if (trkStateLastHit->getTanLambda()>0) {
+      if (trkStateIP->getTanLambda()>0) {
         encoder[lcio::ILDCellID0::side] = lcio::ILDDetID::fwd;
       }
       else{
         encoder[lcio::ILDCellID0::side] = lcio::ILDDetID::bwd;
       }
-      return_code = marlin_trk->propagateToLayer(encoder.lowWord(), last_hit_in_fit, *trkStateCalo, chi2, ndf, detElementID, IMarlinTrack::modeForward ) ;
+      return_code = marlin_trk->propagateToLayer(encoder.lowWord(), last_trkhit, *trkStateCalo, chi2, ndf, detElementID, IMarlinTrack::modeForward ) ;
     }
     
     if (return_code !=MarlinTrk::IMarlinTrack::success ) {
       streamlog_out( DEBUG5 ) << "  >>>>>>>>>>> FinalRefit :  could not get TrackState at Calo Face: return_code = " << return_code << std::endl ;
     }
 
-    
-    trkStateIP->setLocation(  lcio::TrackState::AtIP ) ;
-    trkStateFirstHit->setLocation(  lcio::TrackState::AtFirstHit ) ;
-    trkStateLastHit->setLocation(  lcio::TrackState::AtLastHit ) ;
-    trkStateCalo->setLocation(  lcio::TrackState::AtCalorimeter ) ;
-    
-    Track->trackStates().push_back(trkStateIP);
-    Track->trackStates().push_back(trkStateFirstHit);
-    Track->trackStates().push_back(trkStateLastHit);
+      
+    trkStateCalo->setLocation(  lcio::TrackState::AtCalorimeter ) ;      
     Track->trackStates().push_back(trkStateCalo);
 
-    Track->setChi2(chi2);
-    Track->setNdf(ndf);
-    
     delete marlin_trk;    
 
     
@@ -858,7 +1069,7 @@ LCCollection* TruthTracker::GetCollection(  LCEvent * evt, std::string colName )
     streamlog_out( DEBUG4 ) << " --> " << colName.c_str() << " collection found, number of elements = " << col->getNumberOfElements() << std::endl;
   }
   catch(DataNotAvailableException &e) {
-    streamlog_out( ERROR ) << " --> " << colName.c_str() <<  " collection absent" << std::endl;     
+    streamlog_out( DEBUG4 ) << " --> " << colName.c_str() <<  " collection absent" << std::endl;     
   }
   
   return col; 

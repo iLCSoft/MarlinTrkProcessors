@@ -125,7 +125,15 @@ public:
 //      return ( hita->getTime() < hitb->getTime() ) ; 
 //    }
 //  };
-  
+//  
+//  
+//  struct compare_time_reverse {
+//    bool operator()( EVENT::TrackerHit* a, EVENT::TrackerHit* b)  const { 
+//      SimTrackerHit* hita = dynamic_cast<SimTrackerHit*>(a->getRawHits().at(0));
+//      SimTrackerHit* hitb = dynamic_cast<SimTrackerHit*>(b->getRawHits().at(0));
+//      return ( hita->getTime() > hitb->getTime() ) ; 
+//    }
+//  };
   
   struct compare_r {
     bool operator()( EVENT::TrackerHit* a, EVENT::TrackerHit* b)  const { 
@@ -135,7 +143,7 @@ public:
     }
   } ;
   
-  struct compare_time_reverse {
+  struct compare_r_reverse {
     bool operator()( EVENT::TrackerHit* a, EVENT::TrackerHit* b)  const { 
       double r_a_sqd = a->getPosition()[0] * a->getPosition()[0] + a->getPosition()[1] * a->getPosition()[1] ; 
       double r_b_sqd = b->getPosition()[0] * b->getPosition()[0] + b->getPosition()[1] * b->getPosition()[1] ; 
@@ -209,13 +217,23 @@ protected:
   bool _ElossOn ;
   bool _SmoothOn ;
   bool _useMCParticleParametersFotInitOfFit;
-  float _initialTrackErrors;
+
+  float _initialTrackError_d0;
+  float _initialTrackError_phi0;
+  float _initialTrackError_omega;
+  float _initialTrackError_z0;
+  float _initialTrackError_tanL;
+
+  
+  bool _create_prefit_using_MarlinTrk;
   
   double _Bz;
 
   std::vector< LCCollection* > _colTrackerHits;
   std::vector< LCRelationNavigator* > _navTrackerHitRel;
   
+  bool _runMarlinTrkDiagnostics;
+  std::string _MarlinTrkDiagnosticsName;
   
   unsigned _nCreatedTracks;
   
