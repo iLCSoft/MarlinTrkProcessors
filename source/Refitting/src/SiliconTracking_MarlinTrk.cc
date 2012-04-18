@@ -351,10 +351,6 @@ SiliconTracking_MarlinTrk::SiliconTracking_MarlinTrk() : Processor("SiliconTrack
                             int(1));
 
 
- registerProcessorParameter("CreateMap",
-                            "Create Track To MCP Relations",
-                            _createMap,
-                            int(1));
 
 
  registerProcessorParameter("Debug",
@@ -531,22 +527,14 @@ void SiliconTracking_MarlinTrk::processEvent( LCEvent * evt ) {
    trkCol->setFlag( trkFlag.getFlag()  ) ;
 
    LCCollectionVec * relCol = NULL;
-   if (_createMap){
-     relCol = new LCCollectionVec(LCIO::LCRELATION);
-     // to store the weights
-     LCFlagImpl lcFlag(0) ;
-     lcFlag.setBit( LCIO::LCREL_WEIGHTED ) ;
-     relCol->setFlag( lcFlag.getFlag()  ) ;
-   }
 
 
    FinalRefit(trkCol, relCol);
 
 
    evt->addCollection(trkCol,_siTrkCollection.c_str());     
-   if (_createMap>0)
-     evt->addCollection(relCol,_siTrkMCPCollection.c_str());
- }
+
+  }
  CleanUp();
  streamlog_out(DEBUG4) << "Event is done " << std::endl;
  _nEvt++;
@@ -2730,26 +2718,6 @@ void SiliconTracking_MarlinTrk::FinalRefit(LCCollectionVec* trk_col, LCCollectio
        track_lcio->addHit(trkHits.at(j)) ;
        ++hitNumbers[ getDetectorID(trkHits.at(j)) ];
 
-       if (_createMap > 0) {
-         int nSH = int(trkHits.at(j)->getRawHits().size());
-         for (int ish=0;ish<nSH;++ish) {
-           SimTrackerHit * simHit = dynamic_cast<SimTrackerHit*>(trkHits.at(j)->getRawHits()[ish]);
-           MCParticle * mcp = simHit->getMCParticle();
-           bool found = false;
-           int nMCP = int(mcPointers.size());
-           for (int iMCP=0;iMCP<nMCP;++iMCP) {
-             if (mcp == mcPointers[iMCP]) {
-               found = true;
-               mcHits[iMCP]++;
-               break;
-             }
-           }
-           if (!found) {
-             mcPointers.push_back(mcp);
-             mcHits.push_back(1);
-           }
-         }
-       }
      }
 
      //SJA:FIXME no distiction made for hits in fit or not
@@ -2801,18 +2769,6 @@ void SiliconTracking_MarlinTrk::FinalRefit(LCCollectionVec* trk_col, LCCollectio
      pyTot += trkPy;
      pzTot += trkPz;
 
-     if (_createMap > 0) {
-       int nRel = int(mcPointers.size());
-       for (int k=0;k<nRel;++k) {
-         LCRelationImpl* rel = new LCRelationImpl;
-         MCParticle * mcp = mcPointers[k];
-         rel->setFrom (track_lcio);
-         rel->setTo (mcp);
-         float weight = (float)(mcHits[k])/(float)(track_lcio->getTrackerHits().size());
-         rel->setWeight(weight);
-         rel_col->addElement(rel);
-       }
-     }
    }
  }
 

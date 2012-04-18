@@ -95,8 +95,6 @@ namespace MarlinTrk {
  * number of SIT hits in track is the third element in this vector  
  * (Track::getSubdetectorHitNumbers()[2]) <br>
  * Output track collection has a name "SiTracks". <br>
- * In addition collection of relations of the tracks to MCParticles is stored if flag CreateMap is set to 1. <br>
- * Collection of relations has a name "SiTracksMCP" <br>
  * @param VTXHitCollectionName name of input VTX TrackerHit collection <br>
  * (default parameter value : "VTXTrackerHits") <br>
  * @param FTDHitCollectionName name of input FTD TrackerHit collection <br>
@@ -171,9 +169,6 @@ namespace MarlinTrk {
  * (default value is 0) <br>
  * @param UseSIT When this flag is set to 1, SIT is included in pattern recognition. When this flag is set
  * to 0, SIT is excluded from the procedure of pattern recognition <br>
- * (default value is 1) <br>
- * @param CreateMap When this flag is set to 1 collection of relations between tracks and MCParticles is 
- * created <br>
  * (default value is 1) <br>
  * @param Debug flag to activate debug printout <br>
  * (default value 1)
@@ -384,7 +379,8 @@ protected:
   
   int _nTotalVTXHits,_nTotalFTDHits,_nTotalSITHits;
   int _useSIT;
-  int _createMap;
+  
+//  int _createMap;
   
   UTIL::BitField64* _encoder;
   int getDetectorID(TrackerHit* hit) { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::ILDCellID0::subdet]; }
