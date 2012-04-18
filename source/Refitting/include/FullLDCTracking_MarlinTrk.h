@@ -82,8 +82,6 @@ namespace MarlinTrk {
  * total number of ETD hits in track is the 12th element in this vector
  * (Track::getSubdetectorHitNumbers()[11]) <br>
  * Output track collection has by default a name "LDCTracks". 
- * In addition collection of relations of the tracks to MCParticles is stored if flag CreateMap is set to 1. 
- * Collection of relations has by default a name "LDCTracksMCP" 
  * @param VTXHitCollection name of input VTX TrackerHit collection <br>
  * (default parameter value : "VTXTrackerHits") <br>
  * @param FTDPixelHitCollectionName name of input FTD Pixel TrackerHit collection <br>
@@ -115,10 +113,7 @@ namespace MarlinTrk {
  * @param Chi2PrefitCut cut on the prefit Chi2 of the track candidate, 
  * prefit is done with the simple helix hypothesis <br>
  * (default parameter value : 1e+5) <br>
- * @param CreateMap flag to create relations between Tracks and MCParticles, 
- * if set to 1, relations collection is created and stored in an event <br>
- * (default parameter value : 1) <br>
- * @param AngleCutForMerging  cut on opening angle between 
+  * @param AngleCutForMerging  cut on opening angle between 
  * particle momentum reconstructed with TPC and momentum reconstructed
  * with the Silicon detectors. If the opening angle is smaller that this cut
  * the track segment in Silicon trackers and in TPC are tested for their
@@ -386,7 +381,6 @@ protected:
   float _chi2FitCut;
   
   int _debug;
-  int _createMap;
   
   float _dPCutForMerging;
   float _d0CutForMerging;

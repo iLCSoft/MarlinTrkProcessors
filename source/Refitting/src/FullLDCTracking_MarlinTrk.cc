@@ -174,10 +174,6 @@ FullLDCTracking_MarlinTrk::FullLDCTracking_MarlinTrk() : Processor("FullLDCTrack
                              _chi2PrefitCut,
                              float(1.0e+5));
   
-  registerProcessorParameter("CreateMap",
-                             "Create Track to MCP Relations",
-                             _createMap,
-                             int(1));
   
   registerProcessorParameter("Debug",
                              "Activate debugging?",
@@ -499,15 +495,8 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
   
   streamlog_out(DEBUG4)<< "Collection " << TrkColName << " is being added to event " << std::endl;
   
-  LCCollectionVec * colRel = NULL;
+//  LCCollectionVec * colRel = NULL;
   
-  if (_createMap) {
-    colRel = new LCCollectionVec(LCIO::LCRELATION);
-    // to store the weights
-    LCFlagImpl lcFlag(0) ;
-    lcFlag.setBit( LCIO::LCREL_WEIGHTED ) ;
-    colRel->setFlag( lcFlag.getFlag()  ) ;
-  }
   
   int nTrkCand = int(trkVec.size());
   
@@ -822,26 +811,6 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
       track_lcio->addHit(trkHits.at(j)) ;
       ++hitNumbers[ getDetectorID(trkHits.at(j)) ];
       
-      if (_createMap > 0) {
-        int nSH = int(trkHits.at(j)->getRawHits().size());
-        for (int ish=0;ish<nSH;++ish) {
-          SimTrackerHit * simHit = dynamic_cast<SimTrackerHit*>(trkHits.at(j)->getRawHits()[ish]);
-          MCParticle * mcp = simHit->getMCParticle();
-          bool found = false;
-          int nMCP = int(mcPointers.size());
-          for (int iMCP=0;iMCP<nMCP;++iMCP) {
-            if (mcp == mcPointers[iMCP]) {
-              found = true;
-              mcHits[iMCP]++;
-              break;
-            }
-          }
-          if (!found) {
-            mcPointers.push_back(mcp);
-            mcHits.push_back(1);
-          }
-        }
-      }
     }
     
     //SJA:FIXME no distiction made for hits in fit or not
@@ -911,18 +880,6 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
       
       colTRK->addElement(track_lcio);
       
-      if (_createMap > 0) {
-        int nRel = int(mcPointers.size());
-        for (int k=0;k<nRel;++k) {
-          LCRelationImpl* rel = new LCRelationImpl;
-          MCParticle * mcp = mcPointers[k];
-          rel->setFrom (track_lcio);
-          rel->setTo (mcp);
-          float weight = (float)(mcHits[k])/(float)(track_lcio->getTrackerHits().size());
-          rel->setWeight(weight);
-          colRel->addElement(rel);
-        }
-      }
     }
   }
   
@@ -936,8 +893,7 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
   streamlog_out(DEBUG4) << std::endl;
   
   evt->addCollection(colTRK,TrkColName.c_str());
-  if (_createMap)
-    evt->addCollection(colRel,RelColName.c_str());
+
   
 }
 
