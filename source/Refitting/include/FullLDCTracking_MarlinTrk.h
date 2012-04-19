@@ -106,8 +106,6 @@ namespace MarlinTrk {
  * (default parameter value : "SiTracksMCP") <br> 
  * @param LDCTrackCollection name of the output LDC track collection <br>
  * (default parameter value : "LDCTracks") <br>
- * @param LDCTrackMCPRelCollection name of the output LDC track to MC Particle relation collection <br>
- * (default parameter value : "LDCTracksMCP") <br>
  * @param Chi2FitCut cut on the Chi2/Ndf of the track fit <br>
  * (default parameter value : 100.0) <br>
  * @param Chi2PrefitCut cut on the prefit Chi2 of the track candidate, 
@@ -283,7 +281,7 @@ protected:
   void AddNotAssignedHits();
   void RemoveSplitTracks();
   void AddTrackColToEvt(LCEvent * evt, TrackExtendedVec & trkVec, 
-                        std::string TrkColName, std::string RelColName);
+                        std::string TrkColName);
   float CompareTrk(TrackExtended * first, TrackExtended * second, 
                    float d0Cut, float z0Cut, int iopt);
   
@@ -358,7 +356,6 @@ protected:
   std::string _ETDTrackerHitCollection;
   
   std::string _LDCTrackCollection;
-  std::string _LDCTrackMCPCollection;
   
   
   TrackExtendedVec _allSiTracks;

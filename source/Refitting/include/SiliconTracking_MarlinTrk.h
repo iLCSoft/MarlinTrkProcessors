@@ -103,8 +103,6 @@ namespace MarlinTrk {
  * (default parameter value : "SITTrackerHits") <br>
  * @param SiTrackCollectionName name of the output Silicon track collection <br>
  * (default parameter value : "SiTracks") <br>
- * @param SiTrackMCPRelCollection collection name for the silicon track - MC particle relations <br>
- * (default parameter value : "SiTracksMCP") <br>
  * @param LayerCombinations combinations of layers used to search for hit triplets in VTX+SIT <br>
  * (default parameters : 6 4 3  6 4 2  6 3 2  5 4 3  5 4 2  5 3 2  4 3 2  4 3 1  4 2 1  3 2 1) <br> 
  * Note that in the VTX+SIT system the first and the second layers of SIT have indicies nLayerVTX and nLayerVTX+1. 
@@ -252,7 +250,6 @@ protected:
   std::string _FTDSpacePointCollection;
   std::string _SITHitCollection;
   std::string _siTrkCollection;
-  std::string _siTrkMCPCollection;
   
   std::vector<TrackerHitExtendedVec> _sectors;
   std::vector<TrackerHitExtendedVec> _sectorsFTD;

@@ -5,7 +5,6 @@
 #include <UTIL/LCTOOLS.h>
 #include <UTIL/LCRelationNavigator.h>
 #include <EVENT/LCCollection.h>
-#include <EVENT/MCParticle.h>
 #include <EVENT/SimTrackerHit.h>
 #include <EVENT/TrackerHit.h>
 #include <EVENT/TrackerHitPlane.h>
@@ -251,11 +250,6 @@ SiliconTracking_MarlinTrk::SiliconTracking_MarlinTrk() : Processor("SiliconTrack
                           _siTrkCollection,
                           std::string("SiTracks"));
 
- registerOutputCollection(LCIO::LCRELATION,
-                          "SiTrackMCPRelCollection",
-                          "Name of Si track MC particle relation collection",
-                          _siTrkMCPCollection,
-                          std::string("SiTracksMCP"));
 
 
  // Steering parameters
@@ -2709,10 +2703,6 @@ void SiliconTracking_MarlinTrk::FinalRefit(LCCollectionVec* trk_col, LCCollectio
      hitNumbers[lcio::ILDDetID::ETD] = 0;
 
 
-     std::vector<MCParticle*> mcPointers ;
-     std::vector<int> mcHits ;
-     mcPointers.clear();
-     mcHits.clear();
 
      for(int j=trkHits.size()-1; j>=0; --j) {
        track_lcio->addHit(trkHits.at(j)) ;

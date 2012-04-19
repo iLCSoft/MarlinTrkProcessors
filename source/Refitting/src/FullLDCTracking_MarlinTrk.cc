@@ -133,15 +133,7 @@ FullLDCTracking_MarlinTrk::FullLDCTracking_MarlinTrk() : Processor("FullLDCTrack
                            std::string("LDCTracks"));
   
   
-  // Output relation collection
-  registerOutputCollection(LCIO::LCRELATION,
-                           "LDCTrackMCPRelCollection",
-                           "Collection name for the LDC track to MCParticle relations",
-                           _LDCTrackMCPCollection,
-                           std::string("LDCTracksMCP"));
-  
-  
-  
+    
   // steering parameters
   
   registerProcessorParameter("D0CutForMerging",
@@ -473,7 +465,7 @@ void FullLDCTracking_MarlinTrk::processEvent( LCEvent * evt ) {
   AddNotAssignedHits();
   streamlog_out(DEBUG3) << "***********************************Not assigned hits added..." << std::endl;
   AddTrackColToEvt(evt,_trkImplVec,
-                   _LDCTrackCollection,_LDCTrackMCPCollection);
+                   _LDCTrackCollection);
   streamlog_out(DEBUG3) << "Collections added to event..." << std::endl;
   CleanUp();
   streamlog_out(DEBUG3) << "Cleanup is done..." << std::endl;
@@ -485,7 +477,7 @@ void FullLDCTracking_MarlinTrk::processEvent( LCEvent * evt ) {
 }
 
 void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec & trkVec, 
-                                                 std::string TrkColName, std::string RelColName) {
+                                                 std::string TrkColName) {
   
   LCCollectionVec * colTRK = new LCCollectionVec(LCIO::TRACK);
   // if we want to point back to the hits we need to set the flag
