@@ -15,6 +15,9 @@
 
 #include "KiTrack/SubsetSimple.h"
 #include "KiTrack/SubsetHopfieldNN.h"
+#include "Tools/Fitter.h"
+#include "Tools/KiTrackMarlinTools.h"
+
 
 using namespace lcio ;
 using namespace marlin ;
@@ -203,11 +206,14 @@ void TrackSubsetProcessor::processEvent( LCEvent * evt ) {
   TrackQI trackQI( _trkSystem );
   
   streamlog_out( DEBUG3 ) << "The tracks and their qualities (and their hits ): \n";
+ 
   for( unsigned i=0; i < tracks.size(); i++ ){
     
     double qi = trackQI( tracks[i] );
     streamlog_out( DEBUG3 ) << tracks[i] << "\t" << qi << "( ";
     std::vector< TrackerHit* > hits = tracks[i]->getTrackerHits();
+    
+    std::sort( hits.begin(), hits.end(), KiTrackMarlin::compare_TrackerHit_z );
     
     for( unsigned j=0; j<hits.size(); j++ ){
       
@@ -228,6 +234,7 @@ void TrackSubsetProcessor::processEvent( LCEvent * evt ) {
   
   
   SubsetHopfieldNN< Track* > subset;
+//   SubsetSimple< Track* > subset;
   subset.add( tracks );
   subset.setOmega( _omega );
   subset.calculateBestSet( comp, trackQI );

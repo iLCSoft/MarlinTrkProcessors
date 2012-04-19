@@ -7,7 +7,7 @@
 #include "EVENT/Track.h"
 #include "MarlinTrk/IMarlinTrkSystem.h"
 
-#include "Tools/Fitter.h"
+#include "Math/ProbFunc.h"
 
 
 
@@ -148,21 +148,8 @@ public:
   
   inline double operator()( Track* track ){
     
-    try{
-      
-      Fitter fitter( track , _trkSystem );
-      return fitter.getChi2Prob( lcio::TrackState::AtIP );
-      
-    }
-    catch( FitterException e ){
-      
-      
-      streamlog_out( ERROR ) << "TrackSubsetProcessor: getQI(): Track " << track << "couldn't be fitted: " <<  e.what() << "\n";
-      
-    }
-    
-    return 0.;
-    
+     return ROOT::Math::chisquared_cdf_c( track->getChi2() , track->getNdf() );   
+       
     
   }
   
