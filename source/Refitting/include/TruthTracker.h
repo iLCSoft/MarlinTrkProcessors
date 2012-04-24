@@ -179,6 +179,8 @@ protected:
   
   void createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encoder, std::vector<TrackerHit*>& hit_list );
   
+  void createTrack_old( MCParticle* mcp, UTIL::BitField64& cellID_encoder, std::vector<TrackerHit*>& hit_list );
+  
   
   
   /** input TrackerHit collections
