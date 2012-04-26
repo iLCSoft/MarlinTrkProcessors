@@ -538,9 +538,7 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
   }
   
   if ( hit_list.empty() ) return;
-  
-  streamlog_out( DEBUG3 ) << "Create track with " << hit_list.size() << " hits" << std::endl; 
-  
+    
   HelixTrack hel(mcp->getVertex(), mcp->getMomentum(), mcp->getCharge(), _Bz );
   streamlog_out( DEBUG3 ) << "\n MCParticle paramters: " 
   << " d0 " <<  hel.getD0()
@@ -548,6 +546,7 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
   << " omega "<< hel.getOmega()
   << " z0 "<< hel.getZ0()
   << " tanl "<< hel.getTanLambda()
+  << " total number of hits = " << hit_list.size() 
   << "\n" << std::endl;
   
   
@@ -572,8 +571,32 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
     covMatrix[14] = ( _initialTrackError_tanL  ); //sigma_tanl^2
     
     
+    std::vector<TrackerHit*> hit_list_inner_r;
+    
+    hit_list_inner_r.reserve(300);
+    
+    float delta_phi = 0.0;
+    
+    HelixTrack hel_copy(mcp->getVertex(), mcp->getMomentum(), mcp->getCharge(), _Bz );
+    
+    for( unsigned ihit = 0; ihit < hit_list.size(); ++ihit){
+      
+      float x = hit_list[ihit]->getPosition()[0];
+      float y = hit_list[ihit]->getPosition()[1];
+      float z = hit_list[ihit]->getPosition()[2];
+
+      delta_phi += fabsf(hel_copy.moveRefPoint(x, y, z));      
+                
+      if ( delta_phi < M_PI ) {
+        hit_list_inner_r.push_back(hit_list[ihit]);
+      }
+      
+    }
+    
+    streamlog_out( DEBUG3 ) << "Create track with " << hit_list_inner_r.size() << " hits" << std::endl;
+    
     // First sort the hits in R, so here we are assuming that the track came from the IP and that we want to fit out to in. 
-    sort( hit_list.begin(), hit_list.end(), TruthTracker::compare_r() );
+    sort( hit_list_inner_r.begin(), hit_list_inner_r.end(), TruthTracker::compare_r() );
     
     TrackStateImpl* prefit_trackState = 0;
     
@@ -587,7 +610,7 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
       
       if( _useMCParticleParametersFotInitOfFit ){
         
-        hel.moveRefPoint(hit_list.front()->getPosition()[0], hit_list.front()->getPosition()[1], hit_list.front()->getPosition()[2]);
+        hel.moveRefPoint(hit_list_inner_r.front()->getPosition()[0], hit_list_inner_r.front()->getPosition()[1], hit_list_inner_r.front()->getPosition()[2]);
         
         const float referencePoint[3] = { hel.getRefPointX() , hel.getRefPointY() , hel.getRefPointZ() };
         
@@ -602,16 +625,16 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
         
         
         
-        error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, hit_list, Track, fit_backwards, prefit_trackState, _Bz);
+        error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, hit_list_inner_r, Track, fit_backwards, prefit_trackState, _Bz);
                 
       } else {
         
-        error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, hit_list, Track, fit_backwards, covMatrix, _Bz);
+        error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, hit_list_inner_r, Track, fit_backwards, covMatrix, _Bz);
                 
       }    
         
-      if( error != IMarlinTrack::success ) {       
-        streamlog_out(DEBUG4) << "TruthTracker::createTrack: Track fit returns error code " << error << ". Number of hits = "<< hit_list.size() << std::endl;       
+      if( error != IMarlinTrack::success || Track->getNdf() < 0 ) {       
+        streamlog_out(DEBUG4) << "TruthTracker::createTrack: Track fit returns error code " << error << " NDF = " << Track->getNdf() <<  ". Number of hits = "<< hit_list_inner_r.size() << std::endl;       
         return ;
       }
       
@@ -633,8 +656,30 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
       throw ;
       
     }
+
+    std::vector<std::pair<EVENT::TrackerHit* , double> > hits_in_fit ;  
+    std::vector<std::pair<EVENT::TrackerHit* , double> > outliers ;
+    std::vector<TrackerHit*> all_hits;    
+    all_hits.reserve(300);
+
+    marlinTrk->getHitsInFit(hits_in_fit);
+            
+    for ( unsigned ihit = 0; ihit < hits_in_fit.size(); ++ihit) {
+      all_hits.push_back(hits_in_fit[ihit].first);
+    }
+    
+    MarlinTrk::addHitsToTrack(Track, all_hits, true,  cellID_encoder);
+    
+    marlinTrk->getOutliers(outliers);
+    
+    for ( unsigned ihit = 0; ihit < outliers.size(); ++ihit) {
+      all_hits.push_back(outliers[ihit].first);
+    }
+        
+    MarlinTrk::addHitsToTrack(Track, all_hits, false, cellID_encoder);
     
     delete marlinTrk;
+  
     
   } else {
     
@@ -667,6 +712,8 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
     MarlinTrk::addHitsToTrack(Track, hit_list, false, cellID_encoder);
     
   }
+  
+  streamlog_out( DEBUG3 ) << "Add Track " << Track << " to collection" << std::endl;  
   
   _trackVec->addElement(Track);
   
