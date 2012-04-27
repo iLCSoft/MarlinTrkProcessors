@@ -207,6 +207,7 @@ protected:
 //   int _nEventPrintout ;
   int _n_run ;
   int _n_evt ;
+  int _current_evt_number ;
   
   float _MCpThreshold ;
   bool  _FitTracksWithMarlinTrk;
