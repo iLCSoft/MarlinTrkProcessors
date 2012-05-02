@@ -726,6 +726,13 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
     MarlinTrk::addHitNumbersToTrack(Track, hit_list, true,  cellID_encoder);
     MarlinTrk::addHitNumbersToTrack(Track, hit_list, false, cellID_encoder);
     
+    for( unsigned i=0; i<hit_list.size(); i++ ){
+      
+      Track->addHit( hit_list[i] );
+      
+    }
+    
+    
   }
   
   streamlog_out( DEBUG3 ) << "Add Track " << Track << " to collection related to mcp -> " << mcp << std::endl;  
