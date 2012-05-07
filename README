@@ -18,6 +18,19 @@
  =============================================================================================================
 
   --------
+ | v01-05 |
+  -------- 
+
+ General:			 Added dependencies on KiTrack and KiTrackMarlin to MarlinTrkProcessors.
+ 
+ Refitting:			 Added the TrackSubsetProcessor, to get the best subset from a redundant set of tracks. 
+ 				 TruthTracker restructured to use new convenience methods from MarlinTrk to produce 
+				 cannonical trackstates. The diagonal elements of the Initial error matrix can now be set individually.
+
+ SiliconTracking_MarlinTrk	 Removed the creation of relations for MC <-> Tracks.
+& FullLDCTracking_MarlinTrk
+
+  --------
  | v01-04 |
   -------- 
 
