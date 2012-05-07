@@ -135,25 +135,34 @@ public:
 //    }
 //  };
   
+  
   struct compare_r {
     bool operator()( EVENT::TrackerHit* a, EVENT::TrackerHit* b)  const { 
-      double r_a_sqd = a->getPosition()[0] * a->getPosition()[0] + a->getPosition()[1] * a->getPosition()[1] ; 
-      double r_b_sqd = b->getPosition()[0] * b->getPosition()[0] + b->getPosition()[1] * b->getPosition()[1] ; 
-      return ( r_a_sqd < r_b_sqd ) ; 
+      //       double r_a_sqd = a->getPosition()[0] * a->getPosition()[0] + a->getPosition()[1] * a->getPosition()[1] ; 
+      //       double r_b_sqd = b->getPosition()[0] * b->getPosition()[0] + b->getPosition()[1] * b->getPosition()[1] ; 
+      //       return ( r_a_sqd < r_b_sqd ) ; 
+      //fg: try to work around a compiler issue with optimization that leads to seg faults with above code...
+      //    needs further investigation
+      return ( a == b  ?  false : 
+              ( a->getPosition()[0] * a->getPosition()[0] + a->getPosition()[1] * a->getPosition()[1] ) < 
+              ( b->getPosition()[0] * b->getPosition()[0] + b->getPosition()[1] * b->getPosition()[1] ) ) ; 
     }
   } ;
-  
+
   struct compare_r_reverse {
     bool operator()( EVENT::TrackerHit* a, EVENT::TrackerHit* b)  const { 
-      double r_a_sqd = a->getPosition()[0] * a->getPosition()[0] + a->getPosition()[1] * a->getPosition()[1] ; 
-      double r_b_sqd = b->getPosition()[0] * b->getPosition()[0] + b->getPosition()[1] * b->getPosition()[1] ; 
-      return ( r_a_sqd > r_b_sqd ) ; 
+      //       double r_a_sqd = a->getPosition()[0] * a->getPosition()[0] + a->getPosition()[1] * a->getPosition()[1] ; 
+      //       double r_b_sqd = b->getPosition()[0] * b->getPosition()[0] + b->getPosition()[1] * b->getPosition()[1] ; 
+      //       return ( r_a_sqd < r_b_sqd ) ; 
+      //fg: try to work around a compiler issue with optimization that leads to seg faults with above code...
+      //    needs further investigation
+      return ( a == b  ?  false : 
+              ( a->getPosition()[0] * a->getPosition()[0] + a->getPosition()[1] * a->getPosition()[1] ) > 
+              ( b->getPosition()[0] * b->getPosition()[0] + b->getPosition()[1] * b->getPosition()[1] ) ) ; 
     }
   } ;
-
   
-
-
+  
   
 protected:
   
