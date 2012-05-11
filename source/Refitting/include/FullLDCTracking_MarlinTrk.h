@@ -272,8 +272,11 @@ protected:
   void CleanUp();
   void MergeTPCandSiTracks();
   void MergeTPCandSiTracksII();
-  TrackExtended * CombineTracks(TrackExtended * tpcTrk, TrackExtended * siTrk);
-  TrackExtended * TrialCombineTracks(TrackExtended * tpcTrk, TrackExtended * siTrk);
+
+  TrackExtended * CombineTracks(TrackExtended * tpcTrk, TrackExtended * siTrk, bool testCombinationOnly=false );
+
+//  TrackExtended * TrialCombineTracks(TrackExtended * tpcTrk, TrackExtended * siTrk);
+
   void Sorting(TrackExtendedVec & trackVec);
   void SelectCombinedTracks();
   void AddNotCombinedTracks();
@@ -408,7 +411,17 @@ protected:
   float _maxHitDistanceCutHighPtMerge;
   float _maxFractionOfOutliersCutHighPtMerge;
   
- 
+  float _initialTrackError_d0;
+  float _initialTrackError_phi0;
+  float _initialTrackError_omega;
+  float _initialTrackError_z0;
+  float _initialTrackError_tanL;
+  
+  double _maxChi2PerHit;
+
+  bool _runMarlinTrkDiagnostics;
+  std::string _MarlinTrkDiagnosticsName;
+  
   int _storeHitsInFit;
   
   int _nHitsExtrapolation;
