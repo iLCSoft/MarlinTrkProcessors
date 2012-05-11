@@ -127,7 +127,7 @@ class SpacePointBuilder : public Processor {
             /(line b)
     
      \endverbatim
-   * (If this sketch looks like shit, you probably read this in doxygen and it still needs to be formatted in a
+   * (If this sketch looks terrible, you probably read this in doxygen and it still needs to be formatted in a
    * way, that it still looks sensible in doxygen.)
    * 
    * @param P1 a point on the first line
@@ -136,11 +136,33 @@ class SpacePointBuilder : public Processor {
    * @param point the reference to a point where the result will be stored
    */
   static int calculatePointBetweenTwoLines( 
-    const CLHEP::Hep3Vector& P1, 
-    const CLHEP::Hep3Vector& V1, 
-    const CLHEP::Hep3Vector& P2, 
-    const CLHEP::Hep3Vector& V2, 
-    CLHEP::Hep3Vector& point );
+                                           const CLHEP::Hep3Vector& P1, 
+                                           const CLHEP::Hep3Vector& V1, 
+                                           const CLHEP::Hep3Vector& P2, 
+                                           const CLHEP::Hep3Vector& V2, 
+                                           CLHEP::Hep3Vector& point );
+
+  
+  
+  /** Calculates the intersection of a line L and line PAPB ( strip on the first sensor ). 
+   *  L is constrained to pass through the point "Vertex" and bisect both lines PAPB ( strip on the first sensor ) and PCPD ( strip on the second sensor )
+   * @param PA start of the first line
+   * @param PB end of the first line
+   * @param PC start of the second line
+   * @param PD end of the second line
+   * @param Vertex the position 
+   * 
+   * @param point the reference to a point where the result will be stored
+   */
+
+   */
+  static int calculatePointBetweenTwoLines_UsingVertex( 
+                                                  const CLHEP::Hep3Vector& PA, 
+                                                  const CLHEP::Hep3Vector& PB, 
+                                                  const CLHEP::Hep3Vector& PC, 
+                                                  const CLHEP::Hep3Vector& PD,
+                                                  const CLHEP::Hep3Vector& Vertex,
+                                                  CLHEP::Hep3Vector& point);
   
   
   /** @return a spacepoint (in the form of a TrackerHitImpl* ) created from two TrackerHitPlane* which stand for si-strips */

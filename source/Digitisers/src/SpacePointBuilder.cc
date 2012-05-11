@@ -326,9 +326,10 @@ TrackerHitImpl* SpacePointBuilder::createSpacePoint( TrackerHitPlane* a , Tracke
   
   gear::MeasurementSurface const* ms1 = Global::GEAR->getMeasurementSurfaceStore().GetMeasurementSurface( a->getCellID0() );
   gear::CartesianCoordinateSystem* ccs1 = dynamic_cast< gear::CartesianCoordinateSystem* >( ms1->getCoordinateSystem() );
+ 
   CLHEP::Hep3Vector W1 = ccs1->getLocalZAxis(); // the vector W of the local coordinate system the measurement surface has
   CLHEP::Hep3Vector V1 = ccs1->getLocalYAxis(); // the vector V of the local coordinate system the measurement surface has
-  CLHEP::Hep3Vector U1 = ccs1->getLocalXAxis(); // the vector V of the local coordinate system the measurement surface has
+  CLHEP::Hep3Vector U1 = ccs1->getLocalXAxis(); // the vector U of the local coordinate system the measurement surface has
   
   const double* p2 = b->getPosition();
   double x2 = p2[0];
@@ -341,7 +342,7 @@ TrackerHitImpl* SpacePointBuilder::createSpacePoint( TrackerHitPlane* a , Tracke
   gear::CartesianCoordinateSystem* ccs2 = dynamic_cast< gear::CartesianCoordinateSystem* >( ms2->getCoordinateSystem() );
   CLHEP::Hep3Vector W2 = ccs2->getLocalZAxis(); // the vector W of the local coordinate system the measurement surface has
   CLHEP::Hep3Vector V2 = ccs2->getLocalYAxis(); // the vector V of the local coordinate system the measurement surface has
-  CLHEP::Hep3Vector U2 = ccs2->getLocalXAxis(); // the vector V of the local coordinate system the measurement surface has
+  CLHEP::Hep3Vector U2 = ccs2->getLocalXAxis(); // the vector U of the local coordinate system the measurement surface has
   
   streamlog_out( DEBUG2 ) << "\t ( " << x1 << " " << y1 << " " << z1 << " ) <--> ( " << x2 << " " << y2 << " " << z2 << " )\n";
   
@@ -380,9 +381,44 @@ TrackerHitImpl* SpacePointBuilder::createSpacePoint( TrackerHitPlane* a , Tracke
   Hep3Vector point;
   calculatePointBetweenTwoLines( P1, V1, P2, V2, point );
   
-  streamlog_out( DEBUG2 ) << "\tPosition of space point (global) : ( " << point.x() << " " << point.y() << " " << point.z() << " )\n";
+  streamlog_out( DEBUG2 ) << "\tStandard: Position of space point (global) : ( " << point.x() << " " << point.y() << " " << point.z() << " )\n";
  
   
+  Hep3Vector vertex(0.,0.,0.);
+  Hep3Vector L1 = ccs1->getLocalPoint(P1);
+  Hep3Vector L2 = ccs2->getLocalPoint(P2);
+
+  streamlog_out( DEBUG2 ) << " L1 = " << L1 << std::endl;
+  streamlog_out( DEBUG2 ) << " L2 = " << L2 << std::endl;
+    
+  L1.setY(-50.0);
+  Hep3Vector SL1 = L1;
+  L1.setY( 50.0);
+  Hep3Vector EL1 = L1;
+  
+  
+  L2.setY(-50.0);
+  Hep3Vector SL2 = L2;
+  L2.setY( 50.0);
+  Hep3Vector EL2 = L2;
+  
+  
+  Hep3Vector S1 = ccs1->getGlobalPoint(SL1);
+  Hep3Vector E1 = ccs1->getGlobalPoint(EL1);
+
+  Hep3Vector S2 = ccs2->getGlobalPoint(SL2);
+  Hep3Vector E2 = ccs2->getGlobalPoint(EL2);
+
+  streamlog_out( DEBUG2 ) << " S1 = " << S1 << std::endl;
+  streamlog_out( DEBUG2 ) << " E1 = " << E1 << std::endl;
+
+  streamlog_out( DEBUG2 ) << " S2 = " << S2 << std::endl;
+  streamlog_out( DEBUG2 ) << " E2 = " << E2 << std::endl;
+
+  
+  calculatePointBetweenTwoLines_UsingVertex( S1, E1, S2, E2, vertex, point );
+  
+  streamlog_out( DEBUG2 ) << "\tVertex: Position of space point (global) : ( " << point.x() << " " << point.y() << " " << point.z() << " )\n";
   
   // Check if the new hit is within the boundaries
   CLHEP::Hep3Vector localPoint1 = ccs1->getLocalPoint(point);
@@ -543,6 +579,71 @@ TrackerHitImpl* SpacePointBuilder::createSpacePointOld( TrackerHitPlane* a , Tra
   
 }
 */
+
+
+
+int SpacePointBuilder::calculatePointBetweenTwoLines_UsingVertex( 
+                                                const CLHEP::Hep3Vector& PA, 
+                                                const CLHEP::Hep3Vector& PB, 
+                                                const CLHEP::Hep3Vector& PC, 
+                                                const CLHEP::Hep3Vector& PD,
+                                                const CLHEP::Hep3Vector& Vertex,
+                                                CLHEP::Hep3Vector& point){
+
+  
+  // A general point on the line joining point PA to point PB is
+  // x, where 2*x=(1+m)*PA + (1-m)*PB. Similarly for 2*y=(1+n)*PC + (1-n)*PD.
+  // Suppose that v is the vertex. Requiring that the two 'general
+  // points' lie on a straight through v means that the vector x-v is a 
+  // multiple of y-v. This condition fixes the parameters m and n.
+  // We then return the 'space-point' x, supposed to be the layer containing PA and PB. 
+  // We require that -1<m<1, otherwise x lies 
+  // outside the segment a to b; and similarly for n.
+  
+  bool ok = true;
+  
+  CLHEP::Hep3Vector VAB(PA-PB);
+  CLHEP::Hep3Vector VCD(PC-PD);
+  
+  CLHEP::Hep3Vector  s(PA+PB-2*Vertex);   // twice the vector from vertex to midpoint
+  CLHEP::Hep3Vector  t(PC+PD-2*Vertex);   // twice the vector from vertex to midpoint
+  CLHEP::Hep3Vector  qs(VAB.cross(s));  
+  CLHEP::Hep3Vector  rt(VCD.cross(t));  
+  
+  double m = (-(s*rt)/(VAB*rt)); // ratio for first line
+  
+  double stripLengthTolerance = 0.1;
+  
+  double limit = 1. + stripLengthTolerance;
+  
+  if (m>limit || m<-1.*limit) {
+    
+    streamlog_out( DEBUG1 ) << "m' = " << m << " \n";
+    
+    ok = false;
+    
+  } else {
+    
+    double n = (-(t*qs)/(VCD*qs)); // ratio for second line
+
+	  if (n>limit || n<-1.*limit) {
+  
+      streamlog_out( DEBUG1 ) << "n' = " << n << " \n";
+      
+      ok = false;
+
+    }
+  }
+  
+  if (ok) {
+    point = 0.5*(PA + PB + m*VAB);
+  }
+  
+  return ok ? 0 : 1;
+  
+}
+
+
 
 int SpacePointBuilder::calculatePointBetweenTwoLines( const Hep3Vector& P1, const Hep3Vector& V1, const Hep3Vector& P2, const Hep3Vector& V2, Hep3Vector& point ){
   
