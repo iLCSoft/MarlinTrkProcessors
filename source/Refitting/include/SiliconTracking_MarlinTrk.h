@@ -368,6 +368,14 @@ protected:
   
   TrackExtendedVec _trackImplVec;
   
+  float _initialTrackError_d0;
+  float _initialTrackError_phi0;
+  float _initialTrackError_omega;
+  float _initialTrackError_z0;
+  float _initialTrackError_tanL;
+  
+  double _maxChi2PerHit;
+  
   float _cutOnD0, _cutOnZ0, _cutOnOmega, _cutOnPt;
   
   int _minimalHits;
@@ -376,6 +384,9 @@ protected:
   
   int _nTotalVTXHits,_nTotalFTDHits,_nTotalSITHits;
   int _useSIT;
+  
+  bool _runMarlinTrkDiagnostics;
+  std::string _MarlinTrkDiagnosticsName;
   
 //  int _createMap;
   
