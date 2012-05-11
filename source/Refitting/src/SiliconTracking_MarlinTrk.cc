@@ -2588,7 +2588,7 @@ void SiliconTracking_MarlinTrk::FinalRefit(LCCollectionVec* trk_col, LCCollectio
      
      
 #ifdef MARLINTRK_DIAGNOSTICS_ON
-     if (error != IMarlinTrack::success) {        
+     if ( error != IMarlinTrack::success && _runMarlinTrkDiagnostics ) {        
        void * dcv = _trksystem->getDiagnositicsPointer();
        DiagnosticsController* dc = static_cast<DiagnosticsController*>(dcv);
        dc->skip_current_track();
@@ -2596,8 +2596,33 @@ void SiliconTracking_MarlinTrk::FinalRefit(LCCollectionVec* trk_col, LCCollectio
 #endif
 
      
+     std::vector<std::pair<EVENT::TrackerHit* , double> > hits_in_fit ;  
+     std::vector<std::pair<EVENT::TrackerHit* , double> > outliers ;
+     std::vector<TrackerHit*> all_hits;    
+     all_hits.reserve(300);
+     
+     marlinTrk->getHitsInFit(hits_in_fit);
+     
+     for ( unsigned ihit = 0; ihit < hits_in_fit.size(); ++ihit) {
+       all_hits.push_back(hits_in_fit[ihit].first);
+     }
+     
+     UTIL::BitField64 cellID_encoder( lcio::ILDCellID0::encoder_string ) ; 
+     
+     MarlinTrk::addHitNumbersToTrack(Track, all_hits, true, cellID_encoder);
+     
+     marlinTrk->getOutliers(outliers);
+     
+     for ( unsigned ihit = 0; ihit < outliers.size(); ++ihit) {
+       all_hits.push_back(outliers[ihit].first);
+     }
+     
+     MarlinTrk::addHitNumbersToTrack(Track, all_hits, false, cellID_encoder);
+     
      delete marlinTrk;
 
+     
+     
      if( error != IMarlinTrack::success ) {       
             
        delete Track;
