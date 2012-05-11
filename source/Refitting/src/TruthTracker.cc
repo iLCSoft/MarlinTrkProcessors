@@ -175,9 +175,15 @@ TruthTracker::TruthTracker() : Processor("TruthTracker") {
                              _initialTrackError_tanL,
                              float(1.e2));
   
+  registerProcessorParameter( "MaxChi2PerHit",
+                             "Maximum Chi-squared value allowed when assigning a hit to a track",
+                             _maxChi2PerHit,
+                             double(1.e2));
+
+  
 #ifdef MARLINTRK_DIAGNOSTICS_ON
   
-  registerOptionalParameter("RunMarlinTrkDiagnostics", "Run MarlinTrk Diagnostics. MarlinTrk must be compiled with MARLINTRK_DIAGNOSTICS_ON defined", _runMarlinTrkDiagnostics, bool(true));
+  registerOptionalParameter("RunMarlinTrkDiagnostics", "Run MarlinTrk Diagnostics. MarlinTrk must be compiled with MARLINTRK_DIAGNOSTICS_ON defined", _runMarlinTrkDiagnostics, bool(false));
   
   registerOptionalParameter("DiagnosticsName", "Name of the root file and root tree if running Diagnostics", _MarlinTrkDiagnosticsName, std::string("TruthTrackerDiagnostics"));    
   
@@ -317,32 +323,32 @@ void TruthTracker::processEvent( LCEvent * evt ) {
             << simhitB->getMCParticle() << "\n";
           
           
-#ifdef MARLINTRK_DIAGNOSTICS_ON
-          
-          // set the pointer to the simhit via lcio extention MCTruth4HitExt
-          
-          //Split it up and add both hits to the MarlinTrk
-          const LCObjectVec rawObjects = trkhit->getRawHits();
-          
-          for( unsigned k=0; k< rawObjects.size(); k++ ){
-            
-            TrackerHit* rawHit = dynamic_cast< TrackerHit* >( rawObjects[k] );
-            if( rawHit ){
-              
-              if( rawHit->getCellID0() == simhitA->getCellID0() ) {
-                streamlog_out( DEBUG4 ) << "link simhit = " << simhitA << " Cell ID = " << simhitA->getCellID0() << " with trkhit = " << rawHit << " Cell ID = " <<  rawHit->getCellID0() << std::endl;     
-                rawHit->ext<MarlinTrk::MCTruth4HitExt>() = new MarlinTrk::MCTruth4HitExtStruct;    
-                rawHit->ext<MarlinTrk::MCTruth4HitExt>()->simhit = simhitA;                 
-              }
-              if( rawHit->getCellID0() == simhitB->getCellID0() ) {
-                streamlog_out( DEBUG4 ) << "link simhit = " << simhitB << " Cell ID = " << simhitB->getCellID0() << " with trkhit = " << rawHit << " Cell ID = " <<  rawHit->getCellID0() << std::endl;     
-                rawHit->ext<MarlinTrk::MCTruth4HitExt>() = new MarlinTrk::MCTruth4HitExtStruct;    
-                rawHit->ext<MarlinTrk::MCTruth4HitExt>()->simhit = simhitB;                 
-              }
-              
-            } 
-          }    
-#endif  
+//#ifdef MARLINTRK_DIAGNOSTICS_ON
+//          
+//          // set the pointer to the simhit via lcio extention MCTruth4HitExt
+//          
+//          //Split it up and add both hits to the MarlinTrk
+//          const LCObjectVec rawObjects = trkhit->getRawHits();
+//          
+//          for( unsigned k=0; k< rawObjects.size(); k++ ){
+//            
+//            TrackerHit* rawHit = dynamic_cast< TrackerHit* >( rawObjects[k] );
+//            if( rawHit ){
+//              
+//              if( rawHit->getCellID0() == simhitA->getCellID0() ) {
+//                streamlog_out( DEBUG4 ) << "link simhit = " << simhitA << " Cell ID = " << simhitA->getCellID0() << " with trkhit = " << rawHit << " Cell ID = " <<  rawHit->getCellID0() << std::endl;     
+//                rawHit->ext<MarlinTrk::MCTruth4HitExt>() = new MarlinTrk::MCTruth4HitExtStruct;    
+//                rawHit->ext<MarlinTrk::MCTruth4HitExt>()->simhit = simhitA;                 
+//              }
+//              if( rawHit->getCellID0() == simhitB->getCellID0() ) {
+//                streamlog_out( DEBUG4 ) << "link simhit = " << simhitB << " Cell ID = " << simhitB->getCellID0() << " with trkhit = " << rawHit << " Cell ID = " <<  rawHit->getCellID0() << std::endl;     
+//                rawHit->ext<MarlinTrk::MCTruth4HitExt>() = new MarlinTrk::MCTruth4HitExtStruct;    
+//                rawHit->ext<MarlinTrk::MCTruth4HitExt>()->simhit = simhitB;                 
+//              }
+//              
+//            } 
+//          }    
+//#endif  
           
           
           
@@ -357,10 +363,10 @@ void TruthTracker::processEvent( LCEvent * evt ) {
           SimTrackerHit* simhit = dynamic_cast<SimTrackerHit*>(to.at(0));
           simHitTrkHit.push_back(std::make_pair(simhit, trkhit));
           
-#ifdef MARLINTRK_DIAGNOSTICS_ON
-          trkhit->ext<MarlinTrk::MCTruth4HitExt>() = new MarlinTrk::MCTruth4HitExtStruct;    
-          trkhit->ext<MarlinTrk::MCTruth4HitExt>()->simhit = simhit;  
-#endif       
+//#ifdef MARLINTRK_DIAGNOSTICS_ON
+//          trkhit->ext<MarlinTrk::MCTruth4HitExt>() = new MarlinTrk::MCTruth4HitExtStruct;    
+//          trkhit->ext<MarlinTrk::MCTruth4HitExt>()->simhit = simhit;  
+//#endif       
         }
         else{ streamlog_out( DEBUG0 ) << "TrackerHit discarded, because it is related to " << to.size() << "SimTrackerHits. It should be 1!\n"; }
         
@@ -637,11 +643,11 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
         
         
         
-        error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, hit_list_inner_r, Track, fit_backwards, prefit_trackState, _Bz);
+        error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, hit_list_inner_r, Track, fit_backwards, prefit_trackState, _Bz, _maxChi2PerHit);
                 
       } else {
         
-        error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, hit_list_inner_r, Track, fit_backwards, covMatrix, _Bz);
+        error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, hit_list_inner_r, Track, fit_backwards, covMatrix, _Bz, _maxChi2PerHit);
                 
       }    
         
@@ -651,7 +657,7 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
       }
       
 #ifdef MARLINTRK_DIAGNOSTICS_ON
-      if (error != 0) {        
+      if (error != IMarlinTrack::success) {        
         void * dcv = _trksystem->getDiagnositicsPointer();
         DiagnosticsController* dc = static_cast<DiagnosticsController*>(dcv);
         dc->skip_current_track();

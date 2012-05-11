@@ -236,6 +236,7 @@ protected:
   float _initialTrackError_z0;
   float _initialTrackError_tanL;
 
+  double _maxChi2PerHit;
   
   bool _create_prefit_using_MarlinTrk;
   
