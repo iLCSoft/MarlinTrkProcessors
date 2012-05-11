@@ -155,7 +155,6 @@ class SpacePointBuilder : public Processor {
    * @param point the reference to a point where the result will be stored
    */
 
-   */
   static int calculatePointBetweenTwoLines_UsingVertex( 
                                                   const CLHEP::Hep3Vector& PA, 
                                                   const CLHEP::Hep3Vector& PB, 
