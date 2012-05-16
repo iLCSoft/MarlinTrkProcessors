@@ -26,9 +26,13 @@
  Refitting:			 Added the TrackSubsetProcessor, to get the best subset from a redundant set of tracks. 
  				 TruthTracker restructured to use new convenience methods from MarlinTrk to produce 
 				 cannonical trackstates. The diagonal elements of the Initial error matrix can now be set individually.
+				 Fixed r_comparison sort problem.
 
- SiliconTracking_MarlinTrk	 Removed the creation of relations for MC <-> Tracks.
-& FullLDCTracking_MarlinTrk
+ SiliconTracking_MarlinTrk	 Use convenience functions for track fitting from MarlinTrk. Provide steering of initial covariance matrix,  				 
+& FullLDCTracking_MarlinTrk	 and max delta chi2 for adding hits. 
+  				 Removed the creation of relations for MC <-> Tracks.
+
+ SpacePointBuilder:		 Corrected bias in position by using vertex constraint	
 
   --------
  | v01-04 |
