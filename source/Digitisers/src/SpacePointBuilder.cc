@@ -77,6 +77,31 @@ SpacePointBuilder::SpacePointBuilder() : Processor("SpacePointBuilder") {
                             std::string("FTDSimHitSpacepointRelations"));
     
    
+  registerProcessorParameter("NominalVertexX",
+                             "The global x coordinate of the nominal vertex used for calculation of strip hit intersections",
+                             _nominal_vertex_x,
+                             float(0.0));
+
+  
+  registerProcessorParameter("NominalVertexY",
+                             "The global x coordinate of the nominal vertex used for calculation of strip hit intersections",
+                             _nominal_vertex_y,
+                             float(0.0));
+
+  
+  registerProcessorParameter("NominalVertexZ",
+                             "The global x coordinate of the nominal vertex used for calculation of strip hit intersections",
+                             _nominal_vertex_z,
+                             float(0.0));
+  
+  
+  registerProcessorParameter("StriplengthTolerance",
+                             "Tolerance added to the strip length when calculating strip hit intersections",
+                             _striplength_tolerance,
+                             float(0.1));
+
+
+  
 }
 
 
@@ -92,7 +117,8 @@ void SpacePointBuilder::init() {
   _nRun = 0 ;
   _nEvt = 0 ;
 
-
+  _nominal_vertex.set(_nominal_vertex_x, _nominal_vertex_y, _nominal_vertex_z);
+  
   //FIXME:SJA: if we want the surface store to be filled we need to create an instance of MarlinTrk implemented with KalTest/KalDet
   MarlinTrk::IMarlinTrkSystem* trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( "KalTest" , marlin::Global::GEAR , "" ) ;
   
@@ -175,7 +201,8 @@ void SpacePointBuilder::processEvent( LCEvent * evt ) {
       
     }
     
-    
+
+    UTIL::BitField64  cellID( ILDCellID0::encoder_string );
     
     // now loop over all CellID0s
     for( it= map_cellID0_hits.begin(); it!= map_cellID0_hits.end(); it++ ){
@@ -214,12 +241,41 @@ void SpacePointBuilder::processEvent( LCEvent * evt ) {
             
             
             TrackerHitPlane* hitBack = hitsBack[j];
+                        
+
+            cellID.setValue( cellID0 );
             
+            int subdet = cellID[ ILDCellID0::subdet ] ;
+
+            double strip_length_mm = 0;
+
+            if (subdet == ILDDetID::SIT) {
+              
+              strip_length_mm = Global::GEAR->getSITParameters().getDoubleVal("strip_length_mm");
+
+            } else if (subdet == ILDDetID::SET) {
+
+              strip_length_mm = Global::GEAR->getSETParameters().getDoubleVal("strip_length_mm");
+
+            } else if (subdet == ILDDetID::FTD) {
+
+              strip_length_mm = Global::GEAR->getFTDParameters().getDoubleVal("strip_length_mm");
+
+            } else {
+              
+              std::stringstream errorMsg;
+              errorMsg << "SpacePointBuilder::processEvent: unsupported detector ID = " << subdet << ": file " << __FILE__ << " line " << __LINE__ ;
+              throw Exception( errorMsg.str() );  
+
+            }
+
+            // add tolerence 
+            strip_length_mm = strip_length_mm * (1.0 + _striplength_tolerance);
             
-            TrackerHitImpl* spacePoint = createSpacePoint( hitFront, hitBack );
+            TrackerHitImpl* spacePoint = createSpacePoint( hitFront, hitBack, strip_length_mm);
+
             if ( spacePoint == NULL ) continue;
-            
-            
+                        
             CellIDEncoder<TrackerHitImpl> cellid_encoder( ILDCellID0::encoder_string , spCol );
             cellid_encoder.setValue( cellID0 ); //give the new hit, the CellID0 of the front hit
             cellid_encoder.setCellID( spacePoint ) ;
@@ -314,41 +370,41 @@ void SpacePointBuilder::end(){
    
 }
 
-TrackerHitImpl* SpacePointBuilder::createSpacePoint( TrackerHitPlane* a , TrackerHitPlane* b ){
+TrackerHitImpl* SpacePointBuilder::createSpacePoint( TrackerHitPlane* a , TrackerHitPlane* b, double stripLength ){
   
-  const double* p1 = a->getPosition();
-  double x1 = p1[0];
-  double y1 = p1[1];
-  double z1 = p1[2];
-  Hep3Vector P1( x1,y1,z1 );
+  const double* pa = a->getPosition();
+  double xa = pa[0];
+  double ya = pa[1];
+  double za = pa[2];
+  Hep3Vector PA( xa,ya,za );
   double du_a = a->getdU();  
   
   
-  gear::MeasurementSurface const* ms1 = Global::GEAR->getMeasurementSurfaceStore().GetMeasurementSurface( a->getCellID0() );
-  gear::CartesianCoordinateSystem* ccs1 = dynamic_cast< gear::CartesianCoordinateSystem* >( ms1->getCoordinateSystem() );
+  gear::MeasurementSurface const* msA = Global::GEAR->getMeasurementSurfaceStore().GetMeasurementSurface( a->getCellID0() );
+  gear::CartesianCoordinateSystem* ccsA = dynamic_cast< gear::CartesianCoordinateSystem* >( msA->getCoordinateSystem() );
  
-  CLHEP::Hep3Vector W1 = ccs1->getLocalZAxis(); // the vector W of the local coordinate system the measurement surface has
-  CLHEP::Hep3Vector V1 = ccs1->getLocalYAxis(); // the vector V of the local coordinate system the measurement surface has
-  CLHEP::Hep3Vector U1 = ccs1->getLocalXAxis(); // the vector U of the local coordinate system the measurement surface has
+  CLHEP::Hep3Vector WA = ccsA->getLocalZAxis(); // the vector W of the local coordinate system the measurement surface has
+  CLHEP::Hep3Vector VA = ccsA->getLocalYAxis(); // the vector V of the local coordinate system the measurement surface has
+  CLHEP::Hep3Vector UA = ccsA->getLocalXAxis(); // the vector U of the local coordinate system the measurement surface has
   
-  const double* p2 = b->getPosition();
-  double x2 = p2[0];
-  double y2 = p2[1];
-  double z2 = p2[2];
-  Hep3Vector P2( x2,y2,z2 );  
+  const double* pb = b->getPosition();
+  double xb = pb[0];
+  double yb = pb[1];
+  double zb = pb[2];
+  Hep3Vector PB( xb,yb,zb );  
   double du_b = b->getdU();  
   
-  gear::MeasurementSurface const* ms2 = Global::GEAR->getMeasurementSurfaceStore().GetMeasurementSurface( b->getCellID0() );
-  gear::CartesianCoordinateSystem* ccs2 = dynamic_cast< gear::CartesianCoordinateSystem* >( ms2->getCoordinateSystem() );
-  CLHEP::Hep3Vector W2 = ccs2->getLocalZAxis(); // the vector W of the local coordinate system the measurement surface has
-  CLHEP::Hep3Vector V2 = ccs2->getLocalYAxis(); // the vector V of the local coordinate system the measurement surface has
-  CLHEP::Hep3Vector U2 = ccs2->getLocalXAxis(); // the vector U of the local coordinate system the measurement surface has
+  gear::MeasurementSurface const* msB = Global::GEAR->getMeasurementSurfaceStore().GetMeasurementSurface( b->getCellID0() );
+  gear::CartesianCoordinateSystem* ccsB = dynamic_cast< gear::CartesianCoordinateSystem* >( msB->getCoordinateSystem() );
+  CLHEP::Hep3Vector WB = ccsB->getLocalZAxis(); // the vector W of the local coordinate system the measurement surface has
+  CLHEP::Hep3Vector VB = ccsB->getLocalYAxis(); // the vector V of the local coordinate system the measurement surface has
+  CLHEP::Hep3Vector UB = ccsB->getLocalXAxis(); // the vector U of the local coordinate system the measurement surface has
   
-  streamlog_out( DEBUG2 ) << "\t ( " << x1 << " " << y1 << " " << z1 << " ) <--> ( " << x2 << " " << y2 << " " << z2 << " )\n";
+  streamlog_out( DEBUG2 ) << "\t ( " << xa << " " << ya << " " << za << " ) <--> ( " << xb << " " << yb << " " << zb << " )\n";
   
   //////////////////////////////////////////////////////////////////////////////////////////////////////
   // First: check if the two measurement surfaces are parallel (i.e. the w are parallel or antiparallel)
-  double angle = fabs(W2.angle(W1));
+  double angle = fabs(WB.angle(WA));
   double angleMax = 1.*M_PI/180.;
   if(( angle > angleMax )&&( angle < M_PI-angleMax )){
     
@@ -362,7 +418,7 @@ TrackerHitImpl* SpacePointBuilder::createSpacePoint( TrackerHitPlane* a , Tracke
  
   //////////////////////////////////////////////////////////////////////////////////////////////////////
   // Next: check if the angle between the strips is not 0
-  angle = fabs(V2.angle(V1));
+  angle = fabs(VB.angle(VA));
   double angleMin= 1.*M_PI/180.;
   if(( angle < angleMin )||( angle > M_PI-angleMin )){
     
@@ -379,69 +435,86 @@ TrackerHitImpl* SpacePointBuilder::createSpacePoint( TrackerHitPlane* a , Tracke
   // Next we want to calculate the crossing point.
   
   Hep3Vector point;
-  calculatePointBetweenTwoLines( P1, V1, P2, V2, point );
-  
-  streamlog_out( DEBUG2 ) << "\tStandard: Position of space point (global) : ( " << point.x() << " " << point.y() << " " << point.z() << " )\n";
- 
-  
+
+//  calculatePointBetweenTwoLines( PA, VA, PB, VB, point );
+//  
+//  // we want to set the space point on the surface of the hit closest to the IP
+//  if (PA.mag2() < PB.mag2()) {
+//    calculatePointBetweenTwoLines( PA, VA, PB, VB, point );
+//  } else {
+//    calculatePointBetweenTwoLines( PB, VB, PA, VA, point );
+//  }
+//  
+//
+//  
+//  streamlog_out( DEBUG2 ) << "\tStandard: Position of space point (global) : ( " << point.x() << " " << point.y() << " " << point.z() << " )\n";
+   
   Hep3Vector vertex(0.,0.,0.);
-  Hep3Vector L1 = ccs1->getLocalPoint(P1);
-  Hep3Vector L2 = ccs2->getLocalPoint(P2);
+  Hep3Vector L1 = ccsA->getLocalPoint(PA);
+  Hep3Vector L2 = ccsB->getLocalPoint(PB);
 
   streamlog_out( DEBUG2 ) << " L1 = " << L1 << std::endl;
   streamlog_out( DEBUG2 ) << " L2 = " << L2 << std::endl;
-    
-  L1.setY(-50.0);
+      
+  L1.setY(-stripLength/2.0);
   Hep3Vector SL1 = L1;
-  L1.setY( 50.0);
+  L1.setY( stripLength/2.0);
   Hep3Vector EL1 = L1;
   
   
-  L2.setY(-50.0);
+  L2.setY(-stripLength/2.0);
   Hep3Vector SL2 = L2;
-  L2.setY( 50.0);
+  L2.setY( stripLength/2.0);
   Hep3Vector EL2 = L2;
   
   
-  Hep3Vector S1 = ccs1->getGlobalPoint(SL1);
-  Hep3Vector E1 = ccs1->getGlobalPoint(EL1);
+  Hep3Vector S1 = ccsA->getGlobalPoint(SL1);
+  Hep3Vector E1 = ccsA->getGlobalPoint(EL1);
 
-  Hep3Vector S2 = ccs2->getGlobalPoint(SL2);
-  Hep3Vector E2 = ccs2->getGlobalPoint(EL2);
+  Hep3Vector S2 = ccsB->getGlobalPoint(SL2);
+  Hep3Vector E2 = ccsB->getGlobalPoint(EL2);
 
+  streamlog_out( DEBUG2 ) << " stripLength = " << stripLength << std::endl;
+  
   streamlog_out( DEBUG2 ) << " S1 = " << S1 << std::endl;
   streamlog_out( DEBUG2 ) << " E1 = " << E1 << std::endl;
 
   streamlog_out( DEBUG2 ) << " S2 = " << S2 << std::endl;
   streamlog_out( DEBUG2 ) << " E2 = " << E2 << std::endl;
 
+  point.set(0.0, 0.0, 0.0);
   
-  calculatePointBetweenTwoLines_UsingVertex( S1, E1, S2, E2, vertex, point );
+  // we want to set the space point on the surface of the hit closest to the IP
+  if (PA.mag2() < PB.mag2()) {
+    calculatePointBetweenTwoLines_UsingVertex( S1, E1, S2, E2, vertex, point );
+  } else {
+    calculatePointBetweenTwoLines_UsingVertex( S2, E2, S1, E2, vertex, point );
+  }
   
   streamlog_out( DEBUG2 ) << "\tVertex: Position of space point (global) : ( " << point.x() << " " << point.y() << " " << point.z() << " )\n";
   
   // Check if the new hit is within the boundaries
-  CLHEP::Hep3Vector localPoint1 = ccs1->getLocalPoint(point);
-  localPoint1.setZ( 0. ); // we set w to 0 so it is in the plane ( we are only interested if u and v are in or out of range, to exclude w from the check it is set to 0)
+  CLHEP::Hep3Vector localPointA = ccsA->getLocalPoint(point);
+  localPointA.setZ( 0. ); // we set w to 0 so it is in the plane ( we are only interested if u and v are in or out of range, to exclude w from the check it is set to 0)
   
-  CLHEP::Hep3Vector localPoint2 = ccs2->getLocalPoint(point);
-  localPoint2.setZ( 0. ); // we set w to 0 so it is in the plane ( we are only interested if u and v are in or out of range, to exclude w from the check it is set to 0)
+  CLHEP::Hep3Vector localPointB = ccsB->getLocalPoint(point);
+  localPointB.setZ( 0. ); // we set w to 0 so it is in the plane ( we are only interested if u and v are in or out of range, to exclude w from the check it is set to 0)
   
   
-  if( !ms1->isLocalInBoundary( localPoint1 ) ){
+  if( !msA->isLocalInBoundary( localPointA ) ){
     
     _nOutOfBoundary++;
     streamlog_out( DEBUG2 ) << "\tSpacePoint position lies outside the boundary of the first layer: local coordinates are ( " 
-    << localPoint1.x() << " " << localPoint1.y() << " " << localPoint1.z() << " )\n\n";
+    << localPointA.x() << " " << localPointA.y() << " " << localPointA.z() << " )\n\n";
     
     return NULL;
     
   }
-  if( !ms2->isLocalInBoundary( localPoint2 ) ){
+  if( !msB->isLocalInBoundary( localPointB ) ){
     
     _nOutOfBoundary++;
     streamlog_out( DEBUG2 ) << "\tSecond hit is out of boundary: local coordinates are ( " 
-    << localPoint2.x() << " " << localPoint2.y() << " " << localPoint2.z() << " )\n\n";
+    << localPointB.x() << " " << localPointB.y() << " " << localPointB.z() << " )\n\n";
     
     return NULL;
     
@@ -463,22 +536,22 @@ TrackerHitImpl* SpacePointBuilder::createSpacePoint( TrackerHitPlane* a , Tracke
   if( fabs(du_a - du_b) > 1.0e-06 ){
     streamlog_out( ERROR ) << "\tThe measurement errors of the two 1D hits must be equal \n\n";    
     assert( fabs(du_a - du_b) > 1.0e-06 == false );
-    return NULL; //measurement plane non parallel or orthogonal don't create a spacepoint
+    return NULL; //measurement errors are not equal don't create a spacepoint
   }
  
   
   double du2 = du_a*du_a;
   
   // rotate the strip system back to double-layer wafer system
-  CLHEP::Hep3Vector u_sensor = U1 + U2;
-  CLHEP::Hep3Vector v_sensor = V1 + V2;
-  CLHEP::Hep3Vector w_sensor = W1 + W2;
+  CLHEP::Hep3Vector u_sensor = UA + UB;
+  CLHEP::Hep3Vector v_sensor = VA + VB;
+  CLHEP::Hep3Vector w_sensor = WA + WB;
   
   HepRotation rot_sensor( u_sensor, v_sensor, w_sensor );
   CLHEP::HepMatrix rot_sensor_matrix;
   rot_sensor_matrix = rot_sensor;
   
-  double cos2_alpha = V1.cos2Theta(v_sensor) ; // alpha = strip angle   
+  double cos2_alpha = VA.cos2Theta(v_sensor) ; // alpha = strip angle   
   double sin2_alpha = 1 - cos2_alpha ; 
   
   CLHEP::HepSymMatrix cov_plane(3,0); // u,v,w
@@ -487,7 +560,7 @@ TrackerHitImpl* SpacePointBuilder::createSpacePoint( TrackerHitPlane* a , Tracke
   cov_plane(2,2) = (0.5 * du2) / sin2_alpha;
   
   streamlog_out( DEBUG2 ) << "\t cov_plane  = " << cov_plane << "\n\n";  
-  streamlog_out( DEBUG2 ) << "\tstrip_angle = " << V1.angle(V2)/(M_PI/180) / 2.0 << " degrees \n\n";
+  streamlog_out( DEBUG2 ) << "\tstrip_angle = " << VA.angle(VB)/(M_PI/180) / 2.0 << " degrees \n\n";
   
   CLHEP::HepSymMatrix cov_xyz= cov_plane.similarity(rot_sensor_matrix);
   
@@ -611,10 +684,8 @@ int SpacePointBuilder::calculatePointBetweenTwoLines_UsingVertex(
   CLHEP::Hep3Vector  rt(VCD.cross(t));  
   
   double m = (-(s*rt)/(VAB*rt)); // ratio for first line
-  
-  double stripLengthTolerance = 0.1;
-  
-  double limit = 1. + stripLengthTolerance;
+    
+  double limit = 1.0;
   
   if (m>limit || m<-1.*limit) {
     

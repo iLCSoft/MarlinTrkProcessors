@@ -165,7 +165,7 @@ class SpacePointBuilder : public Processor {
   
   
   /** @return a spacepoint (in the form of a TrackerHitImpl* ) created from two TrackerHitPlane* which stand for si-strips */
-  TrackerHitImpl* createSpacePoint( TrackerHitPlane* a , TrackerHitPlane* b );
+  TrackerHitImpl* createSpacePoint( TrackerHitPlane* a , TrackerHitPlane* b, double stripLength );
   
 //   TrackerHitImpl* createSpacePointOld( TrackerHitPlane* a , TrackerHitPlane* b );
   
@@ -194,7 +194,14 @@ class SpacePointBuilder : public Processor {
   unsigned _nStripsTooParallel;
   unsigned _nPlanesNotParallel;
 
+  float _nominal_vertex_x;
+  float _nominal_vertex_y;
+  float _nominal_vertex_z;
 
+  CLHEP::Hep3Vector _nominal_vertex;
+
+  float _striplength_tolerance;
+  
 } ;
 
 #endif
