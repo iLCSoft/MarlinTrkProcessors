@@ -1062,10 +1062,36 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
     //           "  0  1.111   0.059      0.022    -0.54     0.61    -0.45    0.185
     
     for (int iTrk=0; iTrk<nelem; ++iTrk) {
+
       Track * tpcTrack = dynamic_cast<Track*>(col->getElementAt(iTrk));
-      TrackExtended * trackExt = new TrackExtended( tpcTrack );
+
       TrackerHitVec hitVec = tpcTrack->getTrackerHits();
       int nHits = int(hitVec.size());
+      
+      float d0TPC = tpcTrack->getD0();
+      float z0TPC = tpcTrack->getZ0();
+      float omegaTPC = tpcTrack->getOmega();
+      float phi0TPC = tpcTrack->getPhi();
+      float tanLTPC = tpcTrack->getTanLambda();
+      float Chi2TPC = tpcTrack->getChi2()/float(tpcTrack->getNdf());
+      const int ndfTPC = tpcTrack->getNdf();
+      
+      HelixClass helixTPC;
+      
+      helixTPC.Initialize_Canonical(phi0TPC,d0TPC,z0TPC,omegaTPC,tanLTPC,_bField);
+      
+      char strg[200];
+      
+      float pxTPC = helixTPC.getMomentum()[0];
+      float pyTPC = helixTPC.getMomentum()[1];
+      float pzTPC = helixTPC.getMomentum()[2];
+      const float ptot = sqrt(pxTPC*pxTPC+pyTPC*pyTPC+pzTPC*pzTPC);
+      sprintf(strg,"%3i  %9.3f  %9.3f  %9.3f  %7.2f  %7.2f  %7.2f %4i %4i %8.3f",iTrk,
+              ptot, d0TPC,z0TPC,pxTPC,pyTPC,pzTPC,nHits,ndfTPC,Chi2TPC);
+      streamlog_out(DEBUG3) << strg << std::endl;
+         
+      TrackExtended * trackExt = new TrackExtended( tpcTrack );
+   
       trackExt->setOmega(tpcTrack->getOmega());
       trackExt->setTanLambda(tpcTrack->getTanLambda());
       trackExt->setPhi(tpcTrack->getPhi());
@@ -1091,8 +1117,8 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
       trackExt->setCovMatrix(cov);
       trackExt->setNDF(tpcTrack->getNdf());
       trackExt->setChi2(tpcTrack->getChi2());            
-      char strg[200];
-      HelixClass helixTPC;
+ 
+   
       
       for (int iHit=0;iHit<nHits;++iHit) {
         TrackerHit * hit = hitVec[iHit];
@@ -1102,23 +1128,6 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
       }      
       
       
-      float d0TPC = trackExt->getD0();
-      float z0TPC = trackExt->getZ0();
-      float omegaTPC = trackExt->getOmega();
-      float phi0TPC = trackExt->getPhi();
-      float tanLTPC = trackExt->getTanLambda();
-      float Chi2TPC = trackExt->getChi2()/float(trackExt->getNDF());
-      const int ndfTPC = trackExt->getNDF();
-      
-      helixTPC.Initialize_Canonical(phi0TPC,d0TPC,z0TPC,omegaTPC,tanLTPC,_bField);
-      
-      float pxTPC = helixTPC.getMomentum()[0];
-      float pyTPC = helixTPC.getMomentum()[1];
-      float pzTPC = helixTPC.getMomentum()[2];
-      const float ptot = sqrt(pxTPC*pxTPC+pyTPC*pyTPC+pzTPC*pzTPC);
-      sprintf(strg,"%3i  %9.3f  %9.3f  %9.3f  %7.2f  %7.2f  %7.2f %4i %4i %8.3f",iTrk,
-              ptot, d0TPC,z0TPC,pxTPC,pyTPC,pzTPC,nHits,ndfTPC,Chi2TPC);
-      streamlog_out(DEBUG3) << strg << std::endl;
       
       _allTPCTracks.push_back( trackExt );                
     }      
@@ -1457,6 +1466,22 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
     return 0;
 
   }
+
+  // setup initial dummy covariance matrix
+  EVENT::FloatVec covMatrix;
+  covMatrix.resize(15);
+  
+  for (unsigned icov = 0; icov<covMatrix.size(); ++icov) {
+    covMatrix[icov] = 0;
+  }
+  
+  covMatrix[0]  = ( _initialTrackError_d0    ); //sigma_d0^2
+  covMatrix[2]  = ( _initialTrackError_phi0  ); //sigma_phi0^2
+  covMatrix[5]  = ( _initialTrackError_omega ); //sigma_omega^2
+  covMatrix[9]  = ( _initialTrackError_z0    ); //sigma_z0^2
+  covMatrix[14] = ( _initialTrackError_tanL  ); //sigma_tanl^2
+
+  pre_fit.setCovMatrix(covMatrix);
   
   error = MarlinTrk::createFit( trkHits, marlin_trk, &pre_fit, _bField, IMarlinTrack::backward , _maxChi2PerHit );
   
