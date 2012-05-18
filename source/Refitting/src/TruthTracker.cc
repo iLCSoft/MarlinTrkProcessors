@@ -585,7 +585,7 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
   }
   
   if (hit_list_inner_r.size() < 3) {
-    streamlog_out( MESSAGE ) << " Reject Track as the number of hits before the turn " << hit_list_inner_r.size() << " is less than 3 hits. Total delta phi before last hit = " << delta_phi << " . Total number of hits = " << hit_list.size()  << std::endl;
+    streamlog_out( DEBUG2 ) << " Reject Track as the number of hits before the turn " << hit_list_inner_r.size() << " is less than 3 hits. Total delta phi before last hit = " << delta_phi << " . Total number of hits = " << hit_list.size()  << std::endl;
     return;
   }
 
@@ -652,7 +652,7 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
       }    
         
       if( error != IMarlinTrack::success || Track->getNdf() < 0 ) {       
-        streamlog_out(MESSAGE) << "TruthTracker::createTrack: EVENT: << " << _current_evt_number << " >> Track fit returns error code " << error << " NDF = " << Track->getNdf() <<  ". Number of hits = "<< hit_list_inner_r.size() << std::endl;       
+        streamlog_out(DEBUG2) << "TruthTracker::createTrack: EVENT: << " << _current_evt_number << " >> Track fit returns error code " << error << " NDF = " << Track->getNdf() <<  ". Number of hits = "<< hit_list_inner_r.size() << std::endl;       
         return ;
       }
       
