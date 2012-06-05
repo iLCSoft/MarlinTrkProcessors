@@ -601,10 +601,25 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
     covMatrix[14] = ( _initialTrackError_tanL  ); //sigma_tanl^2
     
     
-    // hits are in reverse order 
+    // sort hits in R
+    std::vector< std::pair<float, EVENT::TrackerHit*> > r2_values;
+    r2_values.reserve(trkHits.size());
     
-    sort(trkHits.begin(), trkHits.end(), FullLDCTracking_MarlinTrk::compare_r() );
+    for (TrackerHitVec::iterator it=trkHits.begin(); it!=trkHits.end(); ++it) {
+      EVENT::TrackerHit* h = *it;
+      float r2 = h->getPosition()[0]*h->getPosition()[0]+h->getPosition()[1]+h->getPosition()[1];
+      r2_values.push_back(std::make_pair(r2, *it));
+    }
     
+    sort(r2_values.begin(),r2_values.end());
+    
+    trkHits.clear();
+    trkHits.reserve(r2_values.size());
+    
+    for (std::vector< std::pair<float, EVENT::TrackerHit*> >::iterator it=r2_values.begin(); it!=r2_values.end(); ++it) {
+      trkHits.push_back(it->second);
+    }
+          
     bool fit_backwards = IMarlinTrack::backward;
     
     MarlinTrk::IMarlinTrack* marlinTrk = _trksystem->createTrack();
@@ -3729,8 +3744,27 @@ void FullLDCTracking_MarlinTrk::AssignSiHitsToTracks(TrackerHitExtendedVec hitVe
         if( trkHits.size() < 3 ) return ;
         
         MarlinTrk::IMarlinTrack* marlin_trk = _trksystem->createTrack();
-        sort(trkHits.begin(), trkHits.end(), FullLDCTracking_MarlinTrk::compare_r() );
+
+	// sort the hits in R
+	std::vector< std::pair<float, EVENT::TrackerHit*> > r2_values;
+        r2_values.reserve(trkHits.size());
         
+        for (TrackerHitVec::iterator it=trkHits.begin(); it!=trkHits.end(); ++it) {
+	  EVENT::TrackerHit* h = *it;
+          float r2 = h->getPosition()[0]*h->getPosition()[0]+h->getPosition()[1]+h->getPosition()[1];
+          r2_values.push_back(std::make_pair(r2, *it));
+        }
+                
+        sort(r2_values.begin(),r2_values.end());
+        
+        trkHits.clear();
+        trkHits.reserve(r2_values.size());
+        
+        for (std::vector< std::pair<float, EVENT::TrackerHit*> >::iterator it=r2_values.begin(); it!=r2_values.end(); ++it) {
+          trkHits.push_back(it->second);
+        }
+
+               
         EVENT::TrackerHitVec::iterator it = trkHits.begin();
         
         streamlog_out(DEBUG2) << "Start Fitting: AddHits: number of hits to fit " << trkHits.size() << std::endl;

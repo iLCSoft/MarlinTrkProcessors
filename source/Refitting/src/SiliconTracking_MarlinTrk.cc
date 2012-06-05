@@ -2562,9 +2562,24 @@ void SiliconTracking_MarlinTrk::FinalRefit(LCCollectionVec* trk_col, LCCollectio
      covMatrix[14] = ( _initialTrackError_tanL  ); //sigma_tanl^2
 
 
-     // hits are in reverse order 
-
-     sort(trkHits.begin(), trkHits.end(), SiliconTracking_MarlinTrk::compare_r() );
+     std::vector< std::pair<float, EVENT::TrackerHit*> > r2_values;
+     r2_values.reserve(trkHits.size());
+     
+     for (TrackerHitVec::iterator it=trkHits.begin(); it!=trkHits.end(); ++it) {
+       EVENT::TrackerHit* h = *it;
+       float r2 = h->getPosition()[0]*h->getPosition()[0]+h->getPosition()[1]+h->getPosition()[1];
+       r2_values.push_back(std::make_pair(r2, *it));
+     }
+     
+     sort(r2_values.begin(),r2_values.end());
+     
+     trkHits.clear();
+     trkHits.reserve(r2_values.size());
+     
+     for (std::vector< std::pair<float, EVENT::TrackerHit*> >::iterator it=r2_values.begin(); it!=r2_values.end(); ++it) {
+       trkHits.push_back(it->second);
+     }
+           
      
      bool fit_backwards = IMarlinTrack::backward;
           

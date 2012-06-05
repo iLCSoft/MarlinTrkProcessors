@@ -608,14 +608,27 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
     covMatrix[5]  = ( _initialTrackError_omega ); //sigma_omega^2
     covMatrix[9]  = ( _initialTrackError_z0    ); //sigma_z0^2
     covMatrix[14] = ( _initialTrackError_tanL  ); //sigma_tanl^2
-    
-    
-      
+              
     streamlog_out( DEBUG3 ) << "Create track with " << hit_list_inner_r.size() << " hits" << std::endl;
+        
+    std::vector< std::pair<float, EVENT::TrackerHit*> > r2_values;
+    r2_values.reserve(hit_list_inner_r.size());
     
-    // First sort the hits in R, so here we are assuming that the track came from the IP and that we want to fit out to in. 
-    sort( hit_list_inner_r.begin(), hit_list_inner_r.end(), TruthTracker::compare_r() );
+    for (TrackerHitVec::iterator it=hit_list_inner_r.begin(); it!=hit_list_inner_r.end(); ++it) {
+      EVENT::TrackerHit* h = *it;
+      float r2 = h->getPosition()[0]*h->getPosition()[0]+h->getPosition()[1]+h->getPosition()[1];
+      r2_values.push_back(std::make_pair(r2, *it));
+    }
     
+    sort(r2_values.begin(),r2_values.end());
+    
+    hit_list_inner_r.clear();
+    hit_list_inner_r.reserve(r2_values.size());
+    
+    for (std::vector< std::pair<float, EVENT::TrackerHit*> >::iterator it=r2_values.begin(); it!=r2_values.end(); ++it) {
+      hit_list_inner_r.push_back(it->second);
+    }
+        
     TrackStateImpl* prefit_trackState = 0;
     
     bool fit_backwards = IMarlinTrack::backward;
@@ -810,9 +823,23 @@ void TruthTracker::createTrack_old( MCParticle* mcp, UTIL::BitField64& cellID_en
     
     
     // First sort the hits in R, so here we are assuming that the track came from the IP and that we want to fit out to in. 
-    sort( hit_list.begin(), hit_list.end(), TruthTracker::compare_r() );
+    std::vector< std::pair<float, EVENT::TrackerHit*> > r2_values;
     
+    for (TrackerHitVec::iterator it=hit_list.begin(); it!=hit_list.end(); ++it) {
+      EVENT::TrackerHit* h = *it;
+      float r2 = h->getPosition()[0]*h->getPosition()[0]+h->getPosition()[1]+h->getPosition()[1];
+      r2_values.push_back(std::make_pair(r2, *it));
+    }
     
+    sort(r2_values.begin(),r2_values.end());
+    
+    hit_list.clear();
+    hit_list.resize(r2_values.size());
+    
+    for (std::vector< std::pair<float, EVENT::TrackerHit*> >::iterator it=r2_values.begin(); it!=r2_values.end(); ++it) {
+      hit_list.push_back(it->second);
+    }
+        
     // loop over all the hits and create a list consisting only 2D hits 
     
     TrackerHitVec twoD_hits;
