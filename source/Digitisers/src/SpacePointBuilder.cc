@@ -241,8 +241,38 @@ void SpacePointBuilder::processEvent( LCEvent * evt ) {
             
             
             TrackerHitPlane* hitBack = hitsBack[j];
-                        
 
+            const LCObjectVec& simHitsFront = nav->getRelatedToObjects( hitFront );
+            const LCObjectVec& simHitsBack  = nav->getRelatedToObjects( hitBack );
+
+            streamlog_out( DEBUG2 ) << "attempt to create space point from:" << std::endl;
+            streamlog_out( DEBUG3 ) << " front hit: " << hitFront << " no. of simhit = " << simHitsFront.size() ;
+            if( simHitsFront.empty() == false ) { 
+              SimTrackerHit* simhit = static_cast<EVENT::SimTrackerHit*>(simHitsFront.at(0));
+              streamlog_out( DEBUG3 ) << " first simhit = " << simhit << " mcp = "<< simhit->getMCParticle() << " ( " << simhit->getPosition()[0] << " " << simhit->getPosition()[1] << " " << simhit->getPosition()[2] << " ) " ; 
+            }
+            streamlog_out( DEBUG3 ) << std::endl;            
+            streamlog_out( DEBUG3 ) << "  rear hit: " << hitBack << " no. of simhit = " << simHitsBack.size() ;
+            if( simHitsBack.empty() == false ) { 
+              SimTrackerHit* simhit = static_cast<EVENT::SimTrackerHit*>(simHitsBack.at(0));
+              streamlog_out( DEBUG3 ) << " first simhit = " << simhit << " mcp = "<< simhit->getMCParticle() << " ( " << simhit->getPosition()[0] << " " << simhit->getPosition()[1] << " " << simhit->getPosition()[2] << " ) " ; 
+            }            
+            streamlog_out( DEBUG3 ) << std::endl;
+            
+            bool ghost_hit = true;
+            
+            if (simHitsFront.size()==1 && simHitsBack.size() == 1) {
+
+              streamlog_out( DEBUG3 ) << "SpacePoint creation from two good hits:" << std::endl;
+
+                ghost_hit = static_cast<EVENT::SimTrackerHit*>(simHitsFront.at(0))->getMCParticle() != static_cast<EVENT::SimTrackerHit*>(simHitsBack.at(0))->getMCParticle();
+              
+            }
+            
+            if ( ghost_hit == true ) {
+              streamlog_out( DEBUG3 ) << "SpacePoint Ghosthit!" << std::endl;
+            }
+            
             cellID.setValue( cellID0 );
             
             int subdet = cellID[ ILDCellID0::subdet ] ;
@@ -274,56 +304,67 @@ void SpacePointBuilder::processEvent( LCEvent * evt ) {
             
             TrackerHitImpl* spacePoint = createSpacePoint( hitFront, hitBack, strip_length_mm);
 
-            if ( spacePoint == NULL ) continue;
-                        
-            CellIDEncoder<TrackerHitImpl> cellid_encoder( ILDCellID0::encoder_string , spCol );
-            cellid_encoder.setValue( cellID0 ); //give the new hit, the CellID0 of the front hit
-            cellid_encoder.setCellID( spacePoint ) ;
-            
-            // store the hits it's composed of:
-            spacePoint->rawHits().push_back( hitFront );
-            spacePoint->rawHits().push_back( hitBack );
-            
-            spacePoint->setType( UTIL::set_bit( spacePoint->getType() ,  ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT ) ) ;
-           
-            spCol->addElement( spacePoint ) ; 
-            
-            createdSpacePoints++;
-            
-            
-            ///////////////////////////////
-            // make the relations
-            const LCObjectVec& simHitsFront = nav->getRelatedToObjects( hitFront );
-            
-            if( simHitsFront.size() == 1 ){
+            if ( spacePoint != NULL ) { 
+
+              CellIDEncoder<TrackerHitImpl> cellid_encoder( ILDCellID0::encoder_string , spCol );
+              cellid_encoder.setValue( cellID0 ); //give the new hit, the CellID0 of the front hit
+              cellid_encoder.setCellID( spacePoint ) ;
               
-              SimTrackerHit* simHit = dynamic_cast< SimTrackerHit* >( simHitsFront[0] );
+              // store the hits it's composed of:
+              spacePoint->rawHits().push_back( hitFront );
+              spacePoint->rawHits().push_back( hitBack );
               
-              if( simHit != NULL ){
-                LCRelationImpl* rel = new LCRelationImpl;
-                rel->setFrom (spacePoint);
-                rel->setTo  (simHit);
-                rel->setWeight( 0.5 );
-                relCol->addElement(rel);
+              spacePoint->setType( UTIL::set_bit( spacePoint->getType() ,  ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT ) ) ;
+              
+              spCol->addElement( spacePoint ) ; 
+              
+              createdSpacePoints++;
+              
+              
+              ///////////////////////////////
+              // make the relations
+              
+              if( simHitsFront.size() == 1 ){
+                
+                SimTrackerHit* simHit = dynamic_cast< SimTrackerHit* >( simHitsFront[0] );
+                
+                if( simHit != NULL ){
+                  LCRelationImpl* rel = new LCRelationImpl;
+                  rel->setFrom (spacePoint);
+                  rel->setTo  (simHit);
+                  rel->setWeight( 0.5 );
+                  relCol->addElement(rel);
+                }
               }
-            }
-            
-            const LCObjectVec& rawObjectsBack = nav->getRelatedToObjects( hitBack );
-            
-            if( rawObjectsBack.size() == 1 ){
               
-              SimTrackerHit* simHit = dynamic_cast< SimTrackerHit* >( rawObjectsBack[0] );
+
               
-              if( simHit != NULL ){
-                LCRelationImpl* rel = new LCRelationImpl;
-                rel->setFrom (spacePoint);
-                rel->setTo  (simHit);
-                rel->setWeight( 0.5 );
-                relCol->addElement(rel);
+              if( simHitsBack.size() == 1 ){
+                
+                SimTrackerHit* simHit = dynamic_cast< SimTrackerHit* >( simHitsBack[0] );
+                
+                if( simHit != NULL ){
+                  LCRelationImpl* rel = new LCRelationImpl;
+                  rel->setFrom (spacePoint);
+                  rel->setTo  (simHit);
+                  rel->setWeight( 0.5 );
+                  relCol->addElement(rel);
+                }
               }
+             
+              
+
+
+            } else {
+                 
+              if ( ghost_hit == true ) {
+                streamlog_out( DEBUG3 ) << "Ghosthit correctly rejected" << std::endl;
+              } else {
+                streamlog_out( DEBUG3 ) << "True hit rejected!" << std::endl;
+              }
+              
+               //////////////////////////////////
             }
-            //////////////////////////////////
-            
             
           }
           
@@ -484,12 +525,8 @@ TrackerHitImpl* SpacePointBuilder::createSpacePoint( TrackerHitPlane* a , Tracke
 
   point.set(0.0, 0.0, 0.0);
   
-  // we want to set the space point on the surface of the hit closest to the IP
-  if (PA.mag2() < PB.mag2()) {
-    calculatePointBetweenTwoLines_UsingVertex( S1, E1, S2, E2, vertex, point );
-  } else {
-    calculatePointBetweenTwoLines_UsingVertex( S2, E2, S1, E2, vertex, point );
-  }
+  
+  calculatePointBetweenTwoLines_UsingVertex( S1, E1, S2, E2, vertex, point );
   
   streamlog_out( DEBUG2 ) << "\tVertex: Position of space point (global) : ( " << point.x() << " " << point.y() << " " << point.z() << " )\n";
   
@@ -671,17 +708,34 @@ int SpacePointBuilder::calculatePointBetweenTwoLines_UsingVertex(
   // multiple of y-v. This condition fixes the parameters m and n.
   // We then return the 'space-point' x, supposed to be the layer containing PA and PB. 
   // We require that -1<m<1, otherwise x lies 
-  // outside the segment a to b; and similarly for n.
+  // outside the segment PA to PB; and similarly for n.
   
   bool ok = true;
   
+//  streamlog_out( DEBUG1 ) << " Vertex = " << Vertex << std::endl; 
+//  
+//  streamlog_out( DEBUG1 ) << " PA = " << PA << std::endl;
+//  streamlog_out( DEBUG1 ) << " PB = " << PB << std::endl;
+//  streamlog_out( DEBUG1 ) << " PC = " << PC << std::endl;
+//  streamlog_out( DEBUG1 ) << " PD = " << PD << std::endl;
+  
   CLHEP::Hep3Vector VAB(PA-PB);
   CLHEP::Hep3Vector VCD(PC-PD);
+
+//  streamlog_out( DEBUG1 ) << " VAB = " << VAB << std::endl;
+//  streamlog_out( DEBUG1 ) << " VCD = " << VCD << std::endl;
   
   CLHEP::Hep3Vector  s(PA+PB-2*Vertex);   // twice the vector from vertex to midpoint
   CLHEP::Hep3Vector  t(PC+PD-2*Vertex);   // twice the vector from vertex to midpoint
+
   CLHEP::Hep3Vector  qs(VAB.cross(s));  
   CLHEP::Hep3Vector  rt(VCD.cross(t));  
+
+//  streamlog_out( DEBUG1 ) << " s = " << s << std::endl;
+//  streamlog_out( DEBUG1 ) << " t = " << t << std::endl;
+//  streamlog_out( DEBUG1 ) << " qs = " << qs << std::endl;
+//  streamlog_out( DEBUG1 ) << " rt = " << rt << std::endl;
+  
   
   double m = (-(s*rt)/(VAB*rt)); // ratio for first line
     
