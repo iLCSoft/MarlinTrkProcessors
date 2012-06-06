@@ -2284,8 +2284,8 @@ void FullLDCTracking_MarlinTrk::AddNotCombinedTracks() {
               if (_debug==3) {
                 GroupTracks * groupCur = combTrk->getGroupTracks();
                 TrackExtended * dummySi = groupCur->getTrackExtendedVec()[0];
-                int iopt = 8;
-                PrintOutMerging(trk,dummySi,iopt);
+                int iopt_temp = 8;
+                PrintOutMerging(trk,dummySi,iopt_temp);
               }
             }
           }
@@ -2299,8 +2299,8 @@ void FullLDCTracking_MarlinTrk::AddNotCombinedTracks() {
               if (dPt>deltaPtMin) {
                 GroupTracks * groupCur = combTrk->getGroupTracks();
                 TrackExtended * dummySi = groupCur->getTrackExtendedVec()[0];
-                int iopt = 8;
-                PrintOutMerging(trk,dummySi,iopt);
+                int iopt_temp = 8;
+                PrintOutMerging(trk,dummySi,iopt_temp);
               }
             }
           }
@@ -3027,7 +3027,7 @@ void FullLDCTracking_MarlinTrk::AddNotAssignedHits() {
           layer = layer / 2 ;
         }
         
-        if (layer >=0 && layer < _nLayersSIT) {
+        if (layer >=0 && layer < (int)_nLayersSIT) {
           nonAssignedSITHits[layer].push_back(trkHitExt);
         }
       }
@@ -3071,7 +3071,7 @@ void FullLDCTracking_MarlinTrk::AddNotAssignedHits() {
         }
         
         
-        if (layer >=0 && layer < _nLayersFTD)
+        if (layer >=0 && layer < (int)_nLayersFTD)
           nonAssignedFTDHits[layer].push_back(trkHitExt);
       }
     }
@@ -3109,7 +3109,7 @@ void FullLDCTracking_MarlinTrk::AddNotAssignedHits() {
         
         int layer = getLayerID(trkHit);
         
-        if (layer >=0 && layer < _nLayersVTX)
+        if (layer >=0 && layer < (int)_nLayersVTX)
           nonAssignedVTXHits[layer].push_back(trkHitExt);
       }
     }
@@ -3461,12 +3461,12 @@ void FullLDCTracking_MarlinTrk::AssignTPCHitsToTracks(TrackerHitExtendedVec hitV
     for (int iTrkGrp=0;iTrkGrp<nTrkGrp;++iTrkGrp) {
       TrackExtended * trkGrp = tracksInGroup[iTrkGrp];
       TrackerHitExtendedVec hitVecGrp = trkGrp->getTrackerHitExtendedVec();
-      int nHits = int(hitVecGrp.size());
+      int nHits_Grp = int(hitVecGrp.size());
       float zMin = 1.0e+20;
       float zMax = -1.0e+20;
       float startPoint[3] = {0.,0.,0.};
       float endPoint[3]   = {0.,0.,0.};
-      for (int iH=0;iH<nHits;++iH) {
+      for (int iH=0;iH<nHits_Grp;++iH) {
         TrackerHitExtended * trkHitExt = hitVecGrp[iH];
         float pos[3] = {0.,0.,0.};
         for (int iC=0;iC<3;++iC) 
@@ -3660,10 +3660,10 @@ void FullLDCTracking_MarlinTrk::AssignSiHitsToTracks(TrackerHitExtendedVec hitVe
         
         float d0 = trkExt->getD0();
         float z0 = trkExt->getZ0();
-        float tanLambda = trkExt->getTanLambda();
         float phi0 = trkExt->getPhi();
         float omega = trkExt->getOmega();
-        
+        tanLambda = trkExt->getTanLambda();
+                
         HelixClass helix;
         helix.Initialize_Canonical(phi0,d0,z0,omega,tanLambda,_bField);
         float distance = helix.getDistanceToPoint(pos,dcut);
@@ -3855,7 +3855,7 @@ void FullLDCTracking_MarlinTrk::AssignSiHitsToTracks(TrackerHitExtendedVec hitVe
         
         covMatrix.resize(15);
         
-        for (int icov = 0; icov<covMatrix.size(); ++icov) {
+        for (unsigned icov = 0; icov<covMatrix.size(); ++icov) {
           covMatrix[icov] = 0;
         }
         
@@ -4486,7 +4486,7 @@ void FullLDCTracking_MarlinTrk::setupGearGeom( const gear::GearMgr* gearMgr ){
     
     _nLayersFTD = pFTD_z->size();
     
-    for (int i = 0; i<_nLayersFTD; ++i) {
+    for (unsigned i = 0; i<_nLayersFTD; ++i) {
       _zLayerFTD.push_back((*pFTD_z)[i]);
     }
     
@@ -4572,7 +4572,7 @@ void FullLDCTracking_MarlinTrk::setupGearGeom( const gear::GearMgr* gearMgr ){
       //           which if traversed in the reverse direction to the next boundary then the track be propagated through carbon
       //           for a significant distance 
       
-      for(int disk=0; disk< _nLayersFTD; ++disk){
+      for(unsigned disk=0; disk< _nLayersFTD; ++disk){
         
         // numbers taken from the ILD_01 gear file for the sensitive part 
         _FTDgeo[disk].nPetals = ftdlayers.getNPetals(disk) ;    
@@ -4659,7 +4659,7 @@ void FullLDCTracking_MarlinTrk::setupGearGeom( const gear::GearMgr* gearMgr ){
         
       }
       
-      for (int disk=0; disk < _nLayersFTD; ++disk) {
+      for (unsigned disk=0; disk < _nLayersFTD; ++disk) {
         _zLayerFTD.push_back(_FTDgeo[disk].senZPos_even_petal1); // front petal even numbered
         _zLayerFTD.push_back(_FTDgeo[disk].senZPos_odd_petal1);  // front petal odd numbered
       }
