@@ -4531,7 +4531,7 @@ void FullLDCTracking_MarlinTrk::setupGearGeom( const gear::GearMgr* gearMgr ){
       const gear::ZPlanarLayerLayout& pSITLayerLayout = pSITDetMain.getZPlanarLayerLayout();
       
       // divide by two as we are treating the SIT as TWO stereo layers 
-      _nLayersSIT = pSITLayerLayout.getNLayers() / 2.0 ; 
+      _nLayersSIT = pSITLayerLayout.getNLayers() / 2 ; 
 //      _SITgeo.resize(_nLayersSIT);
 //      
 //      //SJA:FIXME: for now the support is taken as the same size the sensitive
