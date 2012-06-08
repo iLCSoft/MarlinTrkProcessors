@@ -15,6 +15,7 @@
 namespace EVENT{
   class MCParticle ;
   class Track ;
+  class LCEvent;
 }
 
 namespace IMPL {
@@ -140,11 +141,18 @@ protected:
   /** sets up the different collections */
   void SetupInputCollections( LCEvent * evt ) ;
   
-  void createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encoder, std::vector<TrackerHit*>& hit_list );
+  void createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encoder, std::vector< std::pair<SimTrackerHit*, TrackerHit* > >& hit_list );
   
   void createTrack_old( MCParticle* mcp, UTIL::BitField64& cellID_encoder, std::vector<TrackerHit*>& hit_list );
   
+  void createTrack_iterative( MCParticle* mcp, UTIL::BitField64& cellID_encoder,  std::vector< std::pair<SimTrackerHit*, TrackerHit* > >& hit_list );
   
+  void drawEvent();
+  
+  
+  /** input MCParticle collection
+   */
+  std::string  _colNameMCParticles;
   
   /** input TrackerHit collections
    */
@@ -153,6 +161,9 @@ protected:
   /** input relation collections 
    */
   std::vector< std::string > _colNamesTrackerHitRelations;
+
+  std::vector< LCCollection* > _colTrackerHits;
+  std::vector< LCRelationNavigator* > _navTrackerHitRel;
   
   /** output track collection 
    */
@@ -167,22 +178,25 @@ protected:
   
   int _nMCP;
   
-//   int _nEventPrintout ;
   int _n_run ;
   int _n_evt ;
-  int _current_evt_number ;
   
   float _MCpThreshold ;
-  bool  _FitTracksWithMarlinTrk;
+
+  bool _useMCParticleParametersFotInitOfFit;
   
   /** pointer to the IMarlinTrkSystem instance 
    */
   MarlinTrk::IMarlinTrkSystem* _trksystem ;
-  
+  bool _runMarlinTrkDiagnostics;
+  std::string _MarlinTrkDiagnosticsName;
+
+  bool _FitTracksWithMarlinTrk;
+  bool _create_prefit_using_MarlinTrk;
+    
   bool _MSOn ;
   bool _ElossOn ;
   bool _SmoothOn ;
-  bool _useMCParticleParametersFotInitOfFit;
 
   float _initialTrackError_d0;
   float _initialTrackError_phi0;
@@ -190,20 +204,20 @@ protected:
   float _initialTrackError_z0;
   float _initialTrackError_tanL;
 
+  bool  _UseIterativeFitting;
+  bool  _UseEventDisplay;
+  
   double _maxChi2PerHit;
-  
-  bool _create_prefit_using_MarlinTrk;
-  
+    
   double _Bz;
 
-  std::vector< LCCollection* > _colTrackerHits;
-  std::vector< LCRelationNavigator* > _navTrackerHitRel;
-  
-  bool _runMarlinTrkDiagnostics;
-  std::string _MarlinTrkDiagnosticsName;
-  
   unsigned _nCreatedTracks;
   
+  EVENT::LCEvent* _current_event;
+  
+  int _detector_model_for_drawing;
+  std::vector<int> _colours;  
+  float     _helix_max_r;
   
 } ;
 

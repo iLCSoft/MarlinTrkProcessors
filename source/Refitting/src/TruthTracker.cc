@@ -45,6 +45,9 @@
 #include <UTIL/ILDConf.h>
 #include <UTIL/BitSet32.h>
 
+#include <UTIL/Operators.h>
+#include "MarlinCED.h"
+
 using namespace lcio ;
 using namespace marlin ;
 
@@ -62,6 +65,12 @@ TruthTracker::TruthTracker() : Processor("TruthTracker") {
   _encoder = new UTIL::BitField64(lcio::ILDCellID0::encoder_string);
   
   // register steering parameters: name, description, class-variable, default value
+  
+  registerInputCollection("MCParticle",
+                           "MCParticleCollectionName", 
+                           "Name of the MCParticle input collection",
+                           _colNameMCParticles,
+                           std::string("MCParticle"));
   
   
   StringVec trackerHitsRelInputColNamesDefault;
@@ -180,6 +189,26 @@ TruthTracker::TruthTracker() : Processor("TruthTracker") {
                              _maxChi2PerHit,
                              double(1.e2));
 
+  registerProcessorParameter( "UseIterativeFitting",
+                             "Fit the Tracks with MarlinTrk using iterative approach. If 3 consecutive hits fail to be included then the current fit is written out and a new fit started. Use instead of FitTracksWithMarlinTrk.",
+                             _UseIterativeFitting,
+                             bool(false));
+
+  
+  registerProcessorParameter( "UseEventDisplay",
+                             "When using UseIterativeFitting show status of each track fit using CED event display.",
+                             _UseEventDisplay,
+                             bool(false));
+  
+  registerProcessorParameter("DetectorTypeForDraw",
+                             "Detector type sent to MarlinCED for drawing", 
+                             _detector_model_for_drawing,
+                             int(0));
+  
+  registerProcessorParameter( "HelixMaxR" , 
+                             "Max R (mm) Extent for drawing Helix if UseTPCForLimitsOfHelix false",
+                             _helix_max_r ,
+                             float(2000.0) ) ;
   
 #ifdef MARLINTRK_DIAGNOSTICS_ON
   
@@ -192,7 +221,7 @@ TruthTracker::TruthTracker() : Processor("TruthTracker") {
   _n_run = 0 ;
   _n_evt = 0 ;
   
-  
+  _current_event=0 ;
   
   
   
@@ -206,6 +235,26 @@ void TruthTracker::init() {
   
   // usually a good idea to
   printParameters() ;
+  
+  if (_UseEventDisplay) {
+    MarlinCED::init(this) ;
+  }
+
+  
+  _colours.push_back( 0xff00ff );
+  _colours.push_back( 0xffff00 );
+  _colours.push_back( 0x0000ff );
+  _colours.push_back( 0xff00ff );
+  _colours.push_back( 0x00ffff );
+  _colours.push_back( 0xffffff );
+  
+  _colours.push_back( 0xff88ff );
+  _colours.push_back( 0xffff88 );
+  _colours.push_back( 0x8888ff );
+  _colours.push_back( 0xff88ff );
+  _colours.push_back( 0x88ffff );
+  _colours.push_back( 0xffffff );
+
   
   //FIXME: for now do KalTest only - make this a steering parameter to use other fitters
   
@@ -242,11 +291,10 @@ void TruthTracker::processRunHeader( LCRunHeader* run) {
 
 void TruthTracker::processEvent( LCEvent * evt ) { 
   
-  
+  _current_event = evt;
   
   streamlog_out(DEBUG3) << "   processing event: " << _n_evt << std::endl ;
-  
-  _current_evt_number = evt->getEventNumber();
+    
   
   _nMCP = 0 ;
   
@@ -409,7 +457,8 @@ void TruthTracker::processEvent( LCEvent * evt ) {
   
   streamlog_out( DEBUG4 ) << "Add Tracker hits to Tracks" << std::endl;
   
-  std::vector<TrackerHit*> hit_list;
+  //  std::vector<TrackerHit*> hit_list;
+  std::vector< std::pair<SimTrackerHit*, TrackerHit* > > hit_list;
   
   if( simHitTrkHit.size() > 0) {
     
@@ -423,8 +472,8 @@ void TruthTracker::processEvent( LCEvent * evt ) {
       
       MCParticle* mcp = simhit->getMCParticle();
       double const* p    = mcp->getMomentum() ;
-      float  const pt2   = p[0]*p[0] + p[1]*p[1] ;
-      //         float  const pmag2 =  p[0]*p[0] + p[1]*p[1] + p[2]*p[2] ; 
+      float  const pmag2   = p[0]*p[0] + p[1]*p[1] + p[2]*p[2] ;
+//      float  const pt2   = p[0]*p[0] + p[1]*p[1] ;
       
       if ( i == 0 ) {
         mcplast = mcp ;
@@ -436,7 +485,14 @@ void TruthTracker::processEvent( LCEvent * evt ) {
         if ( hit_list.size() >= 3) {
           // create track from vector of hits                           
           streamlog_out( DEBUG2 ) << "Create New Track for MCParticle " << mcplast << std::endl;
-          this->createTrack(mcplast, cellID_encoder, hit_list );
+
+          if (_UseIterativeFitting) {
+            this->createTrack_iterative(mcplast, cellID_encoder, hit_list );
+          } else {
+            this->createTrack(mcplast, cellID_encoder, hit_list );
+          }
+          
+
           
         }
         
@@ -444,10 +500,11 @@ void TruthTracker::processEvent( LCEvent * evt ) {
         
       }
       
-      if( pt2  > (_MCpThreshold*_MCpThreshold) ) { // if momentum is greater than cut add hit to list
+      if( pmag2  > (_MCpThreshold*_MCpThreshold) ) { // if momentum is greater than cut add hit to list
         
         streamlog_out( DEBUG2 ) << "Add hit from det " <<  simhit->getCellID0()  << " to track from MCParticle " << mcp << " : current number of hits = " << hit_list.size() << std::endl;
-        hit_list.push_back( simHitTrkHit[i].second ) ;
+        std::pair<SimTrackerHit*, TrackerHit*> pair(simHitTrkHit[i]);
+        hit_list.push_back( pair ) ;
       }
       
       // set last mcparticle 
@@ -459,8 +516,11 @@ void TruthTracker::processEvent( LCEvent * evt ) {
     if( hit_list.size() >= 3 ) { 
       // then create a new track
       streamlog_out( DEBUG3 ) << "Create New Track for Last MCParticle " << mcplast << std::endl;
-      this->createTrack(mcplast, cellID_encoder, hit_list );
-      
+      if (_UseIterativeFitting) {
+        this->createTrack_iterative(mcplast, cellID_encoder, hit_list );
+      } else {
+        this->createTrack(mcplast, cellID_encoder, hit_list );
+      }
       
       hit_list.clear();  
       
@@ -535,7 +595,7 @@ void TruthTracker::SetupInputCollections( LCEvent * evt ) {
   
 }
 
-void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encoder, std::vector<TrackerHit*>& hit_list ) {
+void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encoder, std::vector< std::pair<SimTrackerHit*, TrackerHit* > >& hit_list ) {
   
   ///////////////////////////////////////////////////////
   // check inputs 
@@ -557,7 +617,6 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
   << " total number of hits = " << hit_list.size() 
   << "\n" << std::endl;
 
-  
   //////////////////////////////////////////////////////////////////////////////////////
   // Only fit the hits before looping over SJA:FIXME: FTD may need special treatment
   //////////////////////////////////////////////////////////////////////////////////////
@@ -572,14 +631,14 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
   
   for( unsigned ihit = 0; ihit < hit_list.size(); ++ihit){
     
-    float x = hit_list[ihit]->getPosition()[0];
-    float y = hit_list[ihit]->getPosition()[1];
-    float z = hit_list[ihit]->getPosition()[2];
+    float x = hit_list[ihit].second->getPosition()[0];
+    float y = hit_list[ihit].second->getPosition()[1];
+    float z = hit_list[ihit].second->getPosition()[2];
     
     delta_phi += fabsf(hel_copy.moveRefPoint(x, y, z));      
     
     if ( delta_phi < M_PI ) {
-      hit_list_inner_r.push_back(hit_list[ihit]);
+      hit_list_inner_r.push_back(hit_list[ihit].second);
     }
     
   }
@@ -665,7 +724,7 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
       }    
         
       if( error != IMarlinTrack::success || Track->getNdf() < 0 ) {       
-        streamlog_out(DEBUG2) << "TruthTracker::createTrack: EVENT: << " << _current_evt_number << " >> Track fit returns error code " << error << " NDF = " << Track->getNdf() <<  ". Number of hits = "<< hit_list_inner_r.size() << std::endl;       
+        streamlog_out(DEBUG2) << "TruthTracker::createTrack: EVENT: << " << _current_event->getEventNumber() << " >> Track fit returns error code " << error << " NDF = " << Track->getNdf() <<  ". Number of hits = "<< hit_list_inner_r.size() << std::endl;       
         return ;
       }
       
@@ -681,7 +740,7 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
       
     } catch (...) {
       
-      streamlog_out(ERROR) << "TruthTracker::createTrack: EVENT: << " << _current_evt_number << " >> exception caught and rethown. MCParticle = " << mcp << std::endl;       
+      streamlog_out(ERROR) << "TruthTracker::createTrack: EVENT: << " << _current_event->getEventNumber() << " >> exception caught and rethown. MCParticle = " << mcp << std::endl;       
       
 //      delete Track;
 //      delete marlinTrk;
@@ -718,23 +777,23 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
   } else {
     
     // use mcp pos and mom to set the track parameters
-    HelixTrack hel(mcp->getVertex(), mcp->getMomentum(), mcp->getCharge(), _Bz );
+    HelixTrack hel_tmp(mcp->getVertex(), mcp->getMomentum(), mcp->getCharge(), _Bz );
     
-    hel.moveRefPoint(0.0, 0.0, 0.0);
+    hel_tmp.moveRefPoint(0.0, 0.0, 0.0);
     
     TrackStateImpl* ts = new TrackStateImpl();
     
-    ts->setD0(hel.getD0());
-    ts->setPhi(hel.getPhi0());
-    ts->setOmega(hel.getOmega());
-    ts->setZ0(hel.getZ0());
-    ts->setTanLambda(hel.getTanLambda());
+    ts->setD0(hel_tmp.getD0());
+    ts->setPhi(hel_tmp.getPhi0());
+    ts->setOmega(hel_tmp.getOmega());
+    ts->setZ0(hel_tmp.getZ0());
+    ts->setTanLambda(hel_tmp.getTanLambda());
     
     float ref[3];
     
-    ref[0] = hel.getRefPointX() ;
-    ref[1] = hel.getRefPointY() ;
-    ref[2] = hel.getRefPointZ() ;
+    ref[0] = hel_tmp.getRefPointX() ;
+    ref[1] = hel_tmp.getRefPointY() ;
+    ref[2] = hel_tmp.getRefPointZ() ;
     
     ts->setReferencePoint(ref);    
     
@@ -742,12 +801,18 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
     
     Track->addTrackState(ts);
     
-    MarlinTrk::addHitNumbersToTrack(Track, hit_list, true,  cellID_encoder);
-    MarlinTrk::addHitNumbersToTrack(Track, hit_list, false, cellID_encoder);
+    std::vector<EVENT::TrackerHit*> added_hits;
+    
+    for (unsigned i=0; i<hit_list.size(); ++i) {
+      added_hits.push_back(hit_list[i].second);
+    }
+    
+    MarlinTrk::addHitNumbersToTrack(Track, added_hits, true,  cellID_encoder);
+    MarlinTrk::addHitNumbersToTrack(Track, added_hits, false, cellID_encoder);
     
     for( unsigned i=0; i<hit_list.size(); i++ ){
       
-      Track->addHit( hit_list[i] );
+      Track->addHit( hit_list[i].second );
       
     }
     
@@ -769,6 +834,491 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
   
 }
 
+
+void TruthTracker::createTrack_iterative( MCParticle* mcp, UTIL::BitField64& cellID_encoder,  std::vector< std::pair<SimTrackerHit*, TrackerHit* > >& hit_list ) {
+
+  
+  ///////////////////////////////////////////////////////
+  // check inputs 
+  ///////////////////////////////////////////////////////
+  
+  if( mcp == 0 ){
+    throw EVENT::Exception( std::string("TruthTracker::createTrack: MCParticle == NULL ")  ) ;
+  }
+  
+  if ( hit_list.empty() ) {
+   throw EVENT::Exception( std::string("TruthTracker::createTrack: Hitlist is empty")  ) ; 
+  }
+
+  int layer  = 9 ;
+  int size   = 3 ;
+  int marker = 1 ;
+  int ml     = 0 ;
+  float helix_max_r = 0;
+  float helix_max_z = 0;
+  int color = 0;
+  
+  if (_UseEventDisplay) {
+
+    MarlinCED::newEvent(this , _detector_model_for_drawing ) ;
+    
+//    CEDPickingHandler &pHandler=CEDPickingHandler::getInstance();
+//    
+//    pHandler.update(_current_event); 
+    
+
+    helix_max_z = fabsf(mcp->getEndpoint()[2]);
+    
+    streamlog_out(MESSAGE) << "Draw MCParticle : " << *mcp <<std::endl;  
+    
+    MarlinCED::add_layer_description("MCParticle_For_Fit", layer);
+    
+    MarlinCED::drawHelix( _Bz , mcp->getCharge(), mcp->getVertex()[0], mcp->getVertex()[1], mcp->getVertex()[2], 
+                         mcp->getMomentum()[0], mcp->getMomentum()[1], mcp->getMomentum()[2], layer , size , 0x7af774  ,
+                         0.0,  _helix_max_r ,
+                         helix_max_z, mcp->id() ) ;	
+    
+  
+    
+    const std::string  colName = "Hits_For_Fit";
+    
+  
+    size   = 10 ;
+    layer  = 11 ;
+    ml = marker | ( layer << CED_LAYER_SHIFT ) ;
+    
+    //ced_describe_layer( colName.c_str() ,layer);
+    MarlinCED::add_layer_description(colName, layer); 
+  
+  
+    color =  0xFFFFFFFFF;
+  
+    for(   std::vector< std::pair<SimTrackerHit*, TrackerHit* > >::const_iterator it = hit_list.begin();  it != hit_list.end() ; it++ ) {
+      
+      
+      TrackerHit* trkhit = (*it).second;
+      ced_hit_ID(trkhit->getPosition()[0],
+                 trkhit->getPosition()[1],
+                 trkhit->getPosition()[2],
+                 ml, size , color, trkhit->id() ) ;
+      
+    } // hits
+  }
+  
+  TrackStateImpl* prefit_trackState = 0;
+  
+  // setup initial dummy covariance matrix
+  EVENT::FloatVec initial_cov_matrix;
+  initial_cov_matrix.resize(15);
+  
+  for (unsigned icov = 0; icov<initial_cov_matrix.size(); ++icov) {
+    initial_cov_matrix[icov] = 0;
+  }
+  
+  initial_cov_matrix[0]  = ( _initialTrackError_d0    ); //sigma_d0^2
+  initial_cov_matrix[2]  = ( _initialTrackError_phi0  ); //sigma_phi0^2
+  initial_cov_matrix[5]  = ( _initialTrackError_omega ); //sigma_omega^2
+  initial_cov_matrix[9]  = ( _initialTrackError_z0    ); //sigma_z0^2
+  initial_cov_matrix[14] = ( _initialTrackError_tanL  ); //sigma_tanl^2
+
+  
+  // the hits are already ordered in time so there is no need to re-order them
+
+  MarlinTrk::IMarlinTrack* marlinTrk = 0;
+  
+  
+  TrackerHitVec added_hits;
+  added_hits.reserve(500);
+  TrackerHitVec outlier_hits;
+  outlier_hits.reserve(20);
+  
+  // used to keep track of whether hits are accepted by the fitter before fitting
+  bool isSuccessful = false; 
+  
+  // fit the last hit
+  
+  // to initialise we need to add at least one hit. 
+  // given that we need to also work with COMPOSITE_SPACEPOINT hits we will simply added both strip hits in this case.
+  // fit will then be called on the hits added and then addandFit will be used for the remaining hits to provide more feedback and control
+
+  bool fit_running = false;
+  unsigned index_of_last_added_hit = 0;
+  unsigned running_number_of_rejected_hits;
+  
+  // start by trying to add the last hit and break at the first accepted hit
+  for(int j=hit_list.size() - 1; j >= 0; --j) {
+    
+    TrackerHit* trkHit = hit_list[j].second;
+        
+    if (fit_running == false) { // try to start fit
+      
+      marlinTrk = _trksystem->createTrack();
+      
+      running_number_of_rejected_hits = 0;
+      
+      // Check for spacepoints
+      if( BitSet32( trkHit->getType() )[ UTIL::ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT ]   ){ //it is a composite spacepoint
+        
+        //Split it up and add both hits to the MarlinTrk
+        const LCObjectVec rawObjects = trkHit->getRawHits();
+        
+        for( unsigned k=0; k< rawObjects.size(); k++ ){
+          
+          TrackerHit* rawHit = dynamic_cast< TrackerHit* >( rawObjects[k] );
+          if( marlinTrk->addHit( rawHit ) == IMarlinTrack::success ){
+            
+            isSuccessful = true; //if at least one hit from the spacepoint gets added
+                      
+          }          
+        }
+      } 
+      else { // normal non-composite tracker hit
+        
+        isSuccessful = marlinTrk->addHit( trkHit ) == IMarlinTrack::success;
+        
+      }
+      
+      if ( isSuccessful ) {  
+        
+        added_hits.push_back( trkHit ); 
+        // at this point one hit added successfully so break the for loop
+        fit_running = true;
+       
+        // use the simhit to get the track parameters 
+        
+        SimTrackerHit* simhit_last = hit_list[j].first;
+        
+        double mcp_p_last[3];
+        
+        mcp_p_last[0] = simhit_last->getMomentum()[0];
+        mcp_p_last[1] = simhit_last->getMomentum()[1];
+        mcp_p_last[2] = simhit_last->getMomentum()[2];
+        
+        HelixTrack hel_at_end(simhit_last->getPosition(), mcp_p_last, mcp->getCharge(), _Bz );
+        
+        // set up the initial track and fit parameters
+        
+        const float referencePoint[3] = { hel_at_end.getRefPointX() , hel_at_end.getRefPointY() , hel_at_end.getRefPointZ() };
+        
+        prefit_trackState = new TrackStateImpl( lcio::TrackState::AtLastHit, 
+                                               hel_at_end.getD0(), 
+                                               hel_at_end.getPhi0(), 
+                                               hel_at_end.getOmega(), 
+                                               hel_at_end.getZ0(), 
+                                               hel_at_end.getTanLambda(), 
+                                               initial_cov_matrix, 
+                                               referencePoint) ;
+        
+                    
+        // We now have either one 2-D hit or two 1-D hits added. 
+        // So proceed with initialisation.
+        
+        streamlog_out( DEBUG3 ) << "\n Helix for prefit: " 
+        <<  " d0 =  " << prefit_trackState->getD0()
+        <<  " phi0 =  " << prefit_trackState->getPhi() 
+        <<  " omega =  " << prefit_trackState->getOmega() 
+        <<  " z0 =  " << prefit_trackState->getZ0() 
+        <<  " tanl =  " << prefit_trackState->getTanLambda() 
+        <<  " ref =  " <<  prefit_trackState->getReferencePoint()[0] << " " << prefit_trackState->getReferencePoint()[1] << " " << prefit_trackState->getReferencePoint()[2]
+        << "\n" << std::endl;
+        
+        // set the initial track state for the track    
+        marlinTrk->initialise( *prefit_trackState, _Bz, IMarlinTrack::backward ) ;
+        
+        if (_UseEventDisplay) {
+          
+          double pt = _Bz * 3e-4 / std::abs( prefit_trackState->getOmega() ) ;
+          double charge = ( prefit_trackState->getOmega() > 0. ?  1. : -1. ) ;
+          
+          double px = pt * std::cos(  prefit_trackState->getPhi() ) ;
+          double py = pt * std::sin(  prefit_trackState->getPhi() ) ;
+          double pz = pt * prefit_trackState->getTanLambda() ;
+          
+          // start point for drawing ( PCA to reference point )
+          
+          double xs = prefit_trackState->getReferencePoint()[0] -  prefit_trackState->getD0() * sin( prefit_trackState->getPhi() ) ;
+          double ys = prefit_trackState->getReferencePoint()[1] +  prefit_trackState->getD0() * cos( prefit_trackState->getPhi() ) ;
+          double zs = prefit_trackState->getReferencePoint()[2] +  prefit_trackState->getZ0() ;
+          
+          helix_max_z = 2500.0;
+          
+          streamlog_out(MESSAGE) << " Draw TrackState for Prefit : " << *prefit_trackState <<std::endl;  
+          
+          layer = 7;
+          size  = 2 ;
+      
+          MarlinCED::add_layer_description("prefit_trackState", layer);
+      
+          
+        
+          MarlinCED::drawHelix( _Bz , charge, xs, ys, zs, 
+                               px, py, pz, layer , size , 0xFFFFFF  ,
+                               0.0,  _helix_max_r ,
+                               helix_max_z, prefit_trackState->id() ) ;	
+          
+        }
+      
+        delete prefit_trackState;
+  
+        // filter the first 1 or 2 hits 
+        int fit_status = marlinTrk->fit(_maxChi2PerHit) ; 
+      
+        streamlog_out(DEBUG4) << "fit_status = " << fit_status << std::endl ;
+  
+        // check that first hit is accepted by the fit, if this fails we bail here as there is little chance of recovering. 
+  
+        if ( fit_status != IMarlinTrack::success ) { // no chance to initialise print warning and return
+          streamlog_out(WARNING) << "TruthTracker::createTrack Initial Hit not accepted by the fit, track droped." << std::endl;
+          delete marlinTrk;
+          return;
+        } 
+      
+        else {
+          index_of_last_added_hit = j;
+        }
+      } 
+    }
+    // continue to loop over the hits adding them to the fit
+    else { 
+              
+      isSuccessful = false;
+      
+      // Check for spacepoints
+      if( BitSet32( trkHit->getType() )[ UTIL::ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT ]   ){ //it is a composite spacepoint
+        
+        //Split it up and add both hits to the MarlinTrk
+        const LCObjectVec rawObjects = trkHit->getRawHits();        
+        
+        for( int k=rawObjects.size()-1 ; k >= 0; --k ){
+          
+          TrackerHit* rawHit = dynamic_cast< TrackerHit* >( rawObjects[k] );
+          
+          double chi2inc = 0;
+          
+          if( marlinTrk->addAndFit(rawHit,chi2inc,_maxChi2PerHit) == IMarlinTrack::success ){
+            
+            isSuccessful = true; //if at least one hit from the spacepoint gets added
+            
+          }
+        }      
+      }
+      // normal non composite tracker hit
+      else { 
+      
+        double chi2inc = 0;
+        
+        isSuccessful =  marlinTrk->addAndFit(trkHit,chi2inc,_maxChi2PerHit) == IMarlinTrack::success ;                    
+        
+      }
+      
+      if ( isSuccessful ) { 
+        added_hits.push_back( trkHit ); 
+        index_of_last_added_hit = j;
+        running_number_of_rejected_hits = 0;
+      } 
+      else {
+
+        ++running_number_of_rejected_hits;
+        
+        // if the running number of rejected hits reaches 3 try to save current track and start a new one
+        if (running_number_of_rejected_hits > 3) {
+        
+          if (added_hits.size()>3) {
+            
+            marlinTrk->smooth();
+            
+            IMPL::TrackImpl* Track = new IMPL::TrackImpl();
+            int error = MarlinTrk::finaliseLCIOTrack(marlinTrk, Track, added_hits); 
+
+            delete marlinTrk; marlinTrk=0;
+            
+            fit_running = false;
+            
+            if (error == IMarlinTrack::success) {
+
+              streamlog_out( DEBUG3 ) << "Add Track " << Track << " to collection related to mcp -> " << mcp << std::endl;  
+              
+              _trackVec->addElement(Track);
+              
+              LCRelationImpl* rel = new LCRelationImpl;
+              rel->setFrom (Track);
+              rel->setTo (mcp);
+              rel->setWeight(1.0);
+              _trackRelVec->addElement(rel);
+              
+              _nCreatedTracks++;
+
+              if (_UseEventDisplay) {
+
+                const EVENT::TrackState* trkStateIP = Track->getTrackState(EVENT::TrackState::AtIP);
+                
+                double pt = _Bz * 3e-4 / std::abs( trkStateIP->getOmega() ) ;
+                double charge = ( trkStateIP->getOmega() > 0. ?  1. : -1. ) ;
+                
+                double px = pt * std::cos(  trkStateIP->getPhi() ) ;
+                double py = pt * std::sin(  trkStateIP->getPhi() ) ;
+                double pz = pt * trkStateIP->getTanLambda() ;
+                
+                // start point for drawing ( PCA to reference point )
+                
+                double xs = trkStateIP->getReferencePoint()[0] -  trkStateIP->getD0() * sin( trkStateIP->getPhi() ) ;
+                double ys = trkStateIP->getReferencePoint()[1] +  trkStateIP->getD0() * cos( trkStateIP->getPhi() ) ;
+                double zs = trkStateIP->getReferencePoint()[2] +  trkStateIP->getZ0() ;
+                
+                helix_max_z = fabs(hit_list.back().second->getPosition()[2]);
+                
+                streamlog_out(MESSAGE) << "Draw Partial TrackState : " << *trkStateIP <<std::endl;  
+                
+                layer = 8;
+                size  = 4 ;
+                
+//                MarlinCED::add_layer_description("TrackState_From_Fit", layer);
+              
+                color = _colours[j%_colours.size()];
+              
+                MarlinCED::drawHelix( _Bz , charge, xs, ys, zs, 
+                                     px, py, pz, layer , size , color  ,
+                                     0.0,  helix_max_r ,
+                                     helix_max_z, trkStateIP->id() ) ;	
+                
+                ml = marker | ( layer+10 << CED_LAYER_SHIFT ) ;
+                
+                for(  std::vector<TrackerHit*>::const_iterator it = added_hits.begin();  it != added_hits.end() ; it++ ) {
+                  
+                ced_hit_ID((*it)->getPosition()[0],
+                           (*it)->getPosition()[1],
+                           (*it)->getPosition()[2],
+                           ml, 4 , color, (*it)->id() ) ;
+                  
+                } // hits
+              }                
+            }
+          }
+          // reject track
+          else {
+            
+            streamlog_out( DEBUG3 ) << "Reject Track : number of hits = " << added_hits.size() << " for MCParticle -> " << mcp << std::endl;  
+            
+#ifdef MARLINTRK_DIAGNOSTICS_ON
+
+            void * dcv = _trksystem->getDiagnositicsPointer();
+            DiagnosticsController* dc = static_cast<DiagnosticsController*>(dcv);
+            dc->skip_current_track();
+            
+#endif
+            
+            delete marlinTrk; marlinTrk=0;
+            
+          }
+          
+          // set the counter back to the one after the last hit added 
+          j = index_of_last_added_hit;
+          running_number_of_rejected_hits = 0;
+          added_hits.clear();
+          fit_running = false;
+          
+        }
+      }
+    }  
+    
+    if (j == 0) {
+
+      if (added_hits.size()>3) {
+
+        marlinTrk->smooth();
+        
+        IMPL::TrackImpl* Track = new IMPL::TrackImpl();
+        int error = MarlinTrk::finaliseLCIOTrack(marlinTrk, Track, added_hits); 
+        delete marlinTrk; marlinTrk=0;
+        
+        if (error == IMarlinTrack::success) {
+
+          streamlog_out( DEBUG3 ) << "Add Track " << Track << " to collection related to mcp -> " << mcp << std::endl;  
+          
+          _trackVec->addElement(Track);
+          
+          LCRelationImpl* rel = new LCRelationImpl;
+          rel->setFrom (Track);
+          rel->setTo (mcp);
+          rel->setWeight(1.0);
+          _trackRelVec->addElement(rel);
+          
+          _nCreatedTracks++;
+
+          if(_UseEventDisplay){
+          
+            const EVENT::TrackState* trkStateIP = Track->getTrackState(EVENT::TrackState::AtIP);
+                        
+            double pt = _Bz * 3e-4 / std::abs( trkStateIP->getOmega() ) ;
+            double charge = ( trkStateIP->getOmega() > 0. ?  1. : -1. ) ;
+            
+            double px = pt * std::cos(  trkStateIP->getPhi() ) ;
+            double py = pt * std::sin(  trkStateIP->getPhi() ) ;
+            double pz = pt * trkStateIP->getTanLambda() ;
+            
+            // start point for drawing ( PCA to reference point )
+            
+            double xs = trkStateIP->getReferencePoint()[0] -  trkStateIP->getD0() * sin( trkStateIP->getPhi() ) ;
+            double ys = trkStateIP->getReferencePoint()[1] +  trkStateIP->getD0() * cos( trkStateIP->getPhi() ) ;
+            double zs = trkStateIP->getReferencePoint()[2] +  trkStateIP->getZ0() ;
+            
+            helix_max_z = fabs(hit_list.back().second->getPosition()[2]);
+            
+            streamlog_out(MESSAGE) << " Draw Single TrackState : " << *trkStateIP <<std::endl;  
+            
+            layer = 8;
+            size  = 2;
+            
+            color = _colours[j%_colours.size()];
+            
+            MarlinCED::add_layer_description("TrackState_From_Fit", layer);
+            
+            MarlinCED::drawHelix( _Bz , charge, xs, ys, zs, 
+                                 px, py, pz, layer , size , color  ,
+                                 0.0,  _helix_max_r ,
+                                 helix_max_z, trkStateIP->id() ) ;	
+            
+            ml = marker | ( layer+10 << CED_LAYER_SHIFT ) ;
+          
+            for(  std::vector<TrackerHit*>::const_iterator it = added_hits.begin();  it != added_hits.end() ; it++ ) {
+              
+              ced_hit_ID((*it)->getPosition()[0],
+                         (*it)->getPosition()[1],
+                         (*it)->getPosition()[2],
+                         ml, 4 , color, (*it)->id() ) ;
+              
+            } // hits
+          } 
+        } 
+      }
+      // reject track
+      else {
+        
+        streamlog_out( DEBUG3 ) << "Reject Track : number of hits = " << added_hits.size() << " for MCParticle -> " << mcp << std::endl;  
+
+#ifdef MARLINTRK_DIAGNOSTICS_ON
+        
+        void * dcv = _trksystem->getDiagnositicsPointer();
+        DiagnosticsController* dc = static_cast<DiagnosticsController*>(dcv);
+        dc->skip_current_track();
+        
+#endif
+              
+        delete marlinTrk; marlinTrk=0;
+
+      }
+    }
+    
+  }   // end reverse loop over trakerhits 
+  
+  
+  if (_UseEventDisplay) {
+    this->drawEvent();
+  }
+
+  delete marlinTrk; // just to be sure
+  
+}
 
 void TruthTracker::createTrack_old( MCParticle* mcp, UTIL::BitField64& cellID_encoder, std::vector<TrackerHit*>& hit_list ) {
   
@@ -1241,16 +1791,16 @@ void TruthTracker::createTrack_old( MCParticle* mcp, UTIL::BitField64& cellID_en
     
     
     // use mcp pos and mom to set the track parameters
-    HelixTrack hel(mcp->getVertex(), mcp->getMomentum(), mcp->getCharge(), _Bz );
-    d0    = hel.getD0();
-    phi0  = hel.getPhi0();
-    omega = hel.getOmega();
-    z0    = hel.getZ0();
-    tanL  = hel.getTanLambda();
+    HelixTrack hel_tmp(mcp->getVertex(), mcp->getMomentum(), mcp->getCharge(), _Bz );
+    d0    = hel_tmp.getD0();
+    phi0  = hel_tmp.getPhi0();
+    omega = hel_tmp.getOmega();
+    z0    = hel_tmp.getZ0();
+    tanL  = hel_tmp.getTanLambda();
     
-    ref[0] = hel.getRefPointX() ;
-    ref[1] = hel.getRefPointY() ;
-    ref[2] = hel.getRefPointZ() ;
+    ref[0] = hel_tmp.getRefPointX() ;
+    ref[1] = hel_tmp.getRefPointY() ;
+    ref[2] = hel_tmp.getRefPointZ() ;
     
     Track->setD0(d0);
     Track->setPhi(phi0);
@@ -1352,6 +1902,75 @@ LCRelationNavigator* TruthTracker::GetRelations(LCEvent * evt , std::string RelN
 }
 
 
+void TruthTracker::drawEvent(){
+  
+   LCCollection* colMCP = GetCollection(_current_event, _colNameMCParticles);
+  
+  if ( colMCP ) {
+
+    for (int iMCP=0; iMCP<colMCP->getNumberOfElements() ; ++iMCP) {
+
+      MCParticle* mcp = dynamic_cast<MCParticle*>(colMCP->getElementAt(iMCP)) ;
+
+      float pmag2 = mcp->getMomentum()[0]*mcp->getMomentum()[0]
+      + mcp->getMomentum()[1]*mcp->getMomentum()[1] + mcp->getMomentum()[2]*mcp->getMomentum()[2];
+      
+      if ( fabs(mcp->getCharge())>0.01 && pmag2 > _MCpThreshold*_MCpThreshold) {
+
+      
+      int layer = 0;
+      int size   = 1 ;
+      
+      float helix_max_r = sqrt( mcp->getEndpoint()[0]*mcp->getEndpoint()[0] + mcp->getEndpoint()[1]*mcp->getEndpoint()[1]);
+      
+      helix_max_r = _helix_max_r;
+      
+      float helix_max_z = fabsf(mcp->getEndpoint()[2]);
+            
+      MarlinCED::add_layer_description(_colNameMCParticles, layer);
+      
+      MarlinCED::drawHelix( _Bz , mcp->getCharge(), mcp->getVertex()[0], mcp->getVertex()[1], mcp->getVertex()[2], 
+                           mcp->getMomentum()[0], mcp->getMomentum()[1], mcp->getMomentum()[2], layer , size , _colours[iMCP%_colours.size()]  ,
+                           0.0,  helix_max_r ,
+                           helix_max_z, mcp->id() ) ;	
+
+      }      
+      
+    }
+
+    
+  }
+  
+  
+  
+  for( unsigned iCol=0; iCol<_colTrackerHits.size(); iCol++){
+  
+     LCCollection* trackerHitCol = _colTrackerHits[iCol];
+    
+    
+    int color = 0xee0044 ;
+    
+    int layer  = iCol+1;
+    int marker = 1;
+    int size   = 10;
+    const std::string& colName = _colNamesTrackerHits[iCol];
+    
+    //ced_describe_layer( colName.c_str() ,layer);
+    MarlinCED::add_layer_description(colName, layer); 
+              
+    // draw a marker at hit position    
+    LCTypedVector<TrackerHit> v( trackerHitCol ) ;
+    MarlinCED::drawObjectsWithPosition( v.begin(), v.end() , marker, size , color, layer) ;
+      
+    
+  }
+  
+  int wait_for_keyboard = 1;
+  //++++++++++++++++++++++++++++++++++++
+  MarlinCED::draw(this, wait_for_keyboard );
+  //++++++++++++++++++++++++++++++++++++
+
+}
 
 
 
