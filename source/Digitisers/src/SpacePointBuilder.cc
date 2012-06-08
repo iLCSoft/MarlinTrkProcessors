@@ -40,7 +40,6 @@
 
 using namespace lcio ;
 using namespace marlin ;
-using namespace CLHEP;
 
 SpacePointBuilder aSpacePointBuilder ;
 
@@ -233,9 +232,9 @@ void SpacePointBuilder::processEvent( LCEvent * evt ) {
         
         
         // Now iterate over all combinations and store those that make sense
-        for( unsigned i=0; i<hitsFront.size(); i++ ){
+        for( unsigned ifront=0; ifront<hitsFront.size(); ifront++ ){
           
-          TrackerHitPlane* hitFront = hitsFront[i];
+          TrackerHitPlane* hitFront = hitsFront[ifront];
           
           for( unsigned j=0; j<hitsBack.size(); j++ ){
             
@@ -417,7 +416,7 @@ TrackerHitImpl* SpacePointBuilder::createSpacePoint( TrackerHitPlane* a , Tracke
   double xa = pa[0];
   double ya = pa[1];
   double za = pa[2];
-  Hep3Vector PA( xa,ya,za );
+  CLHEP::Hep3Vector PA( xa,ya,za );
   double du_a = a->getdU();  
   
   
@@ -432,7 +431,7 @@ TrackerHitImpl* SpacePointBuilder::createSpacePoint( TrackerHitPlane* a , Tracke
   double xb = pb[0];
   double yb = pb[1];
   double zb = pb[2];
-  Hep3Vector PB( xb,yb,zb );  
+  CLHEP::Hep3Vector PB( xb,yb,zb );  
   double du_b = b->getdU();  
   
   gear::MeasurementSurface const* msB = Global::GEAR->getMeasurementSurfaceStore().GetMeasurementSurface( b->getCellID0() );
@@ -475,7 +474,7 @@ TrackerHitImpl* SpacePointBuilder::createSpacePoint( TrackerHitPlane* a , Tracke
   //////////////////////////////////////////////////////////////////////////////////////////////////////
   // Next we want to calculate the crossing point.
   
-  Hep3Vector point;
+  CLHEP::Hep3Vector point;
 
 //  calculatePointBetweenTwoLines( PA, VA, PB, VB, point );
 //  
@@ -490,30 +489,30 @@ TrackerHitImpl* SpacePointBuilder::createSpacePoint( TrackerHitPlane* a , Tracke
 //  
 //  streamlog_out( DEBUG2 ) << "\tStandard: Position of space point (global) : ( " << point.x() << " " << point.y() << " " << point.z() << " )\n";
    
-  Hep3Vector vertex(0.,0.,0.);
-  Hep3Vector L1 = ccsA->getLocalPoint(PA);
-  Hep3Vector L2 = ccsB->getLocalPoint(PB);
+  CLHEP::Hep3Vector vertex(0.,0.,0.);
+  CLHEP::Hep3Vector L1 = ccsA->getLocalPoint(PA);
+  CLHEP::Hep3Vector L2 = ccsB->getLocalPoint(PB);
 
   streamlog_out( DEBUG2 ) << " L1 = " << L1 << std::endl;
   streamlog_out( DEBUG2 ) << " L2 = " << L2 << std::endl;
       
   L1.setY(-stripLength/2.0);
-  Hep3Vector SL1 = L1;
+  CLHEP::Hep3Vector SL1 = L1;
   L1.setY( stripLength/2.0);
-  Hep3Vector EL1 = L1;
+  CLHEP::Hep3Vector EL1 = L1;
   
   
   L2.setY(-stripLength/2.0);
-  Hep3Vector SL2 = L2;
+  CLHEP::Hep3Vector SL2 = L2;
   L2.setY( stripLength/2.0);
-  Hep3Vector EL2 = L2;
+  CLHEP::Hep3Vector EL2 = L2;
   
   
-  Hep3Vector S1 = ccsA->getGlobalPoint(SL1);
-  Hep3Vector E1 = ccsA->getGlobalPoint(EL1);
+  CLHEP::Hep3Vector S1 = ccsA->getGlobalPoint(SL1);
+  CLHEP::Hep3Vector E1 = ccsA->getGlobalPoint(EL1);
 
-  Hep3Vector S2 = ccsB->getGlobalPoint(SL2);
-  Hep3Vector E2 = ccsB->getGlobalPoint(EL2);
+  CLHEP::Hep3Vector S2 = ccsB->getGlobalPoint(SL2);
+  CLHEP::Hep3Vector E2 = ccsB->getGlobalPoint(EL2);
 
   streamlog_out( DEBUG2 ) << " stripLength = " << stripLength << std::endl;
   
@@ -584,7 +583,7 @@ TrackerHitImpl* SpacePointBuilder::createSpacePoint( TrackerHitPlane* a , Tracke
   CLHEP::Hep3Vector v_sensor = VA + VB;
   CLHEP::Hep3Vector w_sensor = WA + WB;
   
-  HepRotation rot_sensor( u_sensor, v_sensor, w_sensor );
+  CLHEP::HepRotation rot_sensor( u_sensor, v_sensor, w_sensor );
   CLHEP::HepMatrix rot_sensor_matrix;
   rot_sensor_matrix = rot_sensor;
   
@@ -770,17 +769,17 @@ int SpacePointBuilder::calculatePointBetweenTwoLines_UsingVertex(
 
 
 
-int SpacePointBuilder::calculatePointBetweenTwoLines( const Hep3Vector& P1, const Hep3Vector& V1, const Hep3Vector& P2, const Hep3Vector& V2, Hep3Vector& point ){
+int SpacePointBuilder::calculatePointBetweenTwoLines( const CLHEP::Hep3Vector& P1, const CLHEP::Hep3Vector& V1, const CLHEP::Hep3Vector& P2, const CLHEP::Hep3Vector& V2, CLHEP::Hep3Vector& point ){
   
   // Richgungsvektor normal auf die anderen beiden:
-  Hep3Vector n = V1.cross( V2 );
+  CLHEP::Hep3Vector n = V1.cross( V2 );
   
   // Now we want to rotate into a coordinate system, where n is parallel to the z axis
   // For this: first set phi to 0
   // then: set theta to 0 (we set phi to 0 first, so we can then rotate arount the y axis)
-  HepRotation rot;
+  CLHEP::HepRotation rot;
   rot.rotateZ( -n.phi() );
-  Hep3Vector nPrime = rot * n; //now the phi of nPrime should be 0
+  CLHEP::Hep3Vector nPrime = rot * n; //now the phi of nPrime should be 0
   streamlog_out( DEBUG0 ) << "phi of n' = " << nPrime.phi() << " (it should be 0!!!)\n";
   rot.rotateY( -n.theta() );
   nPrime = rot * n;
@@ -788,10 +787,10 @@ int SpacePointBuilder::calculatePointBetweenTwoLines( const Hep3Vector& P1, cons
   streamlog_out( DEBUG0 ) << "theta of n'' = " << nPrime.theta() <<  " (it should be 0!!!)\n";
   
   // Now rotate all the vectors and points into this coordinatesystem.
-  Hep3Vector P1prime = rot * P1;
-  Hep3Vector V1prime = rot * V1;
-  Hep3Vector P2prime = rot * P2;
-  Hep3Vector V2prime = rot * V2;
+  CLHEP::Hep3Vector P1prime = rot * P1;
+  CLHEP::Hep3Vector V1prime = rot * V1;
+  CLHEP::Hep3Vector P2prime = rot * P2;
+  CLHEP::Hep3Vector V2prime = rot * V2;
   
   // What is the gain of rotating into this system?
   // A: 
