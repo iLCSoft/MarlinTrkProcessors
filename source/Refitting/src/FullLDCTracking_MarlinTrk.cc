@@ -3878,7 +3878,7 @@ void FullLDCTracking_MarlinTrk::AssignSiHitsToTracks(TrackerHitExtendedVec hitVe
         marlin_trk->initialise( trackState, _bField, IMarlinTrack::backward ) ;
         
         
-        int fit_status = marlin_trk->fit() ; 
+        int fit_status = marlin_trk->fit(_maxChi2PerHit) ; 
         
         if( fit_status != 0 ){ 
           delete marlin_trk ;
