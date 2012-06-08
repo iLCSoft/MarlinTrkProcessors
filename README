@@ -18,6 +18,20 @@
  =============================================================================================================
 
   --------
+ | v01-06 |
+  -------- 
+
+  General:			 Removed use of sort predicate. Use sorted list of std pairs instead.
+  				 Use _maxChi2PerHit in fits. 
+
+  FullLDCTracking_MarlinTrk:	 Corrected uninitialised covariance matrix in combine tracks method.
+
+  TruthTracker:			 Added new mode to fit tracks iteratively, off by default. Allow the CED event display to be used during track creation.
+
+  SpacePointBuilder:		 Corrected SpacePoint creation bug. Endpoint of rear strip swapped with endpoint of front strip. Added debug output for checking whether a strip is created from a real combination or ghost combination.
+ 
+
+  --------
  | v01-05 |
   -------- 
 
