@@ -891,7 +891,7 @@ void TruthTracker::createTrack_iterative( MCParticle* mcp, UTIL::BitField64& cel
     MarlinCED::add_layer_description(colName, layer); 
   
   
-    color =  0xFFFFFFFFF;
+    color =  0xFFFFFF;
   
     for(   std::vector< std::pair<SimTrackerHit*, TrackerHit* > >::const_iterator it = hit_list.begin();  it != hit_list.end() ; it++ ) {
       
@@ -943,7 +943,7 @@ void TruthTracker::createTrack_iterative( MCParticle* mcp, UTIL::BitField64& cel
 
   bool fit_running = false;
   unsigned index_of_last_added_hit = 0;
-  unsigned running_number_of_rejected_hits;
+  unsigned running_number_of_rejected_hits = 0 ;
   
   // start by trying to add the last hit and break at the first accepted hit
   for(int j=hit_list.size() - 1; j >= 0; --j) {
