@@ -1163,7 +1163,29 @@ void TruthTracker::createTrack_iterative( MCParticle* mcp, UTIL::BitField64& cel
             
             IMPL::TrackImpl* Track = new IMPL::TrackImpl();
             int error = MarlinTrk::finaliseLCIOTrack(marlinTrk, Track, added_hits); 
+            
+            std::vector<std::pair<EVENT::TrackerHit* , double> > hits_in_fit ;  
+            std::vector<std::pair<EVENT::TrackerHit* , double> > outliers ;
+            std::vector<TrackerHit*> all_hits;    
+            all_hits.reserve(300);
+            
+            marlinTrk->getHitsInFit(hits_in_fit);
+            
+            for ( unsigned ihit = 0; ihit < hits_in_fit.size(); ++ihit) {
+              all_hits.push_back(hits_in_fit[ihit].first);
+            }
+            
+            MarlinTrk::addHitNumbersToTrack(Track, all_hits, true, cellID_encoder);
+            
+            marlinTrk->getOutliers(outliers);
+            
+            for ( unsigned ihit = 0; ihit < outliers.size(); ++ihit) {
+              all_hits.push_back(outliers[ihit].first);
+            }
+            
+            MarlinTrk::addHitNumbersToTrack(Track, all_hits, false, cellID_encoder);
 
+            
             delete marlinTrk; marlinTrk=0;
             
             fit_running = false;
@@ -1266,6 +1288,29 @@ void TruthTracker::createTrack_iterative( MCParticle* mcp, UTIL::BitField64& cel
         
         IMPL::TrackImpl* Track = new IMPL::TrackImpl();
         int error = MarlinTrk::finaliseLCIOTrack(marlinTrk, Track, added_hits); 
+
+        std::vector<std::pair<EVENT::TrackerHit* , double> > hits_in_fit ;  
+        std::vector<std::pair<EVENT::TrackerHit* , double> > outliers ;
+        std::vector<TrackerHit*> all_hits;    
+        all_hits.reserve(300);
+        
+        marlinTrk->getHitsInFit(hits_in_fit);
+        
+        for ( unsigned ihit = 0; ihit < hits_in_fit.size(); ++ihit) {
+          all_hits.push_back(hits_in_fit[ihit].first);
+        }
+        
+        MarlinTrk::addHitNumbersToTrack(Track, all_hits, true, cellID_encoder);
+        
+        marlinTrk->getOutliers(outliers);
+        
+        for ( unsigned ihit = 0; ihit < outliers.size(); ++ihit) {
+          all_hits.push_back(outliers[ihit].first);
+        }
+        
+        MarlinTrk::addHitNumbersToTrack(Track, all_hits, false, cellID_encoder);
+
+        
         delete marlinTrk; marlinTrk=0;
         
         if (error == IMarlinTrack::success) {
