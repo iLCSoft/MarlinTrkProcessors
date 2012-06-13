@@ -1379,6 +1379,19 @@ void TruthTracker::createTrack_iterative( MCParticle* mcp, UTIL::BitField64& cel
 
       Track->addTrack(seg);
       
+      EVENT::TrackerHitVec hits = seg->getTrackerHits(); 
+      
+      for (unsigned ihit=0; ihit<hits.size(); ++ihit) {
+        Track->addHit(hits[ihit]);
+      }
+      
+      EVENT::IntVec hitNums = seg->getSubdetectorHitNumbers();
+      Track->subdetectorHitNumbers().resize(hitNums.size());
+      
+      for (unsigned index=0; index<hitNums.size(); ++index) {
+        Track->subdetectorHitNumbers()[index] += hitNums[index];
+      }
+      
       ndf_sum  += seg->getNdf();
       chi2_sum += seg->getChi2();
       
@@ -1405,6 +1418,8 @@ void TruthTracker::createTrack_iterative( MCParticle* mcp, UTIL::BitField64& cel
         
     Track->setNdf(ndf_sum);
     Track->setChi2(chi2_sum);
+    
+    
     
     _trackVec->addElement(Track);
     
