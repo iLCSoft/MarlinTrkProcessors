@@ -1360,7 +1360,7 @@ void TruthTracker::createTrack_iterative( MCParticle* mcp, UTIL::BitField64& cel
   if (track_segments.size() == 1) { // only 1 track element so just add it to the collection
     _trackVec->addElement(track_segments[0]);
     _trackRelVec->addElement(track_segments_rels[0]);
-  } else {
+  } else if(track_segments.size() != 0 ){
     // as the hits are looped over in reverse then the first track segment will be the one which should 
     // be used for the fit at the calo face, the last will be the one used for the IP
 
