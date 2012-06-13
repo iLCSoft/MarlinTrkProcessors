@@ -174,7 +174,17 @@ protected:
    */
   std::string _output_track_rel_name ;
   LCCollectionVec* _trackRelVec;
+
   
+  /** output track segments collection, used for tracks which cannot be formed from a single fit 
+   */
+  std::string _output_track_segments_col_name ;
+  LCCollectionVec* _trackSegmentsVec;
+  
+  /** Output track segments relations, used for tracks which cannot be formed from a single fit
+   */
+  std::string _output_track_segment_rel_name ;
+  LCCollectionVec* _trackSegmentsRelVec;
   
   int _nMCP;
   

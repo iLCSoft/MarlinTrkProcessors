@@ -116,6 +116,20 @@ TruthTracker::TruthTracker() : Processor("TruthTracker") {
                            "Name of the MCParticle-Track Relations collection for output tracks"  ,
                            _output_track_rel_name ,
                            std::string("TruthTracksMCP") ) ;
+ 
+  
+  registerOutputCollection( LCIO::TRACK,
+                           "OutputTrackSegmentCollectionName" , 
+                           "Name of the output track segment collection"  ,
+                           _output_track_segments_col_name ,
+                           std::string("TruthTrackSegments") ) ;
+  
+  registerOutputCollection( LCIO::LCRELATION,
+                           "OutputTrackSegmentRelCollection" , 
+                           "Name of the MCParticle-Track Relations collection for output track segments"  ,
+                           _output_track_segment_rel_name ,
+                           std::string("TruthTrackSegmentsMCP") ) ;
+  
   
   //   registerProcessorParameter( "nEventPrintout",
   //                              "Print out progress every N events ",
@@ -319,6 +333,20 @@ void TruthTracker::processEvent( LCEvent * evt ) {
   
   // establish the track relations collection that will be created 
   _trackRelVec = new LCCollectionVec( LCIO::LCRELATION )  ;
+
+  
+  // track segments 
+  
+  _trackSegmentsVec = new LCCollectionVec( LCIO::TRACK )  ;    
+  
+  // if we want to point back to the hits we need to set the flag
+  LCFlagImpl trkSegFlag(0) ;
+  trkSegFlag.setBit( LCIO::TRBIT_HITS ) ;
+  _trackSegmentsVec->setFlag( trkSegFlag.getFlag()  ) ;
+  
+  // establish the track relations collection that will be created 
+  _trackSegmentsRelVec = new LCCollectionVec( LCIO::LCRELATION )  ;
+
   
   // create the encoder to decode cellID0
   UTIL::BitField64 cellID_encoder( ILDCellID0::encoder_string ) ;
@@ -530,7 +558,8 @@ void TruthTracker::processEvent( LCEvent * evt ) {
   
   evt->addCollection( _trackVec , _output_track_col_name) ;
   evt->addCollection( _trackRelVec , _output_track_rel_name) ;
-  
+  evt->addCollection( _trackSegmentsVec , _output_track_segments_col_name) ;
+  evt->addCollection( _trackSegmentsRelVec , _output_track_segment_rel_name) ;
   
   streamlog_out( DEBUG4 ) << "Created " << _nCreatedTracks << " truth tracks\n";
   
@@ -905,6 +934,11 @@ void TruthTracker::createTrack_iterative( MCParticle* mcp, UTIL::BitField64& cel
     } // hits
   }
   
+  std::vector<EVENT::Track*> track_segments;
+  std::vector<IMPL::LCRelationImpl*> track_segments_rels;
+  
+  track_segments.reserve(10);
+  
   TrackStateImpl* prefit_trackState = 0;
   
   // setup initial dummy covariance matrix
@@ -1138,13 +1172,16 @@ void TruthTracker::createTrack_iterative( MCParticle* mcp, UTIL::BitField64& cel
 
               streamlog_out( DEBUG3 ) << "Add Track " << Track << " to collection related to mcp -> " << mcp << std::endl;  
               
-              _trackVec->addElement(Track);
+              track_segments.push_back(Track);
+//              _trackVec->addElement(Track);
               
               LCRelationImpl* rel = new LCRelationImpl;
               rel->setFrom (Track);
               rel->setTo (mcp);
               rel->setWeight(1.0);
-              _trackRelVec->addElement(rel);
+              
+              track_segments_rels.push_back(rel);
+//              _trackRelVec->addElement(rel);
               
               _nCreatedTracks++;
 
@@ -1235,13 +1272,16 @@ void TruthTracker::createTrack_iterative( MCParticle* mcp, UTIL::BitField64& cel
 
           streamlog_out( DEBUG3 ) << "Add Track " << Track << " to collection related to mcp -> " << mcp << std::endl;  
           
-          _trackVec->addElement(Track);
+          track_segments.push_back(Track);
+//          _trackVec->addElement(Track);
           
           LCRelationImpl* rel = new LCRelationImpl;
           rel->setFrom (Track);
           rel->setTo (mcp);
           rel->setWeight(1.0);
-          _trackRelVec->addElement(rel);
+
+//          _trackRelVec->addElement(rel);
+           track_segments_rels.push_back(rel);
           
           _nCreatedTracks++;
 
@@ -1310,6 +1350,73 @@ void TruthTracker::createTrack_iterative( MCParticle* mcp, UTIL::BitField64& cel
     }
     
   }   // end reverse loop over trakerhits 
+  
+  
+  // now check how many track segments were created
+  if (track_segments.size() != track_segments_rels.size()) {
+    throw EVENT::Exception( std::string("TruthTracker::createTrack_iterative: missmatch in size of track_segments and track_segments_rels")  ) ; 
+  }
+  
+  if (track_segments.size() == 1) { // only 1 track element so just add it to the collection
+    _trackVec->addElement(track_segments[0]);
+    _trackRelVec->addElement(track_segments_rels[0]);
+  } else {
+    // as the hits are looped over in reverse then the first track segment will be the one which should 
+    // be used for the fit at the calo face, the last will be the one used for the IP
+
+    // create a track which will be composed from the segements
+    IMPL::TrackImpl* Track = new IMPL::TrackImpl();
+
+    int ndf_sum = 0 ;
+    double chi2_sum = 0.0 ;
+    
+    for (unsigned itrkseg=0; itrkseg<track_segments.size(); ++itrkseg) {
+
+      EVENT::Track* seg = track_segments[itrkseg];
+      EVENT::LCRelation* rel = track_segments_rels[itrkseg];
+      _trackSegmentsVec->addElement(seg);
+      _trackSegmentsRelVec->addElement(rel);
+
+      Track->addTrack(seg);
+      
+      ndf_sum  += seg->getNdf();
+      chi2_sum += seg->getChi2();
+      
+    }
+    
+    EVENT::Track* innerMostSegment = track_segments.back();
+    EVENT::Track* outerMostSegment = track_segments.front();
+    
+    IMPL::TrackStateImpl* atIP = new IMPL::TrackStateImpl(innerMostSegment->getTrackState(EVENT::TrackState::AtIP));
+    Track->addTrackState(atIP);
+
+    IMPL::TrackStateImpl* atFirstHit = new IMPL::TrackStateImpl(innerMostSegment->getTrackState(EVENT::TrackState::AtFirstHit));
+    Track->addTrackState(atFirstHit);
+
+    Track->setRadiusOfInnermostHit(innerMostSegment->getRadiusOfInnermostHit());
+    
+    IMPL::TrackStateImpl* atLastHit = new IMPL::TrackStateImpl(outerMostSegment->getTrackState(EVENT::TrackState::AtLastHit));
+    
+    Track->addTrackState(atLastHit);
+
+    IMPL::TrackStateImpl* atCalo = new IMPL::TrackStateImpl(outerMostSegment->getTrackState(EVENT::TrackState::AtCalorimeter));
+    
+    Track->addTrackState(atCalo);            
+        
+    Track->setNdf(ndf_sum);
+    Track->setChi2(chi2_sum);
+    
+    _trackVec->addElement(Track);
+    
+    LCRelationImpl* rel = new LCRelationImpl;
+    rel->setFrom (Track);
+    rel->setTo (mcp);
+    rel->setWeight(1.0);
+
+    _trackRelVec->addElement(rel);
+    
+  }
+  
   
   
   if (_UseEventDisplay) {
