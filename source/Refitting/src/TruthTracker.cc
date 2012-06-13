@@ -1125,7 +1125,7 @@ void TruthTracker::createTrack_iterative( MCParticle* mcp, UTIL::BitField64& cel
         
           if (added_hits.size()>3) {
             
-            marlinTrk->smooth();
+            if(_SmoothOn) marlinTrk->smooth();
             
             IMPL::TrackImpl* Track = new IMPL::TrackImpl();
             int error = MarlinTrk::finaliseLCIOTrack(marlinTrk, Track, added_hits); 
@@ -1225,7 +1225,7 @@ void TruthTracker::createTrack_iterative( MCParticle* mcp, UTIL::BitField64& cel
 
       if (added_hits.size()>3) {
 
-        marlinTrk->smooth();
+        if(_SmoothOn) marlinTrk->smooth();
         
         IMPL::TrackImpl* Track = new IMPL::TrackImpl();
         int error = MarlinTrk::finaliseLCIOTrack(marlinTrk, Track, added_hits); 
