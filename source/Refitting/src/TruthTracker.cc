@@ -718,7 +718,7 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
     
     for (TrackerHitVec::iterator it=hit_list_inner_r.begin(); it!=hit_list_inner_r.end(); ++it) {
       EVENT::TrackerHit* h = *it;
-      float r2 = h->getPosition()[0]*h->getPosition()[0]+h->getPosition()[1]+h->getPosition()[1];
+      float r2 = h->getPosition()[0]*h->getPosition()[0]+h->getPosition()[1]*h->getPosition()[1];
       r2_values.push_back(std::make_pair(r2, *it));
     }
     
@@ -1553,7 +1553,7 @@ void TruthTracker::createTrack_old( MCParticle* mcp, UTIL::BitField64& cellID_en
     
     for (TrackerHitVec::iterator it=hit_list.begin(); it!=hit_list.end(); ++it) {
       EVENT::TrackerHit* h = *it;
-      float r2 = h->getPosition()[0]*h->getPosition()[0]+h->getPosition()[1]+h->getPosition()[1];
+      float r2 = h->getPosition()[0]*h->getPosition()[0]+h->getPosition()[1]*h->getPosition()[1];
       r2_values.push_back(std::make_pair(r2, *it));
     }
     

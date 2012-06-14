@@ -2567,7 +2567,7 @@ void SiliconTracking_MarlinTrk::FinalRefit(LCCollectionVec* trk_col, LCCollectio
      
      for (TrackerHitVec::iterator it=trkHits.begin(); it!=trkHits.end(); ++it) {
        EVENT::TrackerHit* h = *it;
-       float r2 = h->getPosition()[0]*h->getPosition()[0]+h->getPosition()[1]+h->getPosition()[1];
+       float r2 = h->getPosition()[0]*h->getPosition()[0]+h->getPosition()[1]*h->getPosition()[1];
        r2_values.push_back(std::make_pair(r2, *it));
      }
      
