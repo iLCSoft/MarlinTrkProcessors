@@ -393,10 +393,17 @@ void TruthTracker::processEvent( LCEvent * evt ) {
           SimTrackerHit* simhitA = dynamic_cast<SimTrackerHit*>(to.at(0));
           SimTrackerHit* simhitB = dynamic_cast<SimTrackerHit*>(to.at(1));
           
+          MCParticle* mcpA = simhitA->getMCParticle();
+          MCParticle* mcpB = simhitB->getMCParticle();
+          
+          if ( mcpA == 0 || mcpB == 0) {
+            streamlog_out( DEBUG5 ) << "spacepoint discarded, because MCParticle from simHit is NULL: mcpA = " << mcpA << " mcpB = " << mcpB << "\n";
+          }
+          
           // Check if the simHits are from the same particel in order to avoid ghost hits
-          if( simhitA->getMCParticle() == simhitB->getMCParticle() ) simHitTrkHit.push_back(std::make_pair(simhitA, trkhit));
-          else streamlog_out( DEBUG0 ) << "spacepoint discarded, because simHits are not equal " << simhitA->getMCParticle() << " != " 
-            << simhitB->getMCParticle() << "\n";
+          if( mcpA == mcpB ) simHitTrkHit.push_back(std::make_pair(simhitA, trkhit));
+          else streamlog_out( DEBUG0 ) << "spacepoint discarded, because simHits are not equal " << mcpA << " != " 
+            << mcpB << "\n";
           
           
 //#ifdef MARLINTRK_DIAGNOSTICS_ON
@@ -499,6 +506,13 @@ void TruthTracker::processEvent( LCEvent * evt ) {
       SimTrackerHit* simhit = simHitTrkHit[i].first;
       
       MCParticle* mcp = simhit->getMCParticle();
+      
+      if ( mcp == 0 ) {
+        streamlog_out( DEBUG5 ) << "hit discarded, because MCParticle from simHit is NULL: mcp = " << mcp << "\n";
+        continue;
+      }
+      
+      
       double const* p    = mcp->getMomentum() ;
       float  const pmag2   = p[0]*p[0] + p[1]*p[1] + p[2]*p[2] ;
 //      float  const pt2   = p[0]*p[0] + p[1]*p[1] ;
@@ -1412,8 +1426,6 @@ void TruthTracker::createTrack_iterative( MCParticle* mcp, UTIL::BitField64& cel
     // create a track which will be composed from the segements
     IMPL::TrackImpl* Track = new IMPL::TrackImpl();
 
-    int ndf_sum = 0 ;
-    double chi2_sum = 0.0 ;
     
     for (unsigned itrkseg=0; itrkseg<track_segments.size(); ++itrkseg) {
 
@@ -1437,13 +1449,14 @@ void TruthTracker::createTrack_iterative( MCParticle* mcp, UTIL::BitField64& cel
         Track->subdetectorHitNumbers()[index] += hitNums[index];
       }
       
-      ndf_sum  += seg->getNdf();
-      chi2_sum += seg->getChi2();
       
     }
     
     EVENT::Track* innerMostSegment = track_segments.back();
     EVENT::Track* outerMostSegment = track_segments.front();
+
+    Track->setNdf(innerMostSegment->getNdf());
+    Track->setChi2(innerMostSegment->getChi2());
     
     IMPL::TrackStateImpl* atIP = new IMPL::TrackStateImpl(innerMostSegment->getTrackState(EVENT::TrackState::AtIP));
     Track->addTrackState(atIP);
@@ -1460,10 +1473,6 @@ void TruthTracker::createTrack_iterative( MCParticle* mcp, UTIL::BitField64& cel
     IMPL::TrackStateImpl* atCalo = new IMPL::TrackStateImpl(outerMostSegment->getTrackState(EVENT::TrackState::AtCalorimeter));
     
     Track->addTrackState(atCalo);            
-        
-    Track->setNdf(ndf_sum);
-    Track->setChi2(chi2_sum);
-    
     
     
     _trackVec->addElement(Track);
