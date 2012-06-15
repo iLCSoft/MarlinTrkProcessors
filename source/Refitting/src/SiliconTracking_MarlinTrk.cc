@@ -2642,13 +2642,13 @@ void SiliconTracking_MarlinTrk::FinalRefit(LCCollectionVec* trk_col, LCCollectio
             
        delete Track;
        streamlog_out(DEBUG3) << "SiliconTracking_MarlinTrk::FinalRefit: Track fit failed with error code " << error << " track dropped. Number of hits = "<< trkHits.size() << std::endl;       
-       return ;
+       continue ;
      }
      
      if( Track->getNdf() < 0) {       
        delete Track;
        streamlog_out(DEBUG3) << "SiliconTracking_MarlinTrk::FinalRefit: Track fit returns " << Track->getNdf() << " degress of freedom track dropped. Number of hits = "<< trkHits.size() << std::endl;       
-       return ;
+       continue ;
      }
 
      trk_col->addElement(Track);     
