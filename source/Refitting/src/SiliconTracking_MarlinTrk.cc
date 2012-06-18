@@ -1451,7 +1451,7 @@ int SiliconTracking_MarlinTrk::BuildTrack(TrackerHitExtended * outerHit,
      delete[] ph;
 
      bool validCombination = 0;
-     float Chi2 = NAN;
+     float Chi2 = FLT_MAX;
 
      if ((nHits+1) == 4) {
        Chi2 = chi2RPhi*_chi2WRPhiQuartet+chi2Z*_chi2WZQuartet;
@@ -2348,7 +2348,7 @@ int SiliconTracking_MarlinTrk::AttachHitToTrack(TrackExtended * trackAR, Tracker
  float phi0 = par[2];
  float d0 = par[3];
  float z0 = par[4];
- float chi2 = NAN;
+ float chi2 = FLT_MAX;
  int ndf = INT_MAX;
 
  if (NPT == 3) {

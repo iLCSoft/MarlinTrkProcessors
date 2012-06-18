@@ -227,7 +227,8 @@ protected:
   struct compare_TrackExtended{
     // n.b.: a and b should be TrackExtended const *, but the getters are not const :-(
     bool operator()(TrackExtended *a, TrackExtended *b) const {
-      return (a->getChi2()/a->getNDF() <= b->getChi2()/b->getNDF() );
+      if ( a == b ) return false;
+      return (a->getChi2()/a->getNDF() < b->getChi2()/b->getNDF() );
     }
   };
   
