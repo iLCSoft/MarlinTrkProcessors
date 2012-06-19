@@ -27,7 +27,18 @@
   FullLDCTracking_MarlinTrk:	 Corrected uninitialised covariance matrix in combine tracks method.
 
   TruthTracker:			 Added new mode to fit tracks iteratively, off by default. Allow the CED event display to be used during track creation.
+  				 
+				 For the iterative mode split Tracks now have the individual segments added to a separate collection. 
+				 These segments are used to produce a combined track which uses the innermost and outermost segments to 
+				 provided the track states at the IP, FirstHit, LastHit and Calo respectively. 
+				 The combined track is added to the main track collection, the NDF and chi2 are set with the values from the innermost segment.
+				 The NDF and chi2 values for the other segments can be retrieved from the tracks added to the composite track.  
+				 
+				 Hits with no MCParticle are discarded.
 
+  SiliconTracking_MarlinTrk:	 Make sure sort predicate for chi2 fulfils strict weak ordering.
+  				 Fixed problem where using return instead of continue caused loss of all fitted tracks when single track fit failed.
+				 
   SpacePointBuilder:		 Corrected SpacePoint creation bug. Endpoint of rear strip swapped with endpoint of front strip. Added debug output for checking whether a strip is created from a real combination or ghost combination.
  
 
