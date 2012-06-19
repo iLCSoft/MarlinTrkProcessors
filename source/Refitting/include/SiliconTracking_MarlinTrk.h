@@ -370,6 +370,8 @@ protected:
   int _nHitsChi2;
   int _attachFast;
   
+  int _max_hits_per_sector;
+  
   int _nTotalVTXHits,_nTotalFTDHits,_nTotalSITHits;
   int _useSIT;
   

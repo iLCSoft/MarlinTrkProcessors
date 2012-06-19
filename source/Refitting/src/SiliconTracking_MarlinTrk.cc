@@ -23,6 +23,7 @@
 //#include <gsl/gsl_linalg.h>
 
 #include <marlin/Global.h>
+#include <marlin/Exceptions.h>
 
 //#include "ClusterShapes.h"
 
@@ -340,6 +341,13 @@ SiliconTracking_MarlinTrk::SiliconTracking_MarlinTrk() : Processor("SiliconTrack
                             _nHitsChi2,
                             int(5));
 
+  
+ registerProcessorParameter("MaxHitsPerSector",
+                            "Maximal number of hits allowed in one theta-phi sector in VXD/SIT and FTD",
+                            _max_hits_per_sector,
+                            int(100));
+
+  
  registerProcessorParameter("FastAttachment",
                             "Fast attachment",
                             _attachFast,
@@ -800,6 +808,21 @@ int SiliconTracking_MarlinTrk::InitialiseFTD(LCEvent * evt) {
    success = 0;
  }
   
+  for (unsigned i=0; i<_sectorsFTD.size(); ++i) {
+    int nhits = _sectorsFTD[i].size();
+    if( nhits != 0 ) streamlog_out(DEBUG1) << " Number of Hits in FTD Sector " << i << " = " << _sectorsFTD[i].size() << std::endl;
+    if (nhits > _max_hits_per_sector) {
+      for (unsigned ihit=0; ihit<_sectorsFTD[i].size(); ++ihit) {
+        delete _sectorsFTD[i][ihit];
+      } 
+      _sectorsFTD[i].clear();
+      if( nhits != 0 ) streamlog_out(ERROR) << " ### Number of Hits in FTD Sector " << i << " = " << nhits << " : Limit is set to " << _max_hits_per_sector << " : This sector will be dropped from track search" << std::endl;
+      throw marlin::SkipEventException(this);
+    }
+    
+  }
+
+  
  return success;
 }
 
@@ -1009,7 +1032,22 @@ int SiliconTracking_MarlinTrk::InitialiseVTX(LCEvent * evt) {
 
    }
  }
- return success;
+
+  
+  for (unsigned i=0; i<_sectors.size(); ++i) {
+    int nhits = _sectors[i].size();
+    if( nhits != 0 ) streamlog_out(DEBUG1) << " Number of Hits in VXD/SIT Sector " << i << " = " << _sectors[i].size() << std::endl;
+    if (nhits > _max_hits_per_sector) {
+      for (unsigned ihit=0; ihit<_sectors[i].size(); ++ihit) {
+        delete _sectors[i][ihit];
+      } 
+      _sectors[i].clear();
+      if( nhits != 0 ) streamlog_out(ERROR) << " ### Number of Hits in VXD/SIT Sector " << i << " = " << nhits << " : Limit is set to " << _max_hits_per_sector << ": This sector will be dropped from track search" << std::endl;
+      throw marlin::SkipEventException(this);
+    }
+  }
+    
+  return success;
 
 }
 
