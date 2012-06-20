@@ -139,7 +139,7 @@ FullLDCTracking_MarlinTrk::FullLDCTracking_MarlinTrk() : Processor("FullLDCTrack
                            std::string("LDCTracks"));
   
   
-    
+  
   // steering parameters
   
   registerProcessorParameter("D0CutForMerging",
@@ -166,13 +166,7 @@ FullLDCTracking_MarlinTrk::FullLDCTracking_MarlinTrk() : Processor("FullLDCTrack
                              "Cut on fit Chi2",
                              _chi2FitCut,
                              float(100.0));
-  
-  registerProcessorParameter("Chi2PrefitCut",
-                             "Cut on fit Chi2",
-                             _chi2PrefitCut,
-                             float(1.0e+5));
-  
-  
+
   registerProcessorParameter("Debug",
                              "Activate debugging?",
                              _debug,
@@ -315,12 +309,7 @@ FullLDCTracking_MarlinTrk::FullLDCTracking_MarlinTrk() : Processor("FullLDCTrack
                              "number of hits for outward extrapolation",
                              _nHitsExtrapolation,
                              int(35));
-  
-  registerProcessorParameter("StoreHitsInFit",
-                             "Store only hits used in fit?",
-                             _storeHitsInFit,
-                             int(0));
-  
+    
   
   registerProcessorParameter("VTXHitToTrackDistance",
                              "Cut on distance between track and VTX hits",
@@ -425,14 +414,7 @@ FullLDCTracking_MarlinTrk::FullLDCTracking_MarlinTrk() : Processor("FullLDCTrack
                              "Maximum Chi-squared value allowed when assigning a hit to a track",
                              _maxChi2PerHit,
                              double(1.e2));
-
   
-  
-  registerProcessorParameter("ReadingLoiData",
-                             "Legacy mode for reading loi data",
-                             _reading_loi_data,
-                             bool(false));
-
   
 #ifdef MARLINTRK_DIAGNOSTICS_ON
   
@@ -543,7 +525,7 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
   
   streamlog_out(DEBUG4)<< "Collection " << TrkColName << " is being added to event " << std::endl;
   
-//  LCCollectionVec * colRel = NULL;
+  //  LCCollectionVec * colRel = NULL;
   
   
   int nTrkCand = int(trkVec.size());
@@ -566,7 +548,7 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
     
     int nHits = int(hitVec.size());
     for (int ihit=0;ihit<nHits;++ihit) {
-
+      
       EVENT::TrackerHit* trkHit = hitVec[ihit]->getTrackerHit();
       if(trkHit) { 
         trkHits.push_back(trkHit);   
@@ -619,7 +601,7 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
     for (std::vector< std::pair<float, EVENT::TrackerHit*> >::iterator it=r2_values.begin(); it!=r2_values.end(); ++it) {
       trkHits.push_back(it->second);
     }
-          
+    
     bool fit_backwards = IMarlinTrack::backward;
     
     MarlinTrk::IMarlinTrack* marlinTrk = _trksystem->createTrack();
@@ -649,7 +631,7 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
     }        
 #endif
     
-              
+    
     std::vector<std::pair<EVENT::TrackerHit* , double> > hits_in_fit ;  
     std::vector<std::pair<EVENT::TrackerHit* , double> > outliers ;
     std::vector<TrackerHit*> all_hits;    
@@ -672,34 +654,34 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
     }
     
     MarlinTrk::addHitNumbersToTrack(Track, all_hits, false, cellID_encoder);
-
+    
     
     delete marlinTrk;
-
+    
     if( error != IMarlinTrack::success ) {       
-        
+      
       streamlog_out(DEBUG3) << "FullLDCTracking_MarlinTrk::AddTrackColToEvt: Track fit failed with error code " << error << " track dropped. Number of hits = "<< trkHits.size() << std::endl;  
-
+      
       delete Track;      
       continue ;
     }
     
     if( Track->getNdf() < 0) {       
       streamlog_out(DEBUG3) << "FullLDCTracking_MarlinTrk::AddTrackColToEvt: Track fit returns " << Track->getNdf() << " degress of freedom track dropped. Number of hits = "<< trkHits.size() << std::endl;       
-
+      
       delete Track;
       continue ;
     }
-                    
+    
     const TrackState* trkStateIP = Track->getTrackState(lcio::TrackState::AtIP);
     
     if (trkStateIP == 0) {
       streamlog_out(DEBUG3) << "FullLDCTracking_MarlinTrk::AddTrackColToEvt: Track fit returns " << Track->getNdf() << " degress of freedom track dropped. Number of hits = "<< trkHits.size() << std::endl;       
       throw EVENT::Exception( std::string("FullLDCTracking_MarlinTrk::AddTrackColToEvt: trkStateIP pointer == NULL ")  ) ;
     }
-            
     
-        
+    
+    
     GroupTracks * group = trkCand->getGroupTracks();
     
     if (group != NULL) {
@@ -715,7 +697,7 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
     float z0TrkCand = trkCand->getZ0();
     //    float phi0TrkCand = trkCand->getPhi();
     
-
+    
     int hits_in_vxd = Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::VXD - 2 ];
     int hits_in_ftd = Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::FTD - 2 ];
     int hits_in_sit = Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SIT - 2 ];
@@ -729,9 +711,9 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
     rejectTrack = rejectTrack || ( fabs(d0TrkCand) > _d0TrkCut ) || ( fabs(z0TrkCand) > _z0TrkCut );
     
     if ( rejectTrack ) {
-
+      
       delete Track;
-
+      
     } else {
       
       float omega = trkStateIP->getOmega();
@@ -769,7 +751,7 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
   streamlog_out(DEBUG4) << std::endl;
   
   evt->addCollection(colTRK,TrkColName.c_str());
-
+  
   
 }
 
@@ -803,6 +785,8 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
     
     int nelem = col->getNumberOfElements();
     
+    streamlog_out(DEBUG4) << "Number of TPC hits = " << nelem << std::endl;
+    
     for (int ielem=0;ielem<nelem;++ielem) {
       
       TrackerHit * hit = dynamic_cast<TrackerHit*>(col->getElementAt(ielem));
@@ -828,7 +812,7 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
     streamlog_out(DEBUG4) << _TPCTrackerHitCollection.c_str() << " collection is unavailable" << std::endl;
   };
   
-
+  
   // Reading in FTD Pixel Hits Collection
   //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   try {
@@ -857,6 +841,36 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
       _allFTDHits.push_back( hitExt );
       mapTrackerHits[hit] = hitExt;
       
+      // get the layer number
+      unsigned int layer = static_cast<unsigned int>(getLayerID(hit));
+      unsigned int petalIndex = static_cast<unsigned int>(getModuleID(hit));
+      
+      if ( _petalBasedFTDWithOverlaps == true ) {
+        
+        // as we are dealing with staggered petals we will use 2*nlayers in each directions +/- z
+        // the layers will follow the even odd numbering of the petals 
+        if ( petalIndex % 2 == 0 ) {
+          layer = 2*layer;
+        }
+        else {
+          layer = 2*layer + 1;
+        }
+        
+      }
+      
+      if (layer >= _nLayersFTD) {
+        streamlog_out(ERROR) << "FullLDCTracking_MarlinTrk => fatal error in FTD : layer is outside allowed range : " << layer << " number of layers = " << _nLayersFTD <<  std::endl;
+        exit(1);
+      }
+      
+      double pos[3];
+      
+      for (int i=0; i<3; ++i) {
+        pos[i] = hit->getPosition()[i];
+      }      
+      
+      streamlog_out( DEBUG1 ) << " FTD Pixel Hit added : @ " << pos[0] << " " << pos[1] << " " << pos[2]  << " drphi " << hitExt->getResolutionRPhi() << " dz " << hitExt->getResolutionZ() << "  layer = " << layer << std::endl;  
+      
     }
   }
   catch(DataNotAvailableException &e ) {
@@ -879,7 +893,8 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
       
       TrackerHitExtended * hitExt = new TrackerHitExtended( hit );
       
-      double point_res_rphi = sqrt( hit->getCovMatrix()[0] );
+      // SJA:FIXME: fudge for now by a factor of two and ignore covariance
+      double point_res_rphi = 2 * sqrt( hit->getCovMatrix()[0] + hit->getCovMatrix()[2] );
       
       hitExt->setResolutionRPhi( point_res_rphi );
       
@@ -890,9 +905,41 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
       hitExt->setType(int(INT_MAX));
       // det is no longer used set to INT_MAX to try and catch any missuse
       hitExt->setDet(int(INT_MAX));
-            
+      
       _allFTDHits.push_back( hitExt );
       mapTrackerHits[hit] = hitExt;
+      
+      
+      // get the layer number
+      unsigned int layer = static_cast<unsigned int>(getLayerID(hit));
+      unsigned int petalIndex = static_cast<unsigned int>(getModuleID(hit));
+      
+      if ( _petalBasedFTDWithOverlaps == true ) {
+        
+        // as we are dealing with staggered petals we will use 2*nlayers in each directions +/- z
+        // the layers will follow the even odd numbering of the petals 
+        if ( petalIndex % 2 == 0 ) {
+          layer = 2*layer;
+        }
+        else {
+          layer = 2*layer + 1;
+        }
+        
+      }
+      
+      if (layer >= _nLayersFTD) {
+        streamlog_out(ERROR) << "FullLDCTracking_MarlinTrk => fatal error in FTD : layer is outside allowed range : " << layer << " number of layers = " << _nLayersFTD <<  std::endl;
+        exit(1);
+      }
+      
+      double pos[3];
+      
+      for (int i=0; i<3; ++i) {
+        pos[i] = hit->getPosition()[i];
+      }      
+      
+      streamlog_out( DEBUG1 ) << " FTD SpacePoint Hit added : @ " << pos[0] << " " << pos[1] << " " << pos[2]  << " drphi " << hitExt->getResolutionRPhi() << " dz " << hitExt->getResolutionZ() << "  layer = " << layer << std::endl;  
+      
       
     }
   }
@@ -923,86 +970,133 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
   //      streamlog_out(DEBUG4) << _ETDTrackerHitCollection.c_str() << " collection is unavailable" << std::endl;
   //  }
   
-  // Reading SIT Hits
+  
   try {
-
-    LCCollection * col = event->getCollection(_SITTrackerHitCollection.c_str());
     
-    int nelem = col->getNumberOfElements();
+    LCCollection *hitCollection = event->getCollection(_SITTrackerHitCollection.c_str());
     
-    for (int ielem=0;ielem<nelem;++ielem) {
+    int nelem = hitCollection->getNumberOfElements();
     
-      double drphi(NAN);
-      double dz(NAN);
+    streamlog_out(DEBUG4) << "Number of SIT hits = " << nelem << std::endl;
+    
+    TrackerHit*          trkhit   = 0;
+    TrackerHitPlane*     trkhit_P = 0;
+    TrackerHitZCylinder* trkhit_C = 0;
+    
+    double drphi(NAN);
+    double dz(NAN);
+    
+    for (int ielem=0; ielem<nelem; ++ielem) {
       
-      TrackerHit* hit(NULL);
-
-      if (_reading_loi_data) { // uses cylindrical hits
-        
-        TrackerHitZCylinder * hit_c = dynamic_cast<TrackerHitZCylinder*>(col->getElementAt(ielem));
-        
-        if (hit_c) {
-          hit= hit_c;
-        }
-        else{
-          streamlog_out(ERROR) << "FullLDCTracking_MarlinTrk: Dynamic cast to TrackerHitZCylinder failed. \n\n exit(1) called from file " << __FILE__ << " and line " << __LINE__ << std::endl;
-          exit(1);
-        }
-        
-        drphi = hit_c->getdRPhi();
-        dz    = hit_c->getdZ();
-        
+      // hit could be of the following type
+      // 1) TrackerHit, either ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT or just standard TrackerHit
+      // 2) TrackerHitPlane, either 1D or 2D
+      // 3) TrackerHitZCylinder, if coming from a simple cylinder design as in the LOI
+      
+      // Establish which of these it is in the following order of likelyhood
+      //    i)   ILDTrkHitTypeBit::ONE_DIMENSIONAL (TrackerHitPlane) Should Never Happen: SpacePoints Must be Used Instead
+      //    ii)  ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT (TrackerHit)
+      //    iii) TrackerHitPlane (Two dimentional)
+      //    iv)  TrackerHitZCylinder 
+      //    v)   Must be standard TrackerHit
+      
+      trkhit = dynamic_cast<TrackerHit*>(hitCollection->getElementAt(ielem));
+      
+      int layer = getLayerID(trkhit);
+      
+      if (layer < 0 || (unsigned)layer >= _nLayersSIT) {
+        streamlog_out(ERROR) << "FullLDCTracking_MarlinTrk => fatal error in SIT : layer is outside allowed range : " << layer << std::endl;
+        exit(1);
       }
       
-      else {
+      // first check that we have not been given 1D hits by mistake, as they won't work here
+      if ( BitSet32( trkhit->getType() )[ UTIL::ILDTrkHitTypeBit::ONE_DIMENSIONAL ] ) {
         
+        streamlog_out(ERROR) << "FullLDCTracking_MarlinTrk: SIT Hit cannot be of type UTIL::ILDTrkHitTypeBit::ONE_DIMENSIONAL COMPOSITE SPACEPOINTS must be use instead. \n\n  exit(1) called from file " << __FILE__ << " and line " << __LINE__ << std::endl;
+        exit(1);
         
-        TrackerHit * hit_p = dynamic_cast<TrackerHit*>(col->getElementAt(ielem));
-        
-        if (hit_p) {
-          hit= hit_p;
-        }
-        else{
-          streamlog_out(ERROR) << "SiliconTracking_MarlinTrk: Dynamic cast to TrackerHit failed. \n\n exit(1) called from file " << __FILE__ << " and line " << __LINE__ << std::endl;
-          exit(1);
-        }
-        
-        //         double x = hit->getPosition()[0];
-        //         double y = hit->getPosition()[1];
-        
-        //         double atan_xy = atan2(y, x);
-        //         double r = sqrt(x*x+y*y);
-        
-        //         double drphidx = ( x * atan_xy - y ) / r ;
-        //         double drphidy = ( y * atan_xy + x ) / r ;
-        //         
-        //         drphi =  sqrt( drphidx*drphidx*hit->getCovMatrix()[0] + drphidy*drphidy*hit->getCovMatrix()[2] + 2.0 * drphidx * drphidy * hit->getCovMatrix()[1] );
+      } 
+      // most likely case: COMPOSITE_SPACEPOINT hits formed from stereo strip hits
+      else if ( BitSet32( trkhit->getType() )[ UTIL::ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT ] ) {
         
         // SJA:FIXME: fudge for now by a factor of two and ignore covariance
-        drphi =  2 * sqrt(hit->getCovMatrix()[0] + hit->getCovMatrix()[2]);
+        drphi =  2 * sqrt(trkhit->getCovMatrix()[0] + trkhit->getCovMatrix()[2]);         
+        dz    =      sqrt(trkhit->getCovMatrix()[5]);         
         
-        dz =     sqrt(hit->getCovMatrix()[5]);
+      } 
+      // or a PIXEL based SIT, using 2D TrackerHitPlane like the VXD above
+      else if ( ( trkhit_P = dynamic_cast<TrackerHitPlane*>( hitCollection->getElementAt( ielem ) ) ) )  {
+        
+        // first we need to check if the measurement vectors are aligned with the global coordinates 
+        gear::Vector3D U(1.0,trkhit_P->getU()[1],trkhit_P->getU()[0],gear::Vector3D::spherical);
+        gear::Vector3D V(1.0,trkhit_P->getV()[1],trkhit_P->getV()[0],gear::Vector3D::spherical);
+        gear::Vector3D Z(0.0,0.0,1.0);
+        
+        const float eps = 1.0e-07;
+        // V must be the global z axis 
+        if( fabs(1.0 - V.dot(Z)) > eps ) {
+          streamlog_out(ERROR) << "FullLDCTracking_MarlinTrk: PIXEL SIT Hit measurment vectors V is not equal to the global Z axis. \n\n  exit(1) called from file " << __FILE__ << " and line " << __LINE__ << std::endl;
+          exit(1);
+        }
+        
+        // U must be normal to the global z axis
+        if( fabs(U.dot(Z)) > eps ) {
+          streamlog_out(ERROR) << "FullLDCTracking_MarlinTrk: PIXEL SIT Hit measurment vectors U is not in the global X-Y plane. \n\n exit(1) called from file " << __FILE__ << " and line " << __LINE__ << std::endl;
+          exit(1);
+        }
+        
+        drphi = trkhit_P->getdU();
+        dz    = trkhit_P->getdV();                                                 
+        
+      } 
+      // or a simple cylindrical design, as used in the LOI      
+      else if ( ( trkhit_C = dynamic_cast<TrackerHitZCylinder*>( hitCollection->getElementAt( ielem ) ) ) ) {
+        
+        drphi = trkhit_C->getdRPhi();
+        dz    = trkhit_C->getdZ();
+        
+      } 
+      // this would be very unlikely, but who knows ... just an ordinary TrackerHit, which is not a COMPOSITE_SPACEPOINT
+      else {
+        
+        // SJA:FIXME: fudge for now by a factor of two and ignore covariance
+        drphi =  2 * sqrt(trkhit->getCovMatrix()[0] + trkhit->getCovMatrix()[2]);         
+        dz =     sqrt(trkhit->getCovMatrix()[5]);             
         
       }
-
-
       
-      TrackerHitExtended * hitExt = new TrackerHitExtended(hit);
+      // now that the hit type has been established carry on and create a 
+      
+      TrackerHitExtended * hitExt = new TrackerHitExtended( trkhit );
       
       // SJA:FIXME: just use planar res for now
       hitExt->setResolutionRPhi(drphi);
       hitExt->setResolutionZ(dz);
       
-      // type and det are no longer used, set to INT_MAX to try and catch any missuse
+      // set type is now only used in one place where it is set to 0 to reject hits from a fit, set to INT_MAX to try and catch any missuse
       hitExt->setType(int(INT_MAX));
+      // det is no longer used set to INT_MAX to try and catch any missuse
       hitExt->setDet(int(INT_MAX));
+      
       _allSITHits.push_back( hitExt );
-      mapTrackerHits[hit] = hitExt;
+      mapTrackerHits[trkhit] = hitExt;
+      
+      
+      double pos[3];
+      
+      for (int i=0; i<3; ++i) {
+        pos[i] = trkhit->getPosition()[i];
+      }
+      
+      streamlog_out( DEBUG1 ) << " SIT Hit " <<  trkhit->id() << " added : @ " << pos[0] << " " << pos[1] << " " << pos[2] << " drphi " << hitExt->getResolutionRPhi() << " dz " << hitExt->getResolutionZ() << "  layer = " << layer << std::endl;  
+      
     }
+    
+  } catch(DataNotAvailableException &e) {
+    streamlog_out( DEBUG4 ) << " collection not found : " << _SITTrackerHitCollection.c_str() << std::endl ;
   }
-  catch( DataNotAvailableException &e ) {
-    streamlog_out(DEBUG4) << _SITTrackerHitCollection.c_str() << " collection is unavailable" << std::endl;
-  }
+  
+  
   
   // Reading SET Hits
   //    sprintf(strg,"SET hits ----->\n");
@@ -1046,21 +1140,39 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
   // Reading VTX Hits
   try {
     LCCollection * col = event->getCollection(_VTXTrackerHitCollection.c_str());
+    
     int nelem = col->getNumberOfElements();
+    
+    streamlog_out(DEBUG4) << "Number of VXD hits = " << nelem << std::endl;
+    
     for (int ielem=0;ielem<nelem;++ielem) {
-      TrackerHitPlane * hit = dynamic_cast<TrackerHitPlane*>(col->getElementAt(ielem));
-      TrackerHitExtended * hitExt = new TrackerHitExtended(hit);
+      TrackerHitPlane * trkhit = dynamic_cast<TrackerHitPlane*>(col->getElementAt(ielem));
+      TrackerHitExtended * hitExt = new TrackerHitExtended(trkhit);
       
       // SJA:FIXME: just use planar res for now
-      hitExt->setResolutionRPhi(hit->getdU());
-      hitExt->setResolutionZ(hit->getdV());
+      hitExt->setResolutionRPhi(trkhit->getdU());
+      hitExt->setResolutionZ(trkhit->getdV());
       
       // type and det are no longer used, set to INT_MAX to try and catch any missuse
       hitExt->setType(int(INT_MAX));      
       hitExt->setDet(int(INT_MAX));
       _allVTXHits.push_back( hitExt );
-      mapTrackerHits[hit] = hitExt;
+      mapTrackerHits[trkhit] = hitExt;
+      
+      double pos[3];
+      
+      for (int i=0; i<3; ++i) {
+        pos[i] = trkhit->getPosition()[i];
+      }
+      
+      int layer = getLayerID(trkhit);
+      
+      streamlog_out( DEBUG1 ) << " VXD Hit " <<  trkhit->id() << " added : @ " << pos[0] << " " << pos[1] << " " << pos[2] << " drphi " << hitExt->getResolutionRPhi() << " dz " << hitExt->getResolutionZ() << "  layer = " << layer << std::endl;  
+      
+      
     }
+    
+    
   }
   catch( DataNotAvailableException &e ) {
     streamlog_out(DEBUG4) << _VTXTrackerHitCollection.c_str() << " collection is unavailable" << std::endl;
@@ -1077,9 +1189,9 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
     //           "  0  1.111   0.059      0.022    -0.54     0.61    -0.45    0.185
     
     for (int iTrk=0; iTrk<nelem; ++iTrk) {
-
+      
       Track * tpcTrack = dynamic_cast<Track*>(col->getElementAt(iTrk));
-
+      
       TrackerHitVec hitVec = tpcTrack->getTrackerHits();
       int nHits = int(hitVec.size());
       
@@ -1104,9 +1216,9 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
       sprintf(strg,"%3i  %9.3f  %9.3f  %9.3f  %7.2f  %7.2f  %7.2f %4i %4i %8.3f",iTrk,
               ptot, d0TPC,z0TPC,pxTPC,pyTPC,pzTPC,nHits,ndfTPC,Chi2TPC);
       streamlog_out(DEBUG3) << strg << std::endl;
-         
+      
       TrackExtended * trackExt = new TrackExtended( tpcTrack );
-   
+      
       trackExt->setOmega(tpcTrack->getOmega());
       trackExt->setTanLambda(tpcTrack->getTanLambda());
       trackExt->setPhi(tpcTrack->getPhi());
@@ -1132,8 +1244,8 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
       trackExt->setCovMatrix(cov);
       trackExt->setNDF(tpcTrack->getNdf());
       trackExt->setChi2(tpcTrack->getChi2());            
- 
-   
+      
+      
       
       for (int iHit=0;iHit<nHits;++iHit) {
         TrackerHit * hit = hitVec[iHit];
@@ -1444,7 +1556,7 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
   }  
   
   for (int ih=0;ih<nTPCHits;++ih) {
-
+    
     TrackerHit * trkHit = tpcHitVec[ih]->getTrackerHit();
     if(trkHit) { 
       trkHits.push_back(trkHit);   
@@ -1462,7 +1574,7 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
     return 0 ;
     
   }
-
+  
   streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: Start Fitting: AddHits: number of hits to fit " << trkHits.size() << std::endl;
   
   MarlinTrk::IMarlinTrack* marlin_trk = _trksystem->createTrack();
@@ -1472,16 +1584,16 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
   
   /** Provides the values of a track state from the first, middle and last hits in the hit_list. */
   int error = createPrefit( trkHits, &pre_fit, _bField, IMarlinTrack::backward);
-
+  
   if ( error != IMarlinTrack::success ) {
-
+    
     streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: creation of prefit fails with error " << error << std::endl;
-
+    
     delete marlin_trk ;
     return 0;
-
+    
   }
-
+  
   // setup initial dummy covariance matrix
   EVENT::FloatVec covMatrix;
   covMatrix.resize(15);
@@ -1495,14 +1607,14 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
   covMatrix[5]  = ( _initialTrackError_omega ); //sigma_omega^2
   covMatrix[9]  = ( _initialTrackError_z0    ); //sigma_z0^2
   covMatrix[14] = ( _initialTrackError_tanL  ); //sigma_tanl^2
-
+  
   pre_fit.setCovMatrix(covMatrix);
   
   error = MarlinTrk::createFit( trkHits, marlin_trk, &pre_fit, _bField, IMarlinTrack::backward , _maxChi2PerHit );
   
   if ( error != IMarlinTrack::success ) {
     
-    streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: creation of prefit fails with error " << error << std::endl;
+    streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: creation of fit fails with error " << error << std::endl;
     
     delete marlin_trk ;
     return 0;
@@ -1524,7 +1636,7 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
     return 0;
     
   }
-
+  
   if ( ndf < 0  ) {
     
     streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: Fit failed NDF is less that zero  " << ndf << std::endl;
@@ -1533,14 +1645,14 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
     return 0;
     
   }
-
-      
+  
+  
   float chi2Fit = chi2_D/float(ndf);
   
   if ( chi2Fit > _chi2FitCut ) {
     
     streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: track fail Chi2 cut of " << _chi2FitCut << " chi2 of track = " <<  chi2Fit << std::endl;
-      
+    
     delete marlin_trk ;
     return 0;
     
@@ -1569,11 +1681,11 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
   OutputTrack->setNDF(ndf);
   
   float cov[15];
-    
+  
   for (int i = 0 ; i<15 ; ++i) {
     cov[i] = trkState.getCovMatrix().operator[](i);
   }
-    
+  
   OutputTrack->setCovMatrix(cov);
   
   if ( testCombinationOnly == false ) {
@@ -1624,250 +1736,9 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
   delete marlin_trk ;
   
   return OutputTrack;
-
+  
 }
 
-
-//TrackExtended * FullLDCTracking_MarlinTrk::TrialCombineTracks(TrackExtended * tpcTrack, TrackExtended * siTrack) {
-//  
-//  TrackExtended * OutputTrack = NULL;
-//  
-//  TrackerHitExtendedVec siHitVec = siTrack->getTrackerHitExtendedVec();
-//  TrackerHitExtendedVec tpcHitVec = tpcTrack->getTrackerHitExtendedVec();
-//  
-//  int nSiHits = int(siHitVec.size());
-//  int nTPCHits = int(tpcHitVec.size());
-//  int nHits = nTPCHits + nSiHits;
-//  
-//  EVENT::TrackerHitVec trkHits;
-//  trkHits.reserve(nHits);
-//  
-//  for (int ih=0;ih<nSiHits;++ih) {
-//    TrackerHit * trkHit = siHitVec[ih]->getTrackerHit();
-//    if(trkHit) { 
-//      trkHits.push_back(trkHit);   
-//    }
-//    else{
-//      throw EVENT::Exception( std::string("FullLDCTracking_MarlinTrk::TrialCombineTracks: TrackerHit pointer == NULL ")  ) ;
-//    }
-//  }      
-//  for (int ih=0;ih<nTPCHits;++ih) {
-//    TrackerHit * trkHit = tpcHitVec[ih]->getTrackerHit();
-//    if(trkHit) { 
-//      trkHits.push_back(trkHit);   
-//    }
-//    else{
-//      throw EVENT::Exception( std::string("FullLDCTracking_MarlinTrk::TrialCombineTracks: TrackerHit pointer == NULL ")  ) ;
-//    }
-//  }      
-//  
-//  double chi2_D;
-//  int ndf_D;
-//  
-//  if( trkHits.size() < 3 ) { 
-//    
-//    return NULL ;
-//    
-//  }
-//  
-//  MarlinTrk::IMarlinTrack* marlin_trk = _trksystem->createTrack();
-//  
-//  sort(trkHits.begin(), trkHits.end(), FullLDCTracking_MarlinTrk::compare_r() );
-//  
-//  EVENT::TrackerHitVec::iterator it = trkHits.begin();
-//  
-//  streamlog_out(DEBUG2) << "Start Fitting: AddHits: number of hits to fit " << trkHits.size() << std::endl;
-//  
-////  int number_of_added_hits = 0;
-////  for( it = trkHits.begin() ; it != trkHits.end() ; ++it )
-////      {
-////    if (marlin_trk->addHit(*it) == 0){
-////      ++number_of_added_hits;
-////    }
-////    else{
-////      streamlog_out(DEBUG2) << "Hit " << it - trkHits.begin() << " Dropped " << std::endl;
-////    }
-////      }
-////  
-////  if( number_of_added_hits < 3 ) {
-////    
-////    delete marlin_trk ;
-////    
-////    return NULL;
-////    
-////  }
-////  
-////  // SJA:FIXME: Here we could initialise the fit using the previous fits 
-////  marlin_trk->initialise( IMarlinTrack::backward ) ;
-//  
-//  
-//  int number_of_added_hits = 0;
-//  int ndof_added = 0;
-//  TrackerHitVec added_hits;
-//  
-//  for( it = trkHits.begin() ; it != trkHits.end() ; ++it ) {
-//    
-//    TrackerHit* trkHit = *it;
-//    bool isSuccessful = false; 
-//    
-//    if( BitSet32( trkHit->getType() )[ UTIL::ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT ]   ){ //it is a composite spacepoint
-//      
-//      //Split it up and add both hits to the MarlinTrk
-//      const LCObjectVec rawObjects = trkHit->getRawHits();                    
-//      
-//      for( unsigned k=0; k< rawObjects.size(); k++ ){
-//        
-//        TrackerHit* rawHit = dynamic_cast< TrackerHit* >( rawObjects[k] );
-//        
-//        if( marlin_trk->addHit( rawHit ) == IMarlinTrack::success ){
-//          
-//          isSuccessful = true; //if at least one hit from the spacepoint gets added
-//          ++ndof_added;
-//        }
-//      }
-//    }
-//    else { // normal non composite hit
-//      
-//      if (marlin_trk->addHit( trkHit ) == 0) {
-//        isSuccessful = true;
-//        ndof_added += 2;
-//      }
-//    }
-//    
-//    if (isSuccessful) {
-//      added_hits.push_back(trkHit);
-//      ++number_of_added_hits;
-//    }
-//    
-//    
-//    else{
-//      streamlog_out(DEBUG4) << "Hit " << it - trkHits.begin() << " Dropped " << std::endl;          
-//    }
-//    
-//  }
-//  
-//  if( ndof_added < 8 ) {
-//    streamlog_out(DEBUG3) << "SiliconTracking_MarlinTrk::FinalRefit: Cannot fit less with less than 8 degrees of freedom. Number of hits =  " << number_of_added_hits << " ndof = " << ndof_added << std::endl;
-//    delete marlin_trk ;
-//    return NULL;
-//  }
-//  
-//  // initialise with space-points not strips 
-//  // make a helix from 3 hits to get a trackstate
-//  const double* x1 = added_hits[0]->getPosition();
-//  const double* x2 = added_hits[ added_hits.size()/2 ]->getPosition();
-//  const double* x3 = added_hits.back()->getPosition();
-//  
-//  HelixTrack helixTrack( x1, x2, x3, _bField, IMarlinTrack::backward );
-//  
-//  helixTrack.moveRefPoint(0.0, 0.0, 0.0);
-//  
-//  const float referencePoint[3] = { helixTrack.getRefPointX() , helixTrack.getRefPointY() , helixTrack.getRefPointZ() };
-//  
-//  
-//  EVENT::FloatVec covMatrix;
-//  
-//  covMatrix.resize(15);
-//  
-//  for (int icov = 0; icov<covMatrix.size(); ++icov) {
-//    covMatrix[icov] = 0;
-//  }
-//  
-//  covMatrix[0]  = ( 1.e4 ); //sigma_d0^2
-//  covMatrix[2]  = ( 1.e4 ); //sigma_phi0^2
-//  covMatrix[5]  = ( 1.e4 ); //sigma_omega^2
-//  covMatrix[9]  = ( 1.e4 ); //sigma_z0^2
-//  covMatrix[14] = ( 1.e4 ); //sigma_tanl^2
-//  
-//  
-//  TrackStateImpl trackState( TrackState::AtOther, 
-//                            helixTrack.getD0(), 
-//                            helixTrack.getPhi0(), 
-//                            helixTrack.getOmega(), 
-//                            helixTrack.getZ0(), 
-//                            helixTrack.getTanLambda(), 
-//                            covMatrix, 
-//                            referencePoint) ;
-//  
-//  marlin_trk->initialise( trackState, _bField, IMarlinTrack::backward ) ;
-//
-//  
-//  int fit_status = marlin_trk->fit() ; 
-//  
-//  if( fit_status != 0 ) {
-//    
-//    delete marlin_trk ;
-//    
-//    return NULL;
-//    
-//  }
-//  
-//  
-//  const gear::Vector3D point(0.,0.,0.); // nominal IP
-//  int return_code = 0;
-//  
-//  TrackStateImpl trkState ;
-//  return_code = marlin_trk->propagate(point, trkState, chi2_D, ndf_D ) ;
-//  
-//  if( return_code != 0 ) {
-//    
-//    delete marlin_trk ;
-//    
-//    return NULL;
-//    
-//  }
-//  
-//  float chiQ = chi2_D/float(ndf_D);
-//  
-//  
-//  // SJA:FIXME remove hard coded chiQ cut 
-//  if (fit_status == 0 && chiQ > 0.001) {
-//    
-//    float chi2Fit = chi2_D/float(ndf_D);
-//    
-//    if (chi2Fit > _chi2FitCut) {
-//      
-//      delete marlin_trk ;
-//      
-//      return NULL;
-//      
-//    }    
-//    
-//    float omega = trkState.getOmega();
-//    float tanlambda = trkState.getTanLambda();
-//    float phi0 = trkState.getPhi();
-//    float d0 = trkState.getD0();
-//    float z0 = trkState.getZ0();    
-//    
-//    OutputTrack = new TrackExtended();
-//    GroupTracks * group = new GroupTracks();
-//    group->addTrackExtended(siTrack);
-//    group->addTrackExtended(tpcTrack);
-//    
-//    // note OutputTrack which is of type TrackExtended, only takes fits set for ref point = 0,0,0    
-//    OutputTrack->setGroupTracks(group);
-//    OutputTrack->setOmega(omega);
-//    OutputTrack->setTanLambda(tanlambda);
-//    OutputTrack->setPhi(phi0);
-//    OutputTrack->setZ0(z0);
-//    OutputTrack->setD0(d0);
-//    OutputTrack->setChi2(chi2_D);
-//    OutputTrack->setNDF(ndf_D);
-//    
-//    float cov[15];
-//    
-//    for (int i = 0 ; i<15 ; ++i) {
-//      cov[i] = trkState.getCovMatrix().operator[](i);
-//    }
-//    
-//    OutputTrack->setCovMatrix(cov);
-//    
-//  }
-//  
-//  delete marlin_trk ;
-//  
-//  return OutputTrack;
-//}
 
 
 void FullLDCTracking_MarlinTrk::SortingTrackHitPairs(TrackHitPairVec & trackHitPairVec) {
@@ -3006,10 +2877,12 @@ void FullLDCTracking_MarlinTrk::AddNotAssignedHits() {
   
   if (_assignSITHits>0) { // Treatment of left-over SIT hits 
     
+    streamlog_out(DEBUG4) << "Assign SIT hits *********************************" << std::endl;
+    
     std::vector<TrackerHitExtendedVec> nonAssignedSITHits;    
     nonAssignedSITHits.resize(_nLayersSIT);
     
-    int nSITHits = int(_allSITHits.size());
+    int nSITHits = int(_allSITHits.size());    
     
     // loop over all SIT hits ...
     for (int iH=0;iH<nSITHits;++iH) {
@@ -3020,27 +2893,32 @@ void FullLDCTracking_MarlinTrk::AddNotAssignedHits() {
       // check if this hit has not already been assigned to a track
       if (trkExt == NULL) {
         TrackerHit * trkHit = trkHitExt->getTrackerHit();
-      
-        int layer = getLayerID(trkHit);
-
-        if (  _reading_loi_data == false ) { // divide by two as we are treating the SIT as TWO stereo layers 
-          layer = layer / 2 ;
-        }
         
-        if (layer >=0 && layer < (int)_nLayersSIT) {
+        int layer = getLayerID(trkHit);
+        
+        if (layer >=0 && (unsigned)layer < _nLayersSIT) {
           nonAssignedSITHits[layer].push_back(trkHitExt);
         }
       }
     }       
     
     for (int iL=_nLayersSIT-1;iL>=0;--iL) { // reverse loop over layers in Si
+      
       TrackerHitExtendedVec hitVec = nonAssignedSITHits[iL];
-      AssignSiHitsToTracks(hitVec,
-                           _distCutForSITHits);
+      
+      if ( hitVec.empty() == false ) {
+        streamlog_out(DEBUG4) << "AddNotAssignedHits : Try to assign hits from layer " << iL << " : Number of hits = " <<  hitVec.size() << std::endl;
+        AssignSiHitsToTracks(hitVec,
+                             _distCutForSITHits);
+        
+      }
+      
     }
   }
   
   if (_assignFTDHits>0) { // Treatment of left-over FTD hits
+    
+    streamlog_out(DEBUG4) << "Assign FTD hits *********************************" << std::endl;
     
     std::vector<TrackerHitExtendedVec> nonAssignedFTDHits;
     nonAssignedFTDHits.resize(_nLayersFTD);
@@ -3061,24 +2939,29 @@ void FullLDCTracking_MarlinTrk::AddNotAssignedHits() {
         // get the layer number
         int layer = getLayerID(trkHit);
         int petalIndex = getModuleID(trkHit);
-        // as we are dealing with staggered petals we will use 2*nlayers in each directions +/- z
-        // the layers will follow the even odd numbering of the petals 
-        if ( petalIndex % 2 == 0 ) {
-          layer = 2*layer;
-        }
-        else {
-          layer = 2*layer + 1;
-        }
         
+        if ( _petalBasedFTDWithOverlaps == true ) {
+          
+          // as we are dealing with staggered petals we will use 2*nlayers in each directions +/- z
+          // the layers will follow the even odd numbering of the petals 
+          if ( petalIndex % 2 == 0 ) {
+            layer = 2*layer;
+          }
+          else {
+            layer = 2*layer + 1;
+          }
+          
+        }
         
         if (layer >=0 && layer < (int)_nLayersFTD)
           nonAssignedFTDHits[layer].push_back(trkHitExt);
       }
     }
     for (int iL=_nLayersFTD-1;iL>=0;--iL) {
-      if ( nonAssignedFTDHits[iL].size()!=0 ) {
+      if ( nonAssignedFTDHits[iL].empty() == false ) {
         
         TrackerHitExtendedVec hitVec = nonAssignedFTDHits[iL];
+        streamlog_out(DEBUG4) << "AddNotAssignedHits : Try to assign hits from layer " << iL << " : Number of hits = " <<  hitVec.size() << std::endl;
         AssignSiHitsToTracks(hitVec,
                              _distCutForFTDHits);     
         
@@ -3090,7 +2973,7 @@ void FullLDCTracking_MarlinTrk::AddNotAssignedHits() {
   
   if (_assignVTXHits>0) { // Treatment of left-over VTX hits
     
-     streamlog_out(DEBUG4) << "Assign VXD hits *********************************" << std::endl;
+    streamlog_out(DEBUG4) << "Assign VXD hits *********************************" << std::endl;
     
     std::vector<TrackerHitExtendedVec> nonAssignedVTXHits;
     nonAssignedVTXHits.resize(_nLayersVTX);
@@ -3114,9 +2997,13 @@ void FullLDCTracking_MarlinTrk::AddNotAssignedHits() {
       }
     }
     for (int iL=_nLayersVTX-1;iL>=0;--iL) {
-      TrackerHitExtendedVec hitVec = nonAssignedVTXHits[iL];
-      AssignSiHitsToTracks(hitVec,
-                           _distCutForVTXHits);     
+      if ( nonAssignedVTXHits[iL].empty() == false ) {
+        
+        TrackerHitExtendedVec hitVec = nonAssignedVTXHits[iL];
+        streamlog_out(DEBUG4) << "AddNotAssignedHits : Try to assign hits from layer " << iL << " : Number of hits = " <<  hitVec.size() << std::endl;
+        AssignSiHitsToTracks(hitVec,
+                             _distCutForVTXHits);     
+      }
     }
   }
   
@@ -3132,6 +3019,7 @@ void FullLDCTracking_MarlinTrk::AddNotAssignedHits() {
         nonAssignedTPCHits.push_back(trkHitExt);
       }
     }
+    streamlog_out(DEBUG4) << "AddNotAssignedHits : Number of Non Assigned TPC hits = " <<  nonAssignedTPCHits.size() << std::endl;
     AssignTPCHitsToTracks(nonAssignedTPCHits,
                           _distCutForTPCHits);
   }
@@ -3632,6 +3520,8 @@ void FullLDCTracking_MarlinTrk::AssignSiHitsToTracks(TrackerHitExtendedVec hitVe
   int nHits = int(hitVec.size());
   int nTrk = int(_allNonCombinedTPCTracks.size());
   
+  streamlog_out(DEBUG4) << "AssignSiHitsToTracks : Number of hits to assign " <<  hitVec.size() << " : Number of available tracks = " << nTrk << std::endl;
+  
   std::map <TrackExtended*,bool> flagTrack;
   std::map <TrackerHitExtended*,bool> flagHit;
   TrackHitPairVec pairs;
@@ -3656,6 +3546,9 @@ void FullLDCTracking_MarlinTrk::AssignSiHitsToTracks(TrackerHitExtendedVec hitVe
       float tanLambda = trkExt->getTanLambda();       
       float product = pos[2]*tanLambda;
       
+      streamlog_out(DEBUG2) << "AssignSiHitsToTracks : product =  " << product << " z hit = " << pos[2] <<  std::endl;
+      
+      
       if (product>0) {
         
         float d0 = trkExt->getD0();
@@ -3663,10 +3556,12 @@ void FullLDCTracking_MarlinTrk::AssignSiHitsToTracks(TrackerHitExtendedVec hitVe
         float phi0 = trkExt->getPhi();
         float omega = trkExt->getOmega();
         tanLambda = trkExt->getTanLambda();
-                
+        
         HelixClass helix;
         helix.Initialize_Canonical(phi0,d0,z0,omega,tanLambda,_bField);
         float distance = helix.getDistanceToPoint(pos,dcut);
+        
+        streamlog_out(DEBUG2) << "AssignSiHitsToTracks : distance =  " << distance << " cut = " << dcut << std::endl;
         
         if (distance<dcut) {
           TrackHitPair * trkHitPair = 
@@ -3680,6 +3575,8 @@ void FullLDCTracking_MarlinTrk::AssignSiHitsToTracks(TrackerHitExtendedVec hitVe
   }
   
   int nPairs = int(pairs.size());
+  
+  streamlog_out(DEBUG4) << "AssignSiHitsToTracks : Number of track hit pairs to try =  " << nPairs << std::endl;
   
   if (nPairs>0) {
     
@@ -3738,23 +3635,21 @@ void FullLDCTracking_MarlinTrk::AssignSiHitsToTracks(TrackerHitExtendedVec hitVe
         trkHits.push_back(remainHit);
         
         
-        double chi2;
+        double chi2_D;
         int ndf;
         
         if( trkHits.size() < 3 ) return ;
         
-        MarlinTrk::IMarlinTrack* marlin_trk = _trksystem->createTrack();
-
-	// sort the hits in R
-	std::vector< std::pair<float, EVENT::TrackerHit*> > r2_values;
+        // sort the hits in R
+        std::vector< std::pair<float, EVENT::TrackerHit*> > r2_values;
         r2_values.reserve(trkHits.size());
         
         for (TrackerHitVec::iterator it=trkHits.begin(); it!=trkHits.end(); ++it) {
-	  EVENT::TrackerHit* h = *it;
+          EVENT::TrackerHit* h = *it;
           float r2 = h->getPosition()[0]*h->getPosition()[0]+h->getPosition()[1]*h->getPosition()[1];
           r2_values.push_back(std::make_pair(r2, *it));
         }
-                
+        
         sort(r2_values.begin(),r2_values.end());
         
         trkHits.clear();
@@ -3763,142 +3658,96 @@ void FullLDCTracking_MarlinTrk::AssignSiHitsToTracks(TrackerHitExtendedVec hitVe
         for (std::vector< std::pair<float, EVENT::TrackerHit*> >::iterator it=r2_values.begin(); it!=r2_values.end(); ++it) {
           trkHits.push_back(it->second);
         }
-
-               
+        
+        
         EVENT::TrackerHitVec::iterator it = trkHits.begin();
         
-        streamlog_out(DEBUG2) << "Start Fitting: AddHits: number of hits to fit " << trkHits.size() << std::endl;
-      
-//        
-//        int number_of_added_hits = 0;
-//        for( it = trkHits.begin() ; it != trkHits.end() ; ++it ) {
-//          
-//          if (marlin_trk->addHit(*it) == 0){
-//            ++number_of_added_hits;
-//          }
-//          else{
-//            streamlog_out(DEBUG4) << "Hit " << it - trkHits.begin() << " Dropped " << std::endl;
-//          }
-//          
-//        }
-//        
-//        if( number_of_added_hits < 3 ) {
-//          delete marlin_trk ;
-//          return ;
-//        }
-                            
-        int number_of_added_hits = 0;
-        int ndof_added = 0;
-        TrackerHitVec added_hits;
-        
-        for( it = trkHits.begin() ; it != trkHits.end() ; ++it ) {
-          
-          TrackerHit* trkHit = *it;
-          bool isSuccessful = false; 
-          
-          if( BitSet32( trkHit->getType() )[ UTIL::ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT ]   ){ //it is a composite spacepoint
-            
-            //Split it up and add both hits to the MarlinTrk
-            const LCObjectVec rawObjects = trkHit->getRawHits();                    
-            
-            for( unsigned k=0; k< rawObjects.size(); k++ ){
-              
-              TrackerHit* rawHit = dynamic_cast< TrackerHit* >( rawObjects[k] );
-              
-              if( marlin_trk->addHit( rawHit ) == IMarlinTrack::success ){
+        streamlog_out(DEBUG2) << "AssignSiHitsToTracks: Start Fitting: AddHits: number of hits to fit " << trkHits.size() << std::endl;
                 
-                isSuccessful = true; //if at least one hit from the spacepoint gets added
-                ++ndof_added;
-              }
-            }
-          }
-          else { // normal non composite hit
-            
-            if (marlin_trk->addHit( trkHit ) == 0) {
-              isSuccessful = true;
-              ndof_added += 2;
-            }
-          }
-          
-          if (isSuccessful) {
-            added_hits.push_back(trkHit);
-            ++number_of_added_hits;
-          }
-          
-          
-          else{
-            streamlog_out(DEBUG4) << "Hit " << it - trkHits.begin() << " Dropped " << std::endl;          
-          }
-          
-        }
         
-        if( ndof_added < 8 ) {
-          streamlog_out(DEBUG3) << "SiliconTracking_MarlinTrk::FinalRefit: Cannot fit less with less than 8 degrees of freedom. Number of hits =  " << number_of_added_hits << " ndof = " << ndof_added << std::endl;
+        MarlinTrk::IMarlinTrack* marlin_trk = _trksystem->createTrack();
+        
+        IMPL::TrackStateImpl pre_fit ;
+        
+        
+        /** Provides the values of a track state from the first, middle and last hits in the hit_list. */
+        int error = createPrefit( trkHits, &pre_fit, _bField, IMarlinTrack::backward);
+        
+        if ( error != IMarlinTrack::success ) {
+          
+          streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::AssignSiHitsToTracks: creation of prefit fails with error " << error << std::endl;
+          
           delete marlin_trk ;
-          continue ;
+          return;
+          
         }
         
-        // initialise with space-points not strips 
-        // make a helix from 3 hits to get a trackstate
-        const double* x1 = added_hits[0]->getPosition();
-        const double* x2 = added_hits[ added_hits.size()/2 ]->getPosition();
-        const double* x3 = added_hits.back()->getPosition();
-        
-        HelixTrack helixTrack( x1, x2, x3, _bField, IMarlinTrack::backward );
-        
-        helixTrack.moveRefPoint(0.0, 0.0, 0.0);
-        
-        const float referencePoint[3] = { helixTrack.getRefPointX() , helixTrack.getRefPointY() , helixTrack.getRefPointZ() };
-        
-        
+        // setup initial dummy covariance matrix
         EVENT::FloatVec covMatrix;
-        
         covMatrix.resize(15);
         
         for (unsigned icov = 0; icov<covMatrix.size(); ++icov) {
           covMatrix[icov] = 0;
         }
         
-        covMatrix[0]  = ( 1.e4 ); //sigma_d0^2
-        covMatrix[2]  = ( 1.e4 ); //sigma_phi0^2
-        covMatrix[5]  = ( 1.e4 ); //sigma_omega^2
-        covMatrix[9]  = ( 1.e4 ); //sigma_z0^2
-        covMatrix[14] = ( 1.e4 ); //sigma_tanl^2
+        covMatrix[0]  = ( _initialTrackError_d0    ); //sigma_d0^2
+        covMatrix[2]  = ( _initialTrackError_phi0  ); //sigma_phi0^2
+        covMatrix[5]  = ( _initialTrackError_omega ); //sigma_omega^2
+        covMatrix[9]  = ( _initialTrackError_z0    ); //sigma_z0^2
+        covMatrix[14] = ( _initialTrackError_tanL  ); //sigma_tanl^2
         
+        pre_fit.setCovMatrix(covMatrix);
         
-        TrackStateImpl trackState( TrackState::AtOther, 
-                                  helixTrack.getD0(), 
-                                  helixTrack.getPhi0(), 
-                                  helixTrack.getOmega(), 
-                                  helixTrack.getZ0(), 
-                                  helixTrack.getTanLambda(), 
-                                  covMatrix, 
-                                  referencePoint) ;
+        error = MarlinTrk::createFit( trkHits, marlin_trk, &pre_fit, _bField, IMarlinTrack::backward , _maxChi2PerHit );
         
-        marlin_trk->initialise( trackState, _bField, IMarlinTrack::backward ) ;
-        
-        
-        int fit_status = marlin_trk->fit(_maxChi2PerHit) ; 
-        
-        if( fit_status != 0 ){ 
+        if ( error != IMarlinTrack::success ) {
+          
+          streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::AssignSiHitsToTracks: creation of fit fails with error " << error << std::endl;
+          
           delete marlin_trk ;
-          return;
+          return ;
+          
         }
+        
         
         const gear::Vector3D point(0.,0.,0.); // nominal IP
         int return_code = 0;
         
         TrackStateImpl trkState ;
-        return_code = marlin_trk->propagate(point, trkState, chi2, ndf ) ;
+        return_code = marlin_trk->propagate(point, trkState, chi2_D, ndf ) ;
         
         delete marlin_trk ;
         
-        if (return_code !=0 || (chi2/(double)ndf) > _chi2FitCut) {
-          return;
+        if ( error != IMarlinTrack::success ) {
+          
+          streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::AssignSiHitsToTracks: propagate to IP fails with error " << error << std::endl;
+          
+          return ;
+          
+        }
+        
+        if ( ndf < 0  ) {
+          
+          streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::AssignSiHitsToTracks: Fit failed : NDF is less that zero  " << ndf << std::endl;
+          
+          return ;
+          
         }
         
         
-        // note trackAR which is of type TrackExtended, only takes fits set for ref point = 0,0,0 
+        float chi2Fit = chi2_D/float(ndf);
+        
+        if ( chi2Fit > _chi2FitCut ) {
+          
+          streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::AssignSiHitsToTracks: track fail Chi2 cut of " << _chi2FitCut << " chi2 of track = " <<  chi2Fit << std::endl;
+          
+          return ;
+          
+        }
+              
+        
+        
+        // note trackAR which is of type TrackExtended, only takes fits with ref point = 0,0,0 
         trkExt->setOmega(trkState.getOmega());
         trkExt->setTanLambda(trkState.getTanLambda());
         trkExt->setPhi(trkState.getPhi());
@@ -3913,7 +3762,7 @@ void FullLDCTracking_MarlinTrk::AssignSiHitsToTracks(TrackerHitExtendedVec hitVe
         }
         
         trkExt->setCovMatrix(cov);
-        trkExt->setChi2(chi2);
+        trkExt->setChi2(chi2_D);
         trkExt->setNDF(ndf);
         
         trkExt->addTrackerHitExtended( trkHitExt );
@@ -3922,6 +3771,8 @@ void FullLDCTracking_MarlinTrk::AssignSiHitsToTracks(TrackerHitExtendedVec hitVe
         flagTrack[trkExt] = false;
         flagHit[trkHitExt] = false;
         
+        
+        streamlog_out(DEBUG2) << "AssignSiHitsToTracks: Start Fitting: Hit " << trkHitExt << " successfully assigned to track " << trkExt << std::endl;
         
       }
     }
@@ -4301,14 +4152,14 @@ void FullLDCTracking_MarlinTrk::GeneralSorting(int * index, float * val, int dir
       if (direct>0) 
         order = valOne <= valTwo;
       if( order )
-          {
+      {
         valTemp = val[j];
         val[j] = val[j+1];
         val[j+1] = valTemp;
         indTemp = index[j];
         index[j] = index[j+1];
         index[j+1] = indTemp;
-          }
+      }
     }  
   }
   
@@ -4431,425 +4282,143 @@ void FullLDCTracking_MarlinTrk::end() {
   
 }
 
-
 void FullLDCTracking_MarlinTrk::setupGearGeom( const gear::GearMgr* gearMgr ){
   
   _bField = gearMgr->getBField().at( gear::Vector3D( 0.,0.,0.)  ).z() ;
   
-  if( _reading_loi_data ){
+  //-- VXD Parameters--
+  _nLayersVTX = 0 ;
+  const gear::VXDParameters* pVXDDetMain = 0;
+  const gear::VXDLayerLayout* pVXDLayerLayout = 0;
+  
+  try{
     
+    streamlog_out( DEBUG9 ) << " filling VXD parameters from gear::SITParameters " << std::endl ;
     
-    // VXD
+    pVXDDetMain = &Global::GEAR->getVXDParameters();
+    pVXDLayerLayout = &(pVXDDetMain->getVXDLayerLayout());
+    _nLayersVTX = pVXDLayerLayout->getNLayers();
+  }
+  catch( gear::UnknownParameterException& e){
     
-    const gear::ZPlanarParameters& pVXDDetMain = gearMgr->getVXDParameters();
-    const gear::ZPlanarLayerLayout& pVXDLayerLayout = pVXDDetMain.getVXDLayerLayout();
+    streamlog_out( DEBUG9 ) << " ### gear::VXDParameters Not Present in GEAR FILE" << std::endl ;
     
-    _nLayersVTX = pVXDLayerLayout.getNLayers(); 
+  }
+  
+  
+  
+  //-- SIT Parameters--
+  _nLayersSIT = 0 ;
+  const gear::ZPlanarParameters* pSITDetMain = 0;
+  const gear::ZPlanarLayerLayout* pSITLayerLayout = 0;
+  
+  try{
     
+    streamlog_out( DEBUG9 ) << " filling SIT parameters from gear::SITParameters " << std::endl ;
     
+    pSITDetMain = &Global::GEAR->getSITParameters();
+    pSITLayerLayout = &(pSITDetMain->getZPlanarLayerLayout());
+    _nLayersSIT = pSITLayerLayout->getNLayers();
     
+  }
+  catch( gear::UnknownParameterException& e){
     
-    // SIT
+    streamlog_out( DEBUG9 ) << " ### gear::SITParameters Not Present in GEAR FILE" << std::endl ;
     
-    const gear::GearParameters& pSIT = gearMgr->getGearParameters("SIT");
-    
-    const EVENT::DoubleVec& SIT_r   =  pSIT.getDoubleVals("SITLayerRadius" )  ;
-    const EVENT::DoubleVec& SIT_hl  =  pSIT.getDoubleVals("SITSupportLayerHalfLength" )  ;
-    
-    _nLayersSIT = SIT_r.size() ; 
-    
-    if (_nLayersSIT != SIT_r.size() || _nLayersSIT != SIT_hl.size()) {
+  }
+  
+  if( _nLayersSIT == 0 ){
+    // try the old LOI style key value pairs as defined in the SSit03 Mokka drive
+    try{
       
-      streamlog_out( ERROR ) << "ILDSITCylinderKalDetector miss-match between DoubleVec and nlayers exit(1) called from file " << __FILE__ << " line " << __LINE__  << std::endl ;
-      exit(1);
+      streamlog_out( MESSAGE ) << "  FullLDCTracking_MarlinTrk - Simple Cylinder Based SIT using parameters defined by SSit03 Mokka driver " << std::endl ;
+      
+      // SIT
+      
+      const gear::GearParameters& pSIT = gearMgr->getGearParameters("SIT");
+      
+      const EVENT::DoubleVec& SIT_r   =  pSIT.getDoubleVals("SITLayerRadius" )  ;
+      const EVENT::DoubleVec& SIT_hl  =  pSIT.getDoubleVals("SITSupportLayerHalfLength" )  ;
+      
+      _nLayersSIT = SIT_r.size() ; 
+      
+      if (_nLayersSIT != SIT_r.size() || _nLayersSIT != SIT_hl.size()) {
+        
+        streamlog_out( ERROR ) << "ILDSITCylinderKalDetector miss-match between DoubleVec and nlayers exit(1) called from file " << __FILE__ << " line " << __LINE__  << std::endl ;
+        exit(1);
+        
+      }
+    }
+    catch( gear::UnknownParameterException& e){
+      
+      streamlog_out( DEBUG9 ) << " ### gear::SIT Parameters from as defined in SSit03 Not Present in GEAR FILE" << std::endl ;
+      
+    } 
+    
+  }
+  
+  
+  
+  //-- FTD Parameters--
+  _petalBasedFTDWithOverlaps = false;  
+  _nLayersFTD = 0;
+  
+  try{
+    
+    streamlog_out( DEBUG9 ) << " filling FTD parameters from gear::FTDParameters " << std::endl ;
+    
+    const gear::FTDParameters&   pFTD      = Global::GEAR->getFTDParameters();
+    const gear::FTDLayerLayout&  ftdlayers = pFTD.getFTDLayerLayout() ;
+    
+    _nLayersFTD = ftdlayers.getNLayers() ;
+    
+    for (unsigned int disk=0; disk < _nLayersFTD; ++disk) {
+      
+      _zLayerFTD.push_back( ftdlayers.getSensitiveZposition(disk, 0, 1) ); // front petal even numbered
+      
+      if ( ftdlayers.getNPetals(disk) > 0) {
+        _zLayerFTD.push_back( ftdlayers.getSensitiveZposition(disk, 1, 1) );  // front petal odd numbered
+        _petalBasedFTDWithOverlaps = true;
+      }
       
     }
     
+    // SJA: Here we increase the size of _nlayersFTD as we are treating the 
+    _nLayersFTD =_zLayerFTD.size() ;     
+    
+  }
+  catch( gear::UnknownParameterException& e){
+    
+    streamlog_out( DEBUG9 ) << " ### gear::FTDParameters Not Present in GEAR FILE" << std::endl ;
+    
+  } 
+  
+  if( _nLayersFTD == 0 ){
     
     // FTD
-    
-    const gear::GearParameters& pFTD = gearMgr->getGearParameters("FTD");
-    
-    const EVENT::DoubleVec* pFTD_si  = NULL;
-    const EVENT::DoubleVec* pFTD_sp  = NULL;
-    const EVENT::DoubleVec* pFTD_ri  = NULL;
-    const EVENT::DoubleVec* pFTD_ro  = NULL;
-    const EVENT::DoubleVec* pFTD_z   = NULL;
-    
-    streamlog_out( MESSAGE ) << " For FTD using parameters defined by SFtd05 Mokka driver " << std::endl ;
-    
-    pFTD_si  =  &pFTD.getDoubleVals("FTDDiskSiThickness" )  ;
-    pFTD_sp  =  &pFTD.getDoubleVals("FTDDiskSupportThickness" )  ;
-    pFTD_ri  =  &pFTD.getDoubleVals("FTDInnerRadius" )  ;
-    pFTD_ro  =  &pFTD.getDoubleVals("FTDOuterRadius" )  ;
-    pFTD_z   =  &pFTD.getDoubleVals("FTDZCoordinate" )  ;
-    
-    _nLayersFTD = pFTD_z->size();
-    
-    for (unsigned i = 0; i<_nLayersFTD; ++i) {
-      _zLayerFTD.push_back((*pFTD_z)[i]);
-    }
-    
-  }
-  
-  else {
-    
-    try {
+    try{
       
-      const gear::ZPlanarParameters& pVXDDetMain = gearMgr->getVXDParameters();
-      const gear::ZPlanarLayerLayout& pVXDLayerLayout = pVXDDetMain.getVXDLayerLayout();
+      streamlog_out( MESSAGE ) << "  FullLDCTracking_MarlinTrk - Simple Disc Based FTD using parameters defined by SFtd05 Mokka driver " << std::endl ;
       
-      _nLayersVTX = pVXDLayerLayout.getNLayers(); 
+      const gear::GearParameters& pFTD = gearMgr->getGearParameters("FTD");
       
-      _VXDgeo.resize(_nLayersVTX);
+      const EVENT::DoubleVec* pFTD_z   = NULL;
       
-      //SJA:FIXME: for now the support is taken as the same size the sensitive
-      //           if this is not done then the exposed areas of the support would leave a carbon - air boundary,
-      //           which if traversed in the reverse direction to the next boundary then the track be propagated through carbon
-      //           for a significant distance 
+      streamlog_out( MESSAGE ) << " For FTD using parameters defined by SFtd05 Mokka driver " << std::endl ;
       
-      for( unsigned int layer=0; layer < _nLayersVTX; ++layer){
-        _VXDgeo[layer].nLadders = pVXDLayerLayout.getNLadders(layer); 
-        _VXDgeo[layer].phi0 = pVXDLayerLayout.getPhi0(layer); 
-        _VXDgeo[layer].dphi = 2*M_PI / _VXDgeo[layer].nLadders; 
-        _VXDgeo[layer].senRMin = pVXDLayerLayout.getSensitiveDistance(layer); 
-        _VXDgeo[layer].supRMin = pVXDLayerLayout.getLadderDistance(layer); 
-        _VXDgeo[layer].length = pVXDLayerLayout.getSensitiveLength(layer); 
-        _VXDgeo[layer].width = pVXDLayerLayout.getSensitiveWidth(layer); 
-        _VXDgeo[layer].offset = pVXDLayerLayout.getSensitiveOffset(layer); 
-        _VXDgeo[layer].senThickness = pVXDLayerLayout.getSensitiveThickness(layer); 
-        _VXDgeo[layer].supThickness = pVXDLayerLayout.getLadderThickness(layer); 
+      pFTD_z = &pFTD.getDoubleVals("FTDZCoordinate" )  ;
+      
+      _nLayersFTD = pFTD_z->size();
+      
+      for (unsigned int i = 0; i<_nLayersFTD; ++i) {
+        _zLayerFTD.push_back((*pFTD_z)[i]);
       }
-      
-    } catch (gear::UnknownParameterException& e) {
-      streamlog_out( MESSAGE ) << "  MarlinKalTest - VXD missing in gear file: VXD Not Built " << std::endl ;
     }
-    
-    try {
+    catch( gear::UnknownParameterException& e){
       
-      const gear::ZPlanarParameters& pSITDetMain = gearMgr->getSITParameters();
-      const gear::ZPlanarLayerLayout& pSITLayerLayout = pSITDetMain.getZPlanarLayerLayout();
-      
-      // divide by two as we are treating the SIT as TWO stereo layers 
-      _nLayersSIT = pSITLayerLayout.getNLayers() / 2 ; 
-//      _SITgeo.resize(_nLayersSIT);
-//      
-//      //SJA:FIXME: for now the support is taken as the same size the sensitive
-//      //           if this is not done then the exposed areas of the support would leave a carbon - air boundary,
-//      //           which if traversed in the reverse direction to the next boundary then the track be propagated through carbon
-//      //           for a significant distance 
-//      
-//      for( unsigned int layer=0; layer < _nLayersSIT; ++layer){
-//        _SITgeo[layer].nLadders = pSITLayerLayout.getNLadders(layer); 
-//        _SITgeo[layer].phi0 = pSITLayerLayout.getPhi0(layer); 
-//        _SITgeo[layer].dphi = 2*M_PI / _SITgeo[layer].nLadders; 
-//        _SITgeo[layer].senRMin = pSITLayerLayout.getSensitiveDistance(layer); 
-//        _SITgeo[layer].supRMin = pSITLayerLayout.getLadderDistance(layer); 
-//        _SITgeo[layer].length = pSITLayerLayout.getSensitiveLength(layer); 
-//        _SITgeo[layer].width = pSITLayerLayout.getSensitiveWidth(layer); 
-//        _SITgeo[layer].offset = pSITLayerLayout.getSensitiveOffset(layer); 
-//        _SITgeo[layer].senThickness = pSITLayerLayout.getSensitiveThickness(layer); 
-//        _SITgeo[layer].supThickness = pSITLayerLayout.getLadderThickness(layer); 
-//      }
+      streamlog_out( DEBUG9 ) << " ### gear::FTD Parameters as defined in SFtd05 Not Present in GEAR FILE" << std::endl ;
       
     } 
-    catch (gear::UnknownParameterException& e) {
-      streamlog_out( MESSAGE ) << "  MarlinKalTest - SIT missing in gear file: SIT Not Built " << std::endl ;
-    }
-    
-    try {
-      
-      
-      const gear::FTDParameters& ftdParams = gearMgr->getFTDParameters() ;
-      const gear::FTDLayerLayout& ftdlayers = ftdParams.getFTDLayerLayout() ;
-      
-      
-      _nLayersFTD = ftdlayers.getNLayers() ; 
-      _FTDgeo.resize(_nLayersFTD);
-      
-      //SJA:FIXME: for now the support is taken as the same size the sensitive
-      //           if this is not done then the exposed areas of the support would leave a carbon - air boundary,
-      //           which if traversed in the reverse direction to the next boundary then the track be propagated through carbon
-      //           for a significant distance 
-      
-      for(unsigned disk=0; disk< _nLayersFTD; ++disk){
-        
-        // numbers taken from the ILD_01 gear file for the sensitive part 
-        _FTDgeo[disk].nPetals = ftdlayers.getNPetals(disk) ;    
-        _FTDgeo[disk].dphi = 2*M_PI /  _FTDgeo[disk].nPetals ;
-        _FTDgeo[disk].phi0 = ftdlayers.getPhi0(disk) ;
-        _FTDgeo[disk].alpha = ftdlayers.getAlpha(disk) ;
-        _FTDgeo[disk].rInner = ftdlayers.getSensitiveRinner(disk) ;
-        _FTDgeo[disk].height = ftdlayers.getSensitiveWidth(disk) ;
-        _FTDgeo[disk].innerBaseLength =  ftdlayers.getSensitiveLengthMin(disk) ;
-        _FTDgeo[disk].outerBaseLength =  ftdlayers.getSensitiveLengthMax(disk) ;
-        _FTDgeo[disk].senThickness =  ftdlayers.getSensitiveThickness(disk) ;
-        _FTDgeo[disk].supThickness =  ftdlayers.getSupportThickness(disk) ;
-        
-//         _FTDgeo[disk].senZPos_even_petal1 = ftdlayers.getSensitiveZposition(disk, 0, 1) ; 
-//         _FTDgeo[disk].senZPos_even_petal2 = ftdlayers.getSensitiveZposition(disk, 0, 2) ; 
-//         _FTDgeo[disk].senZPos_even_petal3 = ftdlayers.getSensitiveZposition(disk, 0, 3) ; 
-//         _FTDgeo[disk].senZPos_even_petal4 = ftdlayers.getSensitiveZposition(disk, 0, 4) ; 
-//         
-//         // currently the design assumes that the petal on the same side are at the same z
-//         assert(_FTDgeo[disk].senZPos_even_petal1==_FTDgeo[disk].senZPos_even_petal2);
-//         assert(_FTDgeo[disk].senZPos_even_petal3==_FTDgeo[disk].senZPos_even_petal4);
-//         
-//         _FTDgeo[disk].senZPos_odd_petal1 = ftdlayers.getSensitiveZposition(disk, 1, 1) ; 
-//         _FTDgeo[disk].senZPos_odd_petal2 = ftdlayers.getSensitiveZposition(disk, 1, 2) ; 
-//         _FTDgeo[disk].senZPos_odd_petal3 = ftdlayers.getSensitiveZposition(disk, 1, 3) ; 
-//         _FTDgeo[disk].senZPos_odd_petal4 = ftdlayers.getSensitiveZposition(disk, 1, 4) ; 
-//         
-//         // currently the design assumes that the petal on the same side are at the same z
-//         assert(_FTDgeo[disk].senZPos_odd_petal1==_FTDgeo[disk].senZPos_odd_petal2);
-//         assert(_FTDgeo[disk].senZPos_odd_petal3==_FTDgeo[disk].senZPos_odd_petal4);
-//         
-//         _FTDgeo[disk].supZPos_even_petal1 = ftdlayers.getSensitiveZposition(disk, 0, 1) ; 
-//         _FTDgeo[disk].supZPos_even_petal2 = ftdlayers.getSensitiveZposition(disk, 0, 2) ; 
-//         _FTDgeo[disk].supZPos_even_petal3 = ftdlayers.getSensitiveZposition(disk, 0, 3) ; 
-//         _FTDgeo[disk].supZPos_even_petal4 = ftdlayers.getSensitiveZposition(disk, 0, 4) ; 
-//         
-//         assert(_FTDgeo[disk].supZPos_even_petal1==_FTDgeo[disk].supZPos_even_petal2);
-//         assert(_FTDgeo[disk].supZPos_even_petal3==_FTDgeo[disk].supZPos_even_petal4);
-//         
-//         _FTDgeo[disk].supZPos_odd_petal1 = ftdlayers.getSensitiveZposition(disk, 1, 1) ; 
-//         _FTDgeo[disk].supZPos_odd_petal2 = ftdlayers.getSensitiveZposition(disk, 1, 2) ; 
-//         _FTDgeo[disk].supZPos_odd_petal3 = ftdlayers.getSensitiveZposition(disk, 1, 3) ; 
-//         _FTDgeo[disk].supZPos_odd_petal4 = ftdlayers.getSensitiveZposition(disk, 1, 4) ; 
-//         
-//         assert(_FTDgeo[disk].supZPos_odd_petal1==_FTDgeo[disk].supZPos_odd_petal2);
-//         assert(_FTDgeo[disk].supZPos_odd_petal3==_FTDgeo[disk].supZPos_odd_petal4);
-        
-        ///////////////////////////////////////////////////////////////////////////////
-        double thickness= _FTDgeo[disk].senThickness + _FTDgeo[disk].supThickness;
-        
-        _FTDgeo[disk].senZPos_even_petal1 = ftdlayers.getSensitiveZposition(disk, 0, 1) ; 
-        _FTDgeo[disk].senZPos_even_petal2 = _FTDgeo[disk].senZPos_even_petal1;
-        _FTDgeo[disk].senZPos_even_petal3 = _FTDgeo[disk].senZPos_even_petal1 + thickness;
-        _FTDgeo[disk].senZPos_even_petal4 = _FTDgeo[disk].senZPos_even_petal3;
-        
-        _FTDgeo[disk].senZPos_odd_petal1 = ftdlayers.getSensitiveZposition(disk, 1, 1) ; 
-        _FTDgeo[disk].senZPos_odd_petal2 = _FTDgeo[disk].senZPos_odd_petal1;
-        _FTDgeo[disk].senZPos_odd_petal3 = _FTDgeo[disk].senZPos_odd_petal1 + thickness;
-        _FTDgeo[disk].senZPos_odd_petal4 = _FTDgeo[disk].senZPos_odd_petal3;
-        
-        
-        _FTDgeo[disk].supZPos_even_petal1 = ftdlayers.getSensitiveZposition(disk, 0, 1) ; 
-        _FTDgeo[disk].supZPos_even_petal2 = _FTDgeo[disk].senZPos_even_petal1;
-        _FTDgeo[disk].supZPos_even_petal3 = _FTDgeo[disk].senZPos_even_petal1 + thickness;
-        _FTDgeo[disk].supZPos_even_petal4 = _FTDgeo[disk].senZPos_even_petal3;
-        
-        _FTDgeo[disk].supZPos_odd_petal1 = ftdlayers.getSensitiveZposition(disk, 1, 1) ; 
-        _FTDgeo[disk].supZPos_odd_petal2 = _FTDgeo[disk].senZPos_odd_petal1;
-        _FTDgeo[disk].supZPos_odd_petal3 = _FTDgeo[disk].senZPos_odd_petal1 + thickness;
-        _FTDgeo[disk].supZPos_odd_petal4 = _FTDgeo[disk].senZPos_odd_petal3;
-        
-        
-        ///////////////////////////////////////////////////////////////////////////////
-        
-        
-        
-        
-        
-        // rough check to see if the petal is rotated
-        if( fabs(_FTDgeo[disk].alpha) > fabs(FLT_MIN)  ) { 
-          streamlog_out( ERROR ) << "  FullLDCTracking_MarlinTrk - tilted design not supported exit(1) " << std::endl ;
-          exit(1);
-        }
-        
-      }
-      
-      for (unsigned disk=0; disk < _nLayersFTD; ++disk) {
-        _zLayerFTD.push_back(_FTDgeo[disk].senZPos_even_petal1); // front petal even numbered
-        _zLayerFTD.push_back(_FTDgeo[disk].senZPos_odd_petal1);  // front petal odd numbered
-      }
-      
-      // SJA as disks are staggered lets treat them internally as 2*ndisksFTD
-      _nLayersFTD =_zLayerFTD.size() ;
-      
-    } 
-    
-    catch (gear::UnknownParameterException& e) {
-      streamlog_out( MESSAGE ) << "  FullLDCTracking_MarlinTrk - FTD missing in gear file: FTD Not Built " << std::endl ;
-    }
-    
   }
-  
-  
   
 }
-
-
-//void FullLDCTracking_MarlinTrk::setupGearGeom( const gear::GearMgr* gearMgr ){
-//  
-//  _bField = gearMgr->getBField().at( gear::Vector3D( 0.,0.,0.)  ).z() ;
-//  
-//  
-//  try {
-//    
-//    const gear::ZPlanarParameters& pVXDDetMain = gearMgr->getVXDParameters();
-//    const gear::ZPlanarLayerLayout& pVXDLayerLayout = pVXDDetMain.getVXDLayerLayout();
-//    
-//    _nLayersVTX = pVXDLayerLayout.getNLayers(); 
-//    _VXDgeo.resize(_nLayersVTX);
-//    
-//    //SJA:FIXME: for now the support is taken as the same size the sensitive
-//    //           if this is not done then the exposed areas of the support would leave a carbon - air boundary,
-//    //           which if traversed in the reverse direction to the next boundary then the track be propagated through carbon
-//    //           for a significant distance 
-//    
-//    for( unsigned int layer=0; layer < _nLayersVTX; ++layer){
-//      _VXDgeo[layer].nLadders = pVXDLayerLayout.getNLadders(layer); 
-//      _VXDgeo[layer].phi0 = pVXDLayerLayout.getPhi0(layer); 
-//      _VXDgeo[layer].dphi = 2*M_PI / _VXDgeo[layer].nLadders; 
-//      _VXDgeo[layer].senRMin = pVXDLayerLayout.getSensitiveDistance(layer); 
-//      _VXDgeo[layer].supRMin = pVXDLayerLayout.getLadderDistance(layer); 
-//      _VXDgeo[layer].length = pVXDLayerLayout.getSensitiveLength(layer); 
-//      _VXDgeo[layer].width = pVXDLayerLayout.getSensitiveWidth(layer); 
-//      _VXDgeo[layer].offset = pVXDLayerLayout.getSensitiveOffset(layer); 
-//      _VXDgeo[layer].senThickness = pVXDLayerLayout.getSensitiveThickness(layer); 
-//      _VXDgeo[layer].supThickness = pVXDLayerLayout.getLadderThickness(layer); 
-//    }
-//    
-//  } catch (gear::UnknownParameterException& e) {
-//    streamlog_out( MESSAGE ) << "  MarlinKalTest - VXD missing in gear file: VXD Not Built " << std::endl ;
-//  }
-//  
-//  try {
-//    
-//    const gear::ZPlanarParameters& pSITDetMain = gearMgr->getSITParameters();
-//    const gear::ZPlanarLayerLayout& pSITLayerLayout = pSITDetMain.getZPlanarLayerLayout();
-//    
-//    _nLayersSIT = pSITLayerLayout.getNLayers(); 
-//    _SITgeo.resize(_nLayersSIT);
-//    
-//    //SJA:FIXME: for now the support is taken as the same size the sensitive
-//    //           if this is not done then the exposed areas of the support would leave a carbon - air boundary,
-//    //           which if traversed in the reverse direction to the next boundary then the track be propagated through carbon
-//    //           for a significant distance 
-//    
-//    for( unsigned int layer=0; layer < _nLayersSIT; ++layer){
-//      _SITgeo[layer].nLadders = pSITLayerLayout.getNLadders(layer); 
-//      _SITgeo[layer].phi0 = pSITLayerLayout.getPhi0(layer); 
-//      _SITgeo[layer].dphi = 2*M_PI / _SITgeo[layer].nLadders; 
-//      _SITgeo[layer].senRMin = pSITLayerLayout.getSensitiveDistance(layer); 
-//      _SITgeo[layer].supRMin = pSITLayerLayout.getLadderDistance(layer); 
-//      _SITgeo[layer].length = pSITLayerLayout.getSensitiveLength(layer); 
-//      _SITgeo[layer].width = pSITLayerLayout.getSensitiveWidth(layer); 
-//      _SITgeo[layer].offset = pSITLayerLayout.getSensitiveOffset(layer); 
-//      _SITgeo[layer].senThickness = pSITLayerLayout.getSensitiveThickness(layer); 
-//      _SITgeo[layer].supThickness = pSITLayerLayout.getLadderThickness(layer); 
-//    }
-//    
-//  } 
-//  catch (gear::UnknownParameterException& e) {
-//    streamlog_out( MESSAGE ) << "  MarlinKalTest - SIT missing in gear file: SIT Not Built " << std::endl ;
-//  }
-//  
-//  try {
-//    
-//    
-//    const gear::FTDParameters& ftdParams = gearMgr->getFTDParameters() ;
-//    const gear::FTDLayerLayout& ftdlayers = ftdParams.getFTDLayerLayout() ;
-//    
-//    
-//    _nLayersFTD = ftdlayers.getNLayers() ; 
-//    _FTDgeo.resize(_nLayersFTD);
-//    
-//    //SJA:FIXME: for now the support is taken as the same size the sensitive
-//    //           if this is not done then the exposed areas of the support would leave a carbon - air boundary,
-//    //           which if traversed in the reverse direction to the next boundary then the track be propagated through carbon
-//    //           for a significant distance 
-//    
-//    for(int disk=0; disk< _nLayersFTD; ++disk){
-//      
-//      // numbers taken from the ILD_01 gear file for the sensitive part 
-//      _FTDgeo[disk].nPetals = ftdlayers.getNPetals(disk) ;    
-//      _FTDgeo[disk].dphi = 2*M_PI /  _FTDgeo[disk].nPetals ;
-//      _FTDgeo[disk].phi0 = ftdlayers.getPhi0(disk) ;
-//      _FTDgeo[disk].alpha = ftdlayers.getAlpha(disk) ;
-//      _FTDgeo[disk].rInner = ftdlayers.getSensitiveRinner(disk) ;
-//      _FTDgeo[disk].height = ftdlayers.getSensitiveWidth(disk) ;
-//      _FTDgeo[disk].innerBaseLength =  ftdlayers.getSensitiveLengthMin(disk) ;
-//      _FTDgeo[disk].outerBaseLength =  ftdlayers.getSensitiveLengthMax(disk) ;
-//      _FTDgeo[disk].senThickness =  ftdlayers.getSensitiveThickness(disk) ;
-//      _FTDgeo[disk].supThickness =  ftdlayers.getSupportThickness(disk) ;
-//      
-//      _FTDgeo[disk].senZPos_even_petal1 = ftdlayers.getSensitiveZposition(disk, 0, 1) ; 
-//      _FTDgeo[disk].senZPos_even_petal2 = ftdlayers.getSensitiveZposition(disk, 0, 2) ; 
-//      _FTDgeo[disk].senZPos_even_petal3 = ftdlayers.getSensitiveZposition(disk, 0, 3) ; 
-//      _FTDgeo[disk].senZPos_even_petal4 = ftdlayers.getSensitiveZposition(disk, 0, 4) ; 
-//      
-//      // currently the design assumes that the petal on the same side are at the same z
-//      assert(_FTDgeo[disk].senZPos_even_petal1==_FTDgeo[disk].senZPos_even_petal2);
-//      assert(_FTDgeo[disk].senZPos_even_petal3==_FTDgeo[disk].senZPos_even_petal4);
-//      
-//      _FTDgeo[disk].senZPos_odd_petal1 = ftdlayers.getSensitiveZposition(disk, 1, 1) ; 
-//      _FTDgeo[disk].senZPos_odd_petal2 = ftdlayers.getSensitiveZposition(disk, 1, 2) ; 
-//      _FTDgeo[disk].senZPos_odd_petal3 = ftdlayers.getSensitiveZposition(disk, 1, 3) ; 
-//      _FTDgeo[disk].senZPos_odd_petal4 = ftdlayers.getSensitiveZposition(disk, 1, 4) ; 
-//      
-//      // currently the design assumes that the petal on the same side are at the same z
-//      assert(_FTDgeo[disk].senZPos_odd_petal1==_FTDgeo[disk].senZPos_odd_petal2);
-//      assert(_FTDgeo[disk].senZPos_odd_petal3==_FTDgeo[disk].senZPos_odd_petal4);
-//      
-//      _FTDgeo[disk].supZPos_even_petal1 = ftdlayers.getSensitiveZposition(disk, 0, 1) ; 
-//      _FTDgeo[disk].supZPos_even_petal2 = ftdlayers.getSensitiveZposition(disk, 0, 2) ; 
-//      _FTDgeo[disk].supZPos_even_petal3 = ftdlayers.getSensitiveZposition(disk, 0, 3) ; 
-//      _FTDgeo[disk].supZPos_even_petal4 = ftdlayers.getSensitiveZposition(disk, 0, 4) ; 
-//      
-//      assert(_FTDgeo[disk].supZPos_even_petal1==_FTDgeo[disk].supZPos_even_petal2);
-//      assert(_FTDgeo[disk].supZPos_even_petal3==_FTDgeo[disk].supZPos_even_petal4);
-//      
-//      _FTDgeo[disk].supZPos_odd_petal1 = ftdlayers.getSensitiveZposition(disk, 1, 1) ; 
-//      _FTDgeo[disk].supZPos_odd_petal2 = ftdlayers.getSensitiveZposition(disk, 1, 2) ; 
-//      _FTDgeo[disk].supZPos_odd_petal3 = ftdlayers.getSensitiveZposition(disk, 1, 3) ; 
-//      _FTDgeo[disk].supZPos_odd_petal4 = ftdlayers.getSensitiveZposition(disk, 1, 4) ; 
-//      
-//      assert(_FTDgeo[disk].supZPos_odd_petal1==_FTDgeo[disk].supZPos_odd_petal2);
-//      assert(_FTDgeo[disk].supZPos_odd_petal3==_FTDgeo[disk].supZPos_odd_petal4);
-//      
-//      
-//      
-//      
-//      
-//      // rough check to see if the petal is rotated
-//      if( fabs(_FTDgeo[disk].alpha) > fabs(FLT_MIN)  ) { 
-//        streamlog_out( ERROR ) << "  FullLDCTracking_MarlinTrk - tilted design not supported exit(1) " << std::endl ;
-//        exit(1);
-//      }
-//      
-//    }
-//    
-//    for (int disk=0; disk < _nLayersFTD; ++disk) {
-//      _zLayerFTD.push_back(_FTDgeo[disk].senZPos_even_petal1); // front petal even numbered
-//      _zLayerFTD.push_back(_FTDgeo[disk].senZPos_odd_petal1);  // front petal odd numbered
-//    }
-//    
-//    // SJA as disks are staggered lets treat them internally as 2*ndisksFTD
-//    _nLayersFTD =_zLayerFTD.size() ;
-//    
-//  } 
-//  
-//  catch (gear::UnknownParameterException& e) {
-//    streamlog_out( MESSAGE ) << "  FullLDCTracking_MarlinTrk - FTD missing in gear file: FTD Not Built " << std::endl ;
-//  }
-//  
-//  try {
-//    const gear::TPCParameters& pTPC = Global::GEAR->getTPCParameters();
-//    const gear::PadRowLayout2D& pTPCpads = pTPC.getPadLayout();
-//    _tpc_inner_r = pTPCpads.getPlaneExtent()[0];
-//    _tpc_outer_r = pTPCpads.getPlaneExtent()[1];
-//    _tpc_nrows = pTPCpads.getNRows();
-//    _tpc_pad_height = (_tpc_outer_r-_tpc_inner_r)/(double)_tpc_nrows;
-//    
-//  } catch (gear::UnknownParameterException& e) {
-//    streamlog_out( MESSAGE ) << "  MarlinKalTest - TPC missing in gear file: TPC Not Built " << std::endl ;
-//  }
-//  
-//  
-//  
-//  
-//}
-//
-//

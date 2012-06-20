@@ -225,9 +225,6 @@ namespace MarlinTrk {
  * @param ForbidOverlapInZComb If this flag is set to 1 then merging of left-over TPC semiloop and
  * combined Si-TPC track is their segments overlap in z <br>
  * (default parameter value : 0) <br>
- * @param StoreHitsInFit if set to 1 only hits used in the track fit are stored in the 
- * corresponding associated vector of TrackerHits <br>
- * (default is 0) <br>
  * @param cosThetaCutHighPtMerge cut on cos theta between the two momentum vectors 
  * when considering merger of high Pt tracks <br>
  * (default is 0.99) <br>
@@ -329,8 +326,6 @@ protected:
   
   bool _MSOn, _ElossOn, _SmoothOn ;
   
-  bool _reading_loi_data;
-    
   
   std::string _TPCTrackCollection;
   std::string _SiTrackCollection;
@@ -409,8 +404,6 @@ protected:
   bool _runMarlinTrkDiagnostics;
   std::string _MarlinTrkDiagnosticsName;
   
-  int _storeHitsInFit;
-  
   int _nHitsExtrapolation;
   
   int _cutOnTPCHits;
@@ -450,19 +443,19 @@ protected:
   double _tpc_pad_height;
   int    _tpc_nrows;
   
-  struct VXD_Layer {
-    int nLadders;
-    double phi0;
-    double dphi;
-    double senRMin;
-    double supRMin;
-    double length;
-    double width;
-    double offset;
-    double senThickness;
-    double supThickness;
-  };
-  std::vector<VXD_Layer> _VXDgeo;
+//  struct VXD_Layer {
+//    int nLadders;
+//    double phi0;
+//    double dphi;
+//    double senRMin;
+//    double supRMin;
+//    double length;
+//    double width;
+//    double offset;
+//    double senThickness;
+//    double supThickness;
+//  };
+//  std::vector<VXD_Layer> _VXDgeo;
   
   unsigned int _nLayersVTX;
   
@@ -482,49 +475,49 @@ protected:
   
   unsigned int _nLayersSIT;
   
-  struct FTD_Disk {
-    int nPetals;
-    double phi0;
-    double dphi;
-    
-    double alpha;
-    double rInner;
-    double height;
-    double innerBaseLength;
-    double outerBaseLength;
-    double senThickness;
-    double supThickness;
-    
-    double senZPos_even_petal1;
-    double senZPos_even_petal2;
-    double senZPos_even_petal3;
-    double senZPos_even_petal4;
-    
-    double supZPos_even_petal1;
-    double supZPos_even_petal2;
-    double supZPos_even_petal3;
-    double supZPos_even_petal4;
-    
-    double senZPos_odd_petal1;
-    double senZPos_odd_petal2;
-    double senZPos_odd_petal3;
-    double senZPos_odd_petal4;
-    
-    double supZPos_odd_petal1;
-    double supZPos_odd_petal2;
-    double supZPos_odd_petal3;
-    double supZPos_odd_petal4;
-    
-    
-    
-  };
-  
-  std::vector<FTD_Disk> _FTDgeo;
+//  struct FTD_Disk {
+//    int nPetals;
+//    double phi0;
+//    double dphi;
+//    
+//    double alpha;
+//    double rInner;
+//    double height;
+//    double innerBaseLength;
+//    double outerBaseLength;
+//    double senThickness;
+//    double supThickness;
+//    
+//    double senZPos_even_petal1;
+//    double senZPos_even_petal2;
+//    double senZPos_even_petal3;
+//    double senZPos_even_petal4;
+//    
+//    double supZPos_even_petal1;
+//    double supZPos_even_petal2;
+//    double supZPos_even_petal3;
+//    double supZPos_even_petal4;
+//    
+//    double senZPos_odd_petal1;
+//    double senZPos_odd_petal2;
+//    double senZPos_odd_petal3;
+//    double senZPos_odd_petal4;
+//    
+//    double supZPos_odd_petal1;
+//    double supZPos_odd_petal2;
+//    double supZPos_odd_petal3;
+//    double supZPos_odd_petal4;
+//    
+//    
+//    
+//  };
+//  
+//  std::vector<FTD_Disk> _FTDgeo;
   std::vector<float> _zLayerFTD;
   
   unsigned int _nLayersFTD;
   int _nPhiFTD; 
-
+  bool  _petalBasedFTDWithOverlaps;
   
 } ;
 
