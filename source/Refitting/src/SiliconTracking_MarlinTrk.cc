@@ -1736,7 +1736,7 @@ int SiliconTracking_MarlinTrk::BuildTrack(TrackerHitExtended * outerHit,
       float chi2RPhi;
       float chi2Z;
       
-      std::cout << "######## number of hits to fit with _fastfitter = " << NPT << std::endl; 
+//      std::cout << "######## number of hits to fit with _fastfitter = " << NPT << std::endl; 
       
       _fastfitter->fastHelixFit(NPT, xh, yh, rh, ph, wrh, zh, wzh,iopt, par, epar, chi2RPhi, chi2Z);
       par[3] = par[3]*par[0]/fabs(par[0]);
@@ -2481,7 +2481,7 @@ void SiliconTracking_MarlinTrk::TrackingInFTD() {
         unsigned int iCodeOuter = iS + 2*nLS[0] + 2*_nlayersFTD*ipOuter;
         
         if( iCodeOuter >= _sectorsFTD.size()){          
-          std::cout << "iCodeOuter index out of range: iCodeOuter =   " << iCodeOuter << " _sectorsFTD.size() = " << _sectorsFTD.size() << " exit(1) called from file " << __FILE__ << " line " << __LINE__<< std::endl;
+          streamlog_out(ERROR) << "iCodeOuter index out of range: iCodeOuter =   " << iCodeOuter << " _sectorsFTD.size() = " << _sectorsFTD.size() << " exit(1) called from file " << __FILE__ << " line " << __LINE__<< std::endl;
           exit(1);
         }
         
@@ -2900,9 +2900,9 @@ void SiliconTracking_MarlinTrk::FinalRefit(LCCollectionVec* trk_col, LCCollectio
         trkHits.push_back(it->second);
       }
       
-      for (unsigned ihit_indx=0 ; ihit_indx < trkHits.size(); ++ihit_indx) {
-        std::cout << " trk hit " << *trkHits[ihit_indx] << std::endl;
-      }
+//      for (unsigned ihit_indx=0 ; ihit_indx < trkHits.size(); ++ihit_indx) {
+//        std::cout << " trk hit " << *trkHits[ihit_indx] << std::endl;
+//      }
       
       
       bool fit_backwards = IMarlinTrack::backward;
