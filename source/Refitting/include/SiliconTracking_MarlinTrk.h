@@ -19,6 +19,7 @@
 #include <UTIL/ILDConf.h>
 
 
+
 using namespace lcio ;
 using namespace marlin ;
 
@@ -29,6 +30,9 @@ namespace MarlinTrk {
   class IMarlinTrkSystem ;
 }
 
+namespace UTIL{
+  class LCRelationNavigator ;
+}
 
 
 /** === Silicon Tracking Processor === <br>
@@ -134,8 +138,6 @@ namespace MarlinTrk {
  * (default value is 0.5) <br>
  * @param Chi2FitCut Cut on chi2/ndf to accept track candidate <br>
  * (default value is 100.) <br>
- * @param Chi2PrefitCut Chi2 Cut used in the track prefit with the simple helix hypothesis <br>
- * (default value is 1e+10) <br>
  * @param AngleCutForMerging cut on the angle between two track segments.  
  * If the angle is greater than this cut, segments are not allowed to be merged. <br>
  * (default value is 0.1) <br>
@@ -168,8 +170,6 @@ namespace MarlinTrk {
  * @param UseSIT When this flag is set to 1, SIT is included in pattern recognition. When this flag is set
  * to 0, SIT is excluded from the procedure of pattern recognition <br>
  * (default value is 1) <br>
- * @param Debug flag to activate debug printout <br>
- * (default value 1)
  * <br>
  * @author A. Raspereza (MPI Munich)<br>
  */
@@ -208,6 +208,7 @@ protected:
   
   int _nRun ;
   int _nEvt ;
+  EVENT::LCEvent* _current_event;
   
   int _nDivisionsInPhi;
   int _nDivisionsInTheta;
@@ -218,11 +219,38 @@ protected:
   /** pointer to the IMarlinTrkSystem instance 
    */
   MarlinTrk::IMarlinTrkSystem* _trksystem ;
+  bool _runMarlinTrkDiagnostics;
+  std::string _MarlinTrkDiagnosticsName;
   
   bool _MSOn, _ElossOn, _SmoothOn ;
   
-  bool _reading_loi_data;
-    
+  float _initialTrackError_d0;
+  float _initialTrackError_phi0;
+  float _initialTrackError_omega;
+  float _initialTrackError_z0;
+  float _initialTrackError_tanL;
+  
+  double _maxChi2PerHit;  
+  
+  bool  _UseEventDisplay;
+  int _detector_model_for_drawing;
+  std::vector<int> _colours;  
+  float     _helix_max_r;
+  
+  void drawEvent();
+  
+  /** helper function to get collection using try catch block */
+  LCCollection* GetCollection(  LCEvent * evt, std::string colName ) ;
+  
+  /** helper function to get relations using try catch block */
+  LCRelationNavigator* GetRelations( LCEvent * evt, std::string RelName ) ;
+  
+  /** input MCParticle collection and threshold used for Drawing
+   */
+  std::string  _colNameMCParticles;
+  float _MCpThreshold ;
+  
+  
   /// Compare tracks according to their chi2/ndf
   struct compare_TrackExtended{
     // n.b.: a and b should be TrackExtended const *, but the getters are not const :-(
@@ -238,6 +266,9 @@ protected:
   std::string _FTDSpacePointCollection;
   std::string _SITHitCollection;
   std::string _siTrkCollection;
+  
+  std::vector< LCCollection* > _colTrackerHits;
+  std::map< LCCollection*, std::string > _colNamesTrackerHits;
   
   std::vector<TrackerHitExtendedVec> _sectors;
   std::vector<TrackerHitExtendedVec> _sectorsFTD;
@@ -326,8 +357,6 @@ protected:
   double _dTheta;
   double _dPhiFTD;
   
-  int _debug;
-  
   std::vector<int> _Combinations;
   std::vector<int> _CombinationsFTD;
   
@@ -352,17 +381,9 @@ protected:
   float _distZ;
   float _chi2FitCut;
   
-  float _chi2PrefitCut;
   
   TrackExtendedVec _trackImplVec;
   
-  float _initialTrackError_d0;
-  float _initialTrackError_phi0;
-  float _initialTrackError_omega;
-  float _initialTrackError_z0;
-  float _initialTrackError_tanL;
-  
-  double _maxChi2PerHit;
   
   float _cutOnD0, _cutOnZ0, _cutOnOmega, _cutOnPt;
   
@@ -375,10 +396,8 @@ protected:
   int _nTotalVTXHits,_nTotalFTDHits,_nTotalSITHits;
   int _useSIT;
   
-  bool _runMarlinTrkDiagnostics;
-  std::string _MarlinTrkDiagnosticsName;
   
-//  int _createMap;
+  //  int _createMap;
   
   UTIL::BitField64* _encoder;
   int getDetectorID(TrackerHit* hit) { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::ILDCellID0::subdet]; }
@@ -389,82 +408,16 @@ protected:
   
   void setupGearGeom( const gear::GearMgr* gearMgr ) ;
   
-  struct VXD_Layer {
-    int nLadders;
-    double phi0;
-    double dphi;
-    double senRMin;
-    double supRMin;
-    double length;
-    double width;
-    double offset;
-    double senThickness;
-    double supThickness;
-  };
-  std::vector<VXD_Layer> _VXDgeo;
   
   unsigned int _nLayersVTX;
-  
-  struct SIT_Layer {
-    int nLadders;
-    double phi0;
-    double dphi;
-    double senRMin;
-    double supRMin;
-    double length;
-    double width;
-    double offset;
-    double senThickness;
-    double supThickness;
-  };
-  std::vector<SIT_Layer> _SITgeo;
   
   unsigned int _nLayersSIT;
   
   
-  
-  struct FTD_Disk {
-    int nPetals;
-    double phi0;
-    double dphi;
-    
-    double alpha;
-    double rInner;
-    double height;
-    double innerBaseLength;
-    double outerBaseLength;
-    double senThickness;
-    double supThickness;
-    
-    double senZPos_even_petal1;
-    double senZPos_even_petal2;
-    double senZPos_even_petal3;
-    double senZPos_even_petal4;
-    
-    double supZPos_even_petal1;
-    double supZPos_even_petal2;
-    double supZPos_even_petal3;
-    double supZPos_even_petal4;
-    
-    double senZPos_odd_petal1;
-    double senZPos_odd_petal2;
-    double senZPos_odd_petal3;
-    double senZPos_odd_petal4;
-    
-    double supZPos_odd_petal1;
-    double supZPos_odd_petal2;
-    double supZPos_odd_petal3;
-    double supZPos_odd_petal4;
-    
-    
-    
-  };
-  
-  std::vector<FTD_Disk> _FTDgeo;
-  
   std::vector<float> _zLayerFTD;
   
   unsigned int _nlayersFTD;
+  bool _petalBasedFTDWithOverlaps;
   int _nPhiFTD; 
   
   
