@@ -654,8 +654,6 @@ void SiliconTracking_MarlinTrk::processEvent( LCEvent * evt ) {
         break;
     }
     
-    
-    streamlog_out(ERROR) << " QualityCode  = " << trkCol->parameters().getStringVal("QualityCode") << std::endl;
   
     evt->addCollection(trkCol,_siTrkCollection.c_str());     
     
