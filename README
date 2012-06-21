@@ -42,7 +42,8 @@
 				 Hits with no MCParticle are discarded.
 
   SiliconTracking_MarlinTrk:	 Added protection against being overwhelmed by a very large number of hits within one sector. 
- 				 The default is set to 100. For now an ERROR message is printed and SkipEventException thrown. 
+ 				 The default is set to 100. For now an ERROR message is printed and the sector is dropped.
+				 Quality parameter added to output collection set to "Poor"
 				 This will be removed when the problem is more properly addressed.
 				 Make sure sort predicate for chi2 fulfils strict weak ordering.
   				 Fixed problem where using return instead of continue caused loss of all fitted tracks when single track fit failed.
