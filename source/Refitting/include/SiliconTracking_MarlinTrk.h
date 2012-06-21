@@ -357,6 +357,8 @@ protected:
   double _dTheta;
   double _dPhiFTD;
   
+
+  
   std::vector<int> _Combinations;
   std::vector<int> _CombinationsFTD;
   
@@ -419,7 +421,12 @@ protected:
   unsigned int _nlayersFTD;
   bool _petalBasedFTDWithOverlaps;
   int _nPhiFTD; 
-  
+
+  int _output_track_col_quality;
+  static const int _output_track_col_quality_GOOD;
+  static const int _output_track_col_quality_FAIR;
+  static const int _output_track_col_quality_POOR;
+
   
 } ;
 

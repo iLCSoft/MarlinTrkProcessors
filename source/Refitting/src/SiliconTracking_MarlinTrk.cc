@@ -54,6 +54,10 @@ using std::min;
 using std::max;
 using std::abs;
 
+const int SiliconTracking_MarlinTrk::_output_track_col_quality_GOOD = 1;
+const int SiliconTracking_MarlinTrk::_output_track_col_quality_FAIR = 2;
+const int SiliconTracking_MarlinTrk::_output_track_col_quality_POOR = 3;
+
 const double SiliconTracking_MarlinTrk::TWOPI = 2*M_PI;
 
 SiliconTracking_MarlinTrk aSiliconTracking_MarlinTrk ;
@@ -443,7 +447,7 @@ SiliconTracking_MarlinTrk::SiliconTracking_MarlinTrk() : Processor("SiliconTrack
   
 #endif
   
-  
+  _output_track_col_quality = _output_track_col_quality_GOOD;
   
   
 }
@@ -520,6 +524,7 @@ void SiliconTracking_MarlinTrk::init() {
   cutOnR = 1000.*cutOnR;
   _cutOnOmega = 1/cutOnR;
   
+  _output_track_col_quality = 0;
   
 }
 
@@ -536,6 +541,8 @@ void SiliconTracking_MarlinTrk::processRunHeader( LCRunHeader* run) {
 void SiliconTracking_MarlinTrk::processEvent( LCEvent * evt ) { 
   
   _current_event = evt;
+  
+  _output_track_col_quality = _output_track_col_quality_GOOD;
   
   // Clearing the working containers from the previous event
   // FIXME: partly done at the end of the event, in CleanUp. Make it consistent.
@@ -631,7 +638,25 @@ void SiliconTracking_MarlinTrk::processEvent( LCEvent * evt ) {
     
     FinalRefit(trkCol, relCol);
     
+    // set the quality of the output collection
+    switch (_output_track_col_quality) {
+
+      case _output_track_col_quality_FAIR:
+        trkCol->parameters().setValue( "QualityCode" , "Fair"  ) ;
+        break;
+
+      case _output_track_col_quality_POOR:
+        trkCol->parameters().setValue( "QualityCode" , "Poor"  ) ;
+        break;
+        
+      default:
+        trkCol->parameters().setValue( "QualityCode" , "Good"  ) ;
+        break;
+    }
     
+    
+    streamlog_out(ERROR) << " QualityCode  = " << trkCol->parameters().getStringVal("QualityCode") << std::endl;
+  
     evt->addCollection(trkCol,_siTrkCollection.c_str());     
     
     if (_UseEventDisplay) {
@@ -897,9 +922,10 @@ int SiliconTracking_MarlinTrk::InitialiseFTD(LCEvent * evt) {
         delete _sectorsFTD[i][ihit];
       } 
       _sectorsFTD[i].clear();
-//      if( nhits != 0 ) streamlog_out(ERROR) << " ### Number of Hits in FTD Sector " << i << " = " << nhits << " : Limit is set to " << _max_hits_per_sector << " : This sector will be dropped from track search" << std::endl;
-      if( nhits != 0 ) streamlog_out(ERROR) << " ### EVENT " << evt->getEventNumber() << " :: RUN " << evt->getRunNumber() << " : Number of Hits in FTD Sector " << i << " = " << nhits << " : Limit is set to " << _max_hits_per_sector << " : This event will be skipped from further reconstruction \n #&* SkipEventException Thrown #&*" << std::endl;
-      throw marlin::SkipEventException(this);
+      if( nhits != 0 ) streamlog_out(ERROR)  << " ### EVENT " << evt->getEventNumber() << " :: RUN " << evt->getRunNumber() << " \n ### Number of Hits in FTD Sector " << i << " = " << nhits << " : Limit is set to " << _max_hits_per_sector << " : This sector will be dropped from track search, and QualityCode set to \"Poor\" " << std::endl;
+
+      _output_track_col_quality = _output_track_col_quality_POOR;
+
     }
     
   }
