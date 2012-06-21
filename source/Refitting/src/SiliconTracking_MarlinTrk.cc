@@ -897,7 +897,8 @@ int SiliconTracking_MarlinTrk::InitialiseFTD(LCEvent * evt) {
         delete _sectorsFTD[i][ihit];
       } 
       _sectorsFTD[i].clear();
-      if( nhits != 0 ) streamlog_out(ERROR) << " ### Number of Hits in FTD Sector " << i << " = " << nhits << " : Limit is set to " << _max_hits_per_sector << " : This sector will be dropped from track search" << std::endl;
+//      if( nhits != 0 ) streamlog_out(ERROR) << " ### Number of Hits in FTD Sector " << i << " = " << nhits << " : Limit is set to " << _max_hits_per_sector << " : This sector will be dropped from track search" << std::endl;
+      if( nhits != 0 ) streamlog_out(ERROR) << " ### EVENT " << evt->getEventNumber() << " :: RUN " << evt->getRunNumber() << " : Number of Hits in FTD Sector " << i << " = " << nhits << " : Limit is set to " << _max_hits_per_sector << " : This event will be skipped from further reconstruction \n #&* SkipEventException Thrown #&*" << std::endl;
       throw marlin::SkipEventException(this);
     }
     
