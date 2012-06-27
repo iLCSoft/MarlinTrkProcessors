@@ -577,6 +577,11 @@ void TruthTracker::processEvent( LCEvent * evt ) {
   
   streamlog_out( DEBUG4 ) << "Created " << _nCreatedTracks << " truth tracks\n";
   
+  // clear the navigator relations
+  for (unsigned i = 0 ; i < _navTrackerHitRel.size(); ++i) {
+    delete _navTrackerHitRel[i];
+  }
+  
   ++_n_evt ;
   
 }
@@ -1199,7 +1204,6 @@ void TruthTracker::createTrack_iterative( MCParticle* mcp, UTIL::BitField64& cel
             
             MarlinTrk::addHitNumbersToTrack(Track, all_hits, false, cellID_encoder);
 
-            
             delete marlinTrk; marlinTrk=0;
             
             fit_running = false;
@@ -1279,9 +1283,8 @@ void TruthTracker::createTrack_iterative( MCParticle* mcp, UTIL::BitField64& cel
             dc->skip_current_track();
             
 #endif
-            
             delete marlinTrk; marlinTrk=0;
-            
+
           }
           
           // set the counter back to the one after the last hit added 
@@ -1324,7 +1327,6 @@ void TruthTracker::createTrack_iterative( MCParticle* mcp, UTIL::BitField64& cel
         
         MarlinTrk::addHitNumbersToTrack(Track, all_hits, false, cellID_encoder);
 
-        
         delete marlinTrk; marlinTrk=0;
         
         if (error == IMarlinTrack::success) {
@@ -1402,7 +1404,6 @@ void TruthTracker::createTrack_iterative( MCParticle* mcp, UTIL::BitField64& cel
         dc->skip_current_track();
         
 #endif
-              
         delete marlinTrk; marlinTrk=0;
 
       }
