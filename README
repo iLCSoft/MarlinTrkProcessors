@@ -25,6 +25,7 @@
   				 Use _maxChi2PerHit in fits. 
 
   FullLDCTracking_MarlinTrk:	 Corrected uninitialised covariance matrix in combine tracks method.
+  				 Fixed sorting hits in r2 during TPCTrack SiTracks combination.
   				 Improved hit and geometry handling. 
 				 Removed unused parameters. 
 				 Fixed problem in allocating left over silicon hits, track fit was incorrect after adding a hit. 
