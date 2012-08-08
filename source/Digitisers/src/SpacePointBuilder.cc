@@ -525,7 +525,12 @@ TrackerHitImpl* SpacePointBuilder::createSpacePoint( TrackerHitPlane* a , Tracke
   point.set(0.0, 0.0, 0.0);
   
   
-  calculatePointBetweenTwoLines_UsingVertex( S1, E1, S2, E2, vertex, point );
+  int valid_intersection = calculatePointBetweenTwoLines_UsingVertex( S1, E1, S2, E2, vertex, point );
+  
+  if (valid_intersection != 0) {
+    streamlog_out( DEBUG2 ) << "\tNo valid intersection for lines" << std::endl;
+    return NULL;
+  }
   
   streamlog_out( DEBUG2 ) << "\tVertex: Position of space point (global) : ( " << point.x() << " " << point.y() << " " << point.z() << " )\n";
   
