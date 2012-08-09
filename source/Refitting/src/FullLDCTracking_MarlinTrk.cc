@@ -1450,10 +1450,20 @@ void FullLDCTracking_MarlinTrk::MergeTPCandSiTracks() {
       TrackExtended * siTrackExt = _allSiTracks[iSi];
       int iComp = 0;
       float angle = 0;
+
+      streamlog_out(DEBUG2) << " call CompareTrkII for tpc trk " << tpcTrackExt << " si trk " << siTrackExt << std::endl;
+
       float dOmega = CompareTrkII(siTrackExt,tpcTrackExt,_d0CutForMerging,_z0CutForMerging,iComp,angle);
-      if ( (dOmega<_dOmegaForMerging) && (angle<_angleForMerging) && !VetoMerge(siTrackExt,tpcTrackExt)) {
+      if ( (dOmega<_dOmegaForMerging) && (angle<_angleForMerging) && !VetoMerge(tpcTrackExt,siTrackExt)) {
+
+        streamlog_out(DEBUG2) << " call CombineTracks for tpc trk " << tpcTrackExt << " si trk " << siTrackExt << std::endl;
+
         TrackExtended *combinedTrack = CombineTracks(tpcTrackExt,siTrackExt);       
+
+        streamlog_out(DEBUG2) << " combinedTrack returns " << combinedTrack << std::endl;
+        
         if (combinedTrack != NULL) {
+          streamlog_out(DEBUG2) << " combinedTrack successfully added to _allCombinedTracks" << std::endl;
           _allCombinedTracks.push_back( combinedTrack );
           _candidateCombinedTracks.insert(tpcTrackExt);
           _candidateCombinedTracks.insert(siTrackExt);
@@ -1601,19 +1611,22 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
   MarlinTrk::IMarlinTrack* marlin_trk = _trksystem->createTrack();
   
   IMPL::TrackStateImpl pre_fit ;
+
+  int error = IMarlinTrack::success;
   
+  pre_fit = tpcTrack->getTrack()->getTrackState(EVENT::TrackState::AtLastHit);
   
-  /** Provides the values of a track state from the first, middle and last hits in the hit_list. */
-  int error = createPrefit( trkHits, &pre_fit, _bField, IMarlinTrack::backward);
-  
-  if ( error != IMarlinTrack::success ) {
-    
-    streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: creation of prefit fails with error " << error << std::endl;
-    
-    delete marlin_trk ;
-    return 0;
-    
-  }
+//  /** Provides the values of a track state from the first, middle and last hits in the hit_list. */
+//  int error = createPrefit( trkHits, &pre_fit, _bField, IMarlinTrack::backward);
+//  
+//  if ( error != IMarlinTrack::success ) {
+//    
+//    streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: creation of prefit fails with error " << error << std::endl;
+//    
+//    delete marlin_trk ;
+//    return 0;
+//    
+//  }
   
   // setup initial dummy covariance matrix
   EVENT::FloatVec covMatrix;
@@ -1709,7 +1722,11 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
   
   OutputTrack->setCovMatrix(cov);
   
+  streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: testCombinationOnly = " << testCombinationOnly << std::endl;
+  
   if ( testCombinationOnly == false ) {
+    
+    streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: Check for outliers " << std::endl;
     
     std::vector<std::pair<EVENT::TrackerHit* , double> > outliers ;
     marlin_trk->getOutliers(outliers);
@@ -1755,6 +1772,8 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
   }
   
   delete marlin_trk ;
+  
+  streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: merged track created  " << OutputTrack << " with " << OutputTrack->getTrackerHitExtendedVec().size() << " hits, nhits tpc " << nTPCHits << " nSiHits " << nSiHits << ", testCombinationOnly = " << testCombinationOnly << std::endl;
   
   return OutputTrack;
   
@@ -3681,8 +3700,6 @@ void FullLDCTracking_MarlinTrk::AssignSiHitsToTracks(TrackerHitExtendedVec hitVe
         }
         
         
-        EVENT::TrackerHitVec::iterator it = trkHits.begin();
-        
         streamlog_out(DEBUG2) << "AssignSiHitsToTracks: Start Fitting: AddHits: number of hits to fit " << trkHits.size() << std::endl;
                 
         
@@ -4250,6 +4267,8 @@ int FullLDCTracking_MarlinTrk::SegmentRadialOverlap(TrackExtended* first, TrackE
 bool FullLDCTracking_MarlinTrk::VetoMerge(TrackExtended* firstTrackExt, TrackExtended* secondTrackExt){
   
   
+  streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::VetoMerge called for " << firstTrackExt << " and " << secondTrackExt << std::endl;
+  
   const float d0First = firstTrackExt->getD0();
   const float z0First = firstTrackExt->getZ0();
   const float omegaFirst = firstTrackExt->getOmega();
@@ -4277,19 +4296,36 @@ bool FullLDCTracking_MarlinTrk::VetoMerge(TrackExtended* firstTrackExt, TrackExt
   const float pSecond = sqrt(pxSecond*pxSecond+pySecond*pySecond+pzSecond*pzSecond);
   
   //SJA:FIXME hardcoded cut 
-  if(pFirst<2.5 || pSecond<2.5)return false;
+  if(pFirst<2.5 || pSecond<2.5) {
+    streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::VetoMerge fails momentum cut of 2.5 : pFirst = " << pFirst << " pSecond = " << pSecond << std::endl;
+    return false;
+  }
   
   TrackExtended * combinedTrack = CombineTracks(firstTrackExt,secondTrackExt,true);
+
   bool veto = false;
+  
   if(combinedTrack!=NULL){
-    //SJA:FIXME hardcoded cut 
-    if(combinedTrack->getNDF()+15<firstTrackExt->getNDF()+secondTrackExt->getNDF()+5)veto=true;
+  
+    //SJA:FIXME hardcoded cut
+    if( combinedTrack->getNDF()+15 < firstTrackExt->getNDF() + secondTrackExt->getNDF()+5 ) {
+      streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::VetoMerge fails NDF cut " << std::endl;
+      veto=true ;
+
+    }
+  
     delete combinedTrack->getGroupTracks();
     delete combinedTrack;
-  }else{
+
+  } else {
+    streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::VetoMerge fails CombineTracks(firstTrackExt,secondTrackExt,true) test" << std::endl;
     veto = true;
   }
-  if(SegmentRadialOverlap(firstTrackExt,secondTrackExt)>10)veto=true;
+  
+  if(SegmentRadialOverlap(firstTrackExt,secondTrackExt)>10) {
+    streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::VetoMerge fails SegmentRadialOverlap test " << std::endl;
+    veto=true;
+  }
   return veto;
   
 }
