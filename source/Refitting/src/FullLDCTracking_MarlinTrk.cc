@@ -53,6 +53,38 @@ using namespace MarlinTrk ;
 
 FullLDCTracking_MarlinTrk aFullLDCTracking_MarlinTrk ;
 
+
+/** debug printout helper method */
+std::string toString( int iTrk, Track * tpcTrack, float bField=3.5 ) {
+  
+  int   nHits    = int( tpcTrack->getTrackerHits().size() );
+  float d0TPC    = tpcTrack->getD0();
+  float z0TPC    = tpcTrack->getZ0();
+  float omegaTPC = tpcTrack->getOmega();
+  float phi0TPC  = tpcTrack->getPhi();
+  float tanLTPC  = tpcTrack->getTanLambda();
+  float Chi2TPC  = tpcTrack->getChi2()/float(tpcTrack->getNdf());
+  int   ndfTPC   = tpcTrack->getNdf();
+  
+  HelixClass helixTPC;
+  
+  helixTPC.Initialize_Canonical(phi0TPC,d0TPC,z0TPC,omegaTPC,tanLTPC, bField);
+  
+  char strg[200];
+  
+  float pxTPC = helixTPC.getMomentum()[0];
+  float pyTPC = helixTPC.getMomentum()[1];
+  float pzTPC = helixTPC.getMomentum()[2];
+  const float ptot = sqrt(pxTPC*pxTPC+pyTPC*pyTPC+pzTPC*pzTPC);
+
+  sprintf(strg,"%3i  %9.3f  %9.3f  %9.3f  %7.2f  %7.2f  %7.2f %4i %4i %8.3f",iTrk,
+	  ptot, d0TPC,z0TPC,pxTPC,pyTPC,pzTPC,nHits,ndfTPC,Chi2TPC);
+
+  return std::string( strg ) ;
+}
+
+
+
 FullLDCTracking_MarlinTrk::FullLDCTracking_MarlinTrk() : Processor("FullLDCTracking_MarlinTrk") {  
   _description = "Performs full tracking in ILD detector" ;  
   
@@ -486,18 +518,18 @@ void FullLDCTracking_MarlinTrk::processEvent( LCEvent * evt ) {
   
   
   prepareVectors( evt );
-  streamlog_out(DEBUG3) << "prepareVectors done..." << std::endl;
-  streamlog_out(DEBUG3) << "************************************Merge TPC/Si" << std::endl;
+  streamlog_out(DEBUG5) << "prepareVectors done..." << std::endl;
+  streamlog_out(DEBUG5) << "************************************Merge TPC/Si" << std::endl;
   MergeTPCandSiTracks();
-  streamlog_out(DEBUG3) << "************************************Merging done..." << std::endl;
+  streamlog_out(DEBUG5) << "************************************Merging done..." << std::endl;
   MergeTPCandSiTracksII();
-  streamlog_out(DEBUG3) << "************************************Merging II done..." << std::endl;
+  streamlog_out(DEBUG5) << "************************************Merging II done..." << std::endl;
   Sorting(_allCombinedTracks);
-  streamlog_out(DEBUG3) << "************************************Sorting done..." << std::endl;
+  streamlog_out(DEBUG5) << "************************************Sorting done..." << std::endl;
   SelectCombinedTracks();
-  streamlog_out(DEBUG3) << "************************************Selection of combined tracks done..." << std::endl;
+  streamlog_out(DEBUG5) << "************************************Selection of combined tracks done..." << std::endl;
   AddNotCombinedTracks( );
-  streamlog_out(DEBUG3) << "************************************Not combined tracks added..." << std::endl;
+  streamlog_out(DEBUG5) << "************************************Not combined tracks added..." << std::endl;
   //CheckTracks( );
   
   AddNotAssignedHits();
@@ -1183,39 +1215,46 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
   try {
     LCCollection * col = event->getCollection(_TPCTrackCollection.c_str());
     int nelem = col->getNumberOfElements();
-    streamlog_out(DEBUG3) << std::endl;
-    streamlog_out(DEBUG3) << "Number of TPC Tracks = " << nelem << std::endl;
-    streamlog_out(DEBUG3) << " Trk       p          D0         Z0       Px       Py       Pz    ntpc ndf Chi2/ndf" << std::endl;
+    streamlog_out(DEBUG5) << std::endl;
+    streamlog_out(DEBUG5) << "Number of TPC Tracks = " << nelem << std::endl;
+    streamlog_out(DEBUG5) << " Trk       p          D0         Z0       Px       Py       Pz    ntpc ndf Chi2/ndf" << std::endl;
     //           "  0  1.111   0.059      0.022    -0.54     0.61    -0.45    0.185
     
     for (int iTrk=0; iTrk<nelem; ++iTrk) {
       
-      Track * tpcTrack = dynamic_cast<Track*>(col->getElementAt(iTrk));
+      Track * tpcTrack = dynamic_cast<Track*>(col->getElementAt(iTrk) );
       
+      //fg: if the track consists of more than one segment ( curler) we use just the first one 
+      //FIXME: need to recover the other track segments that are found by Clupatra ...
+      if( ! tpcTrack->getTracks().empty() )
+	tpcTrack =  tpcTrack->getTracks()[0] ;
+
       TrackerHitVec hitVec = tpcTrack->getTrackerHits();
       int nHits = int(hitVec.size());
       
-      float d0TPC = tpcTrack->getD0();
-      float z0TPC = tpcTrack->getZ0();
-      float omegaTPC = tpcTrack->getOmega();
-      float phi0TPC = tpcTrack->getPhi();
-      float tanLTPC = tpcTrack->getTanLambda();
-      float Chi2TPC = tpcTrack->getChi2()/float(tpcTrack->getNdf());
-      const int ndfTPC = tpcTrack->getNdf();
+      // float d0TPC = tpcTrack->getD0();
+      // float z0TPC = tpcTrack->getZ0();
+      // float omegaTPC = tpcTrack->getOmega();
+      // float phi0TPC = tpcTrack->getPhi();
+      // float tanLTPC = tpcTrack->getTanLambda();
+      // float Chi2TPC = tpcTrack->getChi2()/float(tpcTrack->getNdf());
+      // const int ndfTPC = tpcTrack->getNdf();
       
-      HelixClass helixTPC;
+      // HelixClass helixTPC;
       
-      helixTPC.Initialize_Canonical(phi0TPC,d0TPC,z0TPC,omegaTPC,tanLTPC,_bField);
+      // helixTPC.Initialize_Canonical(phi0TPC,d0TPC,z0TPC,omegaTPC,tanLTPC,_bField);
       
-      char strg[200];
+      // char strg[200];
       
-      float pxTPC = helixTPC.getMomentum()[0];
-      float pyTPC = helixTPC.getMomentum()[1];
-      float pzTPC = helixTPC.getMomentum()[2];
-      const float ptot = sqrt(pxTPC*pxTPC+pyTPC*pyTPC+pzTPC*pzTPC);
-      sprintf(strg,"%3i  %9.3f  %9.3f  %9.3f  %7.2f  %7.2f  %7.2f %4i %4i %8.3f",iTrk,
-              ptot, d0TPC,z0TPC,pxTPC,pyTPC,pzTPC,nHits,ndfTPC,Chi2TPC);
-      streamlog_out(DEBUG3) << strg << std::endl;
+      // float pxTPC = helixTPC.getMomentum()[0];
+      // float pyTPC = helixTPC.getMomentum()[1];
+      // float pzTPC = helixTPC.getMomentum()[2];
+      // const float ptot = sqrt(pxTPC*pxTPC+pyTPC*pyTPC+pzTPC*pzTPC);
+      // sprintf(strg,"%3i  %9.3f  %9.3f  %9.3f  %7.2f  %7.2f  %7.2f %4i %4i %8.3f",iTrk,
+      //         ptot, d0TPC,z0TPC,pxTPC,pyTPC,pzTPC,nHits,ndfTPC,Chi2TPC);
+      // streamlog_out(DEBUG5) << strg << std::endl;
+
+      streamlog_out(DEBUG5) << toString( iTrk, tpcTrack ,  _bField ) << std::endl;
       
       TrackExtended * trackExt = new TrackExtended( tpcTrack );
       
@@ -1267,9 +1306,9 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
   try {
     LCCollection * col = event->getCollection(_SiTrackCollection.c_str());
     int nelem = col->getNumberOfElements();
-    streamlog_out(DEBUG3) << std::endl;
-    streamlog_out(DEBUG3) << "Number of Si Tracks = " << nelem << std::endl;
-    streamlog_out(DEBUG3) << " Trk       p          D0         Z0       Px       Py       Pz   hitsSi ndf Chi2/ndf" << std::endl;
+    streamlog_out(DEBUG5) << std::endl;
+    streamlog_out(DEBUG5) << "Number of Si Tracks = " << nelem << std::endl;
+    streamlog_out(DEBUG5) << " Trk       p          D0         Z0       Px       Py       Pz   hitsSi ndf Chi2/ndf" << std::endl;
     
     for (int iTrk=0; iTrk<nelem; ++iTrk) {
       Track * siTrack = dynamic_cast<Track*>(col->getElementAt(iTrk));
@@ -1326,7 +1365,7 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
       float Chi2Si = trackExt->getChi2()/float(trackExt->getNDF());
       sprintf(strg,"%3i  %9.3f  %9.3f  %9.3f  %7.2f  %7.2f  %7.2f %4i %4i %8.3f",iTrk,
               pTot, d0Si,z0Si,pxSi,pySi,pzSi,nHits, ndfSi, Chi2Si);
-      streamlog_out(DEBUG3) << strg << std::endl;
+      streamlog_out(DEBUG5) << strg << std::endl;
       
       if(nHits>0){
         _allSiTracks.push_back( trackExt );
@@ -1451,26 +1490,35 @@ void FullLDCTracking_MarlinTrk::MergeTPCandSiTracks() {
       int iComp = 0;
       float angle = 0;
 
-      streamlog_out(DEBUG2) << " call CompareTrkII for tpc trk " << tpcTrackExt << " si trk " << siTrackExt << std::endl;
-
+      //      streamlog_out(DEBUG3) << " call CompareTrkII for tpc trk " << tpcTrackExt << " si trk " << siTrackExt << std::endl;
+      streamlog_out(DEBUG3) << " compare tpc trk " << toString( iTPC,  tpcTrackExt->getTrack(), _bField  ) << std::endl ;
+      streamlog_out(DEBUG3) << "    to si trk    " << toString( iSi,   siTrackExt->getTrack(),  _bField  ) << std::endl ;
+      
       float dOmega = CompareTrkII(siTrackExt,tpcTrackExt,_d0CutForMerging,_z0CutForMerging,iComp,angle);
+      
       if ( (dOmega<_dOmegaForMerging) && (angle<_angleForMerging) && !VetoMerge(tpcTrackExt,siTrackExt)) {
-
-        streamlog_out(DEBUG2) << " call CombineTracks for tpc trk " << tpcTrackExt << " si trk " << siTrackExt << std::endl;
-
+	
+        streamlog_out(DEBUG3) << " call CombineTracks for tpc trk " << tpcTrackExt << " si trk " << siTrackExt << std::endl;
+	
         TrackExtended *combinedTrack = CombineTracks(tpcTrackExt,siTrackExt);       
-
-        streamlog_out(DEBUG2) << " combinedTrack returns " << combinedTrack << std::endl;
+	
+        streamlog_out(DEBUG3) << " combinedTrack returns " << combinedTrack << std::endl;
         
         if (combinedTrack != NULL) {
-          streamlog_out(DEBUG2) << " combinedTrack successfully added to _allCombinedTracks" << std::endl;
+
+
           _allCombinedTracks.push_back( combinedTrack );
           _candidateCombinedTracks.insert(tpcTrackExt);
           _candidateCombinedTracks.insert(siTrackExt);
+
+	  //          streamlog_out(DEBUG3) << " combinedTrack successfully added to _allCombinedTracks : " << toString( 0,combinedTrack->getTrack(), _bField  )  << std::endl;
+          streamlog_out(DEBUG5) << " *** combinedTrack successfully added to _allCombinedTracks : tpc " << iTPC << " si " << iSi   << std::endl;
+	  
           if (_debug >= 3 ) {
             int iopt = 1;
             PrintOutMerging(tpcTrackExt,siTrackExt,iopt);
           }
+
         }else{
           if (_debug >= 3 ) {
             int iopt = 6;
@@ -1497,6 +1545,8 @@ void FullLDCTracking_MarlinTrk::MergeTPCandSiTracksII() {
   int nTPCTracks = int(_allTPCTracks.size());
   int nSiTracks  = int(_allSiTracks.size());
   
+  streamlog_out( DEBUG3 ) << " MergeTPCandSiTracksII called nTPC tracks " << nTPCTracks << " - nSiTracks " << nSiTracks << std::endl ;
+
   for (int iTPC=0;iTPC<nTPCTracks;++iTPC) {
     TrackExtended * tpcTrackExt = _allTPCTracks[iTPC];
     if(_candidateCombinedTracks.find(tpcTrackExt) != _candidateCombinedTracks.end() )continue;
@@ -1507,11 +1557,20 @@ void FullLDCTracking_MarlinTrk::MergeTPCandSiTracksII() {
       if(_candidateCombinedTracks.find(siTrackExt)!= _candidateCombinedTracks.end() )continue;
       int iComp = 0;
       float angleSignificance = 0;
+
       float significance = CompareTrkIII(siTrackExt,tpcTrackExt,_d0CutForMerging,_z0CutForMerging,iComp,angleSignificance);
+
+      streamlog_out( DEBUG3 ) << " CompareTrkIII - tpctrk " << iTPC << " - " << iSi <<  " - significance " << significance 
+			      << " angleSignificance " << angleSignificance << std::endl ;
+
       if ( (significance<10) && (angleSignificance<5) && !VetoMerge(tpcTrackExt,siTrackExt) ) {
+
         TrackExtended * combinedTrack = CombineTracks(tpcTrackExt,siTrackExt);
         
-        if (combinedTrack != NULL) {
+	streamlog_out( DEBUG3 ) << " ------ > CombineTracks- tpctrk " << iTPC << " - " << iSi <<  " - significance " << significance 
+				<< " angleSignificance " << angleSignificance << std::endl ;
+
+       if (combinedTrack != NULL) {
           
           _allCombinedTracks.push_back( combinedTrack );
           if (_debug >= 3 ) {
@@ -1585,7 +1644,7 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
     
   }
   
-  streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: Sorting Hits " << trkHits.size() << std::endl;
+  streamlog_out(DEBUG3) << "FullLDCTracking_MarlinTrk::CombineTracks: Sorting Hits " << trkHits.size() << std::endl;
   
   std::vector< std::pair<float, EVENT::TrackerHit*> > r2_values;
   r2_values.reserve(trkHits.size());
@@ -1606,7 +1665,7 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
   }
 
   
-  streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: Start Fitting: AddHits: number of hits to fit " << trkHits.size() << std::endl;
+  streamlog_out(DEBUG3) << "FullLDCTracking_MarlinTrk::CombineTracks: Start Fitting: AddHits: number of hits to fit " << trkHits.size() << std::endl;
   
   MarlinTrk::IMarlinTrack* marlin_trk = _trksystem->createTrack();
   
@@ -1621,7 +1680,7 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
 //  
 //  if ( error != IMarlinTrack::success ) {
 //    
-//    streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: creation of prefit fails with error " << error << std::endl;
+//    streamlog_out(DEBUG3) << "FullLDCTracking_MarlinTrk::CombineTracks: creation of prefit fails with error " << error << std::endl;
 //    
 //    delete marlin_trk ;
 //    return 0;
@@ -1648,7 +1707,7 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
   
   if ( error != IMarlinTrack::success ) {
     
-    streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: creation of fit fails with error " << error << std::endl;
+    streamlog_out(DEBUG3) << "FullLDCTracking_MarlinTrk::CombineTracks: creation of fit fails with error " << error << std::endl;
     
     delete marlin_trk ;
     return 0;
@@ -1664,7 +1723,7 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
   
   if ( error != IMarlinTrack::success ) {
     
-    streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: propagate to IP fails with error " << error << std::endl;
+    streamlog_out(DEBUG3) << "FullLDCTracking_MarlinTrk::CombineTracks: propagate to IP fails with error " << error << std::endl;
     
     delete marlin_trk ;
     return 0;
@@ -1673,7 +1732,7 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
   
   if ( ndf < 0  ) {
     
-    streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: Fit failed NDF is less that zero  " << ndf << std::endl;
+    streamlog_out(DEBUG3) << "FullLDCTracking_MarlinTrk::CombineTracks: Fit failed NDF is less that zero  " << ndf << std::endl;
     
     delete marlin_trk ;
     return 0;
@@ -1685,7 +1744,7 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
   
   if ( chi2Fit > _chi2FitCut ) {
     
-    streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: track fail Chi2 cut of " << _chi2FitCut << " chi2 of track = " <<  chi2Fit << std::endl;
+    streamlog_out(DEBUG3) << "FullLDCTracking_MarlinTrk::CombineTracks: track fail Chi2 cut of " << _chi2FitCut << " chi2 of track = " <<  chi2Fit << std::endl;
     
     delete marlin_trk ;
     return 0;
@@ -1722,11 +1781,11 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
   
   OutputTrack->setCovMatrix(cov);
   
-  streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: testCombinationOnly = " << testCombinationOnly << std::endl;
+  streamlog_out(DEBUG3) << "FullLDCTracking_MarlinTrk::CombineTracks: testCombinationOnly = " << testCombinationOnly << std::endl;
   
   if ( testCombinationOnly == false ) {
     
-    streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: Check for outliers " << std::endl;
+    streamlog_out(DEBUG3) << "FullLDCTracking_MarlinTrk::CombineTracks: Check for outliers " << std::endl;
     
     std::vector<std::pair<EVENT::TrackerHit* , double> > outliers ;
     marlin_trk->getOutliers(outliers);
@@ -1773,7 +1832,7 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
   
   delete marlin_trk ;
   
-  streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: merged track created  " << OutputTrack << " with " << OutputTrack->getTrackerHitExtendedVec().size() << " hits, nhits tpc " << nTPCHits << " nSiHits " << nSiHits << ", testCombinationOnly = " << testCombinationOnly << std::endl;
+  streamlog_out(DEBUG3) << "FullLDCTracking_MarlinTrk::CombineTracks: merged track created  " << OutputTrack << " with " << OutputTrack->getTrackerHitExtendedVec().size() << " hits, nhits tpc " << nTPCHits << " nSiHits " << nSiHits << ", testCombinationOnly = " << testCombinationOnly << std::endl;
   
   return OutputTrack;
   
@@ -1825,6 +1884,8 @@ void FullLDCTracking_MarlinTrk::SelectCombinedTracks() {
   
   int nCombTrk = int(_allCombinedTracks.size());
   
+  streamlog_out(DEBUG1) << " **SelectCombinedTracks - check " << nCombTrk << " comb. tracks " << std::endl ;
+
   for (int i=0; i<nCombTrk;++i) {
     TrackExtended * trkExt = _allCombinedTracks[i];
     GroupTracks * group = trkExt->getGroupTracks();
@@ -1833,8 +1894,15 @@ void FullLDCTracking_MarlinTrk::SelectCombinedTracks() {
     if (nTracks == 2) {
       TrackExtended * firstTrack = tracks[0];
       TrackExtended * secondTrack = tracks[1];
+  
+
+      streamlog_out(DEBUG1) << " **SelectCombinedTracks - (nTracks == 2 " << std::endl ;
+
       if ((firstTrack->getGroupTracks() == NULL) &&
           (secondTrack->getGroupTracks() == NULL) ) {
+
+	streamlog_out(DEBUG1) << " **SelectCombinedTracks - firstTrack->getGroupTracks() == NULL ... "  << std::endl ;
+
         firstTrack->setGroupTracks(group);
         secondTrack->setGroupTracks(group);     
         TrackerHitExtendedVec firstVec = firstTrack->getTrackerHitExtendedVec();
@@ -1870,8 +1938,10 @@ void FullLDCTracking_MarlinTrk::SelectCombinedTracks() {
           PrintOutMerging(secondTrack,firstTrack,iopt);
         }       
       }
-    }else{
-      if(nTracks>2) streamlog_out(DEBUG3) << " MORE THAN TWO TRACKS " << std::endl;
+
+    } else { // if(nTracks>2) 
+
+      streamlog_out(DEBUG3) << " *****************  SelectCombinedTracks: MORE THAN TWO TRACKS " << nCombTrk << std::endl;
     }
   }
   
@@ -3946,7 +4016,7 @@ void FullLDCTracking_MarlinTrk::PrintOutMerging(TrackExtended * firstTrackExt, T
     float pSecond = sqrt(pxSecond*pxSecond+pySecond*pySecond+pzSecond*pzSecond);
     
     //SJA:FIXME Hardcoded cut here should be removed 
-    if(pFirst < 1.5 && pSecond < 1.5 )return; 
+    //    if(pFirst < 1.5 && pSecond < 1.5 )return; 
     
     const float sigmaPOverPFirst  = sqrt(firstTrackExt->getCovMatrix()[5])/fabs(omegaFirst);
     const float sigmaPOverPSecond = sqrt(secondTrackExt->getCovMatrix()[5])/fabs(omegaSecond);
