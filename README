@@ -16,6 +16,24 @@
  
 
  =============================================================================================================
+  -----------
+ | v01-06-01 |
+  -----------
+
+
+   /MarlinTrkProcessors/trunk/source/Refitting/src/FullLDCTracking_MarlinTrk.cc
+
+  - increased debug output
+  - workaround for issue with curlers:
+    present only first segment from Clupatra TPC tracks
+    to the rest of the code 
+    -> might loose some curler segments (needs further check)
+  - Use fit from TPC to initialise fit when doing SiTrack TPCTrack comparisons.
+    Added debug output which can we removed at a later stage
+    
+  /MarlinTrkProcessors/trunk/source/Digitisers/src/SpacePointBuilder.cc
+     
+  - Added extra check for valid line intersection when creating space points. This fixes problems from very low pt tracks.
 
   --------
  | v01-06 |
