@@ -46,6 +46,12 @@
 
 #include "MarlinCED.h"
 
+#include "marlin/AIDAProcessor.h"
+
+//---- ROOT -----
+#include "TH1F.h"
+#include "TH2F.h"
+
 using namespace lcio ;
 using namespace marlin ;
 using namespace MarlinTrk ;
@@ -62,6 +68,100 @@ const double SiliconTracking_MarlinTrk::TWOPI = 2*M_PI;
 
 SiliconTracking_MarlinTrk aSiliconTracking_MarlinTrk ;
 
+// Use Frank's histogram handling
+// helper enum defining histogram index in vector
+namespace DiagnosticsHistograms {
+
+  enum index1D{
+    //-----  histogram "names"
+    htriplets, hntriplets, hntriplets_good, hntriplets_2MCP, hntriplets_3MCP, hntriplets_1MCP_Bad, hntriplets_bad, htriplets_chi2_good, htriplets_chi2_bad, htriplets_pt_good, htriplets_pt_bad,
+    //-----  keep Size as last :
+    Size1D
+  };
+
+  enum index2D{
+    //-----  histogram "names"
+    htripletChi2vPt_good, htripletChi2vPt_bad,
+    //-----  keep Size as last :
+    Size2D
+  };
+
+  
+  class Histograms{
+  public:
+    Histograms(int nhistos1D, int nhistos2D)  {
+      _h1D.resize(nhistos1D);
+      _h2D.resize(nhistos2D);
+    }
+    
+    // 1 Dimentional Histos
+    
+    void create1D(int idx, const char* n, int nBin, double min, double max ){
+      create1D( idx , n , n , nBin, min , max ) ;
+    }
+    
+    void create1D(int idx, const char* n, const char* t,  int nBin, double min, double max ){
+
+      if( _h1D.at( idx ) ){
+        streamlog_out( ERROR ) << "create1D: Histogram already created ERROR exit(1) called from File" << __FILE__ << " line " << __LINE__ << std::endl;
+        exit(1);
+      }
+      _h1D.at( idx ) = new TH1D( n, t , nBin , min, max ) ;
+      
+      streamlog_out( DEBUG ) << " create 1D histo " <<  n << " at index " << idx << std::endl ;
+    }
+    
+    void create1D(int idx, const char* n, const char* t,  int nBin , double* bins ){
+      
+      if( _h1D.at( idx ) ){
+        streamlog_out( ERROR ) << "create1D: Histogram already created ERROR exit(1) called from File" << __FILE__ << " line " << __LINE__ << std::endl;
+        exit(1);
+      }
+      _h1D.at( idx ) = new TH1D( n, t , nBin , bins ) ;
+      
+      streamlog_out( DEBUG ) << " create 1D histo " <<  n << " at index " << idx << std::endl ;
+    }
+    
+    void fill1D( int idx , double val, double weight=1.0 ){  _h1D.at( idx )->Fill( val , weight ) ; }
+    
+    
+    // 2 Dimentional Histos
+    
+    void create2D(int idx, const char* n, int nBinX, double minX, double maxX, int nBinY, double minY, double maxY ){
+      create2D( idx , n , n , nBinX, minX , maxX, nBinY, minY , maxY ) ;
+    }
+    
+    void create2D(int idx, const char* n, const char* t,  int nBinX, double minX, double maxX, int nBinY, double minY, double maxY ){
+
+      if( _h2D.at( idx ) ){
+        streamlog_out( ERROR ) << "create2D: Histogram already created ERROR exit(1) called from File" << __FILE__ << " line " << __LINE__ << std::endl;
+        exit(1);
+      }
+      
+      _h2D.at( idx ) = new TH2F(n, t, nBinX, minX, maxX, nBinY, minY, maxY) ;
+      
+      streamlog_out( DEBUG ) << " create 2D histo " <<  n << " at index " << idx << std::endl ;
+
+    }
+        
+    void fill2D( int idx , double valx, double valy, double weight=1.0 ){  _h2D.at( idx )->Fill(valx, valy, weight) ; }
+    
+    
+  protected:
+    
+    std::vector<TH1*> _h1D;
+    std::vector<TH2*> _h2D;
+
+  };
+  
+  
+  
+}
+
+
+
+
+
 SiliconTracking_MarlinTrk::SiliconTracking_MarlinTrk() : Processor("SiliconTracking_MarlinTrk") {
   
   _description = "Pattern recognition in silicon trackers";
@@ -71,6 +171,10 @@ SiliconTracking_MarlinTrk::SiliconTracking_MarlinTrk() : Processor("SiliconTrack
   _encoder = new UTIL::BitField64(lcio::ILDCellID0::encoder_string);
   
   _petalBasedFTDWithOverlaps = false;
+  
+  // zero triplet counters
+  _ntriplets = _ntriplets_good = _ntriplets_2MCP = _ntriplets_3MCP = _ntriplets_1MCP_Bad = _ntriplets_bad = 0;
+
   
   std::vector<int> combinations;
   
@@ -438,6 +542,12 @@ SiliconTracking_MarlinTrk::SiliconTracking_MarlinTrk() : Processor("SiliconTrack
                           std::string("MCParticle"));
   
   
+  registerProcessorParameter( "CreateDiagnosticsHistograms",
+                             "Create diagnostics histograms for internal analysis.",
+                             _createDiagnosticsHistograms,
+                             bool(false));
+
+  
   
 #ifdef MARLINTRK_DIAGNOSTICS_ON
   
@@ -460,12 +570,50 @@ void SiliconTracking_MarlinTrk::init() {
   _nEvt = 0 ;
   printParameters() ;
   
+  // this creates a directory for this processor ....
+  AIDAProcessor::histogramFactory( this ) ;
   
   if (_UseEventDisplay) {
     MarlinCED::init(this) ;
   }
   
-  
+  if (_createDiagnosticsHistograms) {
+    
+    _histos = new DiagnosticsHistograms::Histograms(DiagnosticsHistograms::Size1D,DiagnosticsHistograms::Size2D);
+
+    
+    // now create the 1D histos
+    _histos->create1D( DiagnosticsHistograms::htriplets, "htriplets", "triplets for inspection", 100, 0.0, 100.0 ) ;
+
+    _histos->create1D( DiagnosticsHistograms::hntriplets, "hntriplets", "total number of triplets created per event", 100, 0.0, 1000.0 ) ;
+    
+    _histos->create1D( DiagnosticsHistograms::hntriplets_good, "hntriplets_good", "triplets created from 1 MCP", 100, 0.0, 2000.0 ) ;
+
+    _histos->create1D( DiagnosticsHistograms::hntriplets_2MCP, "hntriplets_2MCP", "triplets created from 2 MCPs", 100, 0.0, 2000.0 ) ;
+
+    _histos->create1D( DiagnosticsHistograms::hntriplets_3MCP, "hntriplets_3MCP", "triplets created from 3 MCPs", 100, 0.0, 2000.0 ) ;
+
+    _histos->create1D( DiagnosticsHistograms::hntriplets_1MCP_Bad, "hntriplets_1MCP_Bad", "triplets created from 1 MCP and one bad hit", 100, 0.0, 2000.0 ) ;
+
+    _histos->create1D( DiagnosticsHistograms::hntriplets_bad, "hntriplets_bad", "triplets created from a mix of MCPs and bad hits", 100, 0.0, 10000.0 ) ;
+
+    _histos->create1D( DiagnosticsHistograms::htriplets_chi2_good, "htriplets_chi2_good", "chi2 of good triplets", 100, 0.0, 100.0) ;
+
+    _histos->create1D( DiagnosticsHistograms::htriplets_chi2_bad, "htriplets_chi2_bad", "chi2 of bad triplets", 100, 0.0, 100.0) ;
+
+    _histos->create1D( DiagnosticsHistograms::htriplets_pt_good, "htriplets_pt_good", "pt of good triplets", 100, 0.0, 100.0) ;
+    
+    _histos->create1D( DiagnosticsHistograms::htriplets_pt_bad, "htriplets_pt_bad", "pt of bad triplets", 100, 0.0, 100.0) ;
+
+    
+    // now create the 2D histos
+    _histos->create2D( DiagnosticsHistograms::htripletChi2vPt_good, "htripletChi2vPt_good", "chi2 of good triplets vs pt", 100, 0.0, 100.0, 100, 0.0, 100.0 ) ;
+    _histos->create2D( DiagnosticsHistograms::htripletChi2vPt_bad, "htripletChi2vPt_bad", "chi2 of bad triplets vs pt", 100, 0.0, 100.0, 100, 0.0, 100.0 ) ;
+
+    
+    
+  }
+    
   _colours.push_back( 0xff00ff );
   _colours.push_back( 0xffff00 );
   _colours.push_back( 0x0000ff );
@@ -543,6 +691,9 @@ void SiliconTracking_MarlinTrk::processEvent( LCEvent * evt ) {
   _current_event = evt;
   
   _output_track_col_quality = _output_track_col_quality_GOOD;
+  
+  // zero triplet counters
+  _ntriplets = _ntriplets_good = _ntriplets_2MCP = _ntriplets_3MCP = _ntriplets_1MCP_Bad = _ntriplets_bad = 0;
   
   // Clearing the working containers from the previous event
   // FIXME: partly done at the end of the event, in CleanUp. Make it consistent.
@@ -663,6 +814,20 @@ void SiliconTracking_MarlinTrk::processEvent( LCEvent * evt ) {
     
     
   }
+  
+  // fill event based histogram
+  if (_createDiagnosticsHistograms) {
+
+    // triplet histos
+    _histos->fill1D(DiagnosticsHistograms::hntriplets, _ntriplets);
+    _histos->fill1D(DiagnosticsHistograms::hntriplets_good, _ntriplets_good);
+    _histos->fill1D(DiagnosticsHistograms::hntriplets_2MCP, _ntriplets_2MCP);
+    _histos->fill1D(DiagnosticsHistograms::hntriplets_3MCP, _ntriplets_3MCP);
+    _histos->fill1D(DiagnosticsHistograms::hntriplets_1MCP_Bad, _ntriplets_1MCP_Bad);
+    _histos->fill1D(DiagnosticsHistograms::hntriplets_bad, _ntriplets_bad);
+
+  }
+  
   CleanUp();
   streamlog_out(DEBUG4) << "Event is done " << std::endl;
   _nEvt++;
@@ -1180,9 +1345,10 @@ void SiliconTracking_MarlinTrk::check(LCEvent * evt) {
 
 void SiliconTracking_MarlinTrk::end() {
   
-  delete _fastfitter ;
-  delete _encoder ;
-  delete _trksystem ;
+  delete _fastfitter ; _fastfitter = 0;
+  delete _encoder ; _encoder = 0;
+  delete _trksystem ; _trksystem = 0;
+  delete _histos ; _histos = 0;
   
 }
 
@@ -1367,7 +1533,7 @@ TrackExtended * SiliconTracking_MarlinTrk::TestTriplet(TrackerHitExtended * oute
   int size   = 3 ;
   int marker = 1 ;
   int ml     = 0 ;
-  float helix_max_r = 0;
+//  float helix_max_r = 0;
   float helix_max_z = 0;
   int color = 0;
   
@@ -1400,7 +1566,7 @@ TrackExtended * SiliconTracking_MarlinTrk::TestTriplet(TrackerHitExtended * oute
         // if track from the outer and middle are not the same progress  
         if ( *outerIter != *middleIter ) continue;
         
-        // loo over the tracks from the inner hit
+        // loop over the tracks from the inner hit
         for (TrackExtendedVec::const_iterator innerIter = innerBeginIter;
              innerIter < innerEndIter;
              ++innerIter) {
@@ -1416,16 +1582,19 @@ TrackExtended * SiliconTracking_MarlinTrk::TestTriplet(TrackerHitExtended * oute
         }// for inner
       }// for outer    
     }// for middle
-  }// if vectors not empty
+  }// if all vectors are not empty
   
   
   //    float dZ = FastTripletCheck(innerHit, middleHit, outerHit);
   
   //    if (fabs(dZ) > _minDistCutAttach)
   //      return trackAR;    
+
   
-  
-  
+  // increase triplet count
+  ++_ntriplets;
+
+  // get the hit coordinates and errors
   double xh[3];
   double yh[3];
   float  zh[3];
@@ -1437,25 +1606,28 @@ TrackExtended * SiliconTracking_MarlinTrk::TestTriplet(TrackerHitExtended * oute
   float par[5];
   float epar[15];
   
+  // first hit
   xh[0] = outerHit->getTrackerHit()->getPosition()[0];
   yh[0] = outerHit->getTrackerHit()->getPosition()[1];
   zh[0] = float(outerHit->getTrackerHit()->getPosition()[2]);
   wrh[0] = double(1.0/(outerHit->getResolutionRPhi()*outerHit->getResolutionRPhi()));
   wzh[0] = 1.0/(outerHit->getResolutionZ()*outerHit->getResolutionZ());
   
+  // second hit
   xh[1] = middleHit->getTrackerHit()->getPosition()[0];
   yh[1] = middleHit->getTrackerHit()->getPosition()[1];
   zh[1] = float(middleHit->getTrackerHit()->getPosition()[2]);
   wrh[1] = double(1.0/(middleHit->getResolutionRPhi()*middleHit->getResolutionRPhi()));
   wzh[1] = 1.0/(middleHit->getResolutionZ()*middleHit->getResolutionZ());
-  
-  
+    
+  // third hit
   xh[2] = innerHit->getTrackerHit()->getPosition()[0];
   yh[2] = innerHit->getTrackerHit()->getPosition()[1];
   zh[2] = float(innerHit->getTrackerHit()->getPosition()[2]);
   wrh[2] = double(1.0/(innerHit->getResolutionRPhi()*innerHit->getResolutionRPhi()));
   wzh[2] = 1.0/(innerHit->getResolutionZ()*innerHit->getResolutionZ());
-  
+
+  // calculate r and phi for all hits
   for (int ih=0; ih<3; ih++) {
     rh[ih] = float(sqrt(xh[ih]*xh[ih]+yh[ih]*yh[ih]));
     ph[ih] = atan2(yh[ih],xh[ih]);
@@ -1470,52 +1642,94 @@ TrackExtended * SiliconTracking_MarlinTrk::TestTriplet(TrackerHitExtended * oute
   
   streamlog_out( DEBUG2 ) << " TestTriplet: Use fastHelixFit " << std::endl ;  
   
+  _fastfitter->fastHelixFit(NPT, xh, yh, rh, ph, wrh, zh, wzh,iopt, par, epar, chi2RPhi, chi2Z);
+  par[3] = par[3]*par[0]/fabs(par[0]);
+
+  // get helix parameters
+  float omega = par[0];
+  float tanlambda = par[1];
+  float phi0 = par[2];
+  float d0 = par[3];
+  float z0 = par[4];
+
+  // chi2 is weighted here by a factor for both rphi and z
+  float Chi2 = chi2RPhi*_chi2WRPhiTriplet+chi2Z*_chi2WZTriplet;
+  int ndf = 2*NPT-5;
+
+  
+  // check the truth information for the triplet
+  
+  // define these outside of the ifdef so that we don't need to keep repeating it.
   std::vector<TrackerHit*> hit_list;
+  std::vector<MCParticle*> mcps_imo;
+  std::vector<MCParticle*> mcp_s;
+  int nmcps   = 0;
+  int nbadHits = 0;
+  int triplet_code;
   
 #ifdef MARLINTRK_DIAGNOSTICS_ON
   
+
+  // use the MCTruth4HitExt to get the MCPs
   
   hit_list.push_back(innerHit->getTrackerHit());
-  EVENT::MCParticle* mcp_i = 0;
-  if (hit_list.back()->ext<MarlinTrk::MCTruth4HitExt>()) {
-    mcp_i = hit_list.back()->ext<MarlinTrk::MCTruth4HitExt>()->simhit->getMCParticle();
-  }
-  
   hit_list.push_back(middleHit->getTrackerHit());
-  EVENT::MCParticle* mcp_m = 0;
-  if (hit_list.back()->ext<MarlinTrk::MCTruth4HitExt>()) {
-    mcp_m = hit_list.back()->ext<MarlinTrk::MCTruth4HitExt>()->simhit->getMCParticle();
-  }
-  
   hit_list.push_back(outerHit->getTrackerHit());
+
+  EVENT::MCParticle* mcp_i = 0;
+  EVENT::MCParticle* mcp_m = 0;
   EVENT::MCParticle* mcp_o = 0;
-  if (hit_list.back()->ext<MarlinTrk::MCTruth4HitExt>()) {
-    mcp_o = hit_list.back()->ext<MarlinTrk::MCTruth4HitExt>()->simhit->getMCParticle();
+  
+  for (unsigned ihit = 0; ihit < hit_list.size(); ++ihit) {
+
+    EVENT::TrackerHit* trkhit = hit_list[ihit];
+    std::vector<MCParticle*> mcps;
+
+    MarlinTrk::getMCParticlesForTrackerHit(trkhit, mcps);
+    
+    if (mcps.size() == 1) {
+      mcps_imo.push_back(mcps[0]);
+      ++nmcps;
+    } else {
+      mcps_imo.push_back(0);
+      ++nbadHits;
+    }
+    
   }
+    
+  mcp_i = mcps_imo[0];
+  mcp_m = mcps_imo[1];
+  mcp_o = mcps_imo[2];
   
-  
-  
-  streamlog_out(DEBUG2) 
-  << "\n mcp_i = " << mcp_i 
-  << "\n mcp_m = " << mcp_m 
-  << "\n mcp_o = " << mcp_o 
+  streamlog_out(DEBUG2)
+  << "\n mcp_i = " << mcp_i
+  << "\n mcp_m = " << mcp_m
+  << "\n mcp_o = " << mcp_o
   << std::endl;
   
+  if( mcp_i ) {
+    mcp_s.push_back(mcp_i) ;
+  }
+    
+  if( mcp_m && mcp_m != mcp_i ) {
+    mcp_s.push_back(mcp_m);
+  }
   
-  std::vector<MCParticle*> mcp_s;
-  
-  if(mcp_i) mcp_s.push_back(mcp_i);
-  if(mcp_m && mcp_m != mcp_i) mcp_s.push_back(mcp_m);
-  if(mcp_o && mcp_o != mcp_m && mcp_o != mcp_i) mcp_s.push_back(mcp_o);
-  
+  if( mcp_o && mcp_o != mcp_m && mcp_o != mcp_i ){
+    mcp_s.push_back(mcp_o);
+  }
+
+  nmcps = mcp_s.size();
+
   
   if (_UseEventDisplay) {
+    // display this triplet and the MCPs from which it is formed
     
     MarlinCED::newEvent(this , _detector_model_for_drawing ) ;
     
     //    CEDPickingHandler &pHandler=CEDPickingHandler::getInstance();
-    //    
-    //    pHandler.update(_current_event); 
+    //
+    //    pHandler.update(_current_event);
     
     for (unsigned imcp = 0; imcp < mcp_s.size(); ++imcp) {
       
@@ -1524,14 +1738,14 @@ TrackExtended * SiliconTracking_MarlinTrk::TestTriplet(TrackerHitExtended * oute
       helix_max_z = fabsf(mcp->getEndpoint()[2]);
       
       
-      streamlog_out(MESSAGE) << "Draw MCParticle : " << *mcp <<std::endl;  
+      streamlog_out(MESSAGE) << "Draw MCParticle : " << *mcp <<std::endl;
       
       MarlinCED::add_layer_description("MCParticle_For_Fit", layer);
       
-      MarlinCED::drawHelix( _bField , mcp->getCharge(), mcp->getVertex()[0], mcp->getVertex()[1], mcp->getVertex()[2], 
+      MarlinCED::drawHelix( _bField , mcp->getCharge(), mcp->getVertex()[0], mcp->getVertex()[1], mcp->getVertex()[2],
                            mcp->getMomentum()[0], mcp->getMomentum()[1], mcp->getMomentum()[2], layer , size , 0x7af774  ,
                            0.0,  _helix_max_r ,
-                           helix_max_z, mcp->id() ) ;	
+                           helix_max_z, mcp->id() ) ;
       
     }
     
@@ -1543,7 +1757,7 @@ TrackExtended * SiliconTracking_MarlinTrk::TestTriplet(TrackerHitExtended * oute
     ml = marker | ( layer << CED_LAYER_SHIFT ) ;
     
     //ced_describe_layer( colName.c_str() ,layer);
-    MarlinCED::add_layer_description(colName, layer); 
+    MarlinCED::add_layer_description(colName, layer);
     
     
     color =  0xFFFFFF;
@@ -1560,19 +1774,39 @@ TrackExtended * SiliconTracking_MarlinTrk::TestTriplet(TrackerHitExtended * oute
     } // hits
   }
   
-#endif  
+  if (_createDiagnosticsHistograms) {
+        
+    // if no bad hits are present triplet_code = nmcps;
+    triplet_code = nmcps + nbadHits * 3  ;
+        
+    _histos->fill1D(DiagnosticsHistograms::htriplets, triplet_code);
+    
+    double pt =  (2.99792458E-4*_bField) / omega ; // for r in mm, p in GeV and Bz in Tesla
+    
+    if (triplet_code == 1) {
+      ++_ntriplets_good;
+      _histos->fill2D(DiagnosticsHistograms::htripletChi2vPt_good, pt, Chi2 );
+      _histos->fill1D(DiagnosticsHistograms::htriplets_chi2_good, Chi2 );
+      _histos->fill1D(DiagnosticsHistograms::htriplets_pt_good, pt );
+    } else {
+
+      _histos->fill2D(DiagnosticsHistograms::htripletChi2vPt_bad, pt, Chi2);
+      _histos->fill1D(DiagnosticsHistograms::htriplets_chi2_bad, Chi2 );
+      _histos->fill1D(DiagnosticsHistograms::htriplets_pt_bad, pt );
+
+      if(triplet_code == 2) {
+        ++_ntriplets_2MCP;
+      } else if (triplet_code == 3) {
+        ++_ntriplets_3MCP;
+      } else if (triplet_code == 4) {
+        ++_ntriplets_1MCP_Bad;
+      } else {
+        ++_ntriplets_bad;
+      }
+    }
+  }
   
-  _fastfitter->fastHelixFit(NPT, xh, yh, rh, ph, wrh, zh, wzh,iopt, par, epar, chi2RPhi, chi2Z);
-  par[3] = par[3]*par[0]/fabs(par[0]);
-  
-  float omega = par[0];
-  float tanlambda = par[1];
-  float phi0 = par[2];
-  float d0 = par[3];
-  float z0 = par[4];
-  
-  float Chi2 = chi2RPhi*_chi2WRPhiTriplet+chi2Z*_chi2WZTriplet;
-  int ndf = 2*NPT-5;
+#endif
   
   
   // Check if track satisfies all conditions
@@ -1588,24 +1822,31 @@ TrackExtended * SiliconTracking_MarlinTrk::TestTriplet(TrackerHitExtended * oute
   //    return 0;
   
   bool failed = false;
-  
+
+  int quality_code = triplet_code * 10 ;
+
   if ( Chi2/float(ndf) > _chi2FitCut ) {
     streamlog_out(DEBUG1) << "Chi2/ndf = " << Chi2/float(ndf) << " , cut = " << _chi2FitCut << std::endl;
     failed = true;
+    quality_code += 1;
   } else if (fabs(d0) > _cutOnD0 ) {
     streamlog_out(DEBUG1) << "d0 = " << d0 << " , cut = " << _cutOnD0  << std::endl;
     failed = true;
+    quality_code += 2;
   } else if (fabs(z0) > _cutOnZ0 ) {
     streamlog_out(DEBUG1) << "z0 = " << z0 << " , cut = " << _cutOnZ0  << std::endl;
     failed = true;
+    quality_code += 3;
   } else if ( fabs(omega)>_cutOnOmega)  {
     streamlog_out(DEBUG1) << "omega = " << omega << " , cut = " << _cutOnOmega << std::endl;
     failed = true;
+    quality_code += 4;
   } else {
     streamlog_out(DEBUG1) << "Success !!!!!!!" << std::endl;
   }
   
-  
+  if (_createDiagnosticsHistograms) _histos->fill1D(DiagnosticsHistograms::htriplets, quality_code);
+
   
   if (_UseEventDisplay) {
     drawEvent();
@@ -1919,7 +2160,7 @@ void SiliconTracking_MarlinTrk::CreateTrack(TrackExtended * trackAR ) {
         
       }
       int NPT = nTotHits;
-      int iopt = 3;
+      int iopt = 2;
       float chi2RPhi;
       float chi2Z;
       int ndf = 2*NPT - 5;
@@ -2211,7 +2452,7 @@ void SiliconTracking_MarlinTrk::AttachRemainingVTXHitsFast() {
           }
         }
         if (minDist < _minDistCutAttach && trackToAttach != NULL) {
-          int iopt = 3;
+          int iopt = 2;
           AttachHitToTrack(trackToAttach,hit,iopt);
         }      
       }
@@ -2290,7 +2531,7 @@ void SiliconTracking_MarlinTrk::AttachRemainingVTXHitsSlow() {
               distance = sqrt(distance);
               if (distance<_minDistToDelta) {
                 consider = false;
-                streamlog_out(DEBUG1) << " hit: id = " << hit->getTrackerHit()->id() << "condsidered delta together with hit " << trkhit2->id() << std::endl;
+                streamlog_out(DEBUG1) << " hit: id = " << hit->getTrackerHit()->id() << " condsidered delta together with hit " << trkhit2->id() << std::endl;
                 break;
               }
             }       
@@ -2315,7 +2556,7 @@ void SiliconTracking_MarlinTrk::AttachRemainingVTXHitsSlow() {
         }
       }
       if (minDist < _minDistCutAttach && trackToAttach != NULL) {
-        int iopt = 3;
+        int iopt = 2;
         streamlog_out(DEBUG1) << " Hit: id = " << hit->getTrackerHit()->id() << " : try attachement"<< std::endl;
         AttachHitToTrack(trackToAttach,hit,iopt);
       } else {
@@ -2677,11 +2918,11 @@ int SiliconTracking_MarlinTrk::AttachHitToTrack(TrackExtended * trackAR, Tracker
   // using SIT and VXD doesn't seem to give any problems, so make it a function parameter and let the caller decide
   //  int iopt = 3;
   
-  float chi2RPhi;
-  float chi2Z;
+  float chi2RPhi = 0 ;
+  float chi2Z = 0 ;
   
   
-  _fastfitter->fastHelixFit(NPT, xh, yh, rh, ph, wrh, zh, wzh,iopt, par, epar, chi2RPhi, chi2Z);
+  int error = _fastfitter->fastHelixFit(NPT, xh, yh, rh, ph, wrh, zh, wzh,iopt, par, epar, chi2RPhi, chi2Z);
   par[3] = par[3]*par[0]/fabs(par[0]);
   
   
@@ -2705,7 +2946,7 @@ int SiliconTracking_MarlinTrk::AttachHitToTrack(TrackExtended * trackAR, Tracker
   ndf = 2*NPT-5;
   
   
-  if (chi2/float(ndf) < _chi2FitCut) {
+  if ( error == 0 && chi2/float(ndf) < _chi2FitCut ) {
     trackAR->addTrackerHitExtended(hit);
     hit->addTrackExtended( trackAR );
     trackAR->setChi2( chi2 );
@@ -2717,8 +2958,9 @@ int SiliconTracking_MarlinTrk::AttachHitToTrack(TrackExtended * trackAR, Tracker
     trackAR->setNDF( ndf );
     trackAR->setCovMatrix( epar );
     attached = 1;
+    streamlog_out(DEBUG1) << "Attachement succeeded chi2/float(ndf) = " << chi2/float(ndf) << "  cut = " <<  _chi2FitCut  << " chi2RPhi = " << chi2RPhi << " chi2Z = " << chi2Z << " error = " << error << std::endl;
   } else {
-    streamlog_out(DEBUG1) << "Attachement failed chi2/float(ndf) = " << chi2/float(ndf) << "  cut = " <<  _chi2FitCut  << std::endl;
+    streamlog_out(DEBUG1) << "Attachement failed chi2/float(ndf) = " << chi2/float(ndf) << "  cut = " <<  _chi2FitCut  << " chi2RPhi = " << chi2RPhi << " chi2Z = " << chi2Z << " error = " << error << std::endl;
   }
   
   delete[] xh;
@@ -2826,17 +3068,21 @@ void SiliconTracking_MarlinTrk::FinalRefit(LCCollectionVec* trk_col, LCCollectio
               }
               
               // get the intersection of the helix with the either the cylinder or plane containing the hit
-              float Point[3];
-              float PointS[3];
+              float Point[6];
+              float PointS[6];
+              
               if (det == lcio::ILDDetID::FTD) {
+
                 float time = helix->getPointInZ(xP[2],Pos,Point);
                 time = helix->getPointInZ(xPS[2],Pos,PointS);
-              }
-              else {
+
+              } else {
+
                 float RAD = sqrt(xP[0]*xP[0]+xP[1]*xP[1]);
                 float RADS = sqrt(xPS[0]*xPS[0]+xPS[1]*xPS[1]);
                 float time = helix->getPointOnCircle(RAD,Pos,Point);
                 time = helix->getPointOnCircle(RADS,Pos,PointS);
+
               }
               
               float DIST = 0;

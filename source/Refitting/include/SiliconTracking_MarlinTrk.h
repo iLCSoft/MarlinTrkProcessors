@@ -18,7 +18,13 @@
 #include <UTIL/BitField64.h>
 #include <UTIL/ILDConf.h>
 
+namespace DiagnosticsHistograms {
+  class Histograms ;
+}
 
+namespace DiagnosticsHistograms2D {
+  class Histograms ;
+}
 
 using namespace lcio ;
 using namespace marlin ;
@@ -64,7 +70,7 @@ namespace UTIL{
  * same track  are identified and merged into one track. All possible 
  * pairings are tested for their compatibility.
  * The number of pairings considered is Ntrk_VTX_SIT*Ntrk_FTD, where Ntrk_VTX_SIT is the number of 
- * track segments reconstructed in the first step in VTX+SIT (segments containing solely VTX and SIT hits) and  
+ * track segments reconstructed in the first step in VTX+SIT (segments containing solely VTX and SIT hits) and
  * Ntrk_FTD is the number of track segments reconstructed in the second step 
  * (segments containing solely FTD hits).
  * Pair of segments is accepted for further examination if the angle between track segments and 
@@ -238,6 +244,16 @@ protected:
   float     _helix_max_r;
   
   void drawEvent();
+  
+  
+  // histogram member variables
+  
+  bool  _createDiagnosticsHistograms;
+  DiagnosticsHistograms::Histograms* _histos ;
+
+  
+  int _ntriplets, _ntriplets_good, _ntriplets_2MCP, _ntriplets_3MCP, _ntriplets_1MCP_Bad, _ntriplets_bad;
+  
   
   /** helper function to get collection using try catch block */
   LCCollection* GetCollection(  LCEvent * evt, std::string colName ) ;
