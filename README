@@ -20,20 +20,31 @@
  | v01-06-01 |
   -----------
 
+  General:			
 
-   /MarlinTrkProcessors/trunk/source/Refitting/src/FullLDCTracking_MarlinTrk.cc
+      - RIADA dependency added
 
-  - increased debug output
-  - workaround for issue with curlers:
-    present only first segment from Clupatra TPC tracks
-    to the rest of the code 
-    -> might loose some curler segments (needs further check)
-  - Use fit from TPC to initialise fit when doing SiTrack TPCTrack comparisons.
-    Added debug output which can we removed at a later stage
-    
-  /MarlinTrkProcessors/trunk/source/Digitisers/src/SpacePointBuilder.cc
+  FullLDCTracking_MarlinTrk:
+
+      - Increased debug output
+      - Workaround for issue with curlers:
+       	present only first segment from Clupatra TPC tracks
+    	to the rest of the code 
+    	-> might loose some curler segments (needs further check)
+      - Use fit from TPC to initialise fit when doing SiTrack TPCTrack comparisons.
+      	Added debug output which can we removed at a later stage
+
+    - SiliconTracking_MarlinTrk:
+      
+      - Make sure that float[6] is used for getPointOnCircle. 
+      - Added diagnostic histograms. 
+      - Check error return of fast fitter. 
+      - Use iopt 2 instead of 3, as newtonian part of fast fitter is not performing well.     
+
+    - SpacePointBuilder:
      
-  - Added extra check for valid line intersection when creating space points. This fixes problems from very low pt tracks.
+      - Added extra check for valid line intersection when creating space points. This fixes problems from very low pt tracks.
+
 
   --------
  | v01-06 |
