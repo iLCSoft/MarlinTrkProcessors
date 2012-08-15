@@ -97,6 +97,16 @@ class TrackSubsetProcessor : public Processor {
   bool _ElossOn ;
   bool _SmoothOn ;
 
+  float _initialTrackError_d0;
+  float _initialTrackError_phi0;
+  float _initialTrackError_omega;
+  float _initialTrackError_z0;
+  float _initialTrackError_tanL;
+  
+  double _maxChi2PerHit;
+  
+  float _bField;
+  
   int _nRun ;
   int _nEvt ;
   

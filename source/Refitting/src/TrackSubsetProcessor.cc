@@ -8,7 +8,9 @@
 #include "IMPL/LCFlagImpl.h"
 #include "IMPL/TrackImpl.h"
 
+#include <UTIL/ILDConf.h>
 
+#include <gear/BField.h>
 
 #include "marlin/VerbosityLevels.h"
 #include "marlin/Global.h"
@@ -18,6 +20,7 @@
 #include "Tools/Fitter.h"
 #include "Tools/KiTrackMarlinTools.h"
 
+#include "MarlinTrk/MarlinTrkUtils.h"
 
 using namespace lcio ;
 using namespace marlin ;
@@ -76,7 +79,37 @@ TrackSubsetProcessor::TrackSubsetProcessor() : Processor("TrackSubsetProcessor")
                              "Smooth All Measurement Sites in Fit",
                              _SmoothOn,
                              bool(false));
+  registerProcessorParameter( "InitialTrackErrorD0",
+                             "Value used for the initial d0 variance of the trackfit",
+                             _initialTrackError_d0,
+                             float(1.e6));
   
+  registerProcessorParameter( "InitialTrackErrorPhi0",
+                             "Value used for the initial phi0 variance of the trackfit",
+                             _initialTrackError_phi0,
+                             float(1.e2));
+  
+  registerProcessorParameter( "InitialTrackErrorOmega",
+                             "Value used for the initial omega variance of the trackfit",
+                             _initialTrackError_omega,
+                             float(1.e-4));
+  
+  registerProcessorParameter( "InitialTrackErrorZ0",
+                             "Value used for the initial z0 variance of the trackfit",
+                             _initialTrackError_z0,
+                             float(1.e6));
+  
+  registerProcessorParameter( "InitialTrackErrorTanL",
+                             "Value used for the initial tanL variance of the trackfit",
+                             _initialTrackError_tanL,
+                             float(1.e2));
+  
+  
+  registerProcessorParameter( "MaxChi2PerHit",
+                             "Maximum Chi-squared value allowed when assigning a hit to a track",
+                             _maxChi2PerHit,
+                             double(1.e2));
+
   /////////////////////////////////////////////////////////////////////////////////
   
   
@@ -103,6 +136,8 @@ void TrackSubsetProcessor::init() {
   /**********************************************************************************************/
   /*       Initialise the MarlinTrkSystem, needed by the tracks for fitting                     */
   /**********************************************************************************************/
+  
+  _bField = Global::GEAR->getBField().at( gear::Vector3D( 0.,0.,0.)  ).z() ;
   
   // set upt the geometry
   _trkSystem =  MarlinTrk::Factory::createMarlinTrkSystem( "KalTest" , marlin::Global::GEAR , "" ) ;
@@ -276,28 +311,126 @@ void TrackSubsetProcessor::processEvent( LCEvent * evt ) {
     Track* track = accepted[i];
     std::vector< TrackerHit* > trackerHits = track->getTrackerHits();
     for( unsigned j=0; j<trackerHits.size(); j++ ) trackImpl->addHit( trackerHits[j] );
+
+    // setup initial dummy covariance matrix
+    EVENT::FloatVec covMatrix;
+    covMatrix.resize(15);
     
-    try{
+    for (unsigned icov = 0; icov<covMatrix.size(); ++icov) {
+      covMatrix[icov] = 0;
+    }
+    
+    covMatrix[0]  = ( _initialTrackError_d0    ); //sigma_d0^2
+    covMatrix[2]  = ( _initialTrackError_phi0  ); //sigma_phi0^2
+    covMatrix[5]  = ( _initialTrackError_omega ); //sigma_omega^2
+    covMatrix[9]  = ( _initialTrackError_z0    ); //sigma_z0^2
+    covMatrix[14] = ( _initialTrackError_tanL  ); //sigma_tanl^2
+    
+    
+    std::vector< std::pair<float, EVENT::TrackerHit*> > r2_values;
+    r2_values.reserve(trackerHits.size());
+    
+    for (TrackerHitVec::iterator it=trackerHits.begin(); it!=trackerHits.end(); ++it) {
+      EVENT::TrackerHit* h = *it;
+      float r2 = h->getPosition()[0]*h->getPosition()[0]+h->getPosition()[1]*h->getPosition()[1];
+      r2_values.push_back(std::make_pair(r2, *it));
+    }
+    
+    sort(r2_values.begin(),r2_values.end());
+    
+    trackerHits.clear();
+    trackerHits.reserve(r2_values.size());
+    
+    for (std::vector< std::pair<float, EVENT::TrackerHit*> >::iterator it=r2_values.begin(); it!=r2_values.end(); ++it) {
+      trackerHits.push_back(it->second);
+    }
+
+    bool fit_backwards = MarlinTrk::IMarlinTrack::backward;
+    
+    MarlinTrk::IMarlinTrack* marlinTrk = _trkSystem->createTrack();
+    
+    
+    int error = 0;
+    
+    try {
       
-      Fitter fitter( trackImpl , _trkSystem );
+      error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, trackerHits, trackImpl, fit_backwards, covMatrix, _bField, _maxChi2PerHit);
       
-      TrackStateImpl* trkStateIP = new TrackStateImpl( fitter.getTrackState( lcio::TrackState::AtIP ) ) ;
-      trackImpl->setChi2( fitter.getChi2( lcio::TrackState::AtIP ) );
-      trackImpl->setNdf( fitter.getNdf( lcio::TrackState::AtIP ) );
-      trkStateIP->setLocation( TrackState::AtIP );
-      trackImpl->addTrackState( trkStateIP );
+    } catch (...) {
       
-      trackVec->addElement(trackImpl);
+      //      delete Track;
+      //      delete marlinTrk;
+      
+      throw ;
       
     }
-    catch( FitterException e ){
-      
+    
+    // Add hit numbers 
+    
+    std::vector<std::pair<EVENT::TrackerHit* , double> > hits_in_fit ;
+    std::vector<std::pair<EVENT::TrackerHit* , double> > outliers ;
+    std::vector<TrackerHit*> all_hits;
+    all_hits.reserve(300);
+    
+    marlinTrk->getHitsInFit(hits_in_fit);
+    
+    for ( unsigned ihit = 0; ihit < hits_in_fit.size(); ++ihit) {
+      all_hits.push_back(hits_in_fit[ihit].first);
+    }
+    
+    UTIL::BitField64 cellID_encoder( lcio::ILDCellID0::encoder_string ) ;
+    
+    MarlinTrk::addHitNumbersToTrack(trackImpl, all_hits, true, cellID_encoder);
+    
+    marlinTrk->getOutliers(outliers);
+    
+    for ( unsigned ihit = 0; ihit < outliers.size(); ++ihit) {
+      all_hits.push_back(outliers[ihit].first);
+    }
+    
+    MarlinTrk::addHitNumbersToTrack(trackImpl, all_hits, false, cellID_encoder);
+    
+    delete marlinTrk;
+    
+    
+    
+    if( error != MarlinTrk::IMarlinTrack::success ) {
       delete trackImpl;
-      
-      streamlog_out( ERROR ) << "TrackImpl nr " << i  << " rejected, because fit failed: " <<  e.what() << "\n";
-      continue;
-      
+      streamlog_out(DEBUG3) << "TrackSubsetProcessor:: Track fit failed with error code " << error << " track dropped. Number of hits = "<< trackerHits.size() << std::endl;
+      continue ;
     }
+    
+    if( trackImpl->getNdf() < 0) {
+      delete trackImpl;
+      streamlog_out(DEBUG3) << "TrackSubsetProcessor:: Track fit returns " << trackImpl->getNdf() << " degress of freedom track dropped. Number of hits = "<< trackerHits.size() << std::endl;
+      continue ;
+    }
+    
+    trackVec->addElement(trackImpl);
+    
+    
+    
+//    try{
+//
+//      Fitter fitter( trackImpl , _trkSystem );
+//
+//      TrackStateImpl* trkStateIP = new TrackStateImpl( fitter.getTrackState( lcio::TrackState::AtIP ) ) ;
+//      trackImpl->setChi2( fitter.getChi2( lcio::TrackState::AtIP ) );
+//      trackImpl->setNdf( fitter.getNdf( lcio::TrackState::AtIP ) );
+//      trkStateIP->setLocation( TrackState::AtIP );
+//      trackImpl->addTrackState( trkStateIP );
+//      
+//      trackVec->addElement(trackImpl);
+//      
+//    }
+//    catch( FitterException e ){
+//      
+//      delete trackImpl;
+//      
+//      streamlog_out( ERROR ) << "TrackImpl nr " << i  << " rejected, because fit failed: " <<  e.what() << "\n";
+//      continue;
+//      
+//    }
     
     
   }
