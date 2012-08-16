@@ -310,7 +310,7 @@ void TrackSubsetProcessor::processEvent( LCEvent * evt ) {
     
     Track* track = accepted[i];
     std::vector< TrackerHit* > trackerHits = track->getTrackerHits();
-    for( unsigned j=0; j<trackerHits.size(); j++ ) trackImpl->addHit( trackerHits[j] );
+
 
     // setup initial dummy covariance matrix
     EVENT::FloatVec covMatrix;
