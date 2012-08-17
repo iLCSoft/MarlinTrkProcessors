@@ -24,15 +24,19 @@
 
       - RIADA dependency added
 
+
+
+
+
+
   FullLDCTracking_MarlinTrk:
 
       - Increased debug output
-      - Workaround for issue with curlers:
-       	present only first segment from Clupatra TPC tracks
-    	to the rest of the code 
-    	-> might loose some curler segments (needs further check)
       - Use fit from TPC to initialise fit when doing SiTrack TPCTrack comparisons.
       	Added debug output which can we removed at a later stage
+      - Use Tracks from the TPC which are composed only of the innermost segment, which contains the fit needed 
+      	for matching to the Silicon Tracks. The Silicon Track, TPC Track, and the segments are added to the final track, 
+	which is then itself added to the Final Track collection. 
 
     - SiliconTracking_MarlinTrk:
       
@@ -82,7 +86,8 @@
 				 Removed unused parameters.
 
   SpacePointBuilder:		 Corrected SpacePoint creation bug. Endpoint of rear strip swapped with endpoint of front strip. Added debug output for checking whether a strip is created from a real combination or ghost combination.
- 
+
+  TrackSubsetProcessor		 Add hit numbers and additional trackstates. Use MarlinTrk utilities. 
 
   --------
  | v01-05 |
