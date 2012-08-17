@@ -65,6 +65,9 @@ std::string toString( int iTrk, Track * tpcTrack, float bField=3.5 ) {
   float tanLTPC  = tpcTrack->getTanLambda();
   float Chi2TPC  = tpcTrack->getChi2()/float(tpcTrack->getNdf());
   int   ndfTPC   = tpcTrack->getNdf();
+
+  int nlinkedTracks = tpcTrack->getTracks().size();
+  
   
   HelixClass helixTPC;
   
@@ -77,8 +80,8 @@ std::string toString( int iTrk, Track * tpcTrack, float bField=3.5 ) {
   float pzTPC = helixTPC.getMomentum()[2];
   const float ptot = sqrt(pxTPC*pxTPC+pyTPC*pyTPC+pzTPC*pzTPC);
 
-  sprintf(strg,"%3i  %9.3f  %9.3f  %9.3f  %7.2f  %7.2f  %7.2f %4i %4i %8.3f",iTrk,
-	  ptot, d0TPC,z0TPC,pxTPC,pyTPC,pzTPC,nHits,ndfTPC,Chi2TPC);
+  sprintf(strg,"%3i  %9.3f  %9.3f  %9.3f  %7.2f  %7.2f  %7.2f %4i %4i %8.3f %8i",iTrk,
+	  ptot, d0TPC,z0TPC,pxTPC,pyTPC,pzTPC,nHits,ndfTPC,Chi2TPC,nlinkedTracks);
 
   return std::string( strg ) ;
 }
@@ -722,6 +725,17 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
       for (int iGr=0;iGr<nGrTRK;++iGr) {
         TrackExtended * subTrack = trkVecGrp[iGr];
         Track->addTrack(subTrack->getTrack());
+        // SJA:FIXME: Here we should really check if the track is a curler from the TPC.
+        // For now lets just take all the segments and add them as SiliconTracking never adds segements together into tracks
+        const TrackVec segments = subTrack->getTrack()->getTracks();
+        if ( segments.empty() == false ) {
+          
+           for (unsigned iSeg=0;iSeg<segments.size();++iSeg) {
+             Track->addTrack(segments[iSeg]);
+           }
+          
+
+        }
       }
     }
     
@@ -734,8 +748,18 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
     int hits_in_ftd = Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::FTD - 2 ];
     int hits_in_sit = Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SIT - 2 ];
     int hits_in_tpc = Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::TPC - 2 ];
+    int hits_in_set = Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SET - 2 ];
     
     int nHitsSi = hits_in_vxd + hits_in_ftd + hits_in_sit;
+    
+    streamlog_out( DEBUG2 ) << " Hit numbers for Track "<< Track->id() << ": "
+    << " vxd hits = " << hits_in_vxd
+    << " ftd hits = " << hits_in_ftd
+    << " sit hits = " << hits_in_sit
+    << " tpc hits = " << hits_in_tpc
+    << " set hits = " << hits_in_set
+    << std::endl;
+
     
     bool rejectTrack = (hits_in_tpc < _cutOnTPCHits) && (nHitsSi<=0);
     
@@ -1216,44 +1240,17 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
     LCCollection * col = event->getCollection(_TPCTrackCollection.c_str());
     int nelem = col->getNumberOfElements();
     streamlog_out(DEBUG5) << std::endl;
-    streamlog_out(DEBUG5) << "Number of TPC Tracks = " << nelem << std::endl;
-    streamlog_out(DEBUG5) << " Trk       p          D0         Z0       Px       Py       Pz    ntpc ndf Chi2/ndf" << std::endl;
+    streamlog_out(DEBUG5) << "Number of TPC Tracks = " << nelem << " in " << _TPCTrackCollection.c_str() << std::endl;
+    streamlog_out(DEBUG5) << " Trk       p          D0         Z0       Px       Py       Pz   ntpc ndf  Chi2/ndf nlinkedTracks" << std::endl;
     //           "  0  1.111   0.059      0.022    -0.54     0.61    -0.45    0.185
     
     for (int iTrk=0; iTrk<nelem; ++iTrk) {
       
       Track * tpcTrack = dynamic_cast<Track*>(col->getElementAt(iTrk) );
       
-      //fg: if the track consists of more than one segment ( curler) we use just the first one 
-      //FIXME: need to recover the other track segments that are found by Clupatra ...
-      if( ! tpcTrack->getTracks().empty() )
-	tpcTrack =  tpcTrack->getTracks()[0] ;
-
       TrackerHitVec hitVec = tpcTrack->getTrackerHits();
       int nHits = int(hitVec.size());
       
-      // float d0TPC = tpcTrack->getD0();
-      // float z0TPC = tpcTrack->getZ0();
-      // float omegaTPC = tpcTrack->getOmega();
-      // float phi0TPC = tpcTrack->getPhi();
-      // float tanLTPC = tpcTrack->getTanLambda();
-      // float Chi2TPC = tpcTrack->getChi2()/float(tpcTrack->getNdf());
-      // const int ndfTPC = tpcTrack->getNdf();
-      
-      // HelixClass helixTPC;
-      
-      // helixTPC.Initialize_Canonical(phi0TPC,d0TPC,z0TPC,omegaTPC,tanLTPC,_bField);
-      
-      // char strg[200];
-      
-      // float pxTPC = helixTPC.getMomentum()[0];
-      // float pyTPC = helixTPC.getMomentum()[1];
-      // float pzTPC = helixTPC.getMomentum()[2];
-      // const float ptot = sqrt(pxTPC*pxTPC+pyTPC*pyTPC+pzTPC*pzTPC);
-      // sprintf(strg,"%3i  %9.3f  %9.3f  %9.3f  %7.2f  %7.2f  %7.2f %4i %4i %8.3f",iTrk,
-      //         ptot, d0TPC,z0TPC,pxTPC,pyTPC,pzTPC,nHits,ndfTPC,Chi2TPC);
-      // streamlog_out(DEBUG5) << strg << std::endl;
-
       streamlog_out(DEBUG5) << toString( iTrk, tpcTrack ,  _bField ) << std::endl;
       
       TrackExtended * trackExt = new TrackExtended( tpcTrack );
