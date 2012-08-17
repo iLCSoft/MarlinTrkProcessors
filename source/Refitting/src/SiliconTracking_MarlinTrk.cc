@@ -734,6 +734,7 @@ void SiliconTracking_MarlinTrk::processEvent( LCEvent * evt ) {
   }
   
   if (successFTD == 1) {
+    streamlog_out(DEBUG1) << "      phi          side        layer      nh o :   m :   i  :: o*m*i " << std::endl;
     TrackingInFTD(); // Perform tracking in the FTD
     streamlog_out(DEBUG4) << "End of Processing FTD sectors" << std::endl;
   }
@@ -2722,13 +2723,18 @@ void SiliconTracking_MarlinTrk::AttachRemainingFTDHitsFast() {
 }
 
 void SiliconTracking_MarlinTrk::TrackingInFTD() {
+
   int nComb = int(_CombinationsFTD.size()) / 3;
+
   for (int iComb=0;iComb<nComb;++iComb) {
+
     int nLS[3];
     nLS[0] = _CombinationsFTD[3*iComb];
     nLS[1] = _CombinationsFTD[3*iComb+1];
     nLS[2] = _CombinationsFTD[3*iComb+2];
-    for (int iS=0;iS<2;++iS) {
+
+    for (int iS=0;iS<2;++iS) { // loop over +z and -z
+      
       //      std::cout << "Combinations : " << iS << " " << nLS[0] << " " << nLS[1] << " " << nLS[2] << std::endl;
       //      int iC = iS + 2*nLS[0];
       //      TrackerHitExtendedVec& hitVec = _sectorsFTD[iC];
@@ -2740,7 +2746,9 @@ void SiliconTracking_MarlinTrk::TrackingInFTD() {
       //      hitVec = _sectorsFTD[iC];
       //      int nI = int(hitVec.size());
       //      std::cout << nO << " " << nM << " " << nI << std::endl;
-      for (int ipOuter=0;ipOuter<_nPhiFTD;++ipOuter) {
+
+      for (int ipOuter=0;ipOuter<_nPhiFTD;++ipOuter) { 
+
         int ipMiddleLow = ipOuter - 1;
         int ipMiddleUp  = ipOuter + 1;
         
@@ -2754,22 +2762,27 @@ void SiliconTracking_MarlinTrk::TrackingInFTD() {
         TrackerHitExtendedVec& hitVecOuter = _sectorsFTD[iCodeOuter];
         
         int nOuter = int(hitVecOuter.size());
+
         for (int iOuter=0;iOuter<nOuter;++iOuter) {
           
           TrackerHitExtended * hitOuter = hitVecOuter[iOuter];
+        
           for (int ipMiddle=ipMiddleLow;ipMiddle<=ipMiddleUp;++ipMiddle) {
             //for(int ipMiddle=0;ipMiddle<_nPhiFTD;++ipMiddle) {
             int ipM = ipMiddle;
             if (ipM < 0) 
               ipM = ipMiddle + _nPhiFTD;
-            if (ipM >= _nPhiFTD) 
+            if (ipM >= _nPhiFTD)
               ipM = ipMiddle - _nPhiFTD;
             int iCodeMiddle = iS + 2*nLS[1] + 2*_nlayersFTD*ipM;
+          
             TrackerHitExtendedVec& hitVecMiddle = _sectorsFTD[iCodeMiddle];
             int ipInnerLow,ipInnerUp;       
             ipInnerLow = ipMiddle - 1;
             ipInnerUp =  ipMiddle + 1;
+            
             int nMiddle = int(hitVecMiddle.size());
+            
             for (int iMiddle=0;iMiddle<nMiddle;++iMiddle) {
               TrackerHitExtended * hitMiddle = hitVecMiddle[iMiddle];
               for (int ipInner=ipInnerLow;ipInner<=ipInnerUp;++ipInner) {
@@ -2781,14 +2794,26 @@ void SiliconTracking_MarlinTrk::TrackingInFTD() {
                   ipI = ipInner - _nPhiFTD;
                 int iCodeInner = iS + 2*nLS[2] + 2*_nlayersFTD*ipI;
                 TrackerHitExtendedVec& hitVecInner = _sectorsFTD[iCodeInner];
+            
                 int nInner = int(hitVecInner.size());
+                
                 for (int iInner=0;iInner<nInner;++iInner) {
+                
                   TrackerHitExtended * hitInner = hitVecInner[iInner];
                   HelixClass helix;
                   //                  std::cout << std::endl;
                   //                  std::cout << "Outer Hit Type " << hitOuter->getTrackerHit()->getType() << " z = " << hitOuter->getTrackerHit()->getPosition()[2] 
                   //                  << "\nMiddle Hit Type "<< hitMiddle->getTrackerHit()->getType() << " z = " << hitMiddle->getTrackerHit()->getPosition()[2]  
                   //                  << "\nInner Hit Type "<< hitInner->getTrackerHit()->getType() << " z = " << hitInner->getTrackerHit()->getPosition()[2]  << std::endl;
+
+                  streamlog_out(DEBUG1) << " "
+                  << std::setw(3) << ipOuter       << " "   << std::setw(3) << ipMiddle << " "      << std::setw(3) << ipInner << "       "
+                  << std::setw(3) << iS << "     "
+                  << std::setw(3) << nLS[0]     << " "   << std::setw(3) << nLS[1]   << " "      << std::setw(3) << nLS[2]  << "     "
+                  << std::setw(3) << nOuter << " : " << std::setw(3) << nMiddle << " : " << std::setw(3) << nInner << "  :: "
+                  << std::setw(3) << nOuter*nMiddle* nInner << std::endl;
+
+                  
                   TrackExtended * trackAR = TestTriplet(hitOuter,hitMiddle,hitInner,helix);
                   if (trackAR != NULL) {
                     //                    std::cout << "FTD triplet found" << std::endl;
@@ -3231,6 +3256,21 @@ void SiliconTracking_MarlinTrk::FinalRefit(LCCollectionVec* trk_col, LCCollectio
       
       delete marlinTrk;
       
+
+      int nhits_in_vxd = Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::VXD - 2 ];
+      int nhits_in_ftd = Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::FTD - 2 ];
+      int nhits_in_sit = Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SIT - 2 ];
+      
+      streamlog_out( DEBUG2 ) << " Hit numbers for Track "<< Track->id() << ": "
+      << " vxd hits = " << nhits_in_vxd
+      << " ftd hits = " << nhits_in_ftd
+      << " sit hits = " << nhits_in_sit
+      << std::endl;
+      
+      if (nhits_in_vxd > 0) Track->setTypeBit( lcio::ILDDetID::VXD ) ;
+      if (nhits_in_ftd > 0) Track->setTypeBit( lcio::ILDDetID::FTD ) ;
+      if (nhits_in_sit > 0) Track->setTypeBit( lcio::ILDDetID::SIT ) ;
+
       
       
       if( error != IMarlinTrack::success ) {       
@@ -3255,7 +3295,7 @@ void SiliconTracking_MarlinTrk::FinalRefit(LCCollectionVec* trk_col, LCCollectio
         throw EVENT::Exception( std::string("SiliconTracking_MarlinTrk::FinalRefit: trkStateIP pointer == NULL ")  ) ;
       }
       
-      // note trackAR which is of type TrackExtended, only takes fits set for ref point = 0,0,0 
+      // note trackAR which is of type TrackExtended, only takes fits set for ref point = 0,0,0
       trackAR->setOmega(trkStateIP->getOmega());
       trackAR->setTanLambda(trkStateIP->getTanLambda());
       trackAR->setPhi(trkStateIP->getPhi());
