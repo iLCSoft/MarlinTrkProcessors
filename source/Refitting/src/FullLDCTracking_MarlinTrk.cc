@@ -725,15 +725,19 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
       for (int iGr=0;iGr<nGrTRK;++iGr) {
         TrackExtended * subTrack = trkVecGrp[iGr];
         Track->addTrack(subTrack->getTrack());
-        // SJA:FIXME: Here we should really check if the track is a curler from the TPC.
-        // For now lets just take all the segments and add them as SiliconTracking never adds segements together into tracks
-        const TrackVec segments = subTrack->getTrack()->getTracks();
-        if ( segments.empty() == false ) {
+
+        // check if it is a tpc looper ...
+        if( BitSet32( subTrack->getTrack()->getType() )[  lcio::ILDDetID::TPC   ] )  {
           
-           for (unsigned iSeg=0;iSeg<segments.size();++iSeg) {
-             Track->addTrack(segments[iSeg]);
-           }
-          
+          const TrackVec segments = subTrack->getTrack()->getTracks();
+
+          if ( segments.empty() == false ) {
+            
+            for (unsigned iSeg=0;iSeg<segments.size();++iSeg) {
+              Track->addTrack(segments[iSeg]);
+            }
+
+          }
 
         }
       }
@@ -744,26 +748,31 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
     //    float phi0TrkCand = trkCand->getPhi();
     
     
-    int hits_in_vxd = Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::VXD - 2 ];
-    int hits_in_ftd = Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::FTD - 2 ];
-    int hits_in_sit = Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SIT - 2 ];
-    int hits_in_tpc = Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::TPC - 2 ];
-    int hits_in_set = Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SET - 2 ];
+    int nhits_in_vxd = Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::VXD - 2 ];
+    int nhits_in_ftd = Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::FTD - 2 ];
+    int nhits_in_sit = Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SIT - 2 ];
+    int nhits_in_tpc = Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::TPC - 2 ];
+    int nhits_in_set = Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SET - 2 ];
     
-    int nHitsSi = hits_in_vxd + hits_in_ftd + hits_in_sit;
+    int nHitsSi = nhits_in_vxd + nhits_in_ftd + nhits_in_sit;
     
     streamlog_out( DEBUG2 ) << " Hit numbers for Track "<< Track->id() << ": "
-    << " vxd hits = " << hits_in_vxd
-    << " ftd hits = " << hits_in_ftd
-    << " sit hits = " << hits_in_sit
-    << " tpc hits = " << hits_in_tpc
-    << " set hits = " << hits_in_set
+    << " vxd hits = " << nhits_in_vxd
+    << " ftd hits = " << nhits_in_ftd
+    << " sit hits = " << nhits_in_sit
+    << " tpc hits = " << nhits_in_tpc
+    << " set hits = " << nhits_in_set
     << std::endl;
-
     
-    bool rejectTrack = (hits_in_tpc < _cutOnTPCHits) && (nHitsSi<=0);
+    if (nhits_in_vxd > 0) Track->setTypeBit( lcio::ILDDetID::VXD ) ;
+    if (nhits_in_ftd > 0) Track->setTypeBit( lcio::ILDDetID::FTD ) ;
+    if (nhits_in_sit > 0) Track->setTypeBit( lcio::ILDDetID::SIT ) ;
+    if (nhits_in_tpc > 0) Track->setTypeBit( lcio::ILDDetID::TPC ) ;
+    if (nhits_in_set > 0) Track->setTypeBit( lcio::ILDDetID::SET ) ;
     
-    rejectTrack = rejectTrack || ( (hits_in_tpc<=0) && (nHitsSi<_cutOnSiHits) );
+    bool rejectTrack = (nhits_in_tpc < _cutOnTPCHits) && (nHitsSi<=0);
+    
+    rejectTrack = rejectTrack || ( (nhits_in_tpc<=0) && (nHitsSi<_cutOnSiHits) );
     rejectTrack = rejectTrack || ( fabs(d0TrkCand) > _d0TrkCut ) || ( fabs(z0TrkCand) > _z0TrkCut );
     
     if ( rejectTrack ) {
