@@ -24,11 +24,6 @@
 
       - RIADA dependency added
 
-
-
-
-
-
   FullLDCTracking_MarlinTrk:
 
       - Increased debug output
@@ -37,6 +32,7 @@
       - Use Tracks from the TPC which are composed only of the innermost segment, which contains the fit needed 
       	for matching to the Silicon Tracks. The Silicon Track, TPC Track, and the segments are added to the final track, 
 	which is then itself added to the Final Track collection. 
+      - Added type bits for the final Track collection. 
 
     - SiliconTracking_MarlinTrk:
       
@@ -44,6 +40,7 @@
       - Added diagnostic histograms. 
       - Check error return of fast fitter. 
       - Use iopt 2 instead of 3, as newtonian part of fast fitter is not performing well.     
+      - Added type bits for the final Track collection. Increased debug for FTD tracking.
 
     - SpacePointBuilder:
      
