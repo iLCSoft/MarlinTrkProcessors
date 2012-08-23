@@ -80,7 +80,7 @@ std::string toString( int iTrk, Track * tpcTrack, float bField=3.5 ) {
   float pzTPC = helixTPC.getMomentum()[2];
   const float ptot = sqrt(pxTPC*pxTPC+pyTPC*pyTPC+pzTPC*pzTPC);
 
-  sprintf(strg,"%3i  %9.3f  %9.3f  %9.3f  %7.2f  %7.2f  %7.2f %4i %4i %8.3f %8i",iTrk,
+  sprintf(strg,"%3i   %5i %9.3f  %9.3f  %9.3f  %7.2f  %7.2f  %7.2f %4i %4i %8.3f %8i",iTrk,tpcTrack->id(),
 	  ptot, d0TPC,z0TPC,pxTPC,pyTPC,pzTPC,nHits,ndfTPC,Chi2TPC,nlinkedTracks);
 
   return std::string( strg ) ;
@@ -800,9 +800,11 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
       pyTot += trkPy;
       pzTot += trkPz;   
       nTotTracks++;
+   
+      streamlog_out(DEBUG3) << " Add Track to final Collection: ID = " << Track->id() << std::endl;
       
       colTRK->addElement(Track);
-      
+   
     }
   }
   
@@ -1250,8 +1252,8 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
     int nelem = col->getNumberOfElements();
     streamlog_out(DEBUG5) << std::endl;
     streamlog_out(DEBUG5) << "Number of TPC Tracks = " << nelem << " in " << _TPCTrackCollection.c_str() << std::endl;
-    streamlog_out(DEBUG5) << " Trk       p          D0         Z0       Px       Py       Pz   ntpc ndf  Chi2/ndf nlinkedTracks" << std::endl;
-    //           "  0  1.111   0.059      0.022    -0.54     0.61    -0.45    0.185
+    streamlog_out(DEBUG5) << " Trk    ID        p          D0         Z0       Px       Py       Pz   ntpc ndf  Chi2/ndf nlinkedTracks" << std::endl;
+    //                       "  0             1.111   0.059      0.022    -0.54     0.61    -0.45    0.185
     
     for (int iTrk=0; iTrk<nelem; ++iTrk) {
       
@@ -1314,7 +1316,7 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
     int nelem = col->getNumberOfElements();
     streamlog_out(DEBUG5) << std::endl;
     streamlog_out(DEBUG5) << "Number of Si Tracks = " << nelem << std::endl;
-    streamlog_out(DEBUG5) << " Trk       p          D0         Z0       Px       Py       Pz   hitsSi ndf Chi2/ndf" << std::endl;
+    streamlog_out(DEBUG5) << " Trk   ID         p          D0         Z0       Px       Py       Pz   hitsSi ndf Chi2/ndf" << std::endl;
     
     for (int iTrk=0; iTrk<nelem; ++iTrk) {
       Track * siTrack = dynamic_cast<Track*>(col->getElementAt(iTrk));
@@ -1369,7 +1371,7 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
       const float pTot = sqrt(pxSi*pxSi+pySi*pySi+pzSi*pzSi);
       const int ndfSi = trackExt->getNDF();
       float Chi2Si = trackExt->getChi2()/float(trackExt->getNDF());
-      sprintf(strg,"%3i  %9.3f  %9.3f  %9.3f  %7.2f  %7.2f  %7.2f %4i %4i %8.3f",iTrk,
+      sprintf(strg,"%3i  %4i  %9.3f  %9.3f  %9.3f  %7.2f  %7.2f  %7.2f %4i %4i %8.3f",iTrk, siTrack->id(),
               pTot, d0Si,z0Si,pxSi,pySi,pzSi,nHits, ndfSi, Chi2Si);
       streamlog_out(DEBUG5) << strg << std::endl;
       
