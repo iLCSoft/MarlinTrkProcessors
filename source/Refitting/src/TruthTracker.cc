@@ -1615,7 +1615,7 @@ void TruthTracker::createTrack_old( MCParticle* mcp, UTIL::BitField64& cellID_en
       const double* x2 = twoD_hits[ twoD_hits.size()/2 ]->getPosition();
       const double* x3 = twoD_hits.back()->getPosition();
       
-      HelixTrack helixTrack( x1, x2, x3, _Bz, IMarlinTrack::backward );
+      HelixTrack helixTrack( x1, x2, x3, _Bz, HelixTrack::forwards );
       
       helixTrack.moveRefPoint(hit_list.back()->getPosition()[0], hit_list.back()->getPosition()[1], hit_list.back()->getPosition()[2]);
       
