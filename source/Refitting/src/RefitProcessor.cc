@@ -229,7 +229,7 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
       const double* x2 = added_hits[ added_hits.size()/2 ]->getPosition();
       const double* x3 = added_hits.back()->getPosition();
       
-      HelixTrack helixTrack( x1, x2, x3, _bField, IMarlinTrack::backward );
+      HelixTrack helixTrack( x1, x2, x3, _bField, HelixTrack::forwards );
       
       helixTrack.moveRefPoint(0.0, 0.0, 0.0);
       
