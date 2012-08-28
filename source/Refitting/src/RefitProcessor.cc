@@ -406,17 +406,19 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
       trackVec->addElement(refittedTrack);
       
       // assign the relations previously assigned to the input tracks  
-      LCObjectVec objVec = input_track_rels->getRelatedToObjects( track );
-      FloatVec weights   = input_track_rels->getRelatedToWeights( track ); 
-      
-      for( unsigned int irel=0 ; irel < objVec.size() ; ++irel ){
+      if(input_track_rels){
+        LCObjectVec objVec = input_track_rels->getRelatedToObjects( track );
+        FloatVec weights   = input_track_rels->getRelatedToWeights( track );
         
-        LCRelationImpl* rel = new LCRelationImpl ;
-        rel->setFrom (refittedTrack) ;
-        rel->setTo ( objVec[irel] ) ;
-        rel->setWeight(weights[irel]) ; 
-        trackRelVec->addElement( rel );
-        
+        for( unsigned int irel=0 ; irel < objVec.size() ; ++irel ){
+          
+          LCRelationImpl* rel = new LCRelationImpl ;
+          rel->setFrom (refittedTrack) ;
+          rel->setTo ( objVec[irel] ) ;
+          rel->setWeight(weights[irel]) ;
+          trackRelVec->addElement( rel );
+          
+        }
       }
       
       
