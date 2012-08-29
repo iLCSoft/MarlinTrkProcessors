@@ -270,7 +270,7 @@ protected:
   void MergeTPCandSiTracks();
   void MergeTPCandSiTracksII();
 
-  TrackExtended * CombineTracks(TrackExtended * tpcTrk, TrackExtended * siTrk, bool testCombinationOnly=false );
+  TrackExtended * CombineTracks(TrackExtended * tpcTrk, TrackExtended * siTrk, int maxAllowedOutliers ,bool testCombinationOnly );
 
 //  TrackExtended * TrialCombineTracks(TrackExtended * tpcTrk, TrackExtended * siTrk);
 
@@ -393,6 +393,8 @@ protected:
   float _maxHitDistanceCutHighPtMerge;
   float _maxFractionOfOutliersCutHighPtMerge;
   
+  float _vetoMergeMomentumCut;
+  
   float _initialTrackError_d0;
   float _initialTrackError_phi0;
   float _initialTrackError_omega;
@@ -400,7 +402,8 @@ protected:
   float _initialTrackError_tanL;
   
   double _maxChi2PerHit;
-
+  int    _maxAllowedOutliersForTrackCombination;
+  
   bool _runMarlinTrkDiagnostics;
   std::string _MarlinTrkDiagnosticsName;
   
