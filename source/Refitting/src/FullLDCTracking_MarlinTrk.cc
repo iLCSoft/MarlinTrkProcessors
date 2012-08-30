@@ -533,7 +533,8 @@ void FullLDCTracking_MarlinTrk::processEvent( LCEvent * evt ) {
   
   
   prepareVectors( evt );
-  streamlog_out(DEBUG5) << "prepareVectors done..." << std::endl;
+  streamlog_out(DEBUG5) << "************************************PrepareVectors done..." << std::endl;
+
   streamlog_out(DEBUG5) << "************************************Merge TPC/Si ..." << std::endl;
 
   MergeTPCandSiTracks();
@@ -545,15 +546,18 @@ void FullLDCTracking_MarlinTrk::processEvent( LCEvent * evt ) {
   Sorting(_allCombinedTracks);
   streamlog_out(DEBUG5) << "************************************Sorting by Chi2/NDF done ..." << std::endl;
 
+  streamlog_out(DEBUG5) << "************************************Selection of all 2 track combininations ..." << std::endl;
   SelectCombinedTracks();
   streamlog_out(DEBUG5) << "************************************Selection of all 2 track combininations done ..." << std::endl;
 
+  streamlog_out(DEBUG5) << "************************************Trying non combined tracks ..." << std::endl;
   AddNotCombinedTracks( );
-  streamlog_out(DEBUG5) << "************************************Not combined tracks added ..." << std::endl;
+  streamlog_out(DEBUG5) << "************************************Non combined tracks added ..." << std::endl;
   //CheckTracks( );
-  
+
+  streamlog_out(DEBUG5) << "************************************Add Non assigned hits ..." << std::endl;
   AddNotAssignedHits();
-  streamlog_out(DEBUG5) << "************************************Not assigned hits added ..." << std::endl;
+  streamlog_out(DEBUG5) << "************************************Non assigned hits added ..." << std::endl;
 
   AddTrackColToEvt(evt,_trkImplVec,
                    _LDCTrackCollection);
@@ -2055,9 +2059,9 @@ void FullLDCTracking_MarlinTrk::SelectCombinedTracks() {
         // record the z extreams to the group ...
         group->setEdges(edges);
         // ... and add the combined track to the list.
-        _trkImplVec.push_back(trkExt);  
+        _trkImplVec.push_back(trkExt);
         
-        if (_debug >= 3) {
+        if (_debug >= 2) {
           int iopt = 1;
           
           // here it is assumed that the tpc tracks is the secondTrack ...
@@ -2134,7 +2138,7 @@ void FullLDCTracking_MarlinTrk::AddNotCombinedTracks() {
                 siTrkToAttach = trkExtSi;
               }
             } else {
-              if (_debug==3) {
+              if (_debug >= 3) {
                 int  iopt = 7;
                 streamlog_out(DEBUG2) << significance << " " << angleSignificance << std::endl;
                 PrintOutMerging(trkExtTPC,trkExtSi,iopt);
@@ -2276,7 +2280,7 @@ void FullLDCTracking_MarlinTrk::AddNotCombinedTracks() {
             mergedTrack->setNDF( totNdf );
             mergedTrack->setChi2( totChi2 );
 
-            if (_debug >= 3) {
+            if (_debug >= 2) {
               int iopt = 2;
               PrintOutMerging(trkTPC,trkSi,iopt);
             }
@@ -2391,13 +2395,13 @@ void FullLDCTracking_MarlinTrk::AddNotCombinedTracks() {
                 dPtMin = dPt;
                 groupToAttach = segments;
                 trkToAttach = trkInGroup;
-                if (_debug==3) {
+                if (_debug>=3) {
                   int iopt = 5;
                   PrintOutMerging(trkExt,trkInGroup,iopt);
                 }
               }
               else {
-                if (_debug==3) {
+                if (_debug>=3) {
                   int iopt = 9;
                   PrintOutMerging(trkExt,trkInGroup,iopt);
                 }
@@ -2438,7 +2442,7 @@ void FullLDCTracking_MarlinTrk::AddNotCombinedTracks() {
           if (zmaxGroup>zmax)
             edges[1] = zmaxGroup;
           groupToAttach->setEdges(edges);
-          if (_debug==3) {
+          if (_debug>=3) {
             int iopt = 3;
             PrintOutMerging(trkExt,trkToAttach,iopt);
           }
@@ -2514,7 +2518,7 @@ void FullLDCTracking_MarlinTrk::AddNotCombinedTracks() {
               }
             }
             else {
-              if (_debug==3) {
+              if (_debug>=3) {
                 GroupTracks * groupCur = combTrk->getGroupTracks();
                 TrackExtended * dummySi = groupCur->getTrackExtendedVec()[0];
                 int iopt_temp = 8;
@@ -2524,7 +2528,7 @@ void FullLDCTracking_MarlinTrk::AddNotCombinedTracks() {
           }
         }
         else {
-          if (_debug==3) {
+          if (_debug>=3) {
             for (int iTrk=0;iTrk<nTrk;++iTrk) {
               TrackExtended * trk = segVec[iTrk];
               int iopt = 0;
@@ -2544,7 +2548,7 @@ void FullLDCTracking_MarlinTrk::AddNotCombinedTracks() {
         GroupTracks * groupToAttach = CombTrkToAttach->getGroupTracks();          
         TrackExtended * SiCombTrk = groupToAttach->getTrackExtendedVec()[0];
         TrackExtended * TpcCombTrk = groupToAttach->getTrackExtendedVec()[1];
-        if (_debug==3) {
+        if (_debug>=3) {
           int iopt = 4;
           PrintOutMerging(keyTrack,SiCombTrk,iopt);
           iopt = 5;
@@ -4379,6 +4383,9 @@ void FullLDCTracking_MarlinTrk::PrintOutMerging(TrackExtended * firstTrackExt, T
     float pFirst  = sqrt(pxFirst * pxFirst+ pyFirst* pyFirst+ pzFirst*pzFirst);
     float pSecond = sqrt(pxSecond*pxSecond+pySecond*pySecond+pzSecond*pzSecond);
     
+    float ptFirst  = sqrt(pxFirst * pxFirst+ pyFirst* pyFirst);
+    float ptSecond = sqrt(pxSecond*pxSecond+pySecond*pySecond);
+    
     
     const float sigmaPOverPFirst  = sqrt( firstTrackExt->getCovMatrix()[5])/fabs(omegaFirst);
     const float sigmaPOverPSecond = sqrt(secondTrackExt->getCovMatrix()[5])/fabs(omegaSecond);
@@ -4399,33 +4406,34 @@ void FullLDCTracking_MarlinTrk::PrintOutMerging(TrackExtended * firstTrackExt, T
     if (firstMCP!=secondMCP && iopt < 6) {
       
       if (iopt==1) {
-        streamlog_out(DEBUG4) << "Erroneous combining Si and TPC segments (iopt=1) --->" << std::endl;
+        streamlog_out(DEBUG4) << "Erroneous merging of Si and TPC segments (iopt=1) mcp first = " << firstMCP << " mcp second = " << secondMCP << " --->" << std::endl;
       }
       else if (iopt==2) {
-        streamlog_out(DEBUG4) << "Erroneous merging of Si and TPC segments (iopt=2) --->" << std::endl;
+        streamlog_out(DEBUG4) << "Erroneous merging of Si and TPC segments (iopt=2) mcp first = " << firstMCP << " mcp second = " << secondMCP << " --->" << std::endl;
       }
       else if (iopt==3) {
-        streamlog_out(DEBUG4) << "Erroneous merging of TPC segments (iopt=3) ---> " << std::endl; 
+        streamlog_out(DEBUG4) << "Erroneous merging of TPC segments (iopt=3) mcp first = " << firstMCP << " mcp second = " << secondMCP << " ---> " << std::endl;
       }
       else if (iopt==4) {
-        streamlog_out(DEBUG4) << "Erroneous merging of combSi segment with uncombTPC segment (iopt=4) ---> " << std::endl;
+        streamlog_out(DEBUG4) << "Erroneous merging of combSi segment with uncombTPC segment (iopt=4) mcp first = " << firstMCP << " mcp second = " << secondMCP << " ---> " << std::endl;
       }
       else {
-        streamlog_out(DEBUG4) << "Erroneous merging of combTPC segment with uncombTPC segment (iopt=5) --->" << std::endl;
+        streamlog_out(DEBUG4) << "Erroneous merging of combTPC segment with uncombTPC segment (iopt=5) mcp first = " << firstMCP << " mcp second = " << secondMCP << " --->" << std::endl;
       }
       
       
+      streamlog_out(DEBUG4) << "    p         error      pt       D0      Z0     Px      Py      Pz      wieght" << std::endl;
       
-      sprintf(strg,"%7.2f +- %7.2f    %7.1f %7.1f %7.2f %7.2f %7.2f  ",
-              pFirst, sigmaPFirst, d0First,z0First,pxFirst,pyFirst,pzFirst);
+      sprintf(strg,"%7.2f +- %7.2f   %7.2f  %7.1f %7.1f %7.2f %7.2f %7.2f  ",
+              pFirst, sigmaPFirst, ptFirst, d0First,z0First,pxFirst,pyFirst,pzFirst);
       streamlog_out(DEBUG4) << strg;
       
       sprintf(strg,"  %5.3f\n",firstWght);
       streamlog_out(DEBUG4) << strg;
       
       
-      sprintf(strg,"%7.2f +- %7.2f    %7.1f %7.1f %7.2f %7.2f %7.2f  ",
-              pSecond, sigmaPSecond, d0Second,z0Second,pxSecond,pySecond,pzSecond);
+      sprintf(strg,"%7.2f +- %7.2f   %7.2f  %7.1f %7.1f %7.2f %7.2f %7.2f  ",
+              pSecond, sigmaPSecond, ptSecond, d0Second,z0Second,pxSecond,pySecond,pzSecond);
       streamlog_out(DEBUG4) << strg;
       sprintf(strg,"  %5.3f\n",secondWght);
       streamlog_out(DEBUG4) << strg;
@@ -4473,15 +4481,20 @@ void FullLDCTracking_MarlinTrk::PrintOutMerging(TrackExtended * firstTrackExt, T
       << " angle = " << angle << std::endl;
       
       
-      sprintf(strg,"%7.2f +- %7.2f    %7.1f %7.1f %7.2f %7.2f %7.2f  ",
-              pFirst, sigmaPFirst, d0First,z0First,pxFirst,pyFirst,pzFirst);
+      streamlog_out(DEBUG4) << "    p         error      pt       D0      Z0     Px      Py      Pz      wieght" << std::endl;
+      
+      sprintf(strg,"%7.2f +- %7.2f   %7.2f  %7.1f %7.1f %7.2f %7.2f %7.2f  ",
+              pFirst, sigmaPFirst, ptFirst, d0First,z0First,pxFirst,pyFirst,pzFirst);
       streamlog_out(DEBUG4) << strg;
+
       sprintf(strg,"  %5.3f\n",firstWght);
       streamlog_out(DEBUG4) << strg;
+
       
-      sprintf(strg,"%7.2f +- %7.2f    %7.1f %7.1f %7.2f %7.2f %7.2f  ",
-              pSecond, sigmaPSecond, d0Second,z0Second,pxSecond,pySecond,pzSecond);
+      sprintf(strg,"%7.2f +- %7.2f   %7.2f  %7.1f %7.1f %7.2f %7.2f %7.2f  ",
+              pSecond, sigmaPSecond, ptSecond, d0Second,z0Second,pxSecond,pySecond,pzSecond);
       streamlog_out(DEBUG4) << strg;
+
       sprintf(strg,"  %5.3f\n",secondWght);
       streamlog_out(DEBUG4) << strg;
       
@@ -4508,10 +4521,10 @@ void FullLDCTracking_MarlinTrk::PrintOutMerging(TrackExtended * firstTrackExt, T
       float deltaAngle = _angleForMerging;
       
       if (iopt ==6) {
-        streamlog_out(DEBUG4) << "Unmerged TPC and Si segments (iopt=6) --->" << std::endl;
+        streamlog_out(DEBUG4) << "Unmerged TPC and Si segments (iopt=6) mcp first = " << firstMCP << " mcp second = " << secondMCP << " --->" << std::endl;
       }
       else {
-        streamlog_out(DEBUG4) << "Unmerged TPC and Si segments (iopt=7) --->" << std::endl;
+        streamlog_out(DEBUG4) << "Unmerged TPC and Si segments (iopt=7) mcp first = " << firstMCP << " mcp second = " << secondMCP << " --->" << std::endl;
         deltaOmega = _dOmegaForForcedMerging;
         deltaAngle = _angleForForcedMerging;
       }
@@ -4529,15 +4542,20 @@ void FullLDCTracking_MarlinTrk::PrintOutMerging(TrackExtended * firstTrackExt, T
       << " AngleCut = " << deltaAngle
       << " dOmega = " << dOmega
       << " angle = " << angle << std::endl;
-      sprintf(strg,"%7.2f +- %7.2f    %7.1f %7.1f %7.2f %7.2f %7.2f  ",
-              pFirst, sigmaPFirst, d0First,z0First,pxFirst,pyFirst,pzFirst);
+
+      streamlog_out(DEBUG4) << "    p         error      pt       D0      Z0     Px      Py      Pz      wieght" << std::endl;
+      
+      sprintf(strg,"%7.2f +- %7.2f   %7.2f  %7.1f %7.1f %7.2f %7.2f %7.2f  ",
+              pFirst, sigmaPFirst, ptFirst, d0First,z0First,pxFirst,pyFirst,pzFirst);
       streamlog_out(DEBUG4) << strg;
+
       sprintf(strg,"  %5.3f\n",firstWght);
       streamlog_out(DEBUG4) << strg;
-      
-      sprintf(strg,"%7.2f +- %7.2f    %7.1f %7.1f %7.2f %7.2f %7.2f  ",
-              pSecond, sigmaPSecond, d0Second,z0Second,pxSecond,pySecond,pzSecond);
+
+      sprintf(strg,"%7.2f +- %7.2f   %7.2f  %7.1f %7.1f %7.2f %7.2f %7.2f  ",
+              pSecond, sigmaPSecond, ptSecond, d0Second,z0Second,pxSecond,pySecond,pzSecond);
       streamlog_out(DEBUG4) << strg;
+
       sprintf(strg,"  %5.3f\n",secondWght);
       streamlog_out(DEBUG4) << strg;
       
@@ -4560,31 +4578,34 @@ void FullLDCTracking_MarlinTrk::PrintOutMerging(TrackExtended * firstTrackExt, T
     else if (firstMCP==secondMCP && iopt < 6 && _debug > 3) {
       //      return;
       if (iopt==1) {
-        streamlog_out(DEBUG4) << "Correctly combining Si and TPC segments (iopt=1) --->" << std::endl;
+        streamlog_out(DEBUG4) << "Correctly combining Si and TPC segments (iopt=1) mcp first = " << firstMCP << " mcp second = " << secondMCP << " --->" << std::endl;
       }
       else if (iopt==2) {
-        streamlog_out(DEBUG4) << "Correctly merging of Si and TPC segments (iopt=2) --->" << std::endl;
+        streamlog_out(DEBUG4) << "Correctly merging of Si and TPC segments (iopt=2) mcp first = " << firstMCP << " mcp second = " << secondMCP << " --->" << std::endl;
       }
       else if (iopt==3) {
-        streamlog_out(DEBUG4) << "Correctly merging of TPC segments (iopt=3) ---> " << std::endl;
+        streamlog_out(DEBUG4) << "Correctly merging of TPC segments (iopt=3) mcp first = " << firstMCP << " mcp second = " << secondMCP << " ---> " << std::endl;
       }
       else if (iopt==4) {
-        streamlog_out(DEBUG4) << "Correctly merging of combSi segment with uncombTPC segment (iopt=4) ---> " << std::endl;
+        streamlog_out(DEBUG4) << "Correctly merging of combSi segment with uncombTPC segment (iopt=4) mcp first = " << firstMCP << " mcp second = " << secondMCP << " ---> " << std::endl;
       }
       else {
-        streamlog_out(DEBUG4) << "Correctly merging of combTPC segment with uncombTPC segment (iopt=5) --->" << std::endl;
+        streamlog_out(DEBUG4) << "Correctly merging of combTPC segment with uncombTPC segment (iopt=5) mcp first = " << firstMCP << " mcp second = " << secondMCP << " --->" << std::endl;
       }
+
+      streamlog_out(DEBUG4) << "    p         error      pt       D0      Z0     Px      Py      Pz      wieght" << std::endl;
       
-      streamlog_out(DEBUG4) << "    p         error       D0      Z0     Px      Py      Pz      wieght" << std::endl;
-      sprintf(strg,"%7.2f +- %7.2f    %7.1f %7.1f %7.2f %7.2f %7.2f  ",
-              pFirst, sigmaPFirst, d0First,z0First,pxFirst,pyFirst,pzFirst);
+      sprintf(strg,"%7.2f +- %7.2f   %7.2f  %7.1f %7.1f %7.2f %7.2f %7.2f  ",
+              pFirst, sigmaPFirst, ptFirst, d0First,z0First,pxFirst,pyFirst,pzFirst);
       streamlog_out(DEBUG4) << strg;
+
       sprintf(strg,"  %5.3f\n",firstWght);
       streamlog_out(DEBUG4) << strg;
       
-      sprintf(strg,"%7.2f +- %7.2f    %7.1f %7.1f %7.2f %7.2f %7.2f  ",
-              pSecond, sigmaPSecond, d0Second,z0Second,pxSecond,pySecond,pzSecond);
+      sprintf(strg,"%7.2f +- %7.2f   %7.2f  %7.1f %7.1f %7.2f %7.2f %7.2f  ",
+              pSecond, sigmaPSecond, ptSecond, d0Second,z0Second,pxSecond,pySecond,pzSecond);
       streamlog_out(DEBUG4) << strg;
+
       sprintf(strg,"  %5.3f\n",secondWght);
       streamlog_out(DEBUG4) << strg;
       
