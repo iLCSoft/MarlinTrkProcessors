@@ -458,7 +458,7 @@ FullLDCTracking_MarlinTrk::FullLDCTracking_MarlinTrk() : Processor("FullLDCTrack
   registerProcessorParameter( "MaxAllowedOutliersForTrackCombination",
                              "Maximum number of outliers allowed before track combination is vetoed",
                              _maxAllowedOutliersForTrackCombination,
-                             int(10));
+                             int(INT_MAX));
 
 
   
@@ -4771,27 +4771,27 @@ bool FullLDCTracking_MarlinTrk::VetoMerge(TrackExtended* firstTrackExt, TrackExt
 
   bool veto = false;
   
-//  bool testCombinationOnly=true;
-//  TrackExtended * combinedTrack = CombineTracks(firstTrackExt,secondTrackExt,testCombinationOnly);
-//
+  bool testCombinationOnly=true;
+  TrackExtended * combinedTrack = CombineTracks(firstTrackExt,secondTrackExt,_maxAllowedOutliersForTrackCombination,testCombinationOnly);
 
-//  
-//  if(combinedTrack!=NULL){
-//  
-//    //SJA:FIXME hardcoded cut: here the check is that no more than 7 hits have been rejected in the combined fit.
-//    if( combinedTrack->getNDF()+15 < firstTrackExt->getNDF() + secondTrackExt->getNDF()+5 ) {
-//      streamlog_out(DEBUG1) << "FullLDCTracking_MarlinTrk::VetoMerge fails NDF cut " << std::endl;
-//      veto=true ;
-//
-//    }
-//  
-//    delete combinedTrack->getGroupTracks();
-//    delete combinedTrack;
-//
-//  } else {
-//    streamlog_out(DEBUG1) << "FullLDCTracking_MarlinTrk::VetoMerge fails CombineTracks(firstTrackExt,secondTrackExt,true) test" << std::endl;
-//    veto = true;
-//  }
+
+  
+  if(combinedTrack!=NULL){
+  
+    //SJA:FIXME hardcoded cut: here the check is that no more than 7 hits have been rejected in the combined fit.
+    if( combinedTrack->getNDF()+15 < firstTrackExt->getNDF() + secondTrackExt->getNDF()+5 ) {
+      streamlog_out(DEBUG1) << "FullLDCTracking_MarlinTrk::VetoMerge fails NDF cut " << std::endl;
+      veto=true ;
+
+    }
+  
+    delete combinedTrack->getGroupTracks();
+    delete combinedTrack;
+
+  } else {
+    streamlog_out(DEBUG1) << "FullLDCTracking_MarlinTrk::VetoMerge fails CombineTracks(firstTrackExt,secondTrackExt,true) test" << std::endl;
+    veto = true;
+  }
   
   if(SegmentRadialOverlap(firstTrackExt,secondTrackExt)>10) {
     streamlog_out(DEBUG1) << "FullLDCTracking_MarlinTrk::VetoMerge fails SegmentRadialOverlap test " << std::endl;
