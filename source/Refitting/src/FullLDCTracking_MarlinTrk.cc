@@ -658,7 +658,20 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
       TrackExtended* te = group->getTrackExtendedVec()[1];
       
       if(te->getTrack()->getTrackState(lcio::TrackState::AtLastHit)){
-        ts_initial = te->getTrack()->getTrackState(lcio::TrackState::AtLastHit);
+
+        const TrackState* ts_last_hit = te->getTrack()->getTrackState(lcio::TrackState::AtLastHit);
+
+        ts_initial.setD0(ts_last_hit->getD0());
+        ts_initial.setPhi(ts_last_hit->getPhi());
+        ts_initial.setZ0(ts_last_hit->getZ0());
+        ts_initial.setOmega(ts_last_hit->getOmega());
+        ts_initial.setTanLambda(ts_last_hit->getTanLambda());
+        
+        ts_initial.setReferencePoint(ts_last_hit->getReferencePoint());
+        
+        ts_initial.setLocation(lcio::TrackStateImpl::AtLastHit);
+        
+        
         prefit_set = true;
       }
       
