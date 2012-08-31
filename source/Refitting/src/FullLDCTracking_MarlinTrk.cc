@@ -642,7 +642,47 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
     covMatrix[9]  = ( _initialTrackError_z0    ); //sigma_z0^2
     covMatrix[14] = ( _initialTrackError_tanL  ); //sigma_tanl^2
     
+    // get the track state at the last hit at the outer most hit
     
+    GroupTracks * group = trkCand->getGroupTracks();
+
+    TrackStateImpl ts_initial;
+    
+    ts_initial.setCovMatrix(covMatrix);
+    
+    bool prefit_set = false;
+    
+    if (group != NULL && group->getTrackExtendedVec().size() == 2) {
+    
+      // get the second track as this must be the one furthest from the IP
+      TrackExtended* te = group->getTrackExtendedVec()[1];
+      
+      if(te->getTrack()->getTrackState(lcio::TrackState::AtLastHit)){
+        ts_initial = te->getTrack()->getTrackState(lcio::TrackState::AtLastHit);
+        prefit_set = true;
+      }
+      
+    }
+    
+    if( !prefit_set ) { // use parameters at IP
+      
+      ts_initial.setD0(trkCand->getD0());
+      ts_initial.setPhi(trkCand->getPhi());
+      ts_initial.setZ0(trkCand->getZ0());
+      ts_initial.setOmega(trkCand->getOmega());
+      ts_initial.setTanLambda(trkCand->getTanLambda());
+      
+      float ref[3];
+      ref[0]=ref[1]=ref[2]=0.0;
+      
+      ts_initial.setReferencePoint(ref);
+      
+      ts_initial.setLocation(lcio::TrackStateImpl::AtIP);
+
+      
+    }
+    
+        
     // sort hits in R
     std::vector< std::pair<float, EVENT::TrackerHit*> > r2_values;
     r2_values.reserve(trkHits.size());
@@ -671,7 +711,7 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
     
     try {
       
-      error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, trkHits, Track, fit_backwards, covMatrix, _bField, _maxChi2PerHit);                              
+      error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, trkHits, Track, fit_backwards, &ts_initial, _bField, _maxChi2PerHit);                              
       
     } catch (...) {
       
@@ -742,8 +782,7 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
     
     
     
-    GroupTracks * group = trkCand->getGroupTracks();
-    
+     
     if (group != NULL) {
       TrackExtendedVec trkVecGrp = group->getTrackExtendedVec();
       int nGrTRK = int(trkVecGrp.size());
@@ -4137,17 +4176,32 @@ void FullLDCTracking_MarlinTrk::AssignSiHitsToTracks(TrackerHitExtendedVec hitVe
         IMPL::TrackStateImpl pre_fit ;
         
         
-        /** Provides the values of a track state from the first, middle and last hits in the hit_list. */
-        int error = createPrefit( trkHits, &pre_fit, _bField, IMarlinTrack::backward);
+        pre_fit.setD0(trkExt->getD0());
+        pre_fit.setPhi(trkExt->getPhi());
+        pre_fit.setZ0(trkExt->getZ0());
+        pre_fit.setOmega(trkExt->getOmega());
+        pre_fit.setTanLambda(trkExt->getTanLambda());
         
-        if ( error != IMarlinTrack::success ) {
-          
-          streamlog_out(DEBUG3) << "FullLDCTracking_MarlinTrk::AssignSiHitsToTracks: creation of prefit fails with error " << error << std::endl;
-          
-          delete marlin_trk ;
-          return;
-          
-        }
+        float ref[3];
+        ref[0]=ref[1]=ref[2]=0.0;
+        
+        pre_fit.setReferencePoint(ref);
+        
+        pre_fit.setLocation(lcio::TrackStateImpl::AtIP);
+//        /** Provides the values of a track state from the first, middle and last hits in the hit_list. */
+//        int error = createPrefit( trkHits, &pre_fit, _bField, IMarlinTrack::backward);
+        
+
+
+        
+//        if ( error != IMarlinTrack::success ) {
+//          
+//          streamlog_out(DEBUG3) << "FullLDCTracking_MarlinTrk::AssignSiHitsToTracks: creation of prefit fails with error " << error << std::endl;
+//          
+//          delete marlin_trk ;
+//          return;
+//          
+//        }
         
         // setup initial dummy covariance matrix
         EVENT::FloatVec covMatrix;
@@ -4165,7 +4219,7 @@ void FullLDCTracking_MarlinTrk::AssignSiHitsToTracks(TrackerHitExtendedVec hitVe
         
         pre_fit.setCovMatrix(covMatrix);
         
-        error = MarlinTrk::createFit( trkHits, marlin_trk, &pre_fit, _bField, IMarlinTrack::backward , _maxChi2PerHit );
+        int error = MarlinTrk::createFit( trkHits, marlin_trk, &pre_fit, _bField, IMarlinTrack::backward , _maxChi2PerHit );
         
         if ( error != IMarlinTrack::success ) {
           
