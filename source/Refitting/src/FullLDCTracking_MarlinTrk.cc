@@ -603,6 +603,9 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
     
     EVENT::TrackerHitVec trkHits;
     
+    streamlog_out(DEBUG2) << " Trying to add track " << trkCand << " to final lcio collection " << std::endl;
+    
+    
     int nHits = int(hitVec.size());
     for (int ihit=0;ihit<nHits;++ihit) {
       
@@ -2060,6 +2063,8 @@ void FullLDCTracking_MarlinTrk::SelectCombinedTracks() {
         group->setEdges(edges);
         // ... and add the combined track to the list.
         _trkImplVec.push_back(trkExt);
+        streamlog_out(DEBUG2) << " add track " << trkExt << " to combined final list " << std::endl;
+        
         
         if (_debug >= 2) {
           int iopt = 1;
