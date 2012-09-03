@@ -652,6 +652,10 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
     
     bool prefit_set = false;
     
+    streamlog_out(DEBUG2) << "Track Group = " << group << std::endl;
+    
+    if( group ) streamlog_out(DEBUG2) << "Track Group size = " << group->getTrackExtendedVec().size() << std::endl;
+    
     if (group != NULL && group->getTrackExtendedVec().size() == 2) {
     
       // get the second track as this must be the one furthest from the IP
@@ -659,6 +663,8 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
       
       if(te->getTrack()->getTrackState(lcio::TrackState::AtLastHit)){
 
+        streamlog_out(DEBUG2) << "Initialise Fit with trackstate from last hit" << group << std::endl;
+        
         const TrackState* ts_last_hit = te->getTrack()->getTrackState(lcio::TrackState::AtLastHit);
 
         ts_initial.setD0(ts_last_hit->getD0());
@@ -670,14 +676,16 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
         ts_initial.setReferencePoint(ts_last_hit->getReferencePoint());
         
         ts_initial.setLocation(lcio::TrackStateImpl::AtLastHit);
-        
-        
+                
         prefit_set = true;
+
       }
       
     }
     
     if( !prefit_set ) { // use parameters at IP
+      
+      streamlog_out(DEBUG2) << "Initialise Fit with trackstate from IP" << group << std::endl;
       
       ts_initial.setD0(trkCand->getD0());
       ts_initial.setPhi(trkCand->getPhi());
@@ -2052,6 +2060,8 @@ void FullLDCTracking_MarlinTrk::SelectCombinedTracks() {
 
     TrackExtended * trkExt = _allCombinedTracks[i];
 
+    streamlog_out(DEBUG1) << " **SelectCombinedTracks - Check Track " << trkExt << std::endl ;
+    
     // get the sub tracks which have been combined to form this track
     GroupTracks * group = trkExt->getGroupTracks();
     TrackExtendedVec tracks = group->getTrackExtendedVec();
@@ -2059,12 +2069,12 @@ void FullLDCTracking_MarlinTrk::SelectCombinedTracks() {
     // check that there are only 2 sub tracks, as we are after Si <-> TPC mergers only
     int nTracks = int(tracks.size());
 
+    streamlog_out(DEBUG1) << " **SelectCombinedTracks - nTracks = " << nTracks << std::endl ;
+    
     if (nTracks == 2) {
       
       TrackExtended * firstTrack = tracks[0];
       TrackExtended * secondTrack = tracks[1];
-
-      streamlog_out(DEBUG1) << " **SelectCombinedTracks - (nTracks == 2 )" << std::endl ;
 
       // check that the two sub tracks in question are not themselves a merger of tracks
       if ((firstTrack->getGroupTracks() == NULL) &&
