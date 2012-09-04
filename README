@@ -16,6 +16,31 @@
  
 
  =============================================================================================================
+
+  --------
+ | v01-07 |
+  --------
+
+  General:
+
+      - Debug output has been made more consistent throughout.	
+
+  FullLDCTracking_MarlinTrk
+  
+      - Use existing tracks parameters when refitting. 
+      - Updated for new lcio TrackState copy constructor taking const reference. 
+     
+  TruthTracker	
+
+      - Updated for new lcio TrackState copy constructor taking const reference. 
+      - Corrected Helix orientation for pre-fit.
+
+
+  RefitProcessor
+
+      - Corrected Helix orientation for pre-fit.			
+      - Protect against missing truth relations.
+
   -----------
  | v01-06-01 |
   -----------
