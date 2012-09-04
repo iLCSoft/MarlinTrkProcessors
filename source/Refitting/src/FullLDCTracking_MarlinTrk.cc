@@ -663,7 +663,7 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
 
         streamlog_out(DEBUG2) << "Initialise Fit with trackstate from last hit" << group << std::endl;
 
-        ts_initial = te->getTrack()->getTrackState(lcio::TrackState::AtLastHit);
+        ts_initial = *(te->getTrack()->getTrackState(lcio::TrackState::AtLastHit));
         
                 
         prefit_set = true;
@@ -1814,7 +1814,7 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
 
   int error = IMarlinTrack::success;
   
-  pre_fit = tpcTrack->getTrack()->getTrackState(EVENT::TrackState::AtLastHit);
+  pre_fit = *(tpcTrack->getTrack()->getTrackState(EVENT::TrackState::AtLastHit));
   
 //  /** Provides the values of a track state from the first, middle and last hits in the hit_list. */
 //  int error = createPrefit( trkHits, &pre_fit, _bField, IMarlinTrack::backward);

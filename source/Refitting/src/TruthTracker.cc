@@ -1459,19 +1459,19 @@ void TruthTracker::createTrack_iterative( MCParticle* mcp, UTIL::BitField64& cel
     Track->setNdf(innerMostSegment->getNdf());
     Track->setChi2(innerMostSegment->getChi2());
     
-    IMPL::TrackStateImpl* atIP = new IMPL::TrackStateImpl(innerMostSegment->getTrackState(EVENT::TrackState::AtIP));
+    IMPL::TrackStateImpl* atIP = new IMPL::TrackStateImpl(*innerMostSegment->getTrackState(EVENT::TrackState::AtIP));
     Track->addTrackState(atIP);
 
-    IMPL::TrackStateImpl* atFirstHit = new IMPL::TrackStateImpl(innerMostSegment->getTrackState(EVENT::TrackState::AtFirstHit));
+    IMPL::TrackStateImpl* atFirstHit = new IMPL::TrackStateImpl(*innerMostSegment->getTrackState(EVENT::TrackState::AtFirstHit));
     Track->addTrackState(atFirstHit);
 
     Track->setRadiusOfInnermostHit(innerMostSegment->getRadiusOfInnermostHit());
     
-    IMPL::TrackStateImpl* atLastHit = new IMPL::TrackStateImpl(outerMostSegment->getTrackState(EVENT::TrackState::AtLastHit));
+    IMPL::TrackStateImpl* atLastHit = new IMPL::TrackStateImpl(*outerMostSegment->getTrackState(EVENT::TrackState::AtLastHit));
     
     Track->addTrackState(atLastHit);
 
-    IMPL::TrackStateImpl* atCalo = new IMPL::TrackStateImpl(outerMostSegment->getTrackState(EVENT::TrackState::AtCalorimeter));
+    IMPL::TrackStateImpl* atCalo = new IMPL::TrackStateImpl(*outerMostSegment->getTrackState(EVENT::TrackState::AtCalorimeter));
     
     Track->addTrackState(atCalo);            
     
