@@ -1530,13 +1530,6 @@ TrackExtended * SiliconTracking_MarlinTrk::TestTriplet(TrackerHitExtended * oute
    */
   
   
-  int layer  = 9 ;
-  int size   = 3 ;
-  int marker = 1 ;
-  int ml     = 0 ;
-//  float helix_max_r = 0;
-  float helix_max_z = 0;
-  int color = 0;
   
   
   // get the tracks already associated with the triplet
@@ -1664,12 +1657,19 @@ TrackExtended * SiliconTracking_MarlinTrk::TestTriplet(TrackerHitExtended * oute
   std::vector<TrackerHit*> hit_list;
   std::vector<MCParticle*> mcps_imo;
   std::vector<MCParticle*> mcp_s;
-  int nmcps   = 0;
-  int nbadHits = 0;
+//  int nmcps   = 0;
+//  int nbadHits = 0;
   int triplet_code = 0;
   
 #ifdef MARLINTRK_DIAGNOSTICS_ON
   
+  int layer  = 9 ;
+  int size   = 3 ;
+  int marker = 1 ;
+  int ml     = 0 ;
+  //  float helix_max_r = 0;
+  float helix_max_z = 0;
+  int color = 0;
 
   // use the MCTruth4HitExt to get the MCPs
   
