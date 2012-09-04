@@ -1666,7 +1666,7 @@ TrackExtended * SiliconTracking_MarlinTrk::TestTriplet(TrackerHitExtended * oute
   std::vector<MCParticle*> mcp_s;
   int nmcps   = 0;
   int nbadHits = 0;
-  int triplet_code;
+  int triplet_code = 0;
   
 #ifdef MARLINTRK_DIAGNOSTICS_ON
   
