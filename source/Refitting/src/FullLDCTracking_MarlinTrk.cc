@@ -1930,7 +1930,7 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
     std::vector<std::pair<EVENT::TrackerHit* , double> > outliers ;
     marlin_trk->getOutliers(outliers);
     
-    if (outliers.size() > maxAllowedOutliers) {
+    if (int(outliers.size()) > maxAllowedOutliers) {
 
       streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: number of outliers " << outliers.size() << " is greater than cut maximum: " << maxAllowedOutliers << std::endl;
       delete marlin_trk ;
