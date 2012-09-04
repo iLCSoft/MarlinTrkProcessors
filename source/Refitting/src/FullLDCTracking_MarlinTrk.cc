@@ -648,8 +648,6 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
 
     TrackStateImpl ts_initial;
     
-    ts_initial.setCovMatrix(covMatrix);
-    
     bool prefit_set = false;
     
     streamlog_out(DEBUG2) << "Track Group = " << group << std::endl;
@@ -664,18 +662,9 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
       if(te->getTrack()->getTrackState(lcio::TrackState::AtLastHit)){
 
         streamlog_out(DEBUG2) << "Initialise Fit with trackstate from last hit" << group << std::endl;
-        
-        const TrackState* ts_last_hit = te->getTrack()->getTrackState(lcio::TrackState::AtLastHit);
 
-        ts_initial.setD0(ts_last_hit->getD0());
-        ts_initial.setPhi(ts_last_hit->getPhi());
-        ts_initial.setZ0(ts_last_hit->getZ0());
-        ts_initial.setOmega(ts_last_hit->getOmega());
-        ts_initial.setTanLambda(ts_last_hit->getTanLambda());
+        ts_initial = te->getTrack()->getTrackState(lcio::TrackState::AtLastHit);
         
-        ts_initial.setReferencePoint(ts_last_hit->getReferencePoint());
-        
-        ts_initial.setLocation(lcio::TrackStateImpl::AtLastHit);
                 
         prefit_set = true;
 
@@ -703,6 +692,7 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
       
     }
     
+    ts_initial.setCovMatrix(covMatrix);
         
     // sort hits in R
     std::vector< std::pair<float, EVENT::TrackerHit*> > r2_values;
