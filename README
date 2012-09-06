@@ -18,6 +18,14 @@
  =============================================================================================================
 
   --------
+ | v01-08 |
+  --------
+     - SimplePlanarTestDigiProcessor:
+       made processor parameters ResolutionU(V) vectors
+       in order to allow for different point resolution values per layer
+       ( needed for the VXD in the DBD)
+
+  --------
  | v01-07 |
   --------
 
