@@ -9,6 +9,7 @@
 
 #include <UTIL/CellIDEncoder.h>
 #include <UTIL/ILDConf.h>
+#include <UTIL/Operators.h>
 
 // STUFF needed for GEAR
 #include <marlin/Global.h>
@@ -51,15 +52,21 @@ SimplePlanarTestDigiProcessor::SimplePlanarTestDigiProcessor() : Processor("Simp
   
   // register steering parameters: name, description, class-variable, default value
   
-  registerProcessorParameter( "ResolutionU" ,
-                              "resolution in direction of u"  ,
-                             _resU ,
-                             float(0.0040)) ;
+  FloatVec resUEx ;
+  resUEx.push_back( 0.0040 ) ;
   
+  registerProcessorParameter( "ResolutionU" ,
+                              "resolution in direction of u - either one per layer or one for all layers "  ,
+                              _resU ,
+                              resUEx) ;
+  
+  FloatVec resVEx ;
+  resVEx.push_back( 0.0040 ) ;
+
   registerProcessorParameter( "ResolutionV" , 
-                              "resolution in direction of v" ,
+                              "resolution in direction of v - either one per layer or one for all layers " ,
                              _resV ,
-                             float(0.0040));
+                              resVEx );
   
   registerProcessorParameter( "IsStrip",
                               "whether hits are 1D strip hits",
@@ -100,6 +107,17 @@ void SimplePlanarTestDigiProcessor::init() {
   
   _nRun = 0 ;
   _nEvt = 0 ;
+
+  
+  if( _resU.size() !=  _resV.size() ) {
+    
+    std::stringstream ss ;
+    ss << name() << "::init() - Inconsistent number of resolutions given for U and V coordinate: " 
+       << "ResolutionU  :" <<   _resU.size() << " != ResolutionV : " <<  _resV.size() ;
+
+    throw EVENT::Exception( ss.str() ) ;
+  }
+
   
   // initialize gsl random generator
   _rng = gsl_rng_alloc(gsl_rng_ranlxs2);
@@ -206,8 +224,11 @@ void SimplePlanarTestDigiProcessor::processEvent( LCEvent * evt ) {
       streamlog_out( DEBUG3 ) << "moduleNumber = " << module << std::endl;
       streamlog_out( DEBUG3 ) << "sensorNumber = " << sensor << std::endl ;
       
-      
-  
+      float resU = ( _resU.size() > 1 ?   _resU.at(  layer )     : _resU.at(0)   )  ;
+      float resV = ( _resV.size() > 1 ?   _resV.at(  layer )     : _resV.at(0)   )  ; 
+
+      streamlog_out( DEBUG3 ) << " --- will smear hit with resU = " << resU << " and resV = " << resV << std::endl ; 
+
       const double *pos ;
       pos =  SimTHit->getPosition() ;  
       
@@ -244,8 +265,8 @@ void SimplePlanarTestDigiProcessor::processEvent( LCEvent * evt ) {
         
         if(tries > 0) streamlog_out(DEBUG0) << "retry smearing for side" << side << " layer"<< layer<< " module" << module << " sensor" << sensor << " : retries " << tries << std::endl;
         
-        localPointSmeared.setX( localPoint.x() + gsl_ran_gaussian(_rng, _resU) );
-        localPointSmeared.setY( localPoint.y() + gsl_ran_gaussian(_rng, _resV) );
+        localPointSmeared.setX( localPoint.x() + gsl_ran_gaussian(_rng, resU) );
+        localPointSmeared.setY( localPoint.y() + gsl_ran_gaussian(_rng, resV) );
           
         //check if hit is in boundaries
         if ( ms->isLocalInBoundary( localPointSmeared ) ){
@@ -309,10 +330,10 @@ void SimplePlanarTestDigiProcessor::processEvent( LCEvent * evt ) {
       trkHit->setU( u_direction ) ;
       trkHit->setV( v_direction ) ;
       
-      trkHit->setdU( _resU ) ;
+      trkHit->setdU( resU ) ;
       
       if( _isStrip ) trkHit->setdV( 0 ); // no error in v direction for strip hits as there is no meesurement information in v direction
-      else trkHit->setdV( _resV ) ;
+      else trkHit->setdV( resV ) ;
       
       if( _isStrip ){
         trkHit->setType( UTIL::set_bit( trkHit->getType() , UTIL::ILDTrkHitTypeBit::ONE_DIMENSIONAL ) ) ;

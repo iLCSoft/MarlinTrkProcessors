@@ -85,8 +85,10 @@ protected:
   int _nRun ;
   int _nEvt ;
   
-  float _resU ;
-  float _resV ;
+  // float _resU ;
+  // float _resV ;
+  FloatVec _resU ;
+  FloatVec _resV ;
   bool _isStrip;
 
   gsl_rng* _rng ;
