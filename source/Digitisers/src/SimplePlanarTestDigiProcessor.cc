@@ -3,6 +3,7 @@
 
 #include <EVENT/LCCollection.h>
 #include <EVENT/SimTrackerHit.h>
+#include <EVENT/MCParticle.h>
 #include <IMPL/LCCollectionVec.h>
 #include <IMPL/LCRelationImpl.h>
 #include <IMPL/TrackerHitPlaneImpl.h>
@@ -223,6 +224,32 @@ void SimplePlanarTestDigiProcessor::processEvent( LCEvent * evt ) {
       streamlog_out( DEBUG3 ) << "layerNumber = " <<  layer << std::endl;
       streamlog_out( DEBUG3 ) << "moduleNumber = " << module << std::endl;
       streamlog_out( DEBUG3 ) << "sensorNumber = " << sensor << std::endl ;
+
+      //      //************************************************************
+      //      // Quick check if the MCParticle is in the list of MCParticles
+      //      //************************************************************
+      //
+      //      if (SimTHit->getMCParticle() == 0) {
+      //        streamlog_out(ERROR) << " SimHit " << SimTHit << " Created by zero MCParticle which is not in the list of MCParticles: "
+      //        << std::endl;
+      //        continue;
+      //      }
+      //
+      //      //************************************************************
+      //      // Quick check if the MCParticle is of zero charge
+      //      //************************************************************
+      //
+      //      if( abs( SimTHit->getMCParticle()->getCharge()) < 0.01  ){
+      //        streamlog_out(ERROR) << " SimHit Created by zero charge particle: "
+      //        << " Charge =  " << SimTHit->getMCParticle()->getCharge()
+      //        << " EDep =  " << SimTHit->getEDep()
+      //        << " x =  " << SimTHit->getPosition()[0]
+      //        << " PDG =  " << SimTHit->getMCParticle()->getPDG()
+      //        << " ID =  " << SimTHit->getMCParticle()->id()
+      //        << std::endl;
+      //        continue;
+      //      }
+
       
       float resU = ( _resU.size() > 1 ?   _resU.at(  layer )     : _resU.at(0)   )  ;
       float resV = ( _resV.size() > 1 ?   _resV.at(  layer )     : _resV.at(0)   )  ; 
@@ -347,9 +374,17 @@ void SimplePlanarTestDigiProcessor::processEvent( LCEvent * evt ) {
       // make the relation
       LCRelationImpl* rel = new LCRelationImpl;
       
+      float weight = 1.0;
+      
+      streamlog_out(DEBUG3) <<" Set relation between "
+      << " sim hit " << SimTHit 
+      << " to tracker hit " << trkHit
+      << " with a weight of " << weight 
+      << std::endl;
+      
       rel->setFrom (trkHit);
       rel->setTo (SimTHit);
-      rel->setWeight( 1.0 );
+      rel->setWeight( weight );
       relCol->addElement(rel);
       
       nCreatedHits++;
