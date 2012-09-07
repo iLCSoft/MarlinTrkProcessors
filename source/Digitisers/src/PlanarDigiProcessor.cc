@@ -1,5 +1,5 @@
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-#include "SimplePlanarTestDigiProcessor.h"
+#include "PlanarDigiProcessor.h"
 
 #include <EVENT/LCCollection.h>
 #include <EVENT/SimTrackerHit.h>
@@ -42,13 +42,13 @@ using namespace lcio ;
 using namespace marlin ;
 using namespace std ;
 
-SimplePlanarTestDigiProcessor aSimplePlanarTestDigiProcessor ;
+PlanarDigiProcessor aPlanarDigiProcessor ;
 
 
-SimplePlanarTestDigiProcessor::SimplePlanarTestDigiProcessor() : Processor("SimplePlanarTestDigiProcessor") {
+PlanarDigiProcessor::PlanarDigiProcessor() : Processor("PlanarDigiProcessor") {
   
   // modify processor description
-  _description = "SimplePlanarTestDigiProcessor creates TrackerHits from SimTrackerHits, smearing them according to the input parameters." ;
+  _description = "PlanarDigiProcessor creates TrackerHits from SimTrackerHits, smearing them according to the input parameters." ;
   
   
   // register steering parameters: name, description, class-variable, default value
@@ -101,7 +101,7 @@ SimplePlanarTestDigiProcessor::SimplePlanarTestDigiProcessor() : Processor("Simp
 }
 
 
-void SimplePlanarTestDigiProcessor::init() { 
+void PlanarDigiProcessor::init() { 
   
   // usually a good idea to
   printParameters() ;
@@ -142,11 +142,11 @@ void SimplePlanarTestDigiProcessor::init() {
   
 }
 
-void SimplePlanarTestDigiProcessor::processRunHeader( LCRunHeader* run) { 
+void PlanarDigiProcessor::processRunHeader( LCRunHeader* run) { 
   ++_nRun ;
 } 
 
-void SimplePlanarTestDigiProcessor::processEvent( LCEvent * evt ) { 
+void PlanarDigiProcessor::processEvent( LCEvent * evt ) { 
   
   gsl_rng_set( _rng, Global::EVENTSEEDER->getSeed(this) ) ;   
   streamlog_out( DEBUG4 ) << "seed set to " << Global::EVENTSEEDER->getSeed(this) << std::endl;
@@ -196,7 +196,7 @@ void SimplePlanarTestDigiProcessor::processEvent( LCEvent * evt ) {
     else if( det_id == lcio::ILDDetID::FTD ){}
     else{
       std::stringstream errorMsg;
-      errorMsg << "SimplePlanarTestDigiProcessor::processEvent: unsupported detector ID = " << det_id << ": file " << __FILE__ << " line " << __LINE__ ;
+      errorMsg << "PlanarDigiProcessor::processEvent: unsupported detector ID = " << det_id << ": file " << __FILE__ << " line " << __LINE__ ;
       throw Exception( errorMsg.str() );  
     }
     
@@ -404,12 +404,12 @@ void SimplePlanarTestDigiProcessor::processEvent( LCEvent * evt ) {
 
 
 
-void SimplePlanarTestDigiProcessor::check( LCEvent * evt ) { 
+void PlanarDigiProcessor::check( LCEvent * evt ) { 
   // nothing to check here - could be used to fill checkplots in reconstruction processor
 }
 
 
-void SimplePlanarTestDigiProcessor::end(){ 
+void PlanarDigiProcessor::end(){ 
   
   streamlog_out(MESSAGE) << " end()  " << name() 
   << " processed " << _nEvt << " events in " << _nRun << " runs "

@@ -1,5 +1,5 @@
-#ifndef SimplePlanarTestDigiProcessor_h
-#define SimplePlanarTestDigiProcessor_h 1
+#ifndef PlanarDigiProcessor_h
+#define PlanarDigiProcessor_h 1
 
 #include "marlin/Processor.h"
 
@@ -15,7 +15,7 @@ using namespace lcio ;
 using namespace marlin ;
 
 
-/** ======= SimplePlanarTestDigiProcessor ========== <br>
+/** ======= PlanarDigiProcessor ========== <br>
  * Creates TrackerHits from SimTrackerHits, smearing them according to the input parameters. 
  * The SimTrackerHits should come from a planar detector like VXD, SIT, SET or FTD.
  * 
@@ -43,14 +43,14 @@ using namespace marlin ;
  * <br>
  * 
  */
-class SimplePlanarTestDigiProcessor : public Processor {
+class PlanarDigiProcessor : public Processor {
   
 public:
   
-  virtual Processor*  newProcessor() { return new SimplePlanarTestDigiProcessor ; }
+  virtual Processor*  newProcessor() { return new PlanarDigiProcessor ; }
   
   
-  SimplePlanarTestDigiProcessor() ;
+  PlanarDigiProcessor() ;
   
   /** Called at the begin of the job before anything is read.
    * Use to initialize the processor, e.g. book histograms.
