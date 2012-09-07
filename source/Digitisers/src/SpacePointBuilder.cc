@@ -196,8 +196,11 @@ void SpacePointBuilder::processEvent( LCEvent * evt ) {
     for( unsigned i=0; i<nHits; i++){
       
       TrackerHitPlane* trkHit = dynamic_cast<TrackerHitPlane*>( col->getElementAt( i ) );
-      if( trkHit != NULL) map_cellID0_hits[ trkHit->getCellID0() ].push_back( trkHit ); 
-      
+
+      if( trkHit != NULL) {
+        streamlog_out( DEBUG4 ) << "Add hit with CellID0 = " << trkHit->getCellID0() << " " << getCellID0Info( trkHit->getCellID0() ) << "\n";
+        map_cellID0_hits[ trkHit->getCellID0() ].push_back( trkHit );
+      }
     }
     
 
