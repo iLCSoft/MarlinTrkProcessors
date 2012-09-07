@@ -991,7 +991,7 @@ void TruthTracker::createTrack_iterative( MCParticle* mcp, UTIL::BitField64& cel
   // fit the last hit
   
   // to initialise we need to add at least one hit. 
-  // given that we need to also work with COMPOSITE_SPACEPOINT hits we will simply added both strip hits in this case.
+  // given that we need to also work with COMPOSITE_SPACEPOINT hits we will simply add both strip hits in this case.
   // fit will then be called on the hits added and then addandFit will be used for the remaining hits to provide more feedback and control
 
   bool fit_running = false;
