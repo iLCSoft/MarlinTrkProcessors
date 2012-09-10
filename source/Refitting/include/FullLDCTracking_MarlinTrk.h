@@ -326,7 +326,6 @@ protected:
   
   bool _MSOn, _ElossOn, _SmoothOn ;
   
-  
   std::string _TPCTrackCollection;
   std::string _SiTrackCollection;
   std::string _TPCTrackMCPCollName;
@@ -477,6 +476,9 @@ protected:
 //  std::vector<SIT_Layer> _SITgeo;
   
   unsigned int _nLayersSIT;
+  
+  unsigned int _nLayersSET;
+
   
 //  struct FTD_Disk {
 //    int nPetals;

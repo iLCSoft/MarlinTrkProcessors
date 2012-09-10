@@ -36,6 +36,8 @@
 #include "MarlinTrk/IMarlinTrack.h"
 #include "MarlinTrk/Factory.h"
 
+#include "MarlinTrk/LCIOTrackPropagators.h"
+
 #include "MarlinTrk/MarlinTrkDiagnostics.h"
 #ifdef MARLINTRK_DIAGNOSTICS_ON
 #include "MarlinTrk/DiagnosticsController.h"
@@ -674,7 +676,7 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
     
     if( !prefit_set ) { // use parameters at IP
       
-      streamlog_out(DEBUG2) << "Initialise Fit with trackstate from IP" << group << std::endl;
+      streamlog_out(DEBUG2) << "Initialise Fit with trackstate from IP " << group << std::endl;
       
       ts_initial.setD0(trkCand->getD0());
       ts_initial.setPhi(trkCand->getPhi());
@@ -1101,27 +1103,6 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
   }
   
   
-  //  // Reading ETD Hits
-  //  try {
-  //    LCCollection * col = event->getCollection(_ETDTrackerHitCollection.c_str());
-  //    int nelem = col->getNumberOfElements();
-  //    for (int ielem=0;ielem<nelem;++ielem) {
-  //      TrackerHit * hit = dynamic_cast<TrackerHit*>(col->getElementAt(ielem));
-  //      TrackerHitExtended * hitExt = new TrackerHitExtended(hit);
-  //      hitExt->setResolutionRPhi(float(sqrt(hit->getCovMatrix()[0])));
-  //      hitExt->setResolutionZ(0.1);
-  //      //      hitExt->setResolutionRPhi(_resolutionRPhi_FTD);
-  //      //      hitExt->setResolutionZ(_resolutionZ_FTD);
-  //      // type and det are no longer used, set to INT_MAX to try and catch any missuse
-  //      hitExt->setType(int(INT_MAX));
-  //      hitExt->setDet(int(INT_MAX));
-  //      _allETDHits.push_back( hitExt );
-  //      mapTrackerHits[hit] = hitExt;
-  //    }
-  //  }
-  //  catch( DataNotAvailableException &e ) {
-  //      streamlog_out(DEBUG4) << _ETDTrackerHitCollection.c_str() << " collection is unavailable" << std::endl;
-  //  }
   
   
   try {
@@ -1250,46 +1231,132 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
   }
   
   
-  
-  // Reading SET Hits
-  //    sprintf(strg,"SET hits ----->\n");
-  //    streamlog_out(DEBUG4) << strg;
-  //    sprintf(strg," id    r_hit   phi_hit    z_hit  e(r-phi)  e(z)  \n");
-  //    streamlog_out(DEBUG4) << strg;
-  
-  //     "  0   1807.64   -1.97     26.45   0.010   0.010
-  //     "  1   1812.64   -1.97     26.51   0.010   0.010
-  //  try {
-  //    LCCollection * col = event->getCollection(_SETTrackerHitCollection.c_str());
-  //    int nelem = col->getNumberOfElements();
-  //    for (int ielem=0;ielem<nelem;++ielem) {
-  //      TrackerHit * hit = dynamic_cast<TrackerHit*>(col->getElementAt(ielem));
-  //      TrackerHitExtended * hitExt = new TrackerHitExtended(hit);
-  //      hitExt->setResolutionRPhi(float(sqrt(hit->getCovMatrix()[2])));
-  //      hitExt->setResolutionZ(float(sqrt(hit->getCovMatrix()[5])));
-  //      //       float x_hit = float(hit->getPosition()[0]);
-  //      //       float y_hit = float(hit->getPosition()[1]);
-  //      //       float z_hit = float(hit->getPosition()[2]);
-  //      //       float phi_hit = atan2( y_hit, x_hit );
-  //      //       float r_hit = sqrt( x_hit*x_hit + y_hit*y_hit );
-  //      //       sprintf(strg,"%3i  %8.2f  %6.3f  %8.2f  %6.3f  %6.3f   ", 
-  //      //             ielem, r_hit, phi_hit, z_hit, 
-  //      //             hitExt->getResolutionRPhi(), 
-  //      //             hitExt->getResolutionZ() );
-  //      //       streamlog_out(DEBUG4) << strg;
-  //
-  //      //       std::cout << hit << std::endl;
-  //      // type and det are no longer used, set to INT_MAX to try and catch any missuse
-  //      hitExt->setType(int(INT_MAX));
-  //      hitExt->setDet(int(INT_MAX));
-  //      _allSETHits.push_back( hitExt );
-  //      mapTrackerHits[hit] = hitExt;
-  //    }
-  //  }
-  //  catch( DataNotAvailableException &e ) {
-  //      streamlog_out(DEBUG4) << _SETTrackerHitCollection.c_str() << " collection is unavailable" << std::endl;
-  //  }
-  
+  try {
+    
+    LCCollection *hitCollection = event->getCollection(_SETTrackerHitCollection.c_str());
+    
+    int nelem = hitCollection->getNumberOfElements();
+    
+    streamlog_out(DEBUG5) << "Number of SET hits = " << nelem << std::endl;
+    
+    TrackerHit*          trkhit   = 0;
+    TrackerHitPlane*     trkhit_P = 0;
+    TrackerHitZCylinder* trkhit_C = 0;
+    
+    double drphi(NAN);
+    double dz(NAN);
+    
+    for (int ielem=0; ielem<nelem; ++ielem) {
+      
+      // hit could be of the following type
+      // 1) TrackerHit, either ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT or just standard TrackerHit
+      // 2) TrackerHitPlane, either 1D or 2D
+      // 3) TrackerHitZCylinder, if coming from a simple cylinder design as in the LOI
+      
+      // Establish which of these it is in the following order of likelyhood
+      //    i)   ILDTrkHitTypeBit::ONE_DIMENSIONAL (TrackerHitPlane) Should Never Happen: SpacePoints Must be Used Instead
+      //    ii)  ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT (TrackerHit)
+      //    iii) TrackerHitPlane (Two dimentional)
+      //    iv)  TrackerHitZCylinder
+      //    v)   Must be standard TrackerHit
+      
+      trkhit = dynamic_cast<TrackerHit*>(hitCollection->getElementAt(ielem));
+      
+      int layer = getLayerID(trkhit);
+      
+      if (layer < 0 || (unsigned)layer >= _nLayersSET) {
+        streamlog_out(ERROR) << "FullLDCTracking_MarlinTrk => fatal error in SET : layer is outside allowed range : " << layer << std::endl;
+        exit(1);
+      }
+      
+      // first check that we have not been given 1D hits by mistake, as they won't work here
+      if ( BitSet32( trkhit->getType() )[ UTIL::ILDTrkHitTypeBit::ONE_DIMENSIONAL ] ) {
+        
+        streamlog_out(ERROR) << "FullLDCTracking_MarlinTrk: SET Hit cannot be of type UTIL::ILDTrkHitTypeBit::ONE_DIMENSIONAL COMPOSITE SPACEPOINTS must be use instead. \n\n  exit(1) called from file " << __FILE__ << " and line " << __LINE__ << std::endl;
+        exit(1);
+        
+      }
+      // most likely case: COMPOSITE_SPACEPOINT hits formed from stereo strip hits
+      else if ( BitSet32( trkhit->getType() )[ UTIL::ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT ] ) {
+        
+        // SJA:FIXME: fudge for now by a factor of two and ignore covariance
+        drphi =  2 * sqrt(trkhit->getCovMatrix()[0] + trkhit->getCovMatrix()[2]);
+        dz    =      sqrt(trkhit->getCovMatrix()[5]);
+        
+      }
+      // or a PIXEL based SET, using 2D TrackerHitPlane like the VXD above
+      else if ( ( trkhit_P = dynamic_cast<TrackerHitPlane*>( hitCollection->getElementAt( ielem ) ) ) )  {
+        
+        // first we need to check if the measurement vectors are aligned with the global coordinates
+        gear::Vector3D U(1.0,trkhit_P->getU()[1],trkhit_P->getU()[0],gear::Vector3D::spherical);
+        gear::Vector3D V(1.0,trkhit_P->getV()[1],trkhit_P->getV()[0],gear::Vector3D::spherical);
+        gear::Vector3D Z(0.0,0.0,1.0);
+        
+        const float eps = 1.0e-07;
+        // V must be the global z axis
+        if( fabs(1.0 - V.dot(Z)) > eps ) {
+          streamlog_out(ERROR) << "FullLDCTracking_MarlinTrk: PIXEL SET Hit measurment vectors V is not equal to the global Z axis. \n\n  exit(1) called from file " << __FILE__ << " and line " << __LINE__ << std::endl;
+          exit(1);
+        }
+        
+        // U must be normal to the global z axis
+        if( fabs(U.dot(Z)) > eps ) {
+          streamlog_out(ERROR) << "FullLDCTracking_MarlinTrk: PIXEL SET Hit measurment vectors U is not in the global X-Y plane. \n\n exit(1) called from file " << __FILE__ << " and line " << __LINE__ << std::endl;
+          exit(1);
+        }
+        
+        drphi = trkhit_P->getdU();
+        dz    = trkhit_P->getdV();
+        
+      }
+      // or a simple cylindrical design, as used in the LOI
+      else if ( ( trkhit_C = dynamic_cast<TrackerHitZCylinder*>( hitCollection->getElementAt( ielem ) ) ) ) {
+        
+        drphi = trkhit_C->getdRPhi();
+        dz    = trkhit_C->getdZ();
+        
+      }
+      // this would be very unlikely, but who knows ... just an ordinary TrackerHit, which is not a COMPOSITE_SPACEPOINT
+      else {
+        
+        // SJA:FIXME: fudge for now by a factor of two and ignore covariance
+        drphi =  2 * sqrt(trkhit->getCovMatrix()[0] + trkhit->getCovMatrix()[2]);
+        dz =     sqrt(trkhit->getCovMatrix()[5]);
+        
+      }
+      
+      // now that the hit type has been established carry on and create a
+      
+      TrackerHitExtended * hitExt = new TrackerHitExtended( trkhit );
+      
+      // SJA:FIXME: just use planar res for now
+      hitExt->setResolutionRPhi(drphi);
+      hitExt->setResolutionZ(dz);
+      
+      // set type is now only used in one place where it is set to 0 to reject hits from a fit, set to INT_MAX to try and catch any missuse
+      hitExt->setType(int(INT_MAX));
+      // det is no longer used set to INT_MAX to try and catch any missuse
+      hitExt->setDet(int(INT_MAX));
+      
+      _allSETHits.push_back( hitExt );
+      mapTrackerHits[trkhit] = hitExt;
+      
+      
+      double pos[3];
+      
+      for (int i=0; i<3; ++i) {
+        pos[i] = trkhit->getPosition()[i];
+      }
+      
+      streamlog_out( DEBUG1 ) << " SET Hit " <<  trkhit->id() << " added : @ " << pos[0] << " " << pos[1] << " " << pos[2] << " drphi " << hitExt->getResolutionRPhi() << " dz " << hitExt->getResolutionZ() << "  layer = " << layer << std::endl;
+      
+    }
+    
+  } catch(DataNotAvailableException &e) {
+    streamlog_out( DEBUG4 ) << " collection not found : " << _SETTrackerHitCollection.c_str() << std::endl ;
+  }
+
+    
   // Reading VTX Hits
   try {
     LCCollection * col = event->getCollection(_VTXTrackerHitCollection.c_str());
@@ -3396,6 +3463,40 @@ void FullLDCTracking_MarlinTrk::AddNotAssignedHits() {
   //  if (_assignSETHits>0||_assignETDHits>0)
   //    CleanUpExtrapolations();
   
+  
+  
+  
+  
+   if (_assignSETHits>0) { // Assignment of SET Hits
+ 
+     streamlog_out(DEBUG4) << "Assign SET hits *********************************" << std::endl;
+     
+     // Creating helix extrapolations
+     CreateExtrapolations();
+     
+     int nSETHits = _allSETHits.size();
+     std::vector<TrackerHitExtendedVec> SETHits;
+
+     SETHits.resize(_nLayersSET);
+ 
+     for (int iSET=0;iSET<nSETHits;++iSET) {
+       TrackerHitExtended * trkHitExt = _allSETHits[iSET];
+       TrackerHit * trkHit = trkHitExt->getTrackerHit();
+       int layer = getLayerID(trkHit);
+       if (layer>=0&&layer<_nLayersSET)
+         SETHits[layer].push_back(trkHitExt);
+     }
+     for (int iL=0; iL<_nLayersSET; ++iL) { // loop over SET layers
+       TrackerHitExtendedVec hitVec = SETHits[iL];
+       int refit = 1;
+       if(hitVec.empty() == false) AssignOuterHitsToTracks(hitVec,_distCutForSETHits,refit);
+     }
+   }
+
+  
+  CleanUpExtrapolations();
+  
+  
   if (_assignSITHits>0) { // Treatment of left-over SIT hits 
     
     streamlog_out(DEBUG4) << "Assign SIT hits *********************************" << std::endl;
@@ -3575,281 +3676,368 @@ void FullLDCTracking_MarlinTrk::CleanUpExtrapolations() {
 }
 
 
-//void FullLDCTracking_MarlinTrk::AssignOuterHitsToTracks(TrackerHitExtendedVec hitVec, float dcut, int refit) {
-//  
-//  int nHits = int(hitVec.size());
-//  int nTrk = int(_trkImplVec.size());
-//  
-//  std::map <TrackExtended*,bool> flagTrack;
-//  std::map <TrackerHitExtended*,bool> flagHit;
-//  TrackHitPairVec pairs;
-//  flagTrack.clear();
-//  flagHit.clear();
-//  pairs.clear();
-//  
-//  for (int iH=0;iH<nHits;++iH) {
-//    float pos[3];
-//    TrackerHitExtended * trkHitExt = hitVec[iH];
-//    TrackerHit * hit = trkHitExt->getTrackerHit();
-//    for (int ip=0;ip<3;++ip)
-//      pos[ip] = float(hit->getPosition()[ip]);
-//    //      float r_hit = sqrt(pos[0]*pos[0]+pos[1]*pos[1]);
-//    //      float phi_hit = atan2(pos[1],pos[0]);
-//    //      float z_hit = pos[2];
-//    //      std::cout << r_hit << " " << phi_hit << " "
-//    //                << z_hit << " " 
-//    //                << trkHitExt->getResolutionRPhi() << " "
-//    //                << trkHitExt->getResolutionZ() << std::endl;
-//    
-//    for (int iT=0;iT<nTrk;++iT) {
-//      TrackExtended * trkExt = _trkImplVec[iT];
-//      float tanLambda = trkExt->getTanLambda();           
-//      float product = pos[2]*tanLambda;
-//      if (product>0) {
-//        HelixClass * helix = _trackExtrapolatedHelix[trkExt];
-//        float distance = helix->getDistanceToPoint(pos,dcut);
-//        //      std::cout << "Dist = " << dist[2] << std::endl;
-//        if (distance<dcut) {
-//          TrackHitPair * trkHitPair = 
-//          new TrackHitPair(trkExt,trkHitExt,distance);
-//          pairs.push_back(trkHitPair);
-//          flagTrack[trkExt] = true;
-//          flagHit[trkHitExt] = true;
-//        }
-//      }
-//    }
-//  }
-//  
-//  int nPairs = int(pairs.size());
-//  if (nPairs>0) {
-//    SortingTrackHitPairs(pairs);
-//    for (int iP=0;iP<nPairs;++iP) {
-//      TrackHitPair * trkHitPair = pairs[iP];
-//      TrackExtended * trkExt = trkHitPair->getTrackExtended();
-//      TrackerHitExtended * trkHitExt = 
-//      trkHitPair->getTrackerHitExtended();       
-//      if (flagTrack[trkExt] && flagHit[trkHitExt]) {
-//        if (refit==0) {
-//          trkExt->addTrackerHitExtended( trkHitExt );
-//          trkHitExt->setUsedInFit( false );
-//          trkHitExt->setTrackExtended( trkExt );
-//        }
-//        else {
-//          TrackerHitExtendedVec hitsInTrack = 
-//          trkExt->getTrackerHitExtendedVec();
-//          int nTotH = int(hitsInTrack.size());
-//          int nHitsInFit = 0;
-//          for (int iTH=0;iTH<nTotH;++iTH) {
-//            TrackerHitExtended * hitInTrack = hitsInTrack[iTH];
-//            if (hitInTrack->getUsedInFit())
-//              nHitsInFit++;
-//          }
-//          float * x_h = new float[nHitsInFit+1];
-//          float * y_h = new float[nHitsInFit+1];
-//          float * z_h = new float[nHitsInFit+1];
-//          int * idet_h = new int[nHitsInFit+1];
-//          int * ityp_h = new int[nHitsInFit+1];
-//          int * lhits = new int[nHitsInFit+1];
-//          float * rR_h = new float[nHitsInFit+1];
-//          float * rZ_h = new float[nHitsInFit+1];
-//          int iHitInFit = 0;
-//          for (int iHit=0;iHit<nTotH;++iHit) {
-//            TrackerHitExtended * hitInTrack = hitsInTrack[iHit];
-//            if (hitInTrack->getUsedInFit()) {
-//              TrackerHit * hit = hitInTrack->getTrackerHit();
-//              x_h[iHitInFit] = float(hit->getPosition()[0]);
-//              y_h[iHitInFit] = float(hit->getPosition()[1]);
-//              z_h[iHitInFit] = float(hit->getPosition()[2]);
-//              idet_h[iHitInFit] = hitInTrack->getDet();
-//              ityp_h[iHitInFit] = hitInTrack->getType();
-//              rR_h[iHitInFit] = hitInTrack->getResolutionRPhi();
-//              rZ_h[iHitInFit] = hitInTrack->getResolutionZ();
-//              iHitInFit++;
-//            }
-//          }
-//          TrackerHit * remainHit = trkHitExt->getTrackerHit();
-//          x_h[iHitInFit] = float(remainHit->getPosition()[0]);
-//          y_h[iHitInFit] = float(remainHit->getPosition()[1]);
-//          z_h[iHitInFit] = float(remainHit->getPosition()[2]);
-//          idet_h[iHitInFit] = trkHitExt->getDet();
-//          ityp_h[iHitInFit] = trkHitExt->getType();
-//          rR_h[iHitInFit] = trkHitExt->getResolutionRPhi();
-//          rZ_h[iHitInFit] = trkHitExt->getResolutionZ();          
-//          iHitInFit++;
-//          
-//          int NPT = iHitInFit;
-//          float chi2_D;
-//          int ndf_D;
-//          float chi2rphi,chi2z;
-//          float par[5];
-//          float epar[15];
-//          float refPoint[3];
-//          
-//          int ierr = _trackFit.DoFitting(_useExtraPoint,_optFit,NPT,
-//                                         _bField,idet_h,ityp_h,
-//                                         _chi2PrefitCut,
-//                                         x_h,y_h,z_h,rR_h,rZ_h,
-//                                         par,epar,refPoint,chi2_D,ndf_D,
-//                                         chi2rphi,chi2z,lhits);              
-//          
-//          float chi2ndf = chi2_D/float(ndf_D);
-//          if (ierr==0 && chi2ndf<_chi2FitCut) {
-//            trkExt->addTrackerHitExtended( trkHitExt );
-//            trkExt->setCovMatrix(epar);
-//            trkExt->setOmega(par[0]);   
-//            trkExt->setTanLambda(par[1]);
-//            trkExt->setPhi(par[2]);
-//            trkExt->setD0(par[3]);
-//            trkExt->setZ0(par[4]);
-//            trkExt->setChi2(chi2_D);
-//            trkExt->setNDF(ndf_D);
-//            trkHitExt->setTrackExtended( trkExt );
-//            trkHitExt->setUsedInFit( true );
-//            flagTrack[trkExt] = false;
-//            flagHit[trkHitExt] = false;
-//            if (_optFit == 4) {
-//              GroupTracks * groupTracks = trkExt->getGroupTracks();
-//              if (groupTracks!=NULL) {
-//                TrackExtendedVec group = groupTracks->getTrackExtendedVec();
-//                int nTracks = int(group.size());
-//                if (nTracks>0) {
-//                  TrackExtended * siTrack = group[0];
-//                  // preserving positiveness of matrix
-//                  float eD0 = siTrack->getCovMatrix()[0];
-//                  float eZ0 = siTrack->getCovMatrix()[9];
-//                  float sD0 = sqrt(eD0/epar[0]);
-//                  float sZ0 = sqrt(eZ0/epar[9]);
-//                  epar[0]  = eD0;
-//                  epar[9]  = eZ0;
-//                  epar[1]  = sD0*epar[1];
-//                  epar[3]  = sD0*epar[3];
-//                  epar[10] = sD0*epar[10];
-//                  epar[7]  = sZ0*epar[7];
-//                  epar[8]  = sZ0*epar[8];
-//                  epar[13] = sZ0*epar[13];
-//                  epar[6]  = sD0*sZ0*epar[6];
-//                  trkExt->setZ0(siTrack->getZ0());
-//                  trkExt->setD0(siTrack->getD0());
-//                  trkExt->setCovMatrix(epar);
-//                }
-//              }
-//            }
-//          }
-//          delete[] x_h;
-//          delete[] y_h;
-//          delete[] z_h;
-//          delete[] rR_h;
-//          delete[] rZ_h;
-//          delete[] idet_h;
-//          delete[] ityp_h;
-//          delete[] lhits;
-//        }
-//      }
-//    }
-//    
-//    for (int iP=0;iP<nPairs;++iP) {
-//      TrackHitPair * trkHitPair = pairs[iP];
-//      delete trkHitPair;
-//    }
-//    
-//    pairs.clear();
-//    
-//  }
-//  
-//  
-//}
+void FullLDCTracking_MarlinTrk::AssignOuterHitsToTracks(TrackerHitExtendedVec hitVec, float dcut, int refit) {
+
+  streamlog_out(DEBUG3) << "FullLDCTracking_MarlinTrk::AssignOuterHitsToTracks dcut = " << dcut << std::endl;
+  
+  // get the number of hits to try, and the number of final tracks to which the tracks will be attached
+  int nHits = int(hitVec.size());
+  int nTrk = int(_trkImplVec.size());
+  
+  // create maps to record which tracks and tracker hits are flagged for assignment
+  std::map <TrackExtended*,bool> flagTrack;
+  std::map <TrackerHitExtended*,bool> flagHit;
+
+  // vector to hold the matchups and the distance of closest approach.
+  TrackHitPairVec pairs;
+
+  flagTrack.clear();
+  flagHit.clear();
+  pairs.clear();
+  
+  // loop over all hits under consideration ...
+  for (int iH=0;iH<nHits;++iH) {
+
+    float pos[3];
+    
+    TrackerHitExtended * trkHitExt = hitVec[iH];
+    TrackerHit * hit = trkHitExt->getTrackerHit();
+    
+    for (int ip=0;ip<3;++ip) {
+      pos[ip] = float(hit->getPosition()[ip]);
+    }
+            
+    // loop over all tracks in same z-half ...
+    for (int iT=0;iT<nTrk;++iT) {
+      
+      TrackExtended * trkExt = _trkImplVec[iT];
+      float tanLambda = trkExt->getTanLambda();           
+      float product = pos[2]*tanLambda;
+      // check that the hit and track are in the same z-half, which won't work for the rare cases of something going backwards ...
+      
+      if (product>0) {
+      
+        // use the previously created trackextrapolations for the
+        HelixClass * helix = _trackExtrapolatedHelix[trkExt];
+        
+        // skip if the extrapolations failed
+        if (helix==0) {
+          streamlog_out(DEBUG3) << "helix extrapolation failed for trkExt" << std::endl;
+          continue;
+        }
+        
+        float distance = helix->getDistanceToPoint(pos,dcut);
+        
+        streamlog_out(DEBUG1) << "for helix extrapolation " << helix << " distance = " << distance << std::endl;
+        
+        // check the distance is less than the steerable cut ...
+        if (distance<dcut) {
+
+          streamlog_out(DEBUG3) << "for helix extrapolation " << helix << " distance = " << distance << std::endl;
+          
+          // ... if so create the association and flag the hit and track
+          TrackHitPair * trkHitPair =
+          new TrackHitPair(trkExt,trkHitExt,distance);
+          pairs.push_back(trkHitPair);
+          flagTrack[trkExt] = true;
+          flagHit[trkHitExt] = true;
+
+        }
+      }
+    }
+  }
+  
+  int nPairs = int(pairs.size());
+
+  streamlog_out(DEBUG3) << "AssignOuterHitsToTracks : Number of track hit pairs to try =  " << nPairs << std::endl;
+  
+  if (nPairs>0) {
+
+    // sort the pairs on distance 
+    SortingTrackHitPairs(pairs);
+
+    for (int iP=0;iP<nPairs;++iP) {
+
+      TrackHitPair * trkHitPair = pairs[iP];
+      TrackExtended * trkExt = trkHitPair->getTrackExtended();
+      TrackerHitExtended * trkHitExt = 
+
+      trkHitPair->getTrackerHitExtended();
+
+      // check if the track or hit is still free to be combined
+      if (flagTrack[trkExt] && flagHit[trkHitExt]) {
+
+        if (refit==0) { // just set the association
+          trkExt->addTrackerHitExtended( trkHitExt );
+          trkHitExt->setUsedInFit( false );
+          trkHitExt->setTrackExtended( trkExt );
+        }
+
+        else {
+
+          // get all the hits already included in the track
+          TrackerHitExtendedVec hitsInTrack = trkExt->getTrackerHitExtendedVec();
+
+          int nTotH = int(hitsInTrack.size());
+          int nHitsInFit = 0;
+
+          for (int iTH=0;iTH<nTotH;++iTH) {
+
+            // count the number of hits used in the fit
+            TrackerHitExtended * hitInTrack = hitsInTrack[iTH];
+            if (hitInTrack->getUsedInFit())  {
+              nHitsInFit++;
+            }
+          }
+
+          int iHitInFit = 0;
+          
+          
+          // add the previously used hits from the track to the vectors
+          
+          EVENT::TrackerHitVec trkHits;
+          
+          for (int iHit=0;iHit<nTotH;++iHit) {
+            
+            TrackerHitExtended * hitInTrack = hitsInTrack[iHit];
+            if (hitInTrack->getUsedInFit()) {
+              TrackerHit * hit = hitInTrack->getTrackerHit();
+              iHitInFit++;
+              if(hit) {
+                trkHits.push_back(hit);
+              }
+              else{
+                throw EVENT::Exception( std::string("FullLDCTracking_MarlinTrk::AssignOuterHitsToTracks: TrackerHit pointer == NULL ")  ) ;
+              }
+            }
+          }
+          
+          // add the hit to be attached to the vectors
+          TrackerHit * remainHit = trkHitExt->getTrackerHit();
+          iHitInFit++;
+          trkHits.push_back(remainHit);
+          
+          
+          double chi2_D;
+          int ndf;
+          
+          
+          if( trkHits.size() < 3 ) return ;
+          
+          // sort the hits in R
+          std::vector< std::pair<float, EVENT::TrackerHit*> > r2_values;
+          r2_values.reserve(trkHits.size());
+          
+          for (TrackerHitVec::iterator it=trkHits.begin(); it!=trkHits.end(); ++it) {
+            EVENT::TrackerHit* h = *it;
+            float r2 = h->getPosition()[0]*h->getPosition()[0]+h->getPosition()[1]*h->getPosition()[1];
+            r2_values.push_back(std::make_pair(r2, *it));
+          }
+          
+          sort(r2_values.begin(),r2_values.end());
+          
+          trkHits.clear();
+          trkHits.reserve(r2_values.size());
+          
+          for (std::vector< std::pair<float, EVENT::TrackerHit*> >::iterator it=r2_values.begin(); it!=r2_values.end(); ++it) {
+            trkHits.push_back(it->second);
+          }
+          
+          
+          streamlog_out(DEBUG3) << "AssignOuterHitsToTracks: Start Fitting: AddHits: number of hits to fit " << trkHits.size() << std::endl;
+          
+          
+          MarlinTrk::IMarlinTrack* marlin_trk = _trksystem->createTrack();
+          
+          IMPL::TrackStateImpl pre_fit ;
+          
+          
+          pre_fit.setD0(trkExt->getD0());
+          pre_fit.setPhi(trkExt->getPhi());
+          pre_fit.setZ0(trkExt->getZ0());
+          pre_fit.setOmega(trkExt->getOmega());
+          pre_fit.setTanLambda(trkExt->getTanLambda());
+          
+          float ref[3];
+          ref[0]=ref[1]=ref[2]=0.0;
+          
+          pre_fit.setReferencePoint(ref);
+          
+          pre_fit.setLocation(lcio::TrackStateImpl::AtIP);          
+          // setup initial dummy covariance matrix
+          EVENT::FloatVec covMatrix;
+          covMatrix.resize(15);
+          
+          for (unsigned icov = 0; icov<covMatrix.size(); ++icov) {
+            covMatrix[icov] = 0;
+          }
+          
+          covMatrix[0]  = ( _initialTrackError_d0    ); //sigma_d0^2
+          covMatrix[2]  = ( _initialTrackError_phi0  ); //sigma_phi0^2
+          covMatrix[5]  = ( _initialTrackError_omega ); //sigma_omega^2
+          covMatrix[9]  = ( _initialTrackError_z0    ); //sigma_z0^2
+          covMatrix[14] = ( _initialTrackError_tanL  ); //sigma_tanl^2
+          
+          pre_fit.setCovMatrix(covMatrix);
+          
+          int error = MarlinTrk::createFit( trkHits, marlin_trk, &pre_fit, _bField, IMarlinTrack::backward , _maxChi2PerHit );
+          
+          if ( error != IMarlinTrack::success ) {
+            
+            streamlog_out(DEBUG3) << "FullLDCTracking_MarlinTrk::AssignOuterHitsToTracks: creation of fit fails with error " << error << std::endl;
+            
+            delete marlin_trk ;
+            return ;
+            
+          }
+          
+          
+          const gear::Vector3D point(0.,0.,0.); // nominal IP
+          int return_code = 0;
+          
+          TrackStateImpl trkState ;
+          return_code = marlin_trk->propagate(point, trkState, chi2_D, ndf ) ;
+          
+          delete marlin_trk ;
+          
+          if ( error != IMarlinTrack::success ) {
+            
+            streamlog_out(DEBUG3) << "FullLDCTracking_MarlinTrk::AssignOuterHitsToTracks: propagate to IP fails with error " << error << std::endl;
+            
+            return ;
+            
+          }
+          
+          if ( ndf < 0  ) {
+            
+            streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::AssignOuterHitsToTracks: Fit failed : NDF is less that zero  " << ndf << std::endl;
+            
+            return ;
+            
+          }
+          
+          
+          float chi2Fit = chi2_D/float(ndf);
+          
+          if ( chi2Fit > _chi2FitCut ) {
+            
+            streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::AssignOuterHitsToTracks: track fail Chi2 cut of " << _chi2FitCut << " chi2 of track = " <<  chi2Fit << std::endl;
+            
+            return ;
+            
+          }
+          
+          
+          
+          // note trackAR which is of type TrackExtended, only takes fits with ref point = 0,0,0
+          trkExt->setOmega(trkState.getOmega());
+          trkExt->setTanLambda(trkState.getTanLambda());
+          trkExt->setPhi(trkState.getPhi());
+          trkExt->setD0(trkState.getD0());
+          trkExt->setZ0(trkState.getZ0());
+          
+          
+          float cov[15];
+          
+          for (int i = 0 ; i<15 ; ++i) {
+            cov[i] = trkState.getCovMatrix().operator[](i);
+          }
+          
+          trkExt->setCovMatrix(cov);
+          trkExt->setChi2(chi2_D);
+          trkExt->setNDF(ndf);
+          
+          trkExt->addTrackerHitExtended( trkHitExt );
+          trkHitExt->setTrackExtended( trkExt );
+          trkHitExt->setUsedInFit( true );
+          flagTrack[trkExt] = false;
+          flagHit[trkHitExt] = false;
+          
+          
+          streamlog_out(DEBUG2) << "AssignOuterHitsToTracks: Hit " << trkHitExt << " successfully assigned to track " << trkExt << std::endl;
+          
+
+                    
+        }
+      }
+    }
+    
+    for (int iP=0;iP<nPairs;++iP) {
+      TrackHitPair * trkHitPair = pairs[iP];
+      delete trkHitPair;
+    }
+    
+    pairs.clear();
+    
+  }
+  
+  
+}
 
 HelixClass * FullLDCTracking_MarlinTrk::GetExtrapolationHelix( TrackExtended * track) {
   
-  TrackerHitExtendedVec hitVec = track->getTrackerHitExtendedVec();
-  int nHits = int(hitVec.size());
+  streamlog_out(DEBUG3) << "FullLDCTracking_MarlinTrk::GetExtrapolationHelix called for track " << track << std::endl;
   
-  HelixClass * helix = new HelixClass();
+  HelixClass * helix = 0;
   
-  int nHitsFit = nHits;
-  if (nHits>_nHitsExtrapolation)
-    nHitsFit = _nHitsExtrapolation;
+  // get the track state at the last hit of the track with ref point of greatest abs z
   
-  float * ampl = new float[nHitsFit];
-  float * xhit = new float[nHitsFit];
-  float * yhit = new float[nHitsFit];
-  float * zhit = new float[nHitsFit];
+  GroupTracks* group = track->getGroupTracks();
   
+  TrackExtendedVec trk_vec = group->getTrackExtendedVec();
   
-  if (nHits<=_nHitsExtrapolation) {
-    for (int iH=0;iH<nHitsFit;++iH) {
-      TrackerHit * trkHit = hitVec[iH]->getTrackerHit();
-      ampl[iH] = 1.0;
-      xhit[iH] = (trkHit->getPosition()[0]);
-      yhit[iH] = (trkHit->getPosition()[1]);
-      zhit[iH] = (trkHit->getPosition()[2]);
-    }    
+  const EVENT::TrackState* ts_at_calo = 0;
+  float z_ref_max = 0;
+  
+  streamlog_out(DEBUG3) << "FullLDCTracking_MarlinTrk::GetExtrapolationHelix number of tracks associated = " << trk_vec.size() << std::endl;
+  
+  for (unsigned itrk=0; itrk<trk_vec.size(); ++itrk) {
+
+    EVENT::Track* trk_lcio = trk_vec[itrk]->getTrack();
+    
+    if (trk_lcio) {
+  
+      // use the tracks state at the calorimeter because that will have accounted for energy loss already
+      if (trk_lcio->getTrackState(lcio::TrackState::AtCalorimeter)) {
+        
+        const EVENT::TrackState* ts_at_last_hit = trk_lcio->getTrackState(lcio::TrackState::AtLastHit);
+        float z_ref = ts_at_last_hit->getReferencePoint()[2];
+
+        // make sure we use the one closest to the calo face
+        if ( fabs(z_ref) >  z_ref_max) {
+          z_ref_max = fabs(z_ref);
+          ts_at_calo = trk_lcio->getTrackState(lcio::TrackState::AtCalorimeter);
+
+          streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::GetExtrapolationHelix set ts_at_calo with ref_z = " << z_ref << std::endl;
+        
+        }
+      
+      }
+    }
     
   }
-  else {
-    int * index = new int[nHits];
-    float * zcoor = new float[nHits];        
-    for (int iH=0;iH<nHits;++iH) {
-      TrackerHit * trkHit = hitVec[iH]->getTrackerHit();
-      zcoor[iH] = fabs(float(trkHit->getPosition()[2]));
-    }
-    int order = 1;
-    GeneralSorting(index,zcoor,order,nHits);
-    for (int iH=0;iH<nHitsFit;++iH) {
-      int idx = index[iH];
-      TrackerHit * trkHit = hitVec[idx]->getTrackerHit();
-      ampl[iH] = 1.0;
-      xhit[iH] = (trkHit->getPosition()[0]);
-      yhit[iH] = (trkHit->getPosition()[1]);
-      zhit[iH] = (trkHit->getPosition()[2]);
-    }
-    delete[] index;
-    delete[] zcoor;
+  
+  
+  if (ts_at_calo) {
+    
+    IMPL::TrackStateImpl* ts_at_calo_forIP = new TrackStateImpl(*ts_at_calo);
+        
+    LCIOTrackPropagators::PropagateLCIOToNewRef(*ts_at_calo_forIP,0.0,0.0,0.0);
+    
+    ts_at_calo_forIP->setLocation(lcio::TrackStateImpl::AtIP);
+    
+    helix = new HelixClass();
+    
+    helix->Initialize_Canonical(ts_at_calo_forIP->getPhi(),
+                                ts_at_calo_forIP->getD0(),
+                                ts_at_calo_forIP->getZ0(),
+                                ts_at_calo_forIP->getOmega(),
+                                ts_at_calo_forIP->getTanLambda(),
+                                _bField);
+    
+    streamlog_out(DEBUG3) << "FullLDCTracking_MarlinTrk::GetExtrapolationHelix helix created at IP" << std::endl;
+
   }
-  
-  ClusterShapes * shapes = new ClusterShapes(nHitsFit,ampl,xhit,yhit,zhit);
-  
-  float parSh[5];
-  float dparSh[5];
-  float distmax = 0;
-  float chi2Sh = 0;
-  // do fitting
-  shapes->FitHelix(500, 0, 1, parSh, dparSh, chi2Sh, distmax);  
-  
-  float x0Sh = parSh[0];
-  float y0Sh = parSh[1];
-  float r0Sh = parSh[2];
-  float bzSh = parSh[3];
-  float phi0Sh = parSh[4];
-  float signPz = 1;
-  float zBegin = zhit[0];
-  float zEnd   = zhit[0];
-  float zMax   = fabs(zBegin);
-  float zMin   = fabs(zEnd);
-  for (int iH=1;iH<nHitsFit;++iH) {
-    float zCurrent = fabs(zhit[iH]);
-    if (zCurrent>zMax) {
-      zMax = zCurrent;
-      zEnd = zhit[iH];
-    }
-    if (zCurrent<zMin) {
-      zMin = zCurrent;
-      zBegin = zhit[iH];
-    }      
-  }
-  
-  delete shapes;
-  
-  if (zEnd<zBegin)
-    signPz = -1;
-  helix->Initialize_BZ(x0Sh, y0Sh, r0Sh, 
-                       bzSh, phi0Sh, _bField,signPz,
-                       zBegin);
-  
-  delete[] ampl;
-  delete[] xhit;
-  delete[] yhit;
-  delete[] zhit;
   
   return helix;
   
@@ -4201,20 +4389,6 @@ void FullLDCTracking_MarlinTrk::AssignSiHitsToTracks(TrackerHitExtendedVec hitVe
         pre_fit.setReferencePoint(ref);
         
         pre_fit.setLocation(lcio::TrackStateImpl::AtIP);
-//        /** Provides the values of a track state from the first, middle and last hits in the hit_list. */
-//        int error = createPrefit( trkHits, &pre_fit, _bField, IMarlinTrack::backward);
-        
-
-
-        
-//        if ( error != IMarlinTrack::success ) {
-//          
-//          streamlog_out(DEBUG3) << "FullLDCTracking_MarlinTrk::AssignSiHitsToTracks: creation of prefit fails with error " << error << std::endl;
-//          
-//          delete marlin_trk ;
-//          return;
-//          
-//        }
         
         // setup initial dummy covariance matrix
         EVENT::FloatVec covMatrix;
@@ -4306,7 +4480,7 @@ void FullLDCTracking_MarlinTrk::AssignSiHitsToTracks(TrackerHitExtendedVec hitVe
         flagHit[trkHitExt] = false;
         
         
-        streamlog_out(DEBUG2) << "AssignSiHitsToTracks: Start Fitting: Hit " << trkHitExt << " successfully assigned to track " << trkExt << std::endl;
+        streamlog_out(DEBUG2) << "AssignSiHitsToTracks: Hit " << trkHitExt << " successfully assigned to track " << trkExt << std::endl;
         
       }
     }
@@ -4945,7 +5119,7 @@ void FullLDCTracking_MarlinTrk::setupGearGeom( const gear::GearMgr* gearMgr ){
       
       if (_nLayersSIT != SIT_r.size() || _nLayersSIT != SIT_hl.size()) {
         
-        streamlog_out( ERROR ) << "ILDSITCylinderKalDetector miss-match between DoubleVec and nlayers exit(1) called from file " << __FILE__ << " line " << __LINE__  << std::endl ;
+        streamlog_out( ERROR ) << "FullLDCTracking_MarlinTrk Miss-match between DoubleVec and nlayers exit(1) called from file " << __FILE__ << " line " << __LINE__  << std::endl ;
         exit(1);
         
       }
@@ -4957,6 +5131,60 @@ void FullLDCTracking_MarlinTrk::setupGearGeom( const gear::GearMgr* gearMgr ){
     } 
     
   }
+  
+  
+  //-- SET Parameters--
+  _nLayersSET = 0 ;
+  const gear::ZPlanarParameters* pSETDetMain = 0;
+  const gear::ZPlanarLayerLayout* pSETLayerLayout = 0;
+  
+  try{
+    
+    streamlog_out( DEBUG9 ) << " filling SET parameters from gear::SETParameters " << std::endl ;
+    
+    pSETDetMain = &Global::GEAR->getSETParameters();
+    pSETLayerLayout = &(pSETDetMain->getZPlanarLayerLayout());
+    _nLayersSET = pSETLayerLayout->getNLayers();
+    
+  }
+  catch( gear::UnknownParameterException& e){
+    
+    streamlog_out( DEBUG9 ) << " ### gear::SETParameters Not Present in GEAR FILE" << std::endl ;
+    
+  }
+  
+  if( _nLayersSET == 0 ){
+    // try the old LOI style key value pairs as defined in the SSet02 Mokka drive
+    try{
+      
+      streamlog_out( MESSAGE ) << "  FullLDCTracking_MarlinTrk - Simple Cylinder Based SET using parameters defined by SSet02 Mokka driver " << std::endl ;
+      
+      // SET
+      
+      const gear::GearParameters& pSET = gearMgr->getGearParameters("SET");
+      
+      const EVENT::DoubleVec& SET_r   =  pSET.getDoubleVals("SETLayerRadius" )  ;
+      const EVENT::DoubleVec& SET_hl  =  pSET.getDoubleVals("SETSupportLayerHalfLength" )  ;
+      
+      _nLayersSET = SET_r.size() ;
+      
+      if (_nLayersSET != SET_r.size() || _nLayersSET != SET_hl.size()) {
+        
+        streamlog_out( ERROR ) << "FullLDCTracking_MarlinTrk Miss-match between DoubleVec and nlayers exit(1) called from file " << __FILE__ << " line " << __LINE__  << std::endl ;
+        exit(1);
+        
+      }
+    }
+    catch( gear::UnknownParameterException& e){
+      
+      streamlog_out( DEBUG9 ) << " ### gear::SET Parameters from as defined in SSet02 Not Present in GEAR FILE" << std::endl ;
+      
+    }
+    
+  }
+  
+  
+  
   
   
   
