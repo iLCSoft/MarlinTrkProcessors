@@ -102,6 +102,13 @@ protected:
   bool _ElossOn ;
   bool _SmoothOn ;
   
+  float _initialTrackError_d0;
+  float _initialTrackError_phi0;
+  float _initialTrackError_omega;
+  float _initialTrackError_z0;
+  float _initialTrackError_tanL;
+  float _maxChi2PerHit;
+  
   int _n_run ;
   int _n_evt ;
   
