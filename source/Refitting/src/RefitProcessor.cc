@@ -245,6 +245,7 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
         
         if( error != IMarlinTrack::success || refittedTrack->getNdf() < 0 ) {
           streamlog_out(DEBUG2) << "TruthTracker::createTrack: EVENT: << " << evt->getEventNumber() << " >> Track fit returns error code " << error << " NDF = " << refittedTrack->getNdf() <<  ". Number of hits = "<< trkHits.size() << std::endl;
+          delete refittedTrack;
           continue ;
         }
         
@@ -252,7 +253,9 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
       } catch (...) {
         
         streamlog_out(ERROR) << "RefitProcessor::processEvent: EVENT: << " << evt->getEventNumber() << " >> exception caught and rethown. Track = " << track_to_refit << std::endl;
-                    
+
+        delete refittedTrack;
+        
         throw ;
         
       }
