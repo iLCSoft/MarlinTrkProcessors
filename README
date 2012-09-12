@@ -17,13 +17,28 @@
 
  =============================================================================================================
 
+
+
+
+
+
   --------
  | v01-08 |
   --------
-     - SimplePlanarTestDigiProcessor:
-       made processor parameters ResolutionU(V) vectors
-       in order to allow for different point resolution values per layer
-       ( needed for the VXD in the DBD)
+
+     - General 
+       - SimplePlanarTestDigiProcessor renamed as PlanarDigiProcessor
+       - Fixed signed unsigned warning.
+       - Fix memory leaks.
+
+     - PlanarDigiProcessor
+       - Made processor parameters ResolutionU(V) vectors
+       	 in order to allow for different point resolution values per layer
+       	 ( needed for the VXD in the DBD)
+
+     - FullLDCTracking_MarlinTrk
+       - Added SET hits. 
+ 
 
   --------
  | v01-07 |
