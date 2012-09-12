@@ -1960,6 +1960,21 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
   }
   
   
+  if ( testCombinationOnly == false ) {
+    
+    streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: Check for outliers " << std::endl;
+    
+    std::vector<std::pair<EVENT::TrackerHit* , double> > outliers ;
+    marlin_trk->getOutliers(outliers);
+    
+    if (int(outliers.size()) > maxAllowedOutliers) {
+      
+      streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: number of outliers " << outliers.size() << " is greater than cut maximum: " << maxAllowedOutliers << std::endl;
+      delete marlin_trk ;
+      return 0;
+    }
+
+  
   float omega = trkState.getOmega();
   float tanlambda = trkState.getTanLambda();
   float phi0 = trkState.getPhi();
@@ -1989,22 +2004,7 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
   
   OutputTrack->setCovMatrix(cov);
   
-  
-  if ( testCombinationOnly == false ) {
-    
-    streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: Check for outliers " << std::endl;
-    
-    std::vector<std::pair<EVENT::TrackerHit* , double> > outliers ;
-    marlin_trk->getOutliers(outliers);
-    
-    if (int(outliers.size()) > maxAllowedOutliers) {
-
-      streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: number of outliers " << outliers.size() << " is greater than cut maximum: " << maxAllowedOutliers << std::endl;
-      delete marlin_trk ;
-      return 0;
-    }
-    
-    
+          
     for (int i=0;i<nSiHits;++i) {
       
       bool hit_is_outlier = false;
@@ -4020,19 +4020,19 @@ HelixClass * FullLDCTracking_MarlinTrk::GetExtrapolationHelix( TrackExtended * t
   
   if (ts_at_calo) {
     
-    IMPL::TrackStateImpl* ts_at_calo_forIP = new TrackStateImpl(*ts_at_calo);
+    IMPL::TrackStateImpl ts_at_calo_forIP(*ts_at_calo);
         
-    LCIOTrackPropagators::PropagateLCIOToNewRef(*ts_at_calo_forIP,0.0,0.0,0.0);
+    LCIOTrackPropagators::PropagateLCIOToNewRef(ts_at_calo_forIP,0.0,0.0,0.0);
     
-    ts_at_calo_forIP->setLocation(lcio::TrackStateImpl::AtIP);
+    ts_at_calo_forIP.setLocation(lcio::TrackStateImpl::AtIP);
     
     helix = new HelixClass();
     
-    helix->Initialize_Canonical(ts_at_calo_forIP->getPhi(),
-                                ts_at_calo_forIP->getD0(),
-                                ts_at_calo_forIP->getZ0(),
-                                ts_at_calo_forIP->getOmega(),
-                                ts_at_calo_forIP->getTanLambda(),
+    helix->Initialize_Canonical(ts_at_calo_forIP.getPhi(),
+                                ts_at_calo_forIP.getD0(),
+                                ts_at_calo_forIP.getZ0(),
+                                ts_at_calo_forIP.getOmega(),
+                                ts_at_calo_forIP.getTanLambda(),
                                 _bField);
     
     streamlog_out(DEBUG3) << "FullLDCTracking_MarlinTrk::GetExtrapolationHelix helix created at IP" << std::endl;
