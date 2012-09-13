@@ -1875,7 +1875,8 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
   
   streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: Start Fitting: AddHits: number of hits to fit " << trkHits.size() << std::endl;
   
-  MarlinTrk::IMarlinTrack* marlin_trk = _trksystem->createTrack();
+  std::auto_ptr<MarlinTrk::IMarlinTrack> marlin_trk_autop(_trksystem->createTrack());
+  MarlinTrk::IMarlinTrack& marlin_trk = *marlin_trk_autop.get();
   
   IMPL::TrackStateImpl pre_fit ;
 
@@ -1883,17 +1884,6 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
   
   pre_fit = *(tpcTrack->getTrack()->getTrackState(EVENT::TrackState::AtLastHit));
   
-//  /** Provides the values of a track state from the first, middle and last hits in the hit_list. */
-//  int error = createPrefit( trkHits, &pre_fit, _bField, IMarlinTrack::backward);
-//  
-//  if ( error != IMarlinTrack::success ) {
-//    
-//    streamlog_out(DEBUG3) << "FullLDCTracking_MarlinTrk::CombineTracks: creation of prefit fails with error " << error << std::endl;
-//    
-//    delete marlin_trk ;
-//    return 0;
-//    
-//  }
   
   // setup initial dummy covariance matrix
   EVENT::FloatVec covMatrix;
@@ -1911,29 +1901,25 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
   
   pre_fit.setCovMatrix(covMatrix);
   
-  error = MarlinTrk::createFit( trkHits, marlin_trk, &pre_fit, _bField, IMarlinTrack::backward , _maxChi2PerHit );
+  error = MarlinTrk::createFit( trkHits, &marlin_trk, &pre_fit, _bField, IMarlinTrack::backward , _maxChi2PerHit );
   
   if ( error != IMarlinTrack::success ) {
     
     streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: creation of fit fails with error " << error << std::endl;
-    
-    delete marlin_trk ;
     return 0;
     
   }
   
   
   const gear::Vector3D point(0.,0.,0.); // nominal IP
-  int return_code = 0;
+
   
   TrackStateImpl trkState ;
-  return_code = marlin_trk->propagate(point, trkState, chi2_D, ndf ) ;
+  error = marlin_trk.propagate(point, trkState, chi2_D, ndf ) ;
   
   if ( error != IMarlinTrack::success ) {
     
-    streamlog_out(DEBUG3) << "FullLDCTracking_MarlinTrk::CombineTracks: propagate to IP fails with error " << error << std::endl;
-    
-    delete marlin_trk ;
+    streamlog_out(DEBUG3) << "FullLDCTracking_MarlinTrk::CombineTracks: propagate to IP fails with error " << error << std::endl;    
     return 0;
     
   }
@@ -1941,8 +1927,6 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
   if ( ndf < 0  ) {
     
     streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: Fit failed NDF is less that zero  " << ndf << std::endl;
-    
-    delete marlin_trk ;
     return 0;
     
   }
@@ -1953,41 +1937,39 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
   if ( chi2Fit > _chi2FitCut ) {
     
     streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: track fail Chi2 cut of " << _chi2FitCut << " chi2 of track = " <<  chi2Fit << std::endl;
-    
-    delete marlin_trk ;
     return 0;
     
   }
   
   
-  if ( testCombinationOnly == false ) {
+  streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: Check for outliers " << std::endl;
+  
+  std::vector<std::pair<EVENT::TrackerHit* , double> > outliers ;
+  marlin_trk.getOutliers(outliers);
+  
+  if (int(outliers.size()) > maxAllowedOutliers) {
     
-    streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: Check for outliers " << std::endl;
-    
-    std::vector<std::pair<EVENT::TrackerHit* , double> > outliers ;
-    marlin_trk->getOutliers(outliers);
-    
-    if (int(outliers.size()) > maxAllowedOutliers) {
-      
-      streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: number of outliers " << outliers.size() << " is greater than cut maximum: " << maxAllowedOutliers << std::endl;
-      delete marlin_trk ;
-      return 0;
-    }
+    streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: number of outliers " << outliers.size() << " is greater than cut maximum: " << maxAllowedOutliers << std::endl;
+    return 0;
+  }
+
 
   
   float omega = trkState.getOmega();
   float tanlambda = trkState.getTanLambda();
   float phi0 = trkState.getPhi();
   float d0 = trkState.getD0();
-  float z0 = trkState.getZ0();    
+  float z0 = trkState.getZ0();
   
   OutputTrack = new TrackExtended();
+
   GroupTracks * group = new GroupTracks();
+  OutputTrack->setGroupTracks(group);
+  
   group->addTrackExtended(siTrack);
   group->addTrackExtended(tpcTrack);
   
-  // note OutputTrack which is of type TrackExtended, only takes fits set for ref point = 0,0,0 
-  OutputTrack->setGroupTracks(group);
+  // note OutputTrack which is of type TrackExtended, only takes fits set for ref point = 0,0,0
   OutputTrack->setOmega(omega);
   OutputTrack->setTanLambda(tanlambda);
   OutputTrack->setPhi(phi0);
@@ -2004,7 +1986,9 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
   
   OutputTrack->setCovMatrix(cov);
   
-          
+  
+  if ( testCombinationOnly == false ) {
+
     for (int i=0;i<nSiHits;++i) {
       
       bool hit_is_outlier = false;
@@ -2044,7 +2028,6 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
     }
   }
   
-  delete marlin_trk ;
   
   streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: merged track created  " << OutputTrack << " with " << OutputTrack->getTrackerHitExtendedVec().size() << " hits, nhits tpc " << nTPCHits << " nSiHits " << nSiHits << ", testCombinationOnly = " << testCombinationOnly << std::endl;
   
