@@ -38,7 +38,8 @@
 
      - FullLDCTracking_MarlinTrk
        - Added SET hits. 
- 
+       - Make sure hits flagged as not to be used in the fit are not included.
+       - ForceTPCSegmentsMerging off by default
 
   --------
  | v01-07 |

@@ -240,7 +240,7 @@ FullLDCTracking_MarlinTrk::FullLDCTracking_MarlinTrk() : Processor("FullLDCTrack
   registerProcessorParameter("ForceTPCSegmentsMerging",
                              "Force merging of TPC Segments?",
                              _mergeTPCSegments,
-                             int(1));
+                             int(0));
   
   registerProcessorParameter("D0CutToMergeTPCSegments",
                              "Cut on D0 difference for merging TPC segments",
