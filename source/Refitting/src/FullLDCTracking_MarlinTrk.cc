@@ -12,6 +12,8 @@
 #include <IMPL/LCFlagImpl.h>
 #include <iostream>
 #include <algorithm>
+#include <memory>
+
 #include <math.h>
 #include <map>
 #include <marlin/Global.h>
@@ -590,7 +592,7 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
   int nTrkCand = int(trkVec.size());
   
   int nTotTracks = 0;
-  float eTot = 0.0;
+  float eTot  = 0.0;
   float pxTot = 0.0;
   float pyTot = 0.0;
   float pzTot = 0.0;
@@ -609,10 +611,19 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
     
     
     int nHits = int(hitVec.size());
+    
+    streamlog_out(DEBUG2) << " Trying to add track " << trkCand << " to final lcio collection nHits = " << nHits << std::endl;
+    
     for (int ihit=0;ihit<nHits;++ihit) {
-      
+    
+      if( hitVec[ihit]->getUsedInFit() == false )  {
+        streamlog_out(DEBUG2) << "rejecting hit for track " << trkCand << " at zhit  " <<  hitVec[ihit]->getTrackerHit()->getPosition()[2] << std::endl;
+        continue;
+      }
+
       EVENT::TrackerHit* trkHit = hitVec[ihit]->getTrackerHit();
-      if(trkHit) { 
+      
+      if(trkHit) {
         trkHits.push_back(trkHit);   
       }
       else{
@@ -655,11 +666,18 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
     streamlog_out(DEBUG2) << "Track Group = " << group << std::endl;
     
     if( group ) streamlog_out(DEBUG2) << "Track Group size = " << group->getTrackExtendedVec().size() << std::endl;
-    
-    if (group != NULL && group->getTrackExtendedVec().size() == 2) {
+
+    if (group != NULL && group->getTrackExtendedVec().size() > 0) {
     
       // get the second track as this must be the one furthest from the IP
-      TrackExtended* te = group->getTrackExtendedVec()[1];
+
+      TrackExtended* te = 0;
+      
+      if(group->getTrackExtendedVec().size()==1) {
+        te = group->getTrackExtendedVec()[0];
+      } else {
+        te = group->getTrackExtendedVec()[1];
+      }
       
       if(te->getTrack()->getTrackState(lcio::TrackState::AtLastHit)){
 
@@ -847,12 +865,18 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
     if (nhits_in_tpc > 0) Track->setTypeBit( lcio::ILDDetID::TPC ) ;
     if (nhits_in_set > 0) Track->setTypeBit( lcio::ILDDetID::SET ) ;
     
-    bool rejectTrack = (nhits_in_tpc < _cutOnTPCHits) && (nHitsSi<=0);
+    bool rejectTrack_onTPCHits = (nhits_in_tpc < _cutOnTPCHits) && (nHitsSi<=0);
     
-    rejectTrack = rejectTrack || ( (nhits_in_tpc<=0) && (nHitsSi<_cutOnSiHits) );
-    rejectTrack = rejectTrack || ( fabs(d0TrkCand) > _d0TrkCut ) || ( fabs(z0TrkCand) > _z0TrkCut );
+    bool rejectTrackonSiliconHits = ( (nhits_in_tpc<=0) && (nHitsSi<_cutOnSiHits) );
+    bool rejectTrackonImpactParameters =  ( fabs(d0TrkCand) > _d0TrkCut ) || ( fabs(z0TrkCand) > _z0TrkCut );
     
-    if ( rejectTrack ) {
+    if ( rejectTrack_onTPCHits || rejectTrackonSiliconHits  || rejectTrackonImpactParameters) {
+      
+      streamlog_out( DEBUG3 ) << " Track " << trkCand
+      << " rejected : rejectTrack_onTPCHits = " << rejectTrack_onTPCHits
+      << " rejectTrackonSiliconHits " << rejectTrackonSiliconHits
+      << " rejectTrackonImpactParameters " << rejectTrackonImpactParameters
+      << std::endl;
       
       delete Track;
       
@@ -878,7 +902,7 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
       pzTot += trkPz;   
       nTotTracks++;
    
-      streamlog_out(DEBUG3) << " Add Track to final Collection: ID = " << Track->id() << std::endl;
+      streamlog_out(DEBUG3) << " Add Track to final Collection: ID = " << Track->id() << " for trkCand "<< trkCand << std::endl;
       
       colTRK->addElement(Track);
    
@@ -2566,8 +2590,13 @@ void FullLDCTracking_MarlinTrk::AddNotCombinedTracks() {
         }
       }
     }
+
+    // At this stage all tpc segements will have been grouped.
     
-    // combining splitted TPC segments with the reconstructed tracks having Si hits
+    // Now try to combine the groups of TPC segments with the
+    // reconstructed tracks which have already been combined into full tracks
+    // containing both Si and TPC segments
+    
     int nCombTrk = int(_trkImplVec.size());
     int nSegments = int(TPCSegments.size());
 
@@ -2603,7 +2632,7 @@ void FullLDCTracking_MarlinTrk::AddNotCombinedTracks() {
           consider = (zminTPCSeg>zmaxComb) || (zmaxTPCSeg<zminComb);
         }
         
-        // if there are not overlaps in z, assuming that is tested for above
+        // if there are not overlaps in z, if _forbidOverlapInZComb is set above
         if (consider) {
 
           // loop over the TPC segments in the group
@@ -2617,8 +2646,11 @@ void FullLDCTracking_MarlinTrk::AddNotCombinedTracks() {
             float angleSignificance(0.);
             float significance = CompareTrkIII(trk,combTrk,_d0CutToMergeTPC,_z0CutToMergeTPC,iopt,angleSignificance);
  
+            // check if this is a better match than any before
             if ( (dPt<deltaPtMin || significance <5 ) ) {
               if(VetoMerge(trk,combTrk)==false){
+
+                // asign the track to be attached
                 CombTrkToAttach = combTrk;
                 keyTrack = trk;
                 deltaPtMin = dPt;
@@ -2655,22 +2687,32 @@ void FullLDCTracking_MarlinTrk::AddNotCombinedTracks() {
         GroupTracks * groupToAttach = CombTrkToAttach->getGroupTracks();          
         TrackExtended * SiCombTrk = groupToAttach->getTrackExtendedVec()[0];
         TrackExtended * TpcCombTrk = groupToAttach->getTrackExtendedVec()[1];
+
         if (_debug>=3) {
           int iopt = 4;
           PrintOutMerging(keyTrack,SiCombTrk,iopt);
           iopt = 5;
           PrintOutMerging(keyTrack,TpcCombTrk,iopt);      
         }
+
         for (int iTrk=0;iTrk<nTrk;iTrk++) {
-          TrackExtended * trk = segVec[iTrk];
-          groupToAttach->addTrackExtended( trk );
-          trk->setGroupTracks( groupToAttach );
-          TrackerHitExtendedVec hitVec = trk->getTrackerHitExtendedVec();
-          int nHitS = int(hitVec.size());              
-          for (int iHS=0;iHS<nHitS;++iHS) {
+
+          TrackExtended * segmentTrack = segVec[iTrk];
+          groupToAttach->addTrackExtended( segmentTrack );
+          segmentTrack->setGroupTracks( groupToAttach );
+
+          TrackerHitExtendedVec hitVec = segmentTrack->getTrackerHitExtendedVec();
+
+          int nHitSeg = int(hitVec.size());
+
+          for (int iHS=0;iHS<nHitSeg;++iHS) {
+
+            // take the hit from the segment and attach it to CombTrkToAttach
+            // flagging it as not to be used in the fit
             TrackerHitExtended * hitExt = hitVec[iHS];
             hitExt->setUsedInFit(false);
             CombTrkToAttach->addTrackerHitExtended( hitExt );
+
           }
         }
       }
@@ -2687,39 +2729,67 @@ void FullLDCTracking_MarlinTrk::AddNotCombinedTracks() {
           _trkImplVec.push_back(segVec[0]);
           _allNonCombinedTPCTracks.push_back(segVec[0]);
         }
-        else {
+        else { // several segments
           
           float zMin = 1.0e+20;
           TrackExtended * chosenTrack = NULL;
 
+          // loop over the segments
           for (int iTrk=0;iTrk<nTrk;++iTrk) {
 
-            TrackExtended * trk = segVec[iTrk];
-            Track * track = trk->getTrack();
+            TrackExtended * segment = segVec[iTrk];
+
+            // get the lcio track which is behind this segemnt
+            Track * track = segment->getTrack();
             TrackerHitVec hitVec = track->getTrackerHits();
 
+            streamlog_out(DEBUG1) << "Group of orphaned TPC tracks: trying track " << track->id() << std::endl;
+            
             int nHits = int(hitVec.size());
 
+            // loop over it's hits
             for (int iH=0;iH<nHits;++iH) {
+              
               float zPosi = fabs(hitVec[iH]->getPosition()[2]);
+
+              // if this segment has the hit closest to the IP so far
               if (zPosi<zMin) {
-                chosenTrack = trk;
+                // take this as the chosen track and break
+                chosenTrack = segment;
                 zMin = zPosi;
                 break;
               }
             }
           }
-          if (chosenTrack!=NULL) {
+
+          
+          if (chosenTrack!=NULL) { // can't really ever be null.
+
+            streamlog_out(DEBUG2) << "Group of orphaned TPC tracks: chosen track taken as " << chosenTrack->getTrack()->id() << std::endl;
+            
+            // create a new group of tracks
             GroupTracks * newGroup = new GroupTracks();
+
+            // first add the chosen track
+            chosenTrack->setGroupTracks( newGroup );
+            newGroup->addTrackExtended( chosenTrack );
+            
+            // loop over the segments ...
             for (int iTrk=0;iTrk<nTrk;++iTrk) {
-              TrackExtended * trk = segVec[iTrk];
-              trk->setGroupTracks( newGroup );
-              newGroup->addTrackExtended( trk );                        
-              TrackerHitExtendedVec hitVecS = trk->getTrackerHitExtendedVec();
+
+              TrackExtended * segment = segVec[iTrk];
+              
+              TrackerHitExtendedVec hitVecS = segment->getTrackerHitExtendedVec();
               int nHitS = int(hitVecS.size());                  
+
+              // loop over the hits for the current segment
               for (int iH=0;iH<nHitS;++iH) {
                 TrackerHitExtended * trkHitExt = hitVecS[iH];
-                if (trk!=chosenTrack) {
+
+                if (segment!=chosenTrack) { // ... then don't add the hits to the fit
+                  // set the relation between group and track
+                  segment->setGroupTracks( newGroup );
+                  newGroup->addTrackExtended( segment );
                   trkHitExt->setUsedInFit( false );
                   chosenTrack->addTrackerHitExtended( trkHitExt );                              
                 }
@@ -4994,7 +5064,7 @@ bool FullLDCTracking_MarlinTrk::VetoMerge(TrackExtended* firstTrackExt, TrackExt
   const float pSecond = sqrt(pxSecond*pxSecond+pySecond*pySecond+pzSecond*pzSecond);
   
   if(pFirst<_vetoMergeMomentumCut || pSecond<_vetoMergeMomentumCut) {
-    streamlog_out(DEBUG1) << "FullLDCTracking_MarlinTrk::VetoMerge fails momentum cut of 2.5 : pFirst = " << pFirst << " pSecond = " << pSecond << std::endl;
+    streamlog_out(DEBUG1) << "FullLDCTracking_MarlinTrk::VetoMerge do not veto as below momentum cut of 2.5 : pFirst = " << pFirst << " pSecond = " << pSecond << std::endl;
     return false;
   }
 
