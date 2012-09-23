@@ -2441,6 +2441,8 @@ void FullLDCTracking_MarlinTrk::AddNotCombinedTracks() {
       TrackExtended * trkExt = _allTPCTracks[i];
       GroupTracks * group = trkExt->getGroupTracks();
 
+      streamlog_out(DEBUG2) << " *****************  AddNotCombinedTracks: Check track " << trkExt << " id = " << trkExt->getTrack()->id()  << std::endl;
+      
       // only consider those tracks which have not yet been combined
       if (group == NULL) {
 
@@ -2463,7 +2465,7 @@ void FullLDCTracking_MarlinTrk::AddNotCombinedTracks() {
         
         nNonAssignedTPCSeg++;
 
-        // current number of TPC segments groupings
+        // current number of TPC segment groupings
         int nGroups = int(TPCSegments.size());
 
         float dPtMin = 1.0e+10;
@@ -2582,6 +2584,8 @@ void FullLDCTracking_MarlinTrk::AddNotCombinedTracks() {
           // create a new group of segments 
           GroupTracks * newSegment = new GroupTracks(trkExt);
           trkExt->setGroupTracks(newSegment);
+          streamlog_out(DEBUG2) << " *****************  AddNotCombinedTracks: Create new TPC Segment Group for track " << trkExt << " id = " << trkExt->getTrack()->id()  << std::endl;
+          
           TPCSegments.push_back(newSegment);
           float edges[2];
           edges[0] = zmin;
@@ -2815,31 +2819,51 @@ void FullLDCTracking_MarlinTrk::AddNotCombinedTracks() {
       TrackExtended * trkExt = _allTPCTracks[i];
       Track * track = trkExt->getTrack();
       GroupTracks * group = trkExt->getGroupTracks();
+
       if (group == NULL) {
-        TrackerHitVec hitVec = track->getTrackerHits();       
+
+        streamlog_out(DEBUG2) << " *****************  AddNotCombinedTracks: _mergeTPCSegments = " << _mergeTPCSegments << " : Add non combined TPC track " << trkExt << " id = " << track->id()  << std::endl;
+
+        TrackerHitExtendedVec hitVec = trkExt->getTrackerHitExtendedVec();
+        int nHTPC = int(hitVec.size());
+
+        for (int iHTPC=0;iHTPC<nHTPC;++iHTPC) {
+          hitVec[iHTPC]->setUsedInFit(true);
+        }
         _trkImplVec.push_back(trkExt);
         _allNonCombinedTPCTracks.push_back( trkExt );
+
         GroupTracks * newGrp = new GroupTracks();
         newGrp->addTrackExtended( trkExt );
         trkExt->setGroupTracks( newGrp );
+
       }
     }    
   }
   
   for (int i=0;i<nSiTrk;++i) { // adding left-over Si segments to the list of tracks
     TrackExtended * trkExt = _allSiTracks[i];
+    Track * track = trkExt->getTrack();
     GroupTracks * group = trkExt->getGroupTracks();
+
     if (group == NULL) {
+      
+       streamlog_out(DEBUG2) << " *****************  AddNotCombinedTracks: Add non combined Silicon Track : " << trkExt << " id = " << track->id()  << std::endl;
+      
       TrackerHitExtendedVec hitVec = trkExt->getTrackerHitExtendedVec();
       int nHSi = int(hitVec.size());
+
       for (int iHSi=0;iHSi<nHSi;++iHSi) {
         hitVec[iHSi]->setUsedInFit(true);
       }
+
       _trkImplVec.push_back(trkExt);
+      _allNonCombinedSiTracks.push_back( trkExt );
+
       GroupTracks * newGrp = new GroupTracks();
       newGrp->addTrackExtended( trkExt );
       trkExt->setGroupTracks( newGrp );   
-      _allNonCombinedSiTracks.push_back( trkExt );
+
     }
   }
   
