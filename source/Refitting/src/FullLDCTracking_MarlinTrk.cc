@@ -459,10 +459,10 @@ FullLDCTracking_MarlinTrk::FullLDCTracking_MarlinTrk() : Processor("FullLDCTrack
                              _vetoMergeMomentumCut,
                              float(2.5));
 
-  registerProcessorParameter( "MaxAllowedOutliersForTrackCombination",
+  registerProcessorParameter( "MaxAllowedPercentageOfOutliersForTrackCombination",
                              "Maximum number of outliers allowed before track combination is vetoed",
-                             _maxAllowedOutliersForTrackCombination,
-                             int(INT_MAX));
+                             _maxAllowedPercentageOfOutliersForTrackCombination,
+                             float(0.3));
 
 
   
@@ -1701,7 +1701,7 @@ void FullLDCTracking_MarlinTrk::MergeTPCandSiTracks() {
 	
         streamlog_out(DEBUG2) << " call CombineTracks for tpc trk " << tpcTrackExt << " si trk " << siTrackExt << std::endl;
 	
-        TrackExtended *combinedTrack = CombineTracks(tpcTrackExt,siTrackExt,_maxAllowedOutliersForTrackCombination, false);
+        TrackExtended *combinedTrack = CombineTracks(tpcTrackExt,siTrackExt,_maxAllowedPercentageOfOutliersForTrackCombination, false);
 	
         streamlog_out(DEBUG2) << " combinedTrack returns " << combinedTrack << std::endl;
         
@@ -1796,7 +1796,7 @@ void FullLDCTracking_MarlinTrk::MergeTPCandSiTracksII() {
 
       if ( (significance<10) && (angleSignificance<5) && !VetoMerge(tpcTrackExt,siTrackExt) ) {
 
-        TrackExtended * combinedTrack = CombineTracks(tpcTrackExt,siTrackExt,_maxAllowedOutliersForTrackCombination, false);
+        TrackExtended * combinedTrack = CombineTracks(tpcTrackExt,siTrackExt,_maxAllowedPercentageOfOutliersForTrackCombination, false);
         
          streamlog_out(DEBUG2) << " combinedTrack returns " << combinedTrack << std::endl;
         
@@ -1829,7 +1829,7 @@ void FullLDCTracking_MarlinTrk::MergeTPCandSiTracksII() {
 
 
 // if testCombinationOnly is true then hits will not be assigned to the tracks 
-TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrack, TrackExtended * siTrack, int maxAllowedOutliers, bool testCombinationOnly) {
+TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrack, TrackExtended * siTrack, float maxAllowedOutliers, bool testCombinationOnly) {
   
   TrackExtended * OutputTrack = NULL;
   
@@ -1971,10 +1971,15 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
   std::vector<std::pair<EVENT::TrackerHit* , double> > outliers ;
   marlin_trk.getOutliers(outliers);
   
-  if (int(outliers.size()) > maxAllowedOutliers) {
+  float outlier_pct = outliers.size()/float(trkHits.size()) ;
+  
+  streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: percentage of outliers " << outlier_pct << std::endl;
+  
+  if ( outlier_pct > maxAllowedOutliers) {
     
-    streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: number of outliers " << outliers.size() << " is greater than cut maximum: " << maxAllowedOutliers << std::endl;
+    streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: percentage of outliers " << outlier_pct << " is greater than cut maximum: " << maxAllowedOutliers << std::endl;
     return 0;
+
   }
 
 
@@ -2016,11 +2021,29 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
     for (int i=0;i<nSiHits;++i) {
       
       bool hit_is_outlier = false;
+
+      // we need to make sure that in the case of a composite hit we reject this as well
+      LCObjectVec hits;
+
+      hits.push_back(siHitVec[i]->getTrackerHit());
+      const LCObjectVec rawHits = siHitVec[i]->getTrackerHit()->getRawHits();
+
+      if ( rawHits.empty() == false) {
+        for (unsigned ihit=0; ihit < rawHits.size(); ++ihit) {
+          hits.push_back(rawHits[ihit]);
+        }
+      }
       
-      for ( unsigned ihit = 0; ihit < outliers.size(); ++ihit) {
-        if( outliers[ihit].first == siHitVec[i]->getTrackerHit() ){
-          hit_is_outlier = true;
-          break;
+      for ( unsigned ohit = 0; ohit < outliers.size(); ++ohit) {
+        for (unsigned ihit = 0; ihit < hits.size(); ++ihit) {
+          
+          if( outliers[ohit].first == hits[ihit] ){
+            hit_is_outlier = true;
+            break;
+          }
+          if (hit_is_outlier) {
+            break;
+          }
         }
       }
       
@@ -2919,7 +2942,7 @@ void FullLDCTracking_MarlinTrk::CheckTracks() {
       // const float sigmaDeltaP = sqrt(pFirst*sigmaPOverPFirst*pFirst*sigmaPOverPFirst+pSecond*sigmaPOverPSecond*pSecond*sigmaPOverPSecond);
       //      const float significance = deltaP/sigmaDeltaP;
       
-      TrackExtended * combinedTrack = CombineTracks(first,second, _maxAllowedOutliersForTrackCombination, true);
+      TrackExtended * combinedTrack = CombineTracks(first,second, _maxAllowedPercentageOfOutliersForTrackCombination, true);
       if(combinedTrack != NULL){
         const int minHits = std::min(firstHitVec.size(),secondHitVec.size());
         const int maxHits = std::max(firstHitVec.size(),secondHitVec.size());
@@ -3427,7 +3450,7 @@ float FullLDCTracking_MarlinTrk::CompareTrk(TrackExtended * first, TrackExtended
         
         
         // SJA:FIXME: try to fit the two tracks, without checking the number of hits which are close !!!!!!!!!!!
-        TrackExtended * combinedTrack = CombineTracks(first,second, _maxAllowedOutliersForTrackCombination, true);
+        TrackExtended * combinedTrack = CombineTracks(first,second, _maxAllowedPercentageOfOutliersForTrackCombination, true);
 
         // check that no more than 5 hits have been discared in the fit of the combined track
         if(combinedTrack != NULL){
@@ -3964,10 +3987,24 @@ void FullLDCTracking_MarlinTrk::AssignOuterHitsToTracks(TrackerHitExtendedVec hi
             streamlog_out(DEBUG3) << "FullLDCTracking_MarlinTrk::AssignOuterHitsToTracks: creation of fit fails with error " << error << std::endl;
             
             delete marlin_trk ;
-            return ;
+            continue ;
             
           }
+         
+          std::vector<std::pair<EVENT::TrackerHit* , double> > outliers ;
+          marlin_trk->getOutliers(outliers);
           
+          float outlier_pct = outliers.size()/float(trkHits.size()) ;
+          
+          streamlog_out(DEBUG1) << "FullLDCTracking_MarlinTrk::AssignOuterHitsToTracks: percentage of outliers " << outlier_pct << std::endl;
+          
+          if ( outlier_pct > _maxAllowedPercentageOfOutliersForTrackCombination) {
+            
+            streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::AssignOuterHitsToTracks: percentage of outliers " << outlier_pct << " is greater than cut maximum: " << _maxAllowedPercentageOfOutliersForTrackCombination << std::endl;
+            delete marlin_trk ;
+            continue ;
+
+          }
           
           const gear::Vector3D point(0.,0.,0.); // nominal IP
           int return_code = 0;
@@ -3981,7 +4018,7 @@ void FullLDCTracking_MarlinTrk::AssignOuterHitsToTracks(TrackerHitExtendedVec hi
             
             streamlog_out(DEBUG3) << "FullLDCTracking_MarlinTrk::AssignOuterHitsToTracks: propagate to IP fails with error " << error << std::endl;
             
-            return ;
+            continue ;
             
           }
           
@@ -3989,7 +4026,7 @@ void FullLDCTracking_MarlinTrk::AssignOuterHitsToTracks(TrackerHitExtendedVec hi
             
             streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::AssignOuterHitsToTracks: Fit failed : NDF is less that zero  " << ndf << std::endl;
             
-            return ;
+            continue ;
             
           }
           
@@ -4490,11 +4527,25 @@ void FullLDCTracking_MarlinTrk::AssignSiHitsToTracks(TrackerHitExtendedVec hitVe
           streamlog_out(DEBUG3) << "FullLDCTracking_MarlinTrk::AssignSiHitsToTracks: creation of fit fails with error " << error << std::endl;
           
           delete marlin_trk ;
-          return ;
+          continue ;
           
         }
         
+        std::vector<std::pair<EVENT::TrackerHit* , double> > outliers ;
+        marlin_trk->getOutliers(outliers);
         
+        float outlier_pct = outliers.size()/float(trkHits.size());
+        
+        streamlog_out(DEBUG1) << "FullLDCTracking_MarlinTrk::AssignSiHitsToTracks: percentage of outliers " << outlier_pct << std::endl;
+        
+        if ( outlier_pct > _maxAllowedPercentageOfOutliersForTrackCombination) {
+          
+          streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::AssignSiHitsToTracks: percentage of outliers " << outlier_pct << " is greater than cut maximum: " << _maxAllowedPercentageOfOutliersForTrackCombination << std::endl;
+          delete marlin_trk ;
+          continue ;
+          
+        }
+                
         const gear::Vector3D point(0.,0.,0.); // nominal IP
         int return_code = 0;
         
@@ -4507,7 +4558,7 @@ void FullLDCTracking_MarlinTrk::AssignSiHitsToTracks(TrackerHitExtendedVec hitVe
           
           streamlog_out(DEBUG3) << "FullLDCTracking_MarlinTrk::AssignSiHitsToTracks: propagate to IP fails with error " << error << std::endl;
           
-          return ;
+          continue ;
           
         }
         
@@ -4515,7 +4566,7 @@ void FullLDCTracking_MarlinTrk::AssignSiHitsToTracks(TrackerHitExtendedVec hitVe
           
           streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::AssignSiHitsToTracks: Fit failed : NDF is less that zero  " << ndf << std::endl;
           
-          return ;
+          continue ;
           
         }
         
@@ -4526,7 +4577,7 @@ void FullLDCTracking_MarlinTrk::AssignSiHitsToTracks(TrackerHitExtendedVec hitVe
           
           streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::AssignSiHitsToTracks: track fail Chi2 cut of " << _chi2FitCut << " chi2 of track = " <<  chi2Fit << std::endl;
           
-          return ;
+          continue ;
           
         }
               
@@ -4763,7 +4814,7 @@ void FullLDCTracking_MarlinTrk::PrintOutMerging(TrackExtended * firstTrackExt, T
       
       streamlog_out(DEBUG4) << "Difference in +P = " << dPplus << "  -P = " << dPminus << std::endl;
       
-      TrackExtended * combinedTrack = CombineTracks(firstTrackExt,secondTrackExt, _maxAllowedOutliersForTrackCombination, true);
+      TrackExtended * combinedTrack = CombineTracks(firstTrackExt,secondTrackExt, _maxAllowedPercentageOfOutliersForTrackCombination, true);
       
       if(combinedTrack != NULL){
         streamlog_out(DEBUG4) << "CombinedTrack " << combinedTrack->getNDF() << " c.f. " << firstTrackExt->getNDF()+secondTrackExt->getNDF()+5 << std::endl;
@@ -4823,7 +4874,7 @@ void FullLDCTracking_MarlinTrk::PrintOutMerging(TrackExtended * firstTrackExt, T
       
       streamlog_out(DEBUG4) << "Difference in +P = " << dPplus << "  -P = " << dPminus << std::endl;
       
-      TrackExtended * combinedTrack = CombineTracks(firstTrackExt,secondTrackExt, _maxAllowedOutliersForTrackCombination, true);
+      TrackExtended * combinedTrack = CombineTracks(firstTrackExt,secondTrackExt, _maxAllowedPercentageOfOutliersForTrackCombination, true);
       if(combinedTrack != NULL){
         streamlog_out(DEBUG4) << "CombinedTrack " << combinedTrack->getNDF() << " c.f. " << firstTrackExt->getNDF()+secondTrackExt->getNDF()+5 << std::endl;
         delete combinedTrack->getGroupTracks();
@@ -4884,7 +4935,7 @@ void FullLDCTracking_MarlinTrk::PrintOutMerging(TrackExtended * firstTrackExt, T
       
       streamlog_out(DEBUG4) << "Difference in +P = " << dPplus << "  -P = " << dPminus << std::endl;      
       
-      TrackExtended * combinedTrack = CombineTracks(firstTrackExt,secondTrackExt, _maxAllowedOutliersForTrackCombination, true);
+      TrackExtended * combinedTrack = CombineTracks(firstTrackExt,secondTrackExt, _maxAllowedPercentageOfOutliersForTrackCombination, true);
       
       if(combinedTrack != NULL){
         streamlog_out(DEBUG4) << "CombinedTrack " << combinedTrack->getNDF() << " c.f. " << firstTrackExt->getNDF()+secondTrackExt->getNDF()+5 << std::endl;
@@ -4934,7 +4985,7 @@ void FullLDCTracking_MarlinTrk::PrintOutMerging(TrackExtended * firstTrackExt, T
       
       streamlog_out(DEBUG4) << "Difference in +P = " << dPplus << "  -P = " << dPminus << std::endl;
 
-      TrackExtended * combinedTrack = CombineTracks(firstTrackExt,secondTrackExt, _maxAllowedOutliersForTrackCombination, true);
+      TrackExtended * combinedTrack = CombineTracks(firstTrackExt,secondTrackExt, _maxAllowedPercentageOfOutliersForTrackCombination, true);
       
       if(combinedTrack != NULL){
         streamlog_out(DEBUG4) << "CombinedTrack " << combinedTrack->getNDF() << " c.f. " << firstTrackExt->getNDF()+secondTrackExt->getNDF()+5 << std::endl;
@@ -5095,7 +5146,7 @@ bool FullLDCTracking_MarlinTrk::VetoMerge(TrackExtended* firstTrackExt, TrackExt
   bool veto = false;
   
   bool testCombinationOnly=true;
-  TrackExtended * combinedTrack = CombineTracks(firstTrackExt,secondTrackExt,_maxAllowedOutliersForTrackCombination,testCombinationOnly);
+  TrackExtended * combinedTrack = CombineTracks(firstTrackExt,secondTrackExt,_maxAllowedPercentageOfOutliersForTrackCombination,testCombinationOnly);
 
 
   
