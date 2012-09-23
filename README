@@ -40,6 +40,11 @@
        - Added SET hits. 
        - Make sure hits flagged as not to be used in the fit are not included.
        - ForceTPCSegmentsMerging off by default
+       - Ensure that trying to add a false hits, cannot derail the whole track creation. 
+         Test number of Outliers using MaxAllowedPercentageOfOutliersForTrackCombination. 
+       - When not using ForceTPCSegmentsMerging, make sure that TPC tracks which do not get 
+       	 merged with Silicon Tracks have their hits set to setUsedInFit.
+
 
   --------
  | v01-07 |
