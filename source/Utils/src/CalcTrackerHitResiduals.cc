@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include <vector>
+#include <cstdlib>
 
 #include <EVENT/LCCollection.h>
 #include <IMPL/LCCollectionVec.h>
