@@ -51,6 +51,8 @@
 #include <climits>
 #include <cmath>
 
+#include <TMath.h>
+
 using namespace lcio ;
 using namespace marlin ;
 using namespace MarlinTrk ;
@@ -1502,6 +1504,14 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
     
     for (int iTrk=0; iTrk<nelem; ++iTrk) {
       Track * siTrack = dynamic_cast<Track*>(col->getElementAt(iTrk));
+    
+      double prob = TMath::Prob(siTrack->getChi2(),siTrack->getNdf());
+      
+      if( prob < 0.001 ) {
+        streamlog_out(DEBUG5) << "Si Tracks " << siTrack << " id : " << siTrack->id() << " rejected with prob " << prob << " < 0.001 " << std::endl;
+        continue;
+      }
+      
       TrackExtended * trackExt = new TrackExtended( siTrack );
       TrackerHitVec hitVec = siTrack->getTrackerHits();
       int nHits = int(hitVec.size());
@@ -2062,7 +2072,7 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
   
   streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: Check for Silicon Hit rejections ... " << std::endl;
   
-  if ( siOutliers.size() > _maxAllowedSiHitRejectionsForTrackCombination ) {
+  if ( (int)siOutliers.size() > _maxAllowedSiHitRejectionsForTrackCombination ) {
     
     streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: Fit rejects " << siOutliers.size() << " silicon hits : max allowed rejections = " << _maxAllowedSiHitRejectionsForTrackCombination << " : Combination rejected " << std::endl;
     return 0;
@@ -2964,7 +2974,7 @@ void FullLDCTracking_MarlinTrk::CheckTracks() {
     momFirst[1]= helixFirst.getMomentum()[1];
     momFirst[2]= helixFirst.getMomentum()[2];
     float pFirst    = sqrt(momFirst[0]*momFirst[0]+momFirst[1]*momFirst[1]+momFirst[2]*momFirst[2]);
-    if(std::isnan(pFirst))continue;
+    if(isnan(pFirst))continue;
     TrackerHitExtendedVec firstHitVec  = first->getTrackerHitExtendedVec();
     if(firstHitVec.size()<1)continue;
     
@@ -2983,7 +2993,7 @@ void FullLDCTracking_MarlinTrk::CheckTracks() {
       momSecond[1] = helixSecond.getMomentum()[1];
       momSecond[2] = helixSecond.getMomentum()[2];
       float pSecond    = sqrt(momSecond[0]*momSecond[0]+momSecond[1]*momSecond[1]+momSecond[2]*momSecond[2]);
-      if(std::isnan(pSecond))continue;
+      if(isnan(pSecond))continue;
       TrackerHitExtendedVec secondHitVec  = second->getTrackerHitExtendedVec();
       if(secondHitVec.size()<1)continue;
       if(firstHitVec.size()+secondHitVec.size()<10)continue;
@@ -3638,10 +3648,10 @@ void FullLDCTracking_MarlinTrk::AddNotAssignedHits() {
        TrackerHitExtended * trkHitExt = _allSETHits[iSET];
        TrackerHit * trkHit = trkHitExt->getTrackerHit();
        int layer = getLayerID(trkHit);
-       if (layer>=0&&layer<_nLayersSET)
+       if (layer>=0 && (unsigned)layer < _nLayersSET)
          SETHits[layer].push_back(trkHitExt);
      }
-     for (int iL=0; iL<_nLayersSET; ++iL) { // loop over SET layers
+     for (unsigned iL=0; iL< _nLayersSET; ++iL) { // loop over SET layers
        TrackerHitExtendedVec hitVec = SETHits[iL];
        int refit = 1;
        if(hitVec.empty() == false) AssignOuterHitsToTracks(hitVec,_distCutForSETHits,refit);
