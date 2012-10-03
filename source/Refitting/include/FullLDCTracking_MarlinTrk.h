@@ -402,6 +402,7 @@ protected:
   
   double _maxChi2PerHit;
   float  _maxAllowedPercentageOfOutliersForTrackCombination;
+  int  _maxAllowedSiHitRejectionsForTrackCombination;
   
   bool _runMarlinTrkDiagnostics;
   std::string _MarlinTrkDiagnosticsName;

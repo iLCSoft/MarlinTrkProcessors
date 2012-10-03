@@ -307,6 +307,7 @@ FullLDCTracking_MarlinTrk::FullLDCTracking_MarlinTrk() : Processor("FullLDCTrack
                              "Cut on the number of the TPC hits for tracks with no Si hits",
                              _cutOnTPCHits,
                              int(35));
+
   registerProcessorParameter("CutOnSiHits",
                              "Cut on the number of the Si hits for tracks with no TPC hits",
                              _cutOnSiHits,
@@ -464,6 +465,10 @@ FullLDCTracking_MarlinTrk::FullLDCTracking_MarlinTrk() : Processor("FullLDCTrack
                              _maxAllowedPercentageOfOutliersForTrackCombination,
                              float(0.3));
 
+  registerProcessorParameter( "MaxAllowedSiHitRejectionsForTrackCombination",
+                             "Maximum number of outliers allowed before track combination is vetoed",
+                             _maxAllowedSiHitRejectionsForTrackCombination,
+                             int(2));
 
   
   
@@ -1973,7 +1978,6 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
   
   float outlier_pct = outliers.size()/float(trkHits.size()) ;
   
-  streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: percentage of outliers " << outlier_pct << std::endl;
   
   if ( outlier_pct > maxAllowedOutliers) {
     
@@ -1982,6 +1986,88 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
 
   }
 
+  // sort the hits into outliers from TPC and Silicon as we will reject the combination if more that 2 Si hits get rejected ...
+  
+  std::vector<TrackerHitExtended*> siHitInFit;
+  std::vector<TrackerHitExtended*> siOutliers;
+  std::vector<TrackerHitExtended*> tpcHitInFit;
+  std::vector<TrackerHitExtended*> tpcOutliers;
+  
+  for (int i=0;i<nSiHits;++i) {
+    
+    bool hit_is_outlier = false;
+    
+    // we need to make sure that in the case of a composite hit we reject this as well
+    LCObjectVec hits;
+    
+    // all hits, both the 2D tracker hit, as well as any raw hits which belong to it
+    hits.push_back(siHitVec[i]->getTrackerHit());
+    
+    // add the raw hits ...
+    const LCObjectVec rawHits = siHitVec[i]->getTrackerHit()->getRawHits();
+    
+    if ( rawHits.empty() == false) {
+      for (unsigned ihit=0; ihit < rawHits.size(); ++ihit) {
+        hits.push_back(rawHits[ihit]);
+      }
+    }
+    
+    // now double loop over the outliers and the hits assosiated with this TrackerHitExtended and compare
+    for ( unsigned ohit = 0; ohit < outliers.size(); ++ohit) {
+      for (unsigned ihit = 0; ihit < hits.size(); ++ihit) {
+        
+        // compare outlier pointer to TrackerHit pointer
+        if( outliers[ohit].first == hits[ihit] ){
+          // silicon outlier found so add the TrackerHitExtended to the list of outliers
+          hit_is_outlier = true;
+          siOutliers.push_back(siHitVec[i]);
+          break;
+        }
+        if (hit_is_outlier) {
+          break;
+        }
+      }
+    }
+    
+    if( hit_is_outlier == false ){
+      // add the TrackerHitExtended to the list of silicon hits used in the fit
+      siHitInFit.push_back(siHitVec[i]);
+    }
+    
+  }
+  
+  // more simple as TPC hits are never composite
+  for (int i=0;i<nTPCHits;++i) {
+    
+    bool hit_is_outlier = false;
+    
+    for ( unsigned ihit = 0; ihit < outliers.size(); ++ihit) {
+
+      // compare outlier pointer to TrackerHit pointer
+      if( outliers[ihit].first == tpcHitVec[i]->getTrackerHit() ){
+        // tpc outlier found so add the TrackerHitExtended to the list of outliers
+        hit_is_outlier = true;
+        tpcOutliers.push_back(tpcHitVec[i]);
+        break;
+      }
+    }
+    
+    if( hit_is_outlier == false ){
+      // add the TrackerHitExtended to the list of tpc hits used in the fit
+      tpcHitInFit.push_back(tpcHitVec[i]);
+    }
+    
+  }
+
+  
+  streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: Check for Silicon Hit rejections ... " << std::endl;
+  
+  if ( siOutliers.size() > _maxAllowedSiHitRejectionsForTrackCombination ) {
+    
+    streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: Fit rejects " << siOutliers.size() << " silicon hits : max allowed rejections = " << _maxAllowedSiHitRejectionsForTrackCombination << " : Combination rejected " << std::endl;
+    return 0;
+    
+  }
 
   
   float omega = trkState.getOmega();
@@ -2015,64 +2101,33 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
   
   OutputTrack->setCovMatrix(cov);
   
-  
+  // if this is not just a test of the combination add the hits to the combined track
   if ( testCombinationOnly == false ) {
 
-    for (int i=0;i<nSiHits;++i) {
-      
-      bool hit_is_outlier = false;
-
-      // we need to make sure that in the case of a composite hit we reject this as well
-      LCObjectVec hits;
-
-      hits.push_back(siHitVec[i]->getTrackerHit());
-      const LCObjectVec rawHits = siHitVec[i]->getTrackerHit()->getRawHits();
-
-      if ( rawHits.empty() == false) {
-        for (unsigned ihit=0; ihit < rawHits.size(); ++ihit) {
-          hits.push_back(rawHits[ihit]);
-        }
-      }
-      
-      for ( unsigned ohit = 0; ohit < outliers.size(); ++ohit) {
-        for (unsigned ihit = 0; ihit < hits.size(); ++ihit) {
-          
-          if( outliers[ohit].first == hits[ihit] ){
-            hit_is_outlier = true;
-            break;
-          }
-          if (hit_is_outlier) {
-            break;
-          }
-        }
-      }
-      
-      if( hit_is_outlier == false ){
-        TrackerHitExtended * hitExt = siHitVec[i];
-        OutputTrack->addTrackerHitExtended(hitExt);
-        hitExt->setUsedInFit(true);
-      }
-      
+    for (unsigned ihit=0; ihit<siHitInFit.size(); ++ihit) {
+      TrackerHitExtended * hitExt = siHitInFit[ihit];
+      OutputTrack->addTrackerHitExtended(hitExt);
+      hitExt->setUsedInFit(true);
     }
     
-    for (int i=0;i<nTPCHits;++i) {
-      
-      bool hit_is_outlier = false;
-      
-      for ( unsigned ihit = 0; ihit < outliers.size(); ++ihit) {
-        if( outliers[ihit].first == tpcHitVec[i]->getTrackerHit() ){
-          hit_is_outlier = true;
-          break;
-        }
-      }
-      
-      if( hit_is_outlier == false ){
-        TrackerHitExtended * hitExt = tpcHitVec[i];
-        OutputTrack->addTrackerHitExtended(hitExt);
-        hitExt->setUsedInFit(true);
-      }
-      
+    for (unsigned ihit=0; ihit<siOutliers.size(); ++ihit) {
+      TrackerHitExtended * hitExt = siOutliers[ihit];
+      OutputTrack->addTrackerHitExtended(hitExt);
+      hitExt->setUsedInFit(false);
     }
+
+    for (unsigned ihit=0; ihit<tpcHitInFit.size(); ++ihit) {
+      TrackerHitExtended * hitExt = tpcHitInFit[ihit];
+      OutputTrack->addTrackerHitExtended(hitExt);
+      hitExt->setUsedInFit(true);
+    }
+    
+    for (unsigned ihit=0; ihit<tpcOutliers.size(); ++ihit) {
+      TrackerHitExtended * hitExt = tpcOutliers[ihit];
+      OutputTrack->addTrackerHitExtended(hitExt);
+      hitExt->setUsedInFit(false);
+    }
+            
   }
   
   
@@ -2977,7 +3032,7 @@ void FullLDCTracking_MarlinTrk::CheckTracks() {
           
           if( getDetectorID(firstHitVec[ihit]->getTrackerHit()) == lcio::ILDDetID::TPC) nTpcFirst++;
           
-          if(firstHitVec[ihit]->getUsedInFit()==true)nUsedFirst++;
+          if( firstHitVec[ihit]->getUsedInFit()==true ) nUsedFirst++;
         }
         
         
@@ -3204,7 +3259,7 @@ float FullLDCTracking_MarlinTrk::CompareTrkIII(TrackExtended * first, TrackExten
  
  .... 
  
- note currently this is only used in AddNonCombinedTracks
+ note currently this is only used in AddNotCombinedTracks
  
  */
 
