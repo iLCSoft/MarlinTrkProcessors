@@ -51,7 +51,9 @@
 #include <climits>
 #include <cmath>
 
-#include <TMath.h>
+#include "gsl/gsl_randist.h"
+#include "gsl/gsl_cdf.h"
+
 
 using namespace lcio ;
 using namespace marlin ;
@@ -456,6 +458,13 @@ FullLDCTracking_MarlinTrk::FullLDCTracking_MarlinTrk() : Processor("FullLDCTrack
                              "Maximum Chi-squared value allowed when assigning a hit to a track",
                              _maxChi2PerHit,
                              double(1.e2));
+  
+
+  registerProcessorParameter( "MinChi2ProbForSiliconTracks",
+                             "Minimum Chi-squared P value allowed for Silicon Tracks.",
+                             _minChi2ProbForSiliconTracks,
+                             double(1.e-03));
+  
   
   registerProcessorParameter( "VetoMergeMomentumCut",
                              "Minimum momentum for which Veto is applicable",
@@ -1504,11 +1513,11 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
     
     for (int iTrk=0; iTrk<nelem; ++iTrk) {
       Track * siTrack = dynamic_cast<Track*>(col->getElementAt(iTrk));
-    
-      double prob = TMath::Prob(siTrack->getChi2(),siTrack->getNdf());
       
-      if( prob < 0.001 ) {
-        streamlog_out(DEBUG5) << "Si Tracks " << siTrack << " id : " << siTrack->id() << " rejected with prob " << prob << " < 0.001 " << std::endl;
+      double prob = ( siTrack->getNdf() > 0 ? gsl_cdf_chisq_Q(  siTrack->getChi2() ,  (double) siTrack->getNdf() )  : 0. ) ;
+      
+      if( prob < _minChi2ProbForSiliconTracks ) {
+        streamlog_out(DEBUG5) << "Si Tracks " << siTrack << " id : " << siTrack->id() << " rejected with prob " << prob << " < " << _minChi2ProbForSiliconTracks << std::endl;
         continue;
       }
       
@@ -2974,7 +2983,7 @@ void FullLDCTracking_MarlinTrk::CheckTracks() {
     momFirst[1]= helixFirst.getMomentum()[1];
     momFirst[2]= helixFirst.getMomentum()[2];
     float pFirst    = sqrt(momFirst[0]*momFirst[0]+momFirst[1]*momFirst[1]+momFirst[2]*momFirst[2]);
-    if(isnan(pFirst))continue;
+    if(std::isnan(pFirst))continue;
     TrackerHitExtendedVec firstHitVec  = first->getTrackerHitExtendedVec();
     if(firstHitVec.size()<1)continue;
     
@@ -2993,7 +3002,7 @@ void FullLDCTracking_MarlinTrk::CheckTracks() {
       momSecond[1] = helixSecond.getMomentum()[1];
       momSecond[2] = helixSecond.getMomentum()[2];
       float pSecond    = sqrt(momSecond[0]*momSecond[0]+momSecond[1]*momSecond[1]+momSecond[2]*momSecond[2]);
-      if(isnan(pSecond))continue;
+      if(std::isnan(pSecond))continue;
       TrackerHitExtendedVec secondHitVec  = second->getTrackerHitExtendedVec();
       if(secondHitVec.size()<1)continue;
       if(firstHitVec.size()+secondHitVec.size()<10)continue;

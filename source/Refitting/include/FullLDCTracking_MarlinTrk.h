@@ -401,8 +401,9 @@ protected:
   float _initialTrackError_tanL;
   
   double _maxChi2PerHit;
+  double _minChi2ProbForSiliconTracks;
   float  _maxAllowedPercentageOfOutliersForTrackCombination;
-  int  _maxAllowedSiHitRejectionsForTrackCombination;
+  int    _maxAllowedSiHitRejectionsForTrackCombination;
   
   bool _runMarlinTrkDiagnostics;
   std::string _MarlinTrkDiagnosticsName;
