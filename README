@@ -19,8 +19,13 @@
 
 
 
+  ---------
+ | v01-09  |
+  ---------
 
-
+     - FullLDCTracking_MarlinTrk
+       - Use the Chi2 probability to remove badly fitted silicon tracks so that the don't pollute the TPC Si track merging.
+       - Reject combinations of TPC and Silicon Tracks if more that a certain number of Silicon Hits, default 2, get rejected by the fit of the combined track.
 
   --------
  | v01-08 |
