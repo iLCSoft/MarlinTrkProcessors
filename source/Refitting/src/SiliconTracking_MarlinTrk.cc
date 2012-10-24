@@ -1336,6 +1336,22 @@ int SiliconTracking_MarlinTrk::InitialiseVTX(LCEvent * evt) {
   }
   
   
+  for (unsigned i=0; i<_sectors.size(); ++i) {
+    int nhits = _sectors[i].size();
+    if( nhits != 0 ) streamlog_out(DEBUG1) << " Number of Hits in VXD/SIT Sector " << i << " = " << _sectors[i].size() << std::endl;
+    if (nhits > _max_hits_per_sector) {
+      for (unsigned ihit=0; ihit<_sectors[i].size(); ++ihit) {
+        delete _sectors[i][ihit];
+      }
+      _sectors[i].clear();
+      if( nhits != 0 ) streamlog_out(ERROR)  << " ### EVENT " << evt->getEventNumber() << " :: RUN " << evt->getRunNumber() << " \n ### Number of Hits in VXD/SIT Sector " << i << " = " << nhits << " : Limit is set to " << _max_hits_per_sector << " : This sector will be dropped from track search, and QualityCode set to \"Poor\" " << std::endl;
+      
+      _output_track_col_quality = _output_track_col_quality_POOR;
+      
+    }
+    
+  }
+  
   return 1; // success 
   
 }
@@ -1657,11 +1673,12 @@ TrackExtended * SiliconTracking_MarlinTrk::TestTriplet(TrackerHitExtended * oute
   std::vector<TrackerHit*> hit_list;
   std::vector<MCParticle*> mcps_imo;
   std::vector<MCParticle*> mcp_s;
-//  int nmcps   = 0;
-//  int nbadHits = 0;
   int triplet_code = 0;
   
 #ifdef MARLINTRK_DIAGNOSTICS_ON
+
+  int nmcps   = 0;
+  int nbadHits = 0;
   
   int layer  = 9 ;
   int size   = 3 ;
