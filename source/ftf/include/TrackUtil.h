@@ -41,10 +41,10 @@ const double bFactor = 0.00299792458 ;
 #define square(a)   ( (a) * (a) )
 
 
-extern double fmod(double,double);
-extern double sqrt(double);
-extern double fabs(double);
-extern double atan2(double,double);
+// extern double fmod(double,double);
+// extern double sqrt(double);
+// extern double fabs(double);
+// extern double atan2(double,double);
 
 namespace ftf
 {
