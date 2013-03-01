@@ -2,6 +2,7 @@
 #include "TrackUtil.h"
 #include <algorithm>
 #include <iostream>
+#include <cstring>
 using namespace ftf;
 using std::cout;
 using std::endl;

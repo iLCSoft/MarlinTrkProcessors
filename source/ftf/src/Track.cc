@@ -1,4 +1,5 @@
 #include "Track.h"
+#include <cstring>
 using namespace ftf;
 using std::min;
 using std::max;
