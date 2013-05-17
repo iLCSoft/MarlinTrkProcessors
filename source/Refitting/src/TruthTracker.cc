@@ -933,7 +933,7 @@ void TruthTracker::createTrack_iterative( MCParticle* mcp, UTIL::BitField64& cel
   
     size   = 10 ;
     layer  = 11 ;
-    ml = marker | ( layer << CED_LAYER_SHIFT ) ;
+    //    ml = marker | ( layer << CED_LAYER_SHIFT ) ;
     
     //ced_describe_layer( colName.c_str() ,layer);
     MarlinCED::add_layer_description(colName, layer); 
@@ -948,7 +948,7 @@ void TruthTracker::createTrack_iterative( MCParticle* mcp, UTIL::BitField64& cel
       ced_hit_ID(trkhit->getPosition()[0],
                  trkhit->getPosition()[1],
                  trkhit->getPosition()[2],
-                 ml, size , color, trkhit->id() ) ;
+                 marker, layer , size , color, trkhit->id() ) ;
       
     } // hits
   }
@@ -1258,14 +1258,14 @@ void TruthTracker::createTrack_iterative( MCParticle* mcp, UTIL::BitField64& cel
                                      0.0,  helix_max_r ,
                                      helix_max_z, trkStateIP->id() ) ;	
                 
-                ml = marker | ( layer+10 << CED_LAYER_SHIFT ) ;
+		//                ml = marker | ( layer+10 << CED_LAYER_SHIFT ) ;
                 
                 for(  std::vector<TrackerHit*>::const_iterator it = added_hits.begin();  it != added_hits.end() ; it++ ) {
                   
                 ced_hit_ID((*it)->getPosition()[0],
                            (*it)->getPosition()[1],
                            (*it)->getPosition()[2],
-                           ml, 4 , color, (*it)->id() ) ;
+                           marker, layer+10 , 4 , color, (*it)->id() ) ;
                   
                 } // hits
               }                
@@ -1379,14 +1379,14 @@ void TruthTracker::createTrack_iterative( MCParticle* mcp, UTIL::BitField64& cel
                                  0.0,  _helix_max_r ,
                                  helix_max_z, trkStateIP->id() ) ;	
             
-            ml = marker | ( layer+10 << CED_LAYER_SHIFT ) ;
+            //ml = marker | ( layer+10 << CED_LAYER_SHIFT ) ;
           
             for(  std::vector<TrackerHit*>::const_iterator it = added_hits.begin();  it != added_hits.end() ; it++ ) {
               
               ced_hit_ID((*it)->getPosition()[0],
                          (*it)->getPosition()[1],
                          (*it)->getPosition()[2],
-                         ml, 4 , color, (*it)->id() ) ;
+                         marker, layer+10 , 4 , color, (*it)->id() ) ;
               
             } // hits
           } 

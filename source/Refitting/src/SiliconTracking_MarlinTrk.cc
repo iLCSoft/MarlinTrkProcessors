@@ -1772,7 +1772,7 @@ TrackExtended * SiliconTracking_MarlinTrk::TestTriplet(TrackerHitExtended * oute
     
     size   = 10 ;
     layer  = 11 ;
-    ml = marker | ( layer << CED_LAYER_SHIFT ) ;
+    //    ml = marker | ( layer << CED_LAYER_SHIFT ) ;
     
     //ced_describe_layer( colName.c_str() ,layer);
     MarlinCED::add_layer_description(colName, layer);
@@ -1787,7 +1787,7 @@ TrackExtended * SiliconTracking_MarlinTrk::TestTriplet(TrackerHitExtended * oute
       ced_hit_ID(trkhit->getPosition()[0],
                  trkhit->getPosition()[1],
                  trkhit->getPosition()[2],
-                 ml, size , color, trkhit->id() ) ;
+                 marker, layer, size , color, trkhit->id() ) ;
       
     } // hits
   }
