@@ -96,7 +96,7 @@ ADD_DEFINITIONS( "-Wall -ansi -pedantic" )
 ADD_DEFINITIONS( "-Wno-long-long" )
 
 # include directories
-INCLUDE_DIRECTORIES( ./source/Digitisers/include ./source/Refitting/include ./source/Utils/include ./source/ftf/include )
+INCLUDE_DIRECTORIES( . ./source/Digitisers/include ./source/Refitting/include ./source/Utils/include ./source/ftf/include )
 #INSTALL_DIRECTORY( ./include DESTINATION . FILES_MATCHING PATTERN "*.h" )
 
 # add library
