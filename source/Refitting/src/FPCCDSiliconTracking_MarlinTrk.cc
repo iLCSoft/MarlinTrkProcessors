@@ -1,17 +1,3 @@
-#define debug_2013_09_01 0
-
-#define debug_2013_09_10 0 //2013_09_27、追加した機能あり。
-//Tripletで拾われるべきMCPが拾われたかをチェックするためにつかう。　
-
-#define debug_2013_09_12 0
-
-
-//何でかmuonのくせに中々トラッキングが終わらないのでそれをチェックする。
-#define debug_2013_10_01 0
-
-
-
-
 #include "FPCCDSiliconTracking_MarlinTrk.h"
 
 
@@ -70,7 +56,7 @@
 #include "TMath.h"
 #include "TStopwatch.h"
 
-#include "GetPurity.h" //by Mori
+#include "../GetPurity.h" //by Mori
 
 
 
@@ -198,7 +184,8 @@ FPCCDSiliconTracking_MarlinTrk::FPCCDSiliconTracking_MarlinTrk() : Processor("FP
       int(16));
 
 
-  // Input Collections
+
+  // Input Collections for debug
   // ^^^^^^^^^^^^^^^^^
   registerInputCollection(LCIO::SIMTRACKERHIT,
       "SimTrackerHit of VXD (VXDCollection)",
@@ -225,6 +212,7 @@ FPCCDSiliconTracking_MarlinTrk::FPCCDSiliconTracking_MarlinTrk() : Processor("FP
       std::string("FTD_PIXELCollection"));
 
 
+  // Input Collections
   registerInputCollection(LCIO::TRACKERHITPLANE,
       "VTXHitCollectionName",
       "VTX Hit Collection Name",
@@ -298,9 +286,9 @@ FPCCDSiliconTracking_MarlinTrk::FPCCDSiliconTracking_MarlinTrk() : Processor("FP
       float(0.5));//unit: mm
 
   registerProcessorParameter("MinMissAddition",
-      "MinMissAddition in BuildTrack",
+      "Allowed max number of MinMissAdditions in BuildTrack",
       _minMissAddition,
-      int(2));//2なら2回までミスが許される。
+      int(2));
 
   registerProcessorParameter("FudgeFactorForSIT_rphi_SpatialResolution",
       "SIT's spatial resolution is not calculated precisely. (default : 2.0)",
@@ -313,10 +301,6 @@ FPCCDSiliconTracking_MarlinTrk::FPCCDSiliconTracking_MarlinTrk() : Processor("FP
       float(1.0));
 
 
-  registerProcessorParameter("boundary_of_Pt_regarded_as_LowPt",
-      "boundary_of_Pt_regarded_as_LowPt",
-      _boundaryLowPt,
-      float(1.8));//unit: GeV/c
 
   registerProcessorParameter("MinLayerToAttach",
       "MinLayerToAttach",
@@ -326,7 +310,7 @@ FPCCDSiliconTracking_MarlinTrk::FPCCDSiliconTracking_MarlinTrk() : Processor("FP
   registerProcessorParameter("CutOnD0",
       "cut on D0 for tracks",
       _cutOnD0,
-      float(60.0));//100 -> 60
+      float(60.0));
 
   registerProcessorParameter("CutOnZ0",
       "cut on Z0 for tracks",
@@ -336,7 +320,7 @@ FPCCDSiliconTracking_MarlinTrk::FPCCDSiliconTracking_MarlinTrk() : Processor("FP
   registerProcessorParameter("CutOnPt_For_VXD+SIT_section",
       "cut on Pt for TestTriplet in VXD+SIT section",
       _cutOnPtVXD,
-      double(0.18));//For now, Pt less than 180MeV are killed.
+      double(0.18));
 
   registerProcessorParameter("CutOnPt_For_FTD_section ",
       "cut on Pt for TestTriplet in FTD section",
@@ -361,20 +345,12 @@ FPCCDSiliconTracking_MarlinTrk::FPCCDSiliconTracking_MarlinTrk() : Processor("FP
   registerProcessorParameter("AttachRemainingHitsForVXD",
       "1:Fast, 2:Slow, 3:VeryFast, 0:skip this process",
       _attachVXD,
-      int(2));
-  //現状のアルゴリズムでは、Slowの場合、トラックに対し全remainingヒットを線形探索に近い形で
-  //処理するのでBG環境下では現実的でない。
-  //かと言って、Fastの場合、search regionをある程度絞っているため少しマシなものの、
-  //search regionの決め方がLow Pt trackを考慮していない。(trackのphi0パラメターを基準にして
-  //phi regionを決めていることが原因。この場合良くてlow Pt trackが拾えるヒットは最内層である。)
-  //似たような処理がFullLDCでも行われているので、場合によってはskipする。
+      int(2));//Very Fast is underconstruction.
 
   registerProcessorParameter("AttachRemainingHitsForFTD",
       "1:Fast, 2:Slow, 0:skip this process",
       _attachFTD,
       int(2));
-  //現在はFTDでBG OverlayしていないのでSlowにしているが、FTDもBG Overlayを
-  //する状況になったら新しくアルゴリズムを実装するべきである。
 
   registerProcessorParameter("UseSIT",
       "Use SIT",
@@ -385,14 +361,6 @@ FPCCDSiliconTracking_MarlinTrk::FPCCDSiliconTracking_MarlinTrk() : Processor("FP
       "Use FTD",
       _useFTD,
       int(1));
-
-
-#if 0
-  registerProcessorParameter("UseBuildTrack_KalFit_forHighPt",
-      "Use original-like BuildTrack_KalFit forHighPt",
-      _useBuildTrackForHighPt,
-      int(0));
-#endif
 
   registerProcessorParameter("NDivisions_phiRangeForBuildTrackForHighPt",
       "set width of phi(deg) value [0,360].ex: 360deg/80 = 4.5 (This value emulates original SiliconTracking_MarlinTrk by default) ",
@@ -405,12 +373,12 @@ FPCCDSiliconTracking_MarlinTrk::FPCCDSiliconTracking_MarlinTrk() : Processor("FP
       double(0.025));
 
   registerProcessorParameter("UseClusterRejection",
-      "Use Cluster Rejection",
+      "Use Cluster Rejection (for FPCCD VXD in dense pair-BG env. option)",
       _useClusterRejection,
-      bool(true));
+      bool(false));
 
   registerProcessorParameter("minDotOf2Clusters",
-      "minimum dot of 2Clusters",
+      "minimum dot of 2Clusters (for FPCCD VXD in dense pair-BG env. option)",
       _minDotOf2Clusters,
       float(0.4));
 
@@ -440,12 +408,12 @@ FPCCDSiliconTracking_MarlinTrk::FPCCDSiliconTracking_MarlinTrk() : Processor("FP
       float(1.e2));
 
   registerProcessorParameter( "MaxChi2PerHit",
-      "Maximum Chi-squared value allowed when assigning a hit to a track",
+      "Maximum Chi-squared value allowed when assigning a hit to a track (for KalTest)",
       _maxChi2PerHit,
       double(1.e2));
 
   registerProcessorParameter( "MaxChi2PerHit2nd",
-      "Maximum Chi-squared value allowed when assigning a hit to a track (for KalFit)",
+      "Maximum Chi-squared value allowed when assigning a hit to a track (especially for KalFit in this code)",
       _maxChi2PerHit2nd,
       double(1.e2));
 
@@ -494,22 +462,6 @@ FPCCDSiliconTracking_MarlinTrk::FPCCDSiliconTracking_MarlinTrk() : Processor("FP
       _safetyPhiRange_fix,
       int(1));//old 0.1
 
-
-  registerProcessorParameter("DetectorTypeForDraw",
-      "Detector type sent to MarlinCED for drawing", 
-      _detector_model_for_drawing,
-      int(0));
-
-  registerProcessorParameter( "HelixMaxR" , 
-      "Max R (mm) Extent for drawing Helix if UseTPCForLimitsOfHelix false",
-      _helix_max_r ,
-      float(2000.0) ) ;
-
-  registerProcessorParameter( "MCpThreshold",
-      "Transverse Momentum Threshold MC particles which will produce tracks GeV",
-      _MCpThreshold,
-      float(0.1));
-
   registerInputCollection("MCParticle",
       "MCParticleCollectionName", 
       "Name of the MCParticle input collection",
@@ -541,10 +493,7 @@ FPCCDSiliconTracking_MarlinTrk::FPCCDSiliconTracking_MarlinTrk() : Processor("FP
       std::string("FTDPixelTrackerHitRelations"));
 
 
-
-
-
-  FloatVec PixelSizeVec; 
+  FloatVec PixelSizeVec; //for FPCCD VXD
   PixelSizeVec.push_back(0.005);
   PixelSizeVec.push_back(0.005);
   PixelSizeVec.push_back(0.010);
@@ -553,54 +502,54 @@ FPCCDSiliconTracking_MarlinTrk::FPCCDSiliconTracking_MarlinTrk() : Processor("FP
   PixelSizeVec.push_back(0.010);
 
   registerProcessorParameter( "FPCCD: Each_FPCCD_pixelSize(mm)",
-      "Each ladder's FPCCD Pixel size(unit:mm)  ",
+      "Each ladder's FPCCD Pixel size(unit:mm) (for cluster rejection for FPCCD)",
       _pixelSizeVec,
       PixelSizeVec );
 
   registerProcessorParameter( "FPCCD: PixelHeight" , 
-      "Pixel Height(mm)",
+      "Pixel Height(mm) (for cluster rejection for FPCCD)",
       _pixelheight ,
       float(0.015));
 
 
   registerProcessorParameter( "fudgePhiRange" , 
-      "fudgePhiRange",
+      "fudgePhiRange for the iterative determination of search range in the extrapolation",
       _fudgePhiRange,
       int(2));
 
   registerProcessorParameter( "fudgeThetaRange" , 
-      "fudgeThetaRange",
+      "fudgeThetaRange for the iterative determination of search range in the extrapolation",
       _fudgeThetaRange,
       int(2));
 
   registerProcessorParameter( "mydebug" , 
-      "mydebug",
+      "mydebug (code debuger for Mori)",
       _mydebug,
-      bool(true));
+      bool(false));
 
   registerProcessorParameter( "mydebugKalFit" , 
-      "mydebugKalFit",
+      "mydebugKalFit (code debuger for Mori)",
       _mydebugKalFit,
       bool(false));
 
 
   registerProcessorParameter( "mydebugIntersection" , 
-      "mydebugIntersection",
+      "mydebugIntersection (code debuger for Mori)",
       _mydebugIntersection,
       bool(false));
 
   registerProcessorParameter( "stopwatch" , 
-      "stopwatch",
+      "stopwatch (code debuger for Mori)",
       _stopwatch,
       bool(false));
 
   registerProcessorParameter( "mydebugstopwatch2" , 
-      "mydebugstopwatch2",
+      "mydebugstopwatch2 (code debuger for Mori)",
       _mydebugstopwatch2,
       bool(false));
 
   registerProcessorParameter( "keepCandidate" , 
-      "Option for AttachRemainingVTXHitsVeryFast",
+      "Option for AttachRemainingVTXHitsVeryFast (please fix false for now)",
       _keepCandidate,
       bool(false));
 
@@ -621,12 +570,6 @@ void FPCCDSiliconTracking_MarlinTrk::init() {
   printParameters() ;
 
   // this creates a directory for this processor ....
-
-
-
-
-
-
   // set up the geometery needed by KalTest
   //FIXME: for now do KalTest only - make this a steering parameter to use other fitters
   _trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( "KalTest" , marlin::Global::GEAR , "" ) ;
@@ -661,14 +604,15 @@ void FPCCDSiliconTracking_MarlinTrk::init() {
   cutOnR_FTD = 1000.*cutOnR_FTD;
   _cutOnOmegaFTD = 1/cutOnR_FTD;
 
-  _output_track_col_quality = 0;
-
   InitVXDGeometry();
   if(_useSIT == 1) InitSITGeometry();
 
+  _output_track_col_quality = 0;
 
-#if debug_2013_09_12
-  //new version
+
+//Range determination for TestTriplet
+#if 0
+  //new version (under construction)
   int ncomb = _Combinations.size();
   for(int i = 0; i < ncomb; i += 3 ){
     std::vector<int> layers(3);
@@ -682,23 +626,23 @@ void FPCCDSiliconTracking_MarlinTrk::init() {
     phiRange[1] = int(std::abs(phiDiff[1]/_dPhi)*(1.0 + _safetyPhiRange_ratio)) + _safetyPhiRange_fix;
     _phiRangeForTripletVer2.insert(std::make_pair(layers,phiRange));
   }
-#else
-  //old version
+#else 
+  //old version (for now, please use this)
   int ncomb = _Combinations.size();
   for(int i = 0; i < ncomb; i += 3 ){
     std::pair<int, int> lyp(_Combinations[i],_Combinations[i+2]);
     double phiDiff = getNeededPhiSectors(_cutOnPtVXD, _Combinations[i] , _Combinations[i+2]);
     int phiRange = int(std::abs(phiDiff/_dPhi)*(1.0 + _safetyPhiRange_ratio)) + _safetyPhiRange_fix;
+    //check
+    if(_mydebug) std::cout << "phiRange for Triplet (layer " << _Combinations[i] << "  " << _Combinations[i+2] <<" ) : " << phiRange << std::endl;
     _phiRangeForTriplet.insert(std::make_pair(lyp,phiRange));
   }
+
 #endif
 
 
-#if debug_2013_09_10
-  _rootf    = new TFile("fst.root", "RECREATE");
-  _ntuple  = new TNtupleD("ntp","ntp","nEvt:mcpID:mcpPt:mcpPz:Comb:purity:chi2:quality:d0:z0:omega:phi0:tanL:d0err:z0err:GoodTriplet:found:nhits_in_vxd:nhits_in_sit:mcpVt:mcpVz:isCreatedInSimulation");
-  _ntuple2  = new TNtupleD("ntp2","ntp2","nEvt:mcpID:mcpPt:mcpPz:nhits_in_vxd:nhits_in_sit:mcpVt:mcpVz:isCreatedInSimulation");
-#endif
+
+
 
 
 }
@@ -724,13 +668,6 @@ void FPCCDSiliconTracking_MarlinTrk::processEvent( LCEvent * evt ) {
   //check
   std::cout << "=========== evt num : " << _nEvt << "  =================" << std::endl;
 
-#if debug_2013_10_01
-  std::cerr << "=========== evt num : " << _nEvt << "  =================" << std::endl;
-#endif
-
-#if debug_2013_10_01
-  std::cerr << "check 1" << std::endl;
-#endif
 
   _current_event = evt;
 
@@ -739,9 +676,6 @@ void FPCCDSiliconTracking_MarlinTrk::processEvent( LCEvent * evt ) {
   // zero triplet counters
   _ntriplets = _ntriplets_good = _ntriplets_2MCP = _ntriplets_3MCP = _ntriplets_1MCP_Bad = _ntriplets_bad = 0;
 
-#if debug_2013_10_01
-  std::cerr << "check 2" << std::endl;
-#endif
   // Clearing the working containers from the previous event
   // FIXME: partly done at the end of the event, in CleanUp. Make it consistent.
   _tracksWithNHitsContainer.clear();
@@ -750,29 +684,8 @@ void FPCCDSiliconTracking_MarlinTrk::processEvent( LCEvent * evt ) {
   _colTrackerHits.clear();
   _colNamesTrackerHits.clear();
 
-#if debug_2013_10_01
-  std::cerr << "check 3" << std::endl;
-#endif
 
-#if debug_2013_09_10
-  _naviVec.clear();
-  _mcpMap.clear();
 
-  _navVXD    = GetRelations(_current_event, _colNameVXDTrackerHitRelations);
-  _navSIT    = GetRelations(_current_event, _colNameSITSpacePointRelations);
-  _navFTDpix = GetRelations(_current_event, _colNameFTDPixelTrackerHitRelations);
-  _navFTDsp  = GetRelations(_current_event, _colNameFTDSpacePointRelations);
-  _naviVec.push_back(_navVXD);
-  _naviVec.push_back(_navSIT);
-  _naviVec.push_back(_navFTDpix);
-  _naviVec.push_back(_navFTDsp);
-  _mcpMap = LoadMCPMap();
-
-#endif
-
-#if debug_2013_10_01
-  std::cerr << "next : initialization of hits" << std::endl;
-#endif
 
   streamlog_out(DEBUG4) << "FPCCDSiliconTracking_MarlinTrk -> run = " << _nRun 
     << "  event = " << _nEvt << std::endl;
@@ -787,9 +700,6 @@ void FPCCDSiliconTracking_MarlinTrk::processEvent( LCEvent * evt ) {
 
    
 
-#if debug_2013_10_01
-  std::cerr << "next : processOneSector" << std::endl;
-#endif
 
   if(_stopwatch) _timer.ProcessOneSector.Start();
   if (successVTX == 1) {
@@ -807,70 +717,10 @@ void FPCCDSiliconTracking_MarlinTrk::processEvent( LCEvent * evt ) {
   }
   if(_stopwatch) _timer.ProcessOneSector.Stop();
 
-#if debug_2013_10_01
-  std::cerr << "End of ProcessOneSector " << std::endl;
-#endif
 
 
-#if debug_2013_09_10
-  std::map< MCParticle*, SimTrackerHitVec >::iterator map_iterator;
-  for(map_iterator = _mcpVXDSIT.begin(); map_iterator != _mcpVXDSIT.end(); map_iterator++){
-    MCParticle* mcp = map_iterator->first;
-    if( mcp == NULL ) continue;
-    SimTrackerHitVec simvec = map_iterator->second;
-
-    IntVec ivec = getNHitsInSubDet(simvec); 
-    //int nhits = simvec.size();
-    int nhits_in_vxd = ivec[lcio::ILDDetID::VXD];
-    int nhits_in_sit = ivec[lcio::ILDDetID::SIT];
-    //int nhits_in_ftd = ivec[lcio::ILDDetID::FTD];
-    std::vector<int> nvxdhitsOnLayer(6);//hard coding
-    std::vector<int> nsithitsOnLayer(4);//hard coding
-    std::vector<int> nftdhitsOnLayer(7);//hard coding
-    for(SimTrackerHitVec::iterator it = simvec.begin(); it != simvec.end(); it++){
-      int detid = getDetectorID(*it);
-      int layer = getLayerID(*it);
-      if(detid == lcio::ILDDetID::VXD){ nvxdhitsOnLayer[layer]++; }
-      else if(detid == lcio::ILDDetID::SIT){ nsithitsOnLayer[layer]++; }
-      else if(detid == lcio::ILDDetID::FTD){ nftdhitsOnLayer[layer]++; }
-    }
-    bool GoodMCP = true;
-    for(int layerID = 0; layerID < int(nvxdhitsOnLayer.size()); layerID++){
-      if(nvxdhitsOnLayer[layerID] == 0){
-        GoodMCP = false;
-        break;
-      }
-    }
-    for(int layerID = 0; layerID < int(nsithitsOnLayer.size()); layerID++){
-      if(nsithitsOnLayer[layerID] == 0 || GoodMCP == false){
-        GoodMCP = false;
-        break;
-      }
-    }
-    if(GoodMCP){
-      struct ntupleForTT{
-        double nEvt,mcpID,mcpPt,mcpPz,nhits_in_vxd,nhits_in_sit,mcpVt,mcpVz,isCreatedInSimulation;
-      }ntpd;
-      //_ntuple2  = new TNtupleD("ntp2","ntp2","nEvt:mcpID:mcpPt:mcpPz:nhits_in_vxd:nhits_in_sit:mcpVt:mcpVz:isCreatedInSimulation");
-      ntpd.nEvt = _nEvt;
-      ntpd.mcpID = mcp->id();
-      ntpd.mcpPt = sqrt(pow(mcp->getMomentum()[0],2) + pow(mcp->getMomentum()[1],2));
-      ntpd.mcpPz = mcp->getMomentum()[2];
-      ntpd.nhits_in_vxd = nhits_in_vxd;
-      ntpd.nhits_in_sit = nhits_in_sit;
-      ntpd.mcpVt = sqrt(pow(mcp->getVertex()[0],2) + pow(mcp->getVertex()[1],2));
-      ntpd.mcpVz = mcp->getVertex()[2];
-      ntpd.isCreatedInSimulation = mcp->isCreatedInSimulation();
-
-      _ntuple2->Fill((double *)&ntpd);
-    }
-  }
-#endif
 
 
-#if debug_2013_10_01
-  std::cerr << "next : tracking in ftd " << std::endl;
-#endif
 
   if(_stopwatch) _timer.TrackingInFTD.Start();
   if (successFTD == 1) {
@@ -880,9 +730,6 @@ void FPCCDSiliconTracking_MarlinTrk::processEvent( LCEvent * evt ) {
   }
   if(_stopwatch) _timer.TrackingInFTD.Stop();
 
-#if debug_2013_10_01
-  std::cerr << "next : sort and create track" << std::endl;
-#endif
 
   if (successVTX == 1 || successFTD == 1) {
     if(_stopwatch) _timer.Sorting.Start();
@@ -903,16 +750,6 @@ void FPCCDSiliconTracking_MarlinTrk::processEvent( LCEvent * evt ) {
     }
     if(_stopwatch) _timer.CreateTrack.Stop();
 
-    for(size_t i=0; i<_trackImplVec.size(); i++){
-      TrackExtended* tester = _trackImplVec[i];
-      TrackerHitExtendedVec& hvec = tester->getTrackerHitExtendedVec();
-      //std::cout  << "CreateTrack, nHits : " << hvec.size() << std::endl;
-    }
-
-#if debug_2013_10_01
-  std::cerr << "next : attachment" << std::endl;
-#endif
-
 
     if(_stopwatch) _timer.AttachRemainingVXD.Start();
     if (_attachVXD == 1)  AttachRemainingVTXHitsFast(); 
@@ -925,18 +762,6 @@ void FPCCDSiliconTracking_MarlinTrk::processEvent( LCEvent * evt ) {
     else if (_attachFTD == 2) AttachRemainingFTDHitsSlow();
     if(_stopwatch) _timer.AttachRemainingFTD.Stop();
 
-
-#if debug_2013_09_01
-    for(size_t i=0; i<_trackImplVec.size(); i++){
-      TrackExtended* tester = _trackImplVec[i];
-      TrackerHitExtendedVec& hvec = tester->getTrackerHitExtendedVec();
-      std::cout << "AttachRemaining, nHits : " << hvec.size() << std::endl;
-    }
-#endif
-
-#if debug_2013_10_01
-  std::cerr << "next : final refit" << std::endl;
-#endif
 
     streamlog_out(DEBUG4) <<  "End of picking up remaining hits " << std::endl;
 
@@ -952,13 +777,6 @@ void FPCCDSiliconTracking_MarlinTrk::processEvent( LCEvent * evt ) {
     FinalRefit(trkCol, relCol);
     if(_stopwatch) _timer.FinalRefit.Stop();
 
-#if debug_2013_09_01
-    for(size_t i=0; i<_trackImplVec.size(); i++){
-      TrackExtended* tester = _trackImplVec[i];
-      TrackerHitExtendedVec& hvec = tester->getTrackerHitExtendedVec();
-      std::cout <<  "FinalRefit, nHits : " << hvec.size() << std::endl;
-    }
-#endif
 
     // set the quality of the output collection
     switch (_output_track_col_quality) {
@@ -996,9 +814,6 @@ void FPCCDSiliconTracking_MarlinTrk::processEvent( LCEvent * evt ) {
 
 
 
-#if debug_2013_10_01
-  std::cerr << "event : "  << _nEvt << "  is completely done"<< std::endl;
-#endif
 
 
 
@@ -1357,9 +1172,6 @@ int FPCCDSiliconTracking_MarlinTrk::InitialiseVTX(LCEvent * evt) {
 
       streamlog_out( DEBUG1 ) << " VXD Hit " <<  hit->id() << " added : @ " << pos[0] << " " << pos[1] << " " << pos[2] << " drphi " << hitExt->getResolutionRPhi() << " dz " << hitExt->getResolutionZ() << "  iPhi = " << iPhi <<  " iTheta "  << iTheta << " iCode = " << iCode << "  layer = " << layer << std::endl;  
 
-#if debug_2013_10_01
-      std::cerr << " VXD Hit " <<  hit->id() << " added : @ " << pos[0] << " " << pos[1] << " " << pos[2] << " drphi " << hitExt->getResolutionRPhi() << " dz " << hitExt->getResolutionZ() << "  iPhi = " << iPhi <<  " iTheta "  << iTheta << " iCode = " << iCode << "  layer = " << layer << std::endl;  
-#endif
 
     }
   }
@@ -1507,9 +1319,6 @@ int FPCCDSiliconTracking_MarlinTrk::InitialiseVTX(LCEvent * evt) {
         streamlog_out( DEBUG1 ) << " SIT Hit " <<  trkhit->id() << " added : @ " << pos[0] << " " << pos[1] << " " << pos[2] << " drphi " << hitExt->getResolutionRPhi() << " dz " << hitExt->getResolutionZ() << "  iPhi = " << iPhi <<  " iTheta "  << iTheta << " iCode = " << iCode << "  layer = " << layer << std::endl;  
 
 
-#if debug_2013_10_01
-        std::cerr << " SIT Hit " <<  trkhit->id() << " added : @ " << pos[0] << " " << pos[1] << " " << pos[2] << " drphi " << hitExt->getResolutionRPhi() << " dz " << hitExt->getResolutionZ() << "  iPhi = " << iPhi <<  " iTheta "  << iTheta << " iCode = " << iCode << "  layer = " << layer << std::endl;  
-#endif
 
       }
 
@@ -1534,9 +1343,6 @@ void FPCCDSiliconTracking_MarlinTrk::end() {
   delete _encoder ; _encoder = 0;
   delete _trksystem ; _trksystem = 0;
 
-#if debug_2013_09_10
-  _rootf->Write();
-#endif
 
 }
 
@@ -1559,14 +1365,6 @@ void FPCCDSiliconTracking_MarlinTrk::ProcessOneSector(int iPhi, int iTheta) {
       nLR[iS] = _Combinations[iNC];
       iNC++;
     }    
-    /*
-       int iPhi_Up    = iPhi + _sw_phi;
-       int iPhi_Low   = iPhi - _sw_phi;
-       int iTheta_Up  = iTheta + _sw_theta; 
-       int iTheta_Low = iTheta - _sw_theta;
-       if (iTheta_Low < 0) iTheta_Low = 0;
-       if (iTheta_Up  >= _nDivisionsInTheta) iTheta_Up = _nDivisionsInTheta-1;
-     */
 
     RangeMap::iterator rmit = _phiRangeForTriplet.find(std::make_pair(nLR[0],nLR[2]));
     if(rmit == _phiRangeForTriplet.end()){
@@ -1575,23 +1373,12 @@ void FPCCDSiliconTracking_MarlinTrk::ProcessOneSector(int iPhi, int iTheta) {
     }
     int iPhi_Up    = iPhi + rmit->second; 
     int iPhi_Low   = iPhi - rmit->second;
-    int iTheta_Up  = iTheta + _sw_theta; 
+    int iTheta_Up  = iTheta + _sw_theta;
     int iTheta_Low = iTheta - _sw_theta;
 
     if (iTheta_Low < 0) iTheta_Low = 0;
     if (iTheta_Up  >= _nDivisionsInTheta) iTheta_Up = _nDivisionsInTheta-1;
 
-#if debug_2013_10_01 
-/*
-    std::cerr << "== ProcessOneSector before testtriplet == " << std::endl;
-    std::cerr << iPhi_Up << std::endl;
-    std::cerr << iPhi_Low << std::endl;
-    std::cerr << iTheta_Up << std::endl;
-    std::cerr << iTheta_Low << std::endl;
-    std::cerr << "==next=="<< std::endl;
-    
-*/
-#endif
 
 
     // index of theta-phi bin of outer most layer
@@ -1664,15 +1451,6 @@ void FPCCDSiliconTracking_MarlinTrk::ProcessOneSector(int iPhi, int iTheta) {
                     << std::setw(3) << nLR[0]     << " "   << std::setw(3) << nLR[1]   << " "      << std::setw(3) << nLR[2]  << "     " 
                     << std::setw(3) << nHitsOuter << " : " << std::setw(3) << nHitsMiddle << " : " << std::setw(3) << nHitsInner << "  :: " 
                     << std::setw(3) << nHitsOuter*nHitsMiddle* nHitsInner << std::endl;
-#if debug_2013_10_01
-                  std::cerr << "combination is found========" << std::endl;
-                  std::cerr << " " 
-                    << std::setw(3) << iPhi       << " "   << std::setw(3) << ipMiddle << " "      << std::setw(3) << ipInner << "   " 
-                    << std::setw(3) << iTheta     << " "   << std::setw(3) << itMiddle << " "      << std::setw(3) << itInner << "  " 
-                    << std::setw(3) << nLR[0]     << " "   << std::setw(3) << nLR[1]   << " "      << std::setw(3) << nLR[2]  << "     " 
-                    << std::setw(3) << nHitsOuter << " : " << std::setw(3) << nHitsMiddle << " : " << std::setw(3) << nHitsInner << "  :: " 
-                    << std::setw(3) << nHitsOuter*nHitsMiddle* nHitsInner << std::endl;
-#endif
                   // test all triplets 
 
                   for (int iOuter = 0; iOuter < nHitsOuter; ++iOuter) { // loop over hits in the outer sector
@@ -1694,9 +1472,6 @@ void FPCCDSiliconTracking_MarlinTrk::ProcessOneSector(int iPhi, int iTheta) {
                           if(_mydebugstopwatch2) _timer2Build.Stop();
 
 
-#if debug_2013_09_01
-                          std::cout << "BuildTrack, nHits : " << nHits << std::endl;
-#endif 
 
 
                           _tracksWithNHitsContainer.getTracksWithNHitsVec(nHits).push_back(trackAR);
@@ -1767,7 +1542,6 @@ TrackExtended * FPCCDSiliconTracking_MarlinTrk::TestTriplet(TrackerHitExtended *
             // return a null pointer
             streamlog_out( DEBUG2 ) << " TestTriplet: track " << *outerIter << " already contains all three hits: Do not create new track from these hits " << std::endl ;
 
-            //std::cout << "完全に同じtripletを処理しようとすると0をreturnする。in testtriplet。0を返します。" << std::endl;
 
           }
 
@@ -1936,86 +1710,6 @@ TrackExtended * FPCCDSiliconTracking_MarlinTrk::TestTriplet(TrackerHitExtended *
     }
   }
 
-#if debug_2013_09_10
-  if(omegamode == 0){
-    struct ntupleForTT{
-      double nEvt,mcpID,mcpPt,mcpPz,Comb,purity,chi2,quality,d0,z0,omega,phi0,tanL,d0err,z0err,GoodTriplet,found,nhits_in_vxd,nhits_in_sit,mcpVt,mcpVz,isCreatedInSimulation;
-    }ntpd;
-    ntpd.nEvt = _nEvt;
-    TrackerHitVec tripletHits(3);
-    tripletHits[0] = innerHit->getTrackerHit();
-    tripletHits[1] = middleHit->getTrackerHit();
-    tripletHits[2] = outerHit->getTrackerHit();
-    purityMCP pMC = _purityUtil->GetPurity(tripletHits,_naviVec);
-    if(pMC.mcp != NULL){
-      ntpd.mcpID = pMC.mcp->id();
-      ntpd.mcpPt = sqrt(pow(pMC.mcp->getMomentum()[0],2) + pow(pMC.mcp->getMomentum()[1],2));
-      ntpd.mcpPz = pMC.mcp->getMomentum()[2];
-      ntpd.purity = pMC.purity;
-    }
-    else{
-      ntpd.mcpID = -1;
-      ntpd.mcpPt = 0;
-      ntpd.mcpPz = 0;
-      ntpd.purity = 0;
-    }
-    int detid[3]; int layer[3];
-    for(int hitID = 0; hitID < 3; hitID++){
-      detid[hitID] = getDetectorID(tripletHits[hitID]);
-      layer[hitID] = getLayerID(tripletHits[hitID]);
-      if(detid[hitID] == lcio::ILDDetID::SIT){ layer[hitID] += 6; }
-    }
-    ntpd.Comb = 100*layer[2] + 10*layer[1] + layer[0]; 
-    ntpd.chi2 = Chi2;
-    ntpd.quality = quality_code;
-    ntpd.d0 = d0;
-    ntpd.z0 = z0;
-    ntpd.omega = omega;
-    ntpd.phi0 = phi0;
-    ntpd.tanL = tanlambda;
-    ntpd.d0err = sqrt(1/epar[9]);
-    ntpd.z0err = sqrt(1/epar[14]);
-
-    ntpd.found = 1;
-    ntpd.GoodTriplet = false;
-
-    ntpd.nhits_in_vxd = 0;
-    ntpd.nhits_in_sit = 0;
-    ntpd.mcpVt = 0;
-    ntpd.mcpVz = 0;
-    ntpd.isCreatedInSimulation = 0;
-
-    if(pMC.mcp != NULL){
-      std::map< MCParticle*, SimTrackerHitVec >::iterator mapit;
-      mapit = _mcpVXDSIT.find(pMC.mcp);
-      if(mapit != _mcpVXDSIT.end()){
-        SimTrackerHitVec simvec = mapit->second;
-        IntVec ivec = getNHitsInSubDet(simvec);
-
-        ntpd.nhits_in_vxd = ivec[lcio::ILDDetID::VXD];
-        ntpd.nhits_in_sit = ivec[lcio::ILDDetID::SIT];
-        ntpd.mcpVt = sqrt(pow(pMC.mcp->getVertex()[0],2) + pow(pMC.mcp->getVertex()[1],2));
-        ntpd.mcpVz = pMC.mcp->getVertex()[2];
-        ntpd.isCreatedInSimulation = pMC.mcp->isCreatedInSimulation();
-      }
-    }
-
-    if(pMC.mcp != NULL){
-      if(pMC.purity > 0.99){
-        _mcpVXDSIT.erase(pMC.mcp);
-        ntpd.GoodTriplet = true;
-      }
-    }
-    else{
-      std::cout << "Fatal Error!! debug : 2013_09_10" << std::endl;
-    }
-    
-
-
-    _ntuple->Fill((double *)&ntpd);
-  }
-
-#endif
 
 
 
@@ -2071,7 +1765,9 @@ int FPCCDSiliconTracking_MarlinTrk::BuildTrack_KalFit(TrackerHitExtended * outer
     }
 
     int Boundaries[4];
-    int pterr =  getPhiThetaRegion(trackAR,layer,Boundaries);//0以外が返ってくるときはbuildTrackの最終結果(hit数)になっている。
+    int pterr =  getPhiThetaRegion(trackAR,layer,Boundaries);
+    //When the number different from 0 comes, then it is the number of hits as the 
+    //last result of buildTrack
     if(pterr != 0){
       return pterr;
     }
@@ -2084,15 +1780,6 @@ int FPCCDSiliconTracking_MarlinTrk::BuildTrack_KalFit(TrackerHitExtended * outer
     if(Boundaries[2] < 0) Boundaries[2] = 0;
     if(Boundaries[3] >= _nDivisionsInTheta) Boundaries[3] = _nDivisionsInTheta - 1;
 
-#if debug_2013_10_01
-    std::cerr << "== in BuildTrack ==" << std::endl;
-    std::cerr << Boundaries[0] << std::endl;
-    std::cerr << Boundaries[1] << std::endl;
-    std::cerr << Boundaries[2] << std::endl;
-    std::cerr << Boundaries[3] << std::endl;
-    std::cerr << "== end ==" << std::endl;
-
-#endif
 
     for (int ipInner = Boundaries[0]; ipInner <= Boundaries[1]; ipInner++) { 
       for (int itInner = Boundaries[2]; itInner <= Boundaries[3]; itInner++) { 
@@ -2113,7 +1800,8 @@ int FPCCDSiliconTracking_MarlinTrk::BuildTrack_KalFit(TrackerHitExtended * outer
           if(_useClusterRejection == true){
             TrackerHit* curInMostHit = trackAR->getTrackerHitExtendedVec().back()->getTrackerHit();
             tiltStatus = CheckTiltOf2Clusters(curInMostHit, currentHit->getTrackerHit(), 1);
-            //BuildTrackではこの場合、第一引数、第二引数にVXD hitしかこないのでSITかどうかのチェックは不要
+            //In BuildTrack, in this case the first and second arguments are 
+            //always VXD, so needless to check which it is VXD or SIT hit.
             dot = DotOf2Clusters(curInMostHit,currentHit->getTrackerHit());
           }
           bool goodDot = (dot > _minDotOf2Clusters) ? true : false ;
@@ -2188,7 +1876,8 @@ int FPCCDSiliconTracking_MarlinTrk::BuildTrack_KalFit(TrackerHitExtended * outer
         // assign hit to track and track to hit, update the track parameters
         trackAR->addTrackerHitExtended(assignedhit);
         assignedhit->addTrackExtended(trackAR);
-        //注意：fastFitとKalFitでparのconventionが違います。KalFitはlcioのcovMatrixとconventionが合うようにした
+        //Mori：two conventions of fastFit and KalFit are different.
+        //I made KalFit's convention match that of lcio's covMatrix.
         float parD0 = par[0];
         float parPhi0 = par[1];
         float parOmega = par[2];
@@ -2229,28 +1918,13 @@ int FPCCDSiliconTracking_MarlinTrk::getIntersectionEasy(HelixClass_double helix,
   double Rmax = sqrt(Rmin*Rmin + hlwidth*hlwidth);
   double Rmean = (Rmin + Rmax)/2.0;
   double point[6];
-  //int error = helix.getPointOnCircleByMori(Rmean,point);
-  //if(error != 0) return error;
-  //std::cout << "  ==getIntersectionEasy==" << std::endl;
-  //std::cout << "  Rmean : " << Rmean << std::endl;
   double time = helix.getPointOnCircle(Rmean,ref,point);
   if(time < 0){
     return -1;
   }
-  //std::cout << "  time : " << time << std::endl;
   double phiX = atan2(curInmos->getPosition()[1],curInmos->getPosition()[0]);
   double diffA = atan2(point[1],point[0]) - phiX; 
   double diffB = atan2(point[4],point[3]) - phiX;
-  /*
-     std::cout << "  point [0] : " << point[0] << std::endl;
-     std::cout << "  point [1] : " << point[1] << std::endl;
-     std::cout << "  point [2] : " << point[2] << std::endl;
-     std::cout << "  point [3] : " << point[3] << std::endl;
-     std::cout << "  point [4] : " << point[4] << std::endl;
-     std::cout << "  point [5] : " << point[5] << std::endl;
-     std::cout << "  diffA     : " << diffA    << std::endl;
-     std::cout << "  diffB     : " << diffB    << std::endl;
-   */
 
   if(std::abs(diffA) < std::abs(diffB)){
     isec[0] = point[0];
@@ -2262,8 +1936,6 @@ int FPCCDSiliconTracking_MarlinTrk::getIntersectionEasy(HelixClass_double helix,
     isec[1] = point[4];
     isec[2] = point[5];
   }
-  //本来ならz座標もやるべきだが、いまのところSilicon Trackerに再び入ってくる粒子のトラッキングについては
-  //半分考えていない(帰ってきた時に作るヒットを拾うことを考えていない。)ので、当分はその件については放置。
 
   return 0;
 
@@ -2391,7 +2063,8 @@ double FPCCDSiliconTracking_MarlinTrk::getNeededPhiSectors(double Pt, int outly 
     double Rmax = sqrt(Rmin*Rmin + hlwidth*hlwidth);
     Ro = (Rmin + Rmax)/2.0;
   }
-  //inlyは現在のgeometryでは必ずVXD layerになることを仮定します。
+  //For now, I assume that inly always corresponds to VXD layer due to the 
+  //current geometry.
   double hlwidth = _vxd.geodata[inly].sximax;
   double Rmin = _vxd.geodata[inly].rmes;
   double Rmax = sqrt(Rmin*Rmin + hlwidth*hlwidth);
@@ -2433,7 +2106,7 @@ double FPCCDSiliconTracking_MarlinTrk::getNeededPhiSectors(double Pt, int outly 
 
 
 
-
+//This is under construction
 void FPCCDSiliconTracking_MarlinTrk::getNeededPhiSectorsVer2(double Pt, std::vector<int> layers, std::vector<double>& phiRange){
   double R = Pt/(0.299792458*_bField);
   R = 1000.0*R;
@@ -2460,7 +2133,7 @@ void FPCCDSiliconTracking_MarlinTrk::getNeededPhiSectorsVer2(double Pt, std::vec
     double Rmax = sqrt(Rmin*Rmin + hlwidth*hlwidth);
     Rm = (Rmin + Rmax)/2.0;
   }
-  //inlyは現在のgeometryでは必ずVXD layerになることを仮定します。
+
   double hlwidth = _vxd.geodata[ layers[2] ].sximax;
   double Rmin = _vxd.geodata[ layers[2] ].rmes;
   double Rmax = sqrt(Rmin*Rmin + hlwidth*hlwidth);
@@ -2555,23 +2228,6 @@ void FPCCDSiliconTracking_MarlinTrk::CreateTrack(TrackExtended * trackAR ) {
   TrackerHitExtendedVec& hitVec = trackAR->getTrackerHitExtendedVec();
   int nHits = int(hitVec.size());
 
-  /*
-  *triplet layer combinationsが多いほど、このCreateTrackによって
-  *重複した組み合わせでトラックが生成されることを以下で防いでいる
-  *例えば、layer combが8 6 5と5 4 3のときにsingle muonをBuildTrackした結果、
-  * muon track : 8 hits & 6 hits 
-  *の２つができるので、angle requirement of mergingをクリアしてしまうので、
-  *ひとつでもそのトラックのhitの内、別のトラックにassignされているものが
-  *あった場合はそのトラックを捨てる。この場合を例に取ると、
-  *8 hits のトラックが最初に来る、全hitはtrackとのrelationを持ってない(以下のことをするために
-  *これまでにわざと持たせていなかった)。
-  *そのためreturnを回避して処理されるが、結局requirementをクリアする組み合わせが無かったので
-  *_trackImplVecに追加される。このとき、全hitにtrackとのrelationを持たせる。
-  *次に6 hitsのトラックが引数として呼ばれるが、6 hits中一個でもtrackにassignされている
-  *ものがあったのでこのトラックは削除される。こうして同種のMCP由来のトラックを
-  *重複させずにhit数の多いtrackを残すということをしている。
-  *
-  */
   for (int i=0; i<nHits; ++i) {
     TrackExtendedVec& trackVec = hitVec[i]->getTrackExtendedVec();
     if (trackVec.size() != 0) return ;
@@ -2596,88 +2252,6 @@ void FPCCDSiliconTracking_MarlinTrk::CreateTrack(TrackExtended * trackAR ) {
     float angle = (cos(phiNew)*cos(phiOld)+sin(phiNew)*sin(phiOld))*sin(thetaNew)*sin(thetaOld)+cos(thetaNew)*cos(thetaOld);
     angle = acos(angle);
 
-#if debug_2013_09_01 
-    const TrackerHitExtendedVec& hvecNew = trackAR->getTrackerHitExtendedVec();
-    TrackerHitVec tvecNew(hvecNew.size());
-    for(int i = 0; i < int(hvecNew.size()); i++){ tvecNew[i] = hvecNew[i]->getTrackerHit(); }
-    purityMCP purimcpNew = _purityUtil->GetPurity(tvecNew,_naviVec);
-    float d0new = trackAR->getD0();
-    float z0new = trackAR->getZ0();
-    float omeganew = trackAR->getOmega();
-    float phi0new = phiNew;
-    float tanLnew = trackAR->getTanLambda();
-    float chi2New = trackAR->getChi2();
-    int ndfNew = trackAR->getNDF();
-    float chi2OverNdfNew = trackAR->getChi2()/float(trackAR->getNDF());
-    int sizeNew = hvecNew.size();
-
-    const TrackerHitExtendedVec& hvecOld = trackOld->getTrackerHitExtendedVec();
-    TrackerHitVec tvecOld(hvecOld.size());
-    for(int i = 0; i < int(hvecOld.size()); i++){ tvecOld[i] = hvecOld[i]->getTrackerHit(); }
-    purityMCP purimcpOld = _purityUtil->GetPurity(tvecOld,_naviVec);
-    float d0old = trackOld->getD0();
-    float z0old = trackOld->getZ0();
-    float omegaold = trackOld->getOmega();
-    float phi0old = phiOld;
-    float tanLold = trackOld->getTanLambda();
-    float chi2Old = trackOld->getChi2();
-    int ndfOld = trackOld->getNDF();
-    float chi2OverNdfOld = trackOld->getChi2()/float(trackOld->getNDF());
-    int sizeOld = hvecOld.size();
-
-    printf("           d0       z0       omega      phi0      tanL     chi2/ndf   chi2    ndf    purity   mcpID   size \n");
-    printf("trackAR  : %f %f %f %f %f %e %e %d %f %d %d   \n",
-    d0new,z0new,omeganew,phi0new,tanLnew,chi2OverNdfNew,chi2New,ndfNew,purimcpNew.purity,purimcpNew.mcp->id(),sizeNew);
-    printf("trackOld : %f %f %f %f %f %e %e %d %f %d %d   \n",
-    d0old,z0old,omegaold,phi0old,tanLold,chi2OverNdfOld,chi2Old,ndfOld,purimcpOld.purity,purimcpOld.mcp->id(),sizeOld);
-    printf("angle : %f \n",angle);
-    if( angle < _angleCutForMerging ){
-      printf("-->good angle. \n " );
-    }
-    if( purimcpNew.mcp->id() == purimcpOld.mcp->id() ){
-      printf("-->New mcpID corresponds with Old one. \n " );
-    }
-    bool checkhitpointNew = false;
-    bool checkhitpointOld = false;
-    if( std::isnormal(chi2New) == false){
-      printf("-->isnormal(chi2New) : 0 , chi2New : %f  \n",chi2New);
-      checkhitpointNew = true;
-    }
-    if( std::isnormal(chi2Old) == false){
-      printf("-->isnormal(chi2Old) : 0 , chi2Old : %f  \n",chi2Old);
-      checkhitpointOld = true;
-    }
-    if( std::isnormal(ndfNew) == false){
-      printf("-->isnormal(ndfNew) : 0 , ndfNew : %d \n",ndfNew);
-      checkhitpointNew = true;
-    }
-    if( std::isnormal(ndfOld) == false){
-      printf("-->isnormal(ndfOld) : 0 , ndfOld : %d \n",ndfOld);
-      checkhitpointOld = true;
-    }
-    if(checkhitpointNew == true){
-      for(int j=0; j<sizeNew; j++){
-        int detid =  getDetectorID(tvecNew[j]);
-        int layer =  getLayerID(tvecNew[j]);
-        float pos[3];
-        pos[0] = tvecNew[j]->getPosition()[0];
-        pos[1] = tvecNew[j]->getPosition()[1];
-        pos[2] = tvecNew[j]->getPosition()[2];
-        printf("-->detid : %d, layer : %d, pos[0] : %f, pos[1] : %f, pos[2] : %f \n",detid,layer,pos[0],pos[1],pos[2]);
-      }
-    }
-    if(checkhitpointOld == true){
-      for(int j=0; j<sizeOld; j++){
-        int detid =  getDetectorID(tvecOld[j]);
-        int layer =  getLayerID(tvecOld[j]);
-        float pos[3];
-        pos[0] = tvecOld[j]->getPosition()[0];
-        pos[1] = tvecOld[j]->getPosition()[1];
-        pos[2] = tvecOld[j]->getPosition()[2];
-        printf("-->detid : %d, layer : %d, pos[0] : %f, pos[1] : %f, pos[2] : %f \n",detid,layer,pos[0],pos[1],pos[2]);
-      }
-    }
-#endif
 
 
 
@@ -2750,10 +2324,6 @@ void FPCCDSiliconTracking_MarlinTrk::CreateTrack(TrackExtended * trackAR ) {
       float chi2MinRPhi = chi2RPhi;
       float chi2MinZ = chi2Z;
 
-#if debug_2013_09_01
-      std::cout << "chi2Min : " << chi2Min << std::endl;
-      std::cout << "isnormal(chi2Min) : " << std::isnormal(chi2Min) << std::endl;
-#endif
 
       int iBad = -1;
       if (chi2Min < _chi2FitCut && std::isnormal(chi2Min) == true && chi2Min > 0) {
@@ -2803,10 +2373,6 @@ void FPCCDSiliconTracking_MarlinTrk::CreateTrack(TrackExtended * trackAR ) {
           }
         }
 
-#if debug_2013_09_01
-        std::cout << "2nd, chi2Min : " << chi2Min << std::endl;
-        std::cout << "2nd, isnormal(chi2Min) : " << std::isnormal(chi2Min) << std::endl;
-#endif
 
         if(chi2Min < _chi2FitCut && std::isnormal(chi2Min) == 1 && chi2Min > 0){
           //Mori added new requirement that chi2Min be normal value on September 1, 2013.
@@ -2978,7 +2544,7 @@ void FPCCDSiliconTracking_MarlinTrk::AttachRemainingVTXHitsFast() {
       Phi = Phi + TWOPI;
     float tanlambda = track->getTanLambda();
     double cosTheta = double(tanlambda/sqrt(1+tanlambda*tanlambda));
-    int iPhi = int(Phi/_dPhi);//この方法ではhigh PtのトラックじゃないとほぼAttachしてくれない。
+    int iPhi = int(Phi/_dPhi);//This way does hardly attach hits to low Pt tracks.
     int iTheta = int ((cosTheta + double(1.0))/_dTheta);
     int iCode = iPhi + _nDivisionsInPhi*iTheta; 
     trackVector[iCode].push_back( track );
@@ -3551,7 +3117,7 @@ int FPCCDSiliconTracking_MarlinTrk::BuildTrackFTD(TrackExtended * trackAR, int *
 
 
 #if 1
-//Here will be used in AttachRemainingVTXVeryFast.
+//Here will be used in AttachRemainingVTXVeryFast which is under construction.
 
 int FPCCDSiliconTracking_MarlinTrk::AttachHitToTrack_KalFit(TrackExtended * trackAR, TrackerHitExtended * hit) {
 
@@ -3993,7 +3559,7 @@ void FPCCDSiliconTracking_MarlinTrk::FinalRefit(LCCollectionVec* trk_col, LCColl
         continue ;
       }
 
-      if( Track->getNdf() <= 0) {//0も許さないようにした。2013_08_18
+      if( Track->getNdf() <= 0) {
         delete Track;
         streamlog_out(DEBUG3) << "FPCCDSiliconTracking_MarlinTrk::FinalRefit: Track fit returns " << Track->getNdf() << " degress of freedom track dropped. Number of hits = "<< trkHits.size() << std::endl;       
         continue ;
@@ -4006,7 +3572,6 @@ void FPCCDSiliconTracking_MarlinTrk::FinalRefit(LCCollectionVec* trk_col, LCColl
       if (trkStateIP == 0) {
         streamlog_out(DEBUG3) << "FPCCDSiliconTracking_MarlinTrk::FinalRefit: Track fit returns " << Track->getNdf() << " degress of freedom track dropped. Number of hits = "<< trkHits.size() << std::endl;       
         throw EVENT::Exception( std::string("FPCCDSiliconTracking_MarlinTrk::FinalRefit: trkStateIP pointer == NULL ")  ) ;
-        //trkStateIP == 0の時も許さないことにした。2013_08_18
         delete Track;
         continue ;
       }
@@ -4284,8 +3849,7 @@ void FPCCDSiliconTracking_MarlinTrk::InitVXDGeometry(){
       -layerVXD.getSensitiveWidth(ly)/2.0;
     _vxd.geodata[ly].sximax = -layerVXD.getSensitiveOffset(ly)
       +layerVXD.getSensitiveWidth(ly)/2.0;
-    //注意。xiの正の向きは、ld = 0, ly = 0 のとき、xが負の方向に等しく、また長い。
-    //xiの負の向きはその逆で、こちらは短い。
+    //CAUTION: plus direction of xi-axis in ld = 0, ly = 0 is equal to minus direction of global x-axis and longer than minus direction of xi-axis.
     _vxd.geodata[ly].hlength = layerVXD.getSensitiveLength(ly);
     _vxd.geodata[ly].cosphi.resize( _vxd.geodata[ly].nladder ) ;
     _vxd.geodata[ly].sinphi.resize( _vxd.geodata[ly].nladder ) ;
@@ -4295,7 +3859,7 @@ void FPCCDSiliconTracking_MarlinTrk::InitVXDGeometry(){
     _vxd.geodata[ly].ladder_incline.resize( _vxd.geodata[ly].nladder ) ;
     _vxd.geodata[ly].num_xi_pixel = (int)(layerVXD.getSensitiveWidth(ly)/_pixelSizeVec[ly]);
     _vxd.geodata[ly].num_zeta_pixel = (int)(2*layerVXD.getSensitiveLength(ly)/_pixelSizeVec[ly]);
-    //新規追加分
+
     if(ly % 2 == 0){ _vxd.geodata[ly].rmes = _vxd.geodata[ly].rmin + _vxd.geodata[ly].sthick*(15.0/50.0)*0.5; }
     else{ _vxd.geodata[ly].rmes = _vxd.geodata[ly].rmin + _vxd.geodata[ly].sthick*(1.0 - (15.0/50.0)*0.5); }
 
@@ -4303,19 +3867,14 @@ void FPCCDSiliconTracking_MarlinTrk::InitVXDGeometry(){
       double phi = _vxd.geodata[ly].phi0 + _vxd.geodata[ly].dphi*ld;
       _vxd.geodata[ly].cosphi[ld] = cos(phi);
       _vxd.geodata[ly].sinphi[ld] = sin(phi);
-      //phiのまま使いたい時だって有るので追加
       _vxd.geodata[ly].phi[ld] = phi;
 
-      //Mori Comment : 以下のinclineの式は符号を反転させるべき。何故なら、この値は、TrackerHitPlaneのsetUをつめるところで使っている
-      //が、このUの向きはxiが正の方向を指していなくてはならないにも関わらず逆向きを指していた、修正前は。
-      //double incline =  phi + (M_PI/2.0);
       double incline =  phi - (M_PI/2.0);
       while( incline >  1.0*M_PI || incline < -1.0*M_PI ){ incline > 1.0*M_PI ? incline -= 2.0*M_PI : incline += 2.0*M_PI ;}
-      _vxd.geodata[ly].ladder_incline[ld] = incline; //ladderの傾きをphiで表している。なので最初に90deg足している。
-      //上の行は[-180deg, 180deg]表記になるように調整してる。
+      _vxd.geodata[ly].ladder_incline[ld] = incline; //this expresses the tilt of the ladder by phi.
+      //I adjusted the range between [-180deg, 180deg]
 
 
-      //以下は新たに追加されたメンバである
       _vxd.geodata[ly].phiAtXiMin[ld] = _vxd.geodata[ly].phi[ld] + atan2(-_vxd.geodata[ly].sximin, _vxd.geodata[ly].rmes); 
       _vxd.geodata[ly].phiAtXiMax[ld] = _vxd.geodata[ly].phi[ld] - atan2( _vxd.geodata[ly].sximax, _vxd.geodata[ly].rmes); 
 
@@ -4324,12 +3883,10 @@ void FPCCDSiliconTracking_MarlinTrk::InitVXDGeometry(){
   }
 } 
 
-//VXDのをコピーしただけ。適当に使わない奴はコメントアウトしてます。
 void FPCCDSiliconTracking_MarlinTrk::InitSITGeometry(){
   // Save frequently used parameters.
 
   const gear::ZPlanarParameters& gearSIT = Global::GEAR->getSITParameters();
-  //const gear::ZPlanarLayerLayout& layerSIT = gearSIT.getSITLayerLayout();//getSITLayerLayoutが無いって言われる。
   const gear::ZPlanarLayerLayout& layerSIT = gearSIT.getZPlanarLayerLayout();
   _sit.nLayer = layerSIT.getNLayers() ;
   _sit.geodata.resize(_sit.nLayer);
@@ -4339,19 +3896,7 @@ void FPCCDSiliconTracking_MarlinTrk::InitSITGeometry(){
     _sit.geodata[ly].nladder = layerSIT.getNLadders(ly);     // Number of ladders in this layer
     if( _sit.maxLadder < _sit.geodata[ly].nladder ) { _sit.maxLadder = _sit.geodata[ly].nladder; }
     _sit.geodata[ly].rmin = layerSIT.getSensitiveDistance(ly); // Distance of sensitive area from IP
-    //check
-    //std::cout << "rmin of SIT, layer " << ly << "  : " << _sit.geodata[ly].rmin << std::endl;
-    //_sit.geodata[ly].dphi = (2*M_PI)/(double)_sit.geodata[ly].nladder;
     _sit.geodata[ly].phi0 = layerSIT.getPhi0(ly);  // phi offset.
-    /*
-       _sit.geodata[ly].sthick = layerSIT.getSensitiveThickness(ly);
-       _sit.geodata[ly].sximin = -layerSIT.getSensitiveOffset(ly)
-       -layerSIT.getSensitiveWidth(ly)/2.0;
-       _sit.geodata[ly].sximax = -layerSIT.getSensitiveOffset(ly)
-       +layerSIT.getSensitiveWidth(ly)/2.0;
-    //注意。xiの正の向きは、ld = 0, ly = 0 のとき、xが負の方向に等しく、また長い。
-    //xiの負の向きはその逆で、こちらは短い。
-     */
     _sit.geodata[ly].hlength = layerSIT.getSensitiveLength(ly);
     _sit.geodata[ly].cosphi.resize( _sit.geodata[ly].nladder ) ;
     _sit.geodata[ly].sinphi.resize( _sit.geodata[ly].nladder ) ;
@@ -4359,33 +3904,18 @@ void FPCCDSiliconTracking_MarlinTrk::InitSITGeometry(){
     _sit.geodata[ly].phiAtXiMin.resize( _sit.geodata[ly].nladder ) ;
     _sit.geodata[ly].phiAtXiMax.resize( _sit.geodata[ly].nladder ) ;
     _sit.geodata[ly].ladder_incline.resize( _sit.geodata[ly].nladder ) ;
-    //_sit.geodata[ly].num_xi_pixel = (int)(layerSIT.getSensitiveWidth(ly)/_pixelSizeVec[ly]);
-    //_sit.geodata[ly].num_zeta_pixel = (int)(2*layerSIT.getSensitiveLength(ly)/_pixelSizeVec[ly]);
-    //新規追加分
-    //if(ly % 2 == 0){ _sit.geodata[ly].rmes = _sit.geodata[ly].rmin + _sit.geodata[ly].sthick*(15.0/50.0)*0.5; }
-    //else{ _sit.geodata[ly].rmes = _sit.geodata[ly].rmin + _sit.geodata[ly].sthick*(1.0 - (15.0/50.0)*0.5); }
 
     for(int ld=0;ld<_sit.geodata[ly].nladder;ld++) {
       double phi = _sit.geodata[ly].phi0 + _sit.geodata[ly].dphi*ld;
       _sit.geodata[ly].cosphi[ld] = cos(phi);
       _sit.geodata[ly].sinphi[ld] = sin(phi);
-      //phiのまま使いたい時だって有るので追加
       _sit.geodata[ly].phi[ld] = phi;
 
-      //Mori Comment : 以下のinclineの式は符号を反転させるべき。何故なら、この値は、TrackerHitPlaneのsetUをつめるところで使っている
-      //が、このUの向きはxiが正の方向を指していなくてはならないにも関わらず逆向きを指していた、修正前は。
-      //double incline =  phi + (M_PI/2.0);
       double incline =  phi - (M_PI/2.0);
       while( incline >  1.0*M_PI || incline < -1.0*M_PI ){
         incline += (incline > 1.0*M_PI) ? -2.0*M_PI :  2.0*M_PI ;
       }
-      _sit.geodata[ly].ladder_incline[ld] = incline; //ladderの傾きをphiで表している。なので最初に90deg足している。
-      //上の行は[-180deg, 180deg]表記になるように調整してる。
-
-
-      //以下は新たに追加されたメンバである
-      //_sit.geodata[ly].phiAtXiMin[ld] = _sit.geodata[ly].phi[ld] + atan2(-_sit.geodata[ly].sximin, _sit.geodata[ly].rmes); 
-      //_sit.geodata[ly].phiAtXiMax[ld] = _sit.geodata[ly].phi[ld] - atan2( _sit.geodata[ly].sximax, _sit.geodata[ly].rmes); 
+      _sit.geodata[ly].ladder_incline[ld] = incline; 
 
     }
 
@@ -4410,14 +3940,13 @@ int FPCCDSiliconTracking_MarlinTrk::KalFit(int& ndf, float& Chi2, TrackerHitVec 
   MarlinTrk::IMarlinTrack* marlinTrk = _trksystem->createTrack();
   int error = 0;
 
-  //当分は10000をセットすることにより、ミスaddingの時にchi2がどうなるのかを調べる。
   error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, trkHits, Track, fit_backwards, covMatrix, _bField, _maxChi2PerHit2nd); 
   if(error != 0){
     if(_mydebugKalFit) std::cout << "KalFit error code : " << error << std::endl;
     delete Track;
     delete marlinTrk;
     return error;
-    /* 参考までに。
+    /* For Reference,
        const int IMarlinTrack::success  = 0 ;  // no error
        const int IMarlinTrack::error = 1 ; // ndf is not enough
        const int IMarlinTrack::bad_intputs = 3 ;
@@ -4468,15 +3997,6 @@ int FPCCDSiliconTracking_MarlinTrk::KalFit(int& ndf, float& Chi2, TrackerHitVec 
   }
 
   FloatVec covM = trkStateIP->getCovMatrix();
-  //d0, phi, omega, z0, tan(lambda)
-  //Caution : Convention of fastfit and that of kalfit are different.
-  //check
-  /**
-    調べた結果、covMatrixは参照引数ではない模様。trkStateIP->getCovMatrix()が正解
-    std::cout << "KalFit! covM(IP) VS covMatrix" << std::endl;
-    printf("d0,phi,omega,z0,tanL : %f,%f,%f,%f,%f \n",covM[0],covM[2],covM[5],covM[9],covM[14]);
-    printf("d0,phi,omega,z0,tanL : %f,%f,%f,%f,%f \n",covMatrix[0],covMatrix[2],covMatrix[5],covMatrix[9],covMatrix[14]);
-   **/
 
   for(int i = 0 ; i < 15; i++) epar[i] = covM[i];
   helix.Initialize_Canonical(par[1],par[0],par[3],par[2],par[4],_bField);
@@ -4500,8 +4020,6 @@ int FPCCDSiliconTracking_MarlinTrk::KalFit(int& ndf, float& Chi2, TrackerHitVec 
   Outliers.clear();
   Outliers.reserve(outliers.size());
   for ( unsigned ihit = 0; ihit < outliers.size(); ++ihit) {Outliers.push_back(outliers[ihit].first); }
-
-
 
 
   delete Track;
@@ -4535,7 +4053,6 @@ float FPCCDSiliconTracking_MarlinTrk::DotOf2Clusters(TrackerHit* A, TrackerHit* 
   std::cout <<  "tilt : "  << cb.tilt << std::endl;
 #endif      
 
-  //double eta0 = _geodata[layer].rmin+0.5*_pixelheight +(layer%2)*(_geodata[layer].sthick-_pixelheight);
 
   double signA = 1;
   if(ca.tilt>1) signA = -1;
@@ -4553,7 +4070,6 @@ float FPCCDSiliconTracking_MarlinTrk::DotOf2Clusters(TrackerHit* A, TrackerHit* 
 
 }
 
-/**/
 
 TVector3 FPCCDSiliconTracking_MarlinTrk::LocalToGlobal(TVector3 local,int layer,int ladder){
 #if 0
@@ -4578,7 +4094,6 @@ TVector3 FPCCDSiliconTracking_MarlinTrk::LocalToGlobal(TVector3 local,int layer,
 
 
 void FPCCDSiliconTracking_MarlinTrk::calcTrackParameterOfMCP(MCParticle* pmcp, double* par){
-  //KalTest Reference Manual page 17 
 
   double bz = Global::GEAR->getBField().at( gear::Vector3D( 0.,0.,0.)  ).z() ;
   HelixTrack helixMC( pmcp->getVertex(), pmcp->getMomentum(), pmcp->getCharge(), bz ) ;
@@ -4619,9 +4134,8 @@ void FPCCDSiliconTracking_MarlinTrk::calcTrackParameterOfMCP(MCParticle* pmcp, d
 
 
 int FPCCDSiliconTracking_MarlinTrk::CheckTiltOf2Clusters(TrackerHit* A, TrackerHit* B, int level){
-  //levelは、tiltCheckの条件の厳しさを選べるようにするためにつけた。今のところlevelでわけないが、
-  //将来的にはVXD layerの組み合わせが 0th 1st, 2nd 3rd, 4th 5thの時には厳しいselectionをかける
-  //ようにするかもしれないです。
+  //level is set for the future where users choose the level of requirement hardness.
+  //For now, this level is not alive.
 
   ClusterStatus ca(A);
   ClusterStatus cb(B);
@@ -4687,6 +4201,7 @@ IntVec FPCCDSiliconTracking_MarlinTrk::getNHitsInSubDet(SimTrackerHitVec simvec)
 }
 
 
+//This is a debug tool for debug by mori.
 MCPMap FPCCDSiliconTracking_MarlinTrk::LoadMCPMap(){
 
 
@@ -4840,7 +4355,6 @@ int FPCCDSiliconTracking_MarlinTrk::getPhiThetaRegion(TrackExtended* trackAR, in
       }
     }
 
-  //2013_08_22追加：例えばnPhiDiv = 1440のとき、
     double tmpphi = atan2( iSec[1], iSec[0] ) ; 
     if(tmpphi < 0.0) tmpphi += 2.0*M_PI;
     phiSectsTest[i] = tmpphi/(2.0*M_PI/_nDivisionsInPhi);
@@ -4892,9 +4406,6 @@ int FPCCDSiliconTracking_MarlinTrk::getPhiThetaRegion(TrackExtended* trackAR, in
   int iThetaUpTest = int(std::max(thetaSectsTest[0],std::max(thetaSectsTest[1],thetaSectsTest[2]))) + 1 + _fudgeThetaRange;
   int iThetaLowTest = int(std::min(thetaSectsTest[0],std::min(thetaSectsTest[1],thetaSectsTest[2]))) - 1 - _fudgeThetaRange;
   
-  //2013_08_22 :Example, nDivisionsInPhi : 1440, low:-3, up:1442 --modified--> low:1437, up 1442
-  //                                             low:-2, up:1439 --modified--> low:1438, up 1439
-  //                                             low:1,  up:1439 --modified--> low:1439, up 1441
   if(iPhiLowTest + _nDivisionsInPhi - iPhiUpTest  < iPhiUpTest - iPhiLowTest ) {
     int swap1 = iPhiUpTest;
     int swap2 = iPhiLowTest + _nDivisionsInPhi;
