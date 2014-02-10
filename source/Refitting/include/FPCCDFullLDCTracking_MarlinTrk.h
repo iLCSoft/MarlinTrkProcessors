@@ -48,6 +48,34 @@ namespace MarlinTrk {
 
 
 /** === FPCCDFullLDCTracking_MarlinTrk Processor === <br>
+ *
+ *
+ * This processor is based on FullLDCTracking_MarlinTrk Processor (author: Steve Apline). <br>
+ * Please use this processor with FPCCDSiliconTracking_MarlinTrk, then tracking performance is improved.  <br>
+ * As I said in FPCCDSiliconTracking_MarlinTrk.h, users can use CMOS VXD Simulator with these tracking code in spite of the name FPCCD~.  <br>
+ * 
+ * There are only two differences between FPCCDFullLDCTracking_MarlinTrk and FullLDCTracking_MarlinTrk. <br>
+ * The one is the requirement of registering silicon tracks in this processor. <br>
+ * If useMaxChi2RequirementForSiTrk : false, then the requirement requires <br>
+ * a threshold of probability of track (old requirement). <br>
+ * If true, it does chi2/ndf (new requirement).  <br>
+ * The reason that I added new one is that good reconstructed low Pt tracks  <br>
+ * tend to have relatively higher probability than high Pt tracks.  <br>
+ * For saving those tracks, it is more effective to use the threshold of chi2/ndf.  <br>
+ * The other is the strategy for reducing pair-BG tracks.  <br>
+ * If FinalTrackCut_strategyA is true, then at last stage of this processor,  <br>
+ * tracks seemed to be pair-BG tracks are discarded by requiring  <br>
+ * SIT htis >= 1 || TPC hits >= 1 || abs(costheta) > 0.9  <br>
+ * About this track requirement, please see   <br>
+ * https://agenda.linearcollider.org/getFile.py/access?contribId=5&resId=0&materialId=slides&confId=6294 <br>
+ *
+ * @author Tatsuya Mori (Tohoku University)<br>
+ *
+ *
+ * The following sentence is the copy of FullLDCTracking_MarlinTrk.
+ *
+ *
+ *
  * Processor performing track finding procedure in 
  * the entire LDC detector by linking track segments
  * found by the SiliconTracking module in the silicon detectors
@@ -591,9 +619,9 @@ protected:
   LCCollection* _simSET;
 
   bool _mydebug;
-  bool _mydebugThrough;
   bool _mydebugPrintMCP;
 
+  bool _FinalTrackCut_strategyA;
 
   /** helper function to get collection using try catch block */
   LCCollection* GetCollection(  LCEvent * evt, std::string colName ) ;
