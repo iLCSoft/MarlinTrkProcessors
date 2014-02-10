@@ -55,14 +55,34 @@ namespace UTIL{
 }
 
 
-/** === Silicon Tracking Processor === <br>
+/** === FPCCDSiliconTracking_MarlinTrk Processor === <br>
+ * This processor is based on SiliconTracking_MarlinTrk Processor (author: Steve Apline). <br>
+ * The major differences between FPCCDSiliconTracking_MarlinTrk and SiliconTracking_MarlinTrk are <br>
+ * TestTriplet method and BuildTrack method, which is to say, making track seed process and extrapolation process. <br>
+ * In more detail, please see my talk slide in LCWS 13. <br>
+ * https://agenda.linearcollider.org/getFile.py/access?contribId=313&sessionId=37&resId=0&materialId=slides&confId=6000 <br>
+ * This slide explains the major differences and shows improvement in tracking efficiency by using FPCCDSiliconTracking_MarlinTrk and <br>
+ * FPCCDFullLDCTracking_MarlinTrk. <br>
+ * In more detail than this slide, now I am preparing to submit proceedings of LCWS 13. In the future, I will write the address here. <br>
+ * 
+ * This processor is named FPCCD~, but if you don't use FPCCD VXD Simulator but CMOS with VXDPlanarDigiProcessor or something like that, <br>
+ * abailable, and improves tracking efficiency and flavor tagging and reduces CPU time down to 1/10 if you include pair-BG into your analysis. <br>
+ * The performance evaluation study of this processor in the case including pair-BG is shown in <br>
+ * https://agenda.linearcollider.org/getFile.py/access?contribId=5&resId=0&materialId=slides&confId=6294 <br>
+ *
+ * @author Tatsuya Mori (Tohoku University)<br>
+ *
+ *
+ * The following sentence is the copy of SiliconTracking_MarlinTrk.
+ *
+ *
  * Processor performing stand-alone pattern recognition
- * in the vertex detector (VTX), forward tracking disks and SIT. <br>
+ * in the vertex detector (VXD), forward tracking disks and SIT. <br>
  * The procedure consists of three steps : <br> 
- * 1) Tracking in VTX and SIT ; <br>
+ * 1) Tracking in VXD and SIT ; <br>
  * 2) Tracking in FTD ; <br>
- * 3) Merging compatible track segments reconstructed in VTX and FTD <br>
- * STEP 1 : TRACKING IN VTX and SIT <br>
+ * 3) Merging compatible track segments reconstructed in VXD and FTD <br>
+ * STEP 1 : TRACKING IN VXD and SIT <br>
  * Algorithm starts with finding of hit triplets satisfying helix hypothesis <br> 
  * in three different layers. Two layers of SIT are effectively considered as outermost <br>
  * layers of the vertex detector. To accelerate procedure, the 4-pi solid angle
@@ -78,13 +98,13 @@ namespace UTIL{
  * array until all track candidate have been output or discarded. <br>
  * STEP 2 : TRACKING IN FTD <br>
  * In the next step tracking in FTD is performed. The strategy of tracking in the FTD 
- * is the same as used for tracking in the VTX+SIT. <br>
- * STEP 3 : MERGING TRACK SEGMENTS FOUND IN FTD AND VTX+SIT <br>
- * In the last step, track segments reconstructed in the FTD and VTX+SIT, belonging to the
+ * is the same as used for tracking in the VXD+SIT. <br>
+ * STEP 3 : MERGING TRACK SEGMENTS FOUND IN FTD AND VXD+SIT <br>
+ * In the last step, track segments reconstructed in the FTD and VXD+SIT, belonging to the
  * same track  are identified and merged into one track. All possible 
  * pairings are tested for their compatibility.
- * The number of pairings considered is Ntrk_VTX_SIT*Ntrk_FTD, where Ntrk_VTX_SIT is the number of 
- * track segments reconstructed in the first step in VTX+SIT (segments containing solely VTX and SIT hits) and
+ * The number of pairings considered is Ntrk_VXD_SIT*Ntrk_FTD, where Ntrk_VXD_SIT is the number of 
+ * track segments reconstructed in the first step in VXD+SIT (segments containing solely VXD and SIT hits) and
  * Ntrk_FTD is the number of track segments reconstructed in the second step 
  * (segments containing solely FTD hits).
  * Pair of segments is accepted for further examination if the angle between track segments and 
@@ -112,24 +132,24 @@ namespace UTIL{
  * The number of hits in the different subdetectors associated
  * with each track can be accessed via method Track::getSubdetectorHitNumbers().
  * This method returns vector of integers : <br>
- * number of VTX hits in track is the first element in this vector  
+ * number of VXD hits in track is the first element in this vector  
  * (Track::getSubdetectorHitNumbers()[0]) <br>
  * number of FTD hits in track is the second element in this vector  
  * (Track::getSubdetectorHitNumbers()[1]) <br>
  * number of SIT hits in track is the third element in this vector  
  * (Track::getSubdetectorHitNumbers()[2]) <br>
  * Output track collection has a name "SiTracks". <br>
- * @param VTXHitCollectionName name of input VTX TrackerHit collection <br>
- * (default parameter value : "VTXTrackerHits") <br>
+ * @param VXDHitCollectionName name of input VXD TrackerHit collection <br>
+ * (default parameter value : "VXDTrackerHits") <br>
  * @param FTDHitCollectionName name of input FTD TrackerHit collection <br>
  * (default parameter value : "FTDTrackerHits") <br>
  * @param SITHitCollectionName name of input SIT TrackerHit collection <br>
  * (default parameter value : "SITTrackerHits") <br>
  * @param SiTrackCollectionName name of the output Silicon track collection <br>
  * (default parameter value : "SiTracks") <br>
- * @param LayerCombinations combinations of layers used to search for hit triplets in VTX+SIT <br>
+ * @param LayerCombinations combinations of layers used to search for hit triplets in VXD+SIT <br>
  * (default parameters : 6 4 3  6 4 2  6 3 2  5 4 3  5 4 2  5 3 2  4 3 2  4 3 1  4 2 1  3 2 1) <br> 
- * Note that in the VTX+SIT system the first and the second layers of SIT have indicies nLayerVTX and nLayerVTX+1. 
+ * Note that in the VXD+SIT system the first and the second layers of SIT have indicies nLayerVXD and nLayerVXD+1. 
  * Combination given above means that triplets are looked first in layers 6 4 3, and then 
  * in 6 4 2;  5 4 3;  6 3 2 etc. NOTE THAT LAYER INDEXING STARTS FROM 0.
  * LAYER 0 is the innermost layer  <br>
@@ -138,9 +158,9 @@ namespace UTIL{
  *  4 3 0  4 2 1  4 2 0  4 1 0  3 2 1  3 2 0  3 1 0  2 1 0). 
  * NOTE THAT TRACKS IN FTD ARE SEARCHED ONLY IN ONE HEMISPHERE. TRACK IS NOT 
  * ALLOWED TO HAVE HITS BOTH IN BACKWARD AND FORWARD PARTS OF FTD SIMULTANEOUSLY. 
- * @param NDivisionsInPhi Number of divisions in Phi for tracking in VTX+SIT <br>
+ * @param NDivisionsInPhi Number of divisions in Phi for tracking in VXD+SIT <br>
  * (default value is 40) <br>
- * @param NDivisionsInTheta Number of divisions in cosQ for tracking in VTX+SIT <br>
+ * @param NDivisionsInTheta Number of divisions in cosQ for tracking in VXD+SIT <br>
  * (default value is 40) <br>
  * @param NDivisionsInPhiFTD Number of divisions in Phi for tracking in FTD <br>
  * (default value is 3) <br>
@@ -166,7 +186,7 @@ namespace UTIL{
  * cut value. The track is refitted with a given hit being added to the list of hits already 
  * assigned for the track. Additional hit is assigned if chi2 of the new fit has good chi2. <br>
  * (default value is 2 ) <br>
- * @param MinLayerToAttach the minimal layer index to attach VTX hits to the found hit triplets <br>
+ * @param MinLayerToAttach the minimal layer index to attach VXD hits to the found hit triplets <br>
  * (default value is -1) <br>
  * @param CutOnZ0 cut on Z0 parameter of track (in mm). If abs(Z0) is greater than the cut value, track is 
  * discarded (used to suppress fake
@@ -254,9 +274,7 @@ protected:
   double _maxChi2PerHit2nd;  
   
   bool  _UseEventDisplay;
-  int _detector_model_for_drawing;
   std::vector<int> _colours;  
-  float     _helix_max_r;
   
   void drawEvent();
   
@@ -276,10 +294,8 @@ protected:
   /** helper function to get relations using try catch block */
   LCRelationNavigator* GetRelations( LCEvent * evt, std::string RelName ) ;
   
-  /** input MCParticle collection and threshold used for Drawing
-   */
+  /** input MCParticle collection and threshold used for Drawing */
   std::string  _colNameMCParticles;
-  float _MCpThreshold ;
   
   
   /// Compare tracks according to their chi2/ndf
@@ -386,7 +402,7 @@ protected:
   float _chi2WZQuartet;
   float _chi2WZSeptet;
   float _minDistCutAttachForFTD;
-  float _minDistCutAttachForVXD;//AttachRemainingHitsのアルゴリズムを改良するまでは置いておく。
+  float _minDistCutAttachForVXD;
   int _minimalLayerToAttach;
   int _minMissAddition;
   
@@ -481,7 +497,6 @@ protected:
 
   int _sw_theta;//search window theta
   float _chi2FitCut_kalman;
-  float _boundaryLowPt;
   bool _useClusterRejection;
   float _minDotOf2Clusters;
 
@@ -490,6 +505,7 @@ protected:
   int CheckTiltOf2Clusters(TrackerHit* A, TrackerHit* B, int level);
   float DotOf2Clusters(TrackerHit* A, TrackerHit* B);
   int KalFit(int& ndf, float& Chi2, TrackerHitVec trkHits,TrackerHitVec& hits_in_fit, TrackerHitVec& outliers, float* par , float* epar, HelixClass_double& helix);
+  int getPhiThetaRegion(TrackExtended* trackAR, int layer, int* Boundaries);
 
   struct GeoData_t {
     int nladder;
@@ -501,7 +517,7 @@ protected:
     std::vector<double> phi;  // phi of each ladder
     std::vector<double> phiAtXiMin;  // phiAtXiMin of each ladder
     std::vector<double> phiAtXiMax;  // phiAtXiMax of each ladder
-    std::vector<double> ladder_incline;//ladderを一時直線とみなした時の、直線の傾きをphiで表したもの。
+    std::vector<double> ladder_incline;//the tilt of the line of the ladder expressed by phi
     double sthick;  // sensitive region thickness
     double sximin;  // minimum xi of sensitive region.
     double sximax;  // maximum xi of sensitive region
@@ -517,8 +533,8 @@ protected:
      std::vector<GeoData_t> geodata;
   }_vxd,_sit;
 
-  void InitVXDGeometry();//FPCCDClusteringにある奴のパクリ
-  void InitSITGeometry();//FPCCDClusteringにある奴のパクリ
+  void InitVXDGeometry();
+  void InitSITGeometry();
   FloatVec _pixelSizeVec;
   float _pixelheight;
   TVector3 LocalToGlobal(TVector3 local,int layer,int ladder);
@@ -540,7 +556,7 @@ protected:
      ClusterStatus(TrackerHit* hit){
         cellid0 = hit->getCellID0(); 
         cellid1 = hit->getCellID1();
-        //layer  = ( cellid0 >> 5 ) & 0x000001ff;//なんかバグってるっぽい。
+        //layer  = ( cellid0 >> 5 ) & 0x000001ff;//maybe bug.
         //ladder = (cellid0 >> 15 ) & 0x000000ff;
         xiwidth =  cellid1 & 0x000001ff ;
         zetawidth = ( cellid1 >> 9 ) & 0x000001ff;
@@ -563,13 +579,17 @@ protected:
   double getNeededPhiSectors(double Pt, int outly , int inly); //Difference of radian is returned
   ///////////////////////////
 
-  //New Ver////////////////////
+  //New Ver////////////////////==under construction====
   typedef std::map< std::vector<int> , std::vector<int> > RangeMapVer2;
   RangeMapVer2 _phiRangeForTripletVer2;
   void getNeededPhiSectorsVer2(double Pt, std::vector<int> layers, std::vector<double>& phiDiff);
-  /////////////////////////////
+  /////////////////////////////========================
 
-  float _safetyPhiRange_ratio;//Range searched by triplet construction process and needed to find triplet is calculated by getNeededPhiSectors, but safety range is not considered. Value of _safetyRange is used such as Range = Range*(1 + _safetyRange);
+  float _safetyPhiRange_ratio;/**
+  Extra range in addition to main range used for triplet construction process and needed to find triplet 
+  is calculated by getNeededPhiSectors, but safety range is not considered.
+  Value of _safetyRange is used such as Range = Range*(1 + _safetyRange);
+  */
   int _safetyPhiRange_fix;
   float _fudgeFactorForSITsr_rphi;
   float _fudgeFactorForSITsr_z;
@@ -593,29 +613,19 @@ protected:
   LCCollection* _simFTDsp;
   LCCollection* _simFTDpix;
 
-  TTree* _treeVXD;
-  TTree* _treeFTD;
-  TTree* _tree;
-  TNtupleD *_ntuple, *_ntuple2;
-  TFile* _rootf;  
-  void MyBranchTT(TTree* tree);//MyBranch_TestTripletにセットするようにした。
-  class Triplet;
-  void MyFillTT(TTree* tree,Triplet tpt);//MyBranch_TestTripletにセットするようにした。
-  MyBranch_TestTriplet _branchTT;
-  std::string _rootFileName;
-  std::string _treeName;
-
 
 
   double _nSigmaBuild_phi;
   double _nSigmaBuild_theta;
 
-  bool _keepCandidate;//used in AttachRemainingVTXHitsVeryFast
+  bool _keepCandidate;//used in AttachRemainingVTXHitsVeryFast <-- under construction for now
 
   moriUTIL* _moriUtil;
   GetPurityUtil* _purityUtil;
 
-//debug tools and variables/////
+////////////////////////////////////////////////////////////////
+////from here, a lot of debug tools and variables for mori /////
+////////////////////////////////////////////////////////////////
   bool _mydebug;
   bool _mydebugKalFit;
   bool _mydebugIntersection;
@@ -701,7 +711,6 @@ protected:
   };
 
   enum MCPContributions getMCPContribution(IntVec nsub);
-
 
   class Triplet : public IMPL::TrackImpl{
    public :
@@ -843,7 +852,6 @@ protected:
   void TripletDebuger1(std::vector<Triplet>::iterator begin, std::vector<Triplet>::iterator end);
   void TripletDebuger2(std::vector<const Triplet*>::iterator begin, std::vector<const Triplet*>::iterator end);
 
-  int getPhiThetaRegion(TrackExtended* trackAR, int layer, int* Boundaries);
   
 };
 
