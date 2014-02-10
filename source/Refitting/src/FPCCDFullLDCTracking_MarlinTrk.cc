@@ -583,18 +583,17 @@ FPCCDFullLDCTracking_MarlinTrk::FPCCDFullLDCTracking_MarlinTrk() : Processor("FP
   registerProcessorParameter( "mydebug" , 
       "mydebug",
       _mydebug,
-      bool(true));
-
-  registerProcessorParameter( "mydebugThrough" , 
-      "mydebugThrough",
-      _mydebugThrough,
-      bool(true));
+      bool(false));
 
   registerProcessorParameter( "mydebugPrintMCP" , 
       "mydebugPrintMCP",
       _mydebugPrintMCP,
-      bool(true));
+      bool(false));
 
+  registerProcessorParameter( "FinalTrackCut_strategyA" , 
+      "Tracks which have SIT hit, TPC hit, or |costheta < 0.9| are stored. The others are discarded in the end of this processor. This is for reducing pair BG tracks.",
+      _FinalTrackCut_strategyA,
+      bool(false));
 
 
 
@@ -1018,8 +1017,33 @@ void FPCCDFullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtend
     
     bool rejectTrackonSiliconHits = ( (nhits_in_tpc<=0) && (nHitsSi<_cutOnSiHits) );
     bool rejectTrackonImpactParameters =  ( fabs(d0TrkCand) > _d0TrkCut ) || ( fabs(z0TrkCand) > _z0TrkCut );
-    
-    if ( rejectTrack_onTPCHits || rejectTrackonSiliconHits  || rejectTrackonImpactParameters) {
+
+
+    //mori added
+    //The following cut option will reduce most of pair BG tracks while keeping non-pair BG tracks
+    bool rejectTrack_on_strategyA = false; 
+    if(_FinalTrackCut_strategyA){
+      bool has_SIT_hits = (nhits_in_sit > 0);
+      bool has_TPC_hits = (nhits_in_tpc > 0);
+
+      double omega = trkStateIP->getOmega();
+      double tanL = trkStateIP->getTanLambda();
+      double bz = Global::GEAR->getBField().at( gear::Vector3D( 0.,0.,0.)  ).z() ;
+      double alpha = 2.99792458E-4;
+      bool is_outside_SIT_coverage = false;
+      if( std::isnormal(omega) && std::isnormal(tanL) ){
+         double Pt = alpha * std::abs( bz / omega );
+         double Pz = Pt * tanL;
+         double Pabs = Pt * sqrt( 1.0 + tanL * tanL );
+         double costheta = Pz/Pabs;
+         is_outside_SIT_coverage = (std::abs(costheta) > 0.9);
+      }
+      if( !has_SIT_hits && !has_TPC_hits && !is_outside_SIT_coverage  ){
+        rejectTrack_on_strategyA = true;
+      }
+    }
+    if ( rejectTrack_onTPCHits || rejectTrackonSiliconHits  || rejectTrackonImpactParameters || rejectTrack_on_strategyA ) {
+
       
       streamlog_out( DEBUG3 ) << " Track " << trkCand
       << " rejected : rejectTrack_onTPCHits = " << rejectTrack_onTPCHits
@@ -1651,13 +1675,13 @@ void FPCCDFullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
       if(_useMaxChi2ReqForSiTrk){
         if( siTrack->getChi2()/double(siTrack->getNdf()) > _maxChi2ForSiliconTracks){
           streamlog_out(DEBUG5) << "Si Tracks " << siTrack << " id : " << siTrack->id() << " rejected with prob " << prob << " < " << _minChi2ProbForSiliconTracks << std::endl;
-          if(_mydebugThrough) continue; //ひとまずこれでチェック。
+          continue; 
         }
       }
       else{
         if( prob < _minChi2ProbForSiliconTracks ) {
           streamlog_out(DEBUG5) << "Si Tracks " << siTrack << " id : " << siTrack->id() << " rejected with prob " << prob << " < " << _minChi2ProbForSiliconTracks << std::endl;
-          if(_mydebugThrough) continue; //ひとまずこれでチェック。
+          continue;
         }
       }
       
