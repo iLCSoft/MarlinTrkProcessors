@@ -56,7 +56,7 @@
 #include "TMath.h"
 #include "TStopwatch.h"
 
-#include "../GetPurity.h" //by Mori
+#include "./GetPurity.h" //by Mori
 
 
 
