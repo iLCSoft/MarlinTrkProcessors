@@ -28,9 +28,7 @@
 #include "TFile.h"
 #include "TVector3.h"
 #include "TStopwatch.h"
-#include "../src/GetPurity.h" 
 #include "./MCPMap.h"
-#include "./MyBranch_TestTriplet.h"
 
 namespace DiagnosticsHistograms {
   class Histograms ;
