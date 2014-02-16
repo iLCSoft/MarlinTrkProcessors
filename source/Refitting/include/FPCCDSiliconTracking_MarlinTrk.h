@@ -29,6 +29,7 @@
 #include "TVector3.h"
 #include "TStopwatch.h"
 #include "./MCPMap.h"
+#include "../src/GetPurity.h" //by Mori
 
 namespace DiagnosticsHistograms {
   class Histograms ;
