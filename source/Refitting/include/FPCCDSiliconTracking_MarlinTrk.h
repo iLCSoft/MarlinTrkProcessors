@@ -499,8 +499,8 @@ protected:
   bool _useClusterRejection;
   float _minDotOf2Clusters;
 
-  int getIntersectionEasy(HelixClass_double helix, TrackerHit* curInmos , int layer, double* isec, double* ref);
-  int getIntersectionEasyTest(HelixClass_double helix, TrackerHit* basisTrkhit , int layer, std::vector<double> &vec );
+  int getIntersectionEasy(HelixClass_double& helix, TrackerHit* curInmos , int layer, double* isec, double* ref); 
+  int getIntersectionEasyTest(HelixClass_double& helix, TrackerHit* basisTrkhit , int layer, std::vector<double> &vec ); 
   int CheckTiltOf2Clusters(TrackerHit* A, TrackerHit* B, int level);
   float DotOf2Clusters(TrackerHit* A, TrackerHit* B);
   int KalFit(int& ndf, float& Chi2, TrackerHitVec trkHits,TrackerHitVec& hits_in_fit, TrackerHitVec& outliers, float* par , float* epar, HelixClass_double& helix);
