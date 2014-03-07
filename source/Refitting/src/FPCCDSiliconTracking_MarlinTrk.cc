@@ -1902,7 +1902,8 @@ int FPCCDSiliconTracking_MarlinTrk::BuildTrack_KalFit(TrackerHitExtended * outer
 }
 
 
-int FPCCDSiliconTracking_MarlinTrk::getIntersectionEasy(HelixClass_double helix, TrackerHit* curInmos , int layer, double* isec, double* ref){
+int FPCCDSiliconTracking_MarlinTrk::getIntersectionEasy(HelixClass_double& helix, TrackerHit* curInmos , int layer, double* isec, double* ref){
+//int FPCCDSiliconTracking_MarlinTrk::getIntersectionEasy(HelixClass_double& helix, TrackerHit* curInmos , int layer, double* isec, double* ref){
 
   if(layer > 5){
     std::cout << "getIntersectionEasy used non-VXD layer by mistake. Check source code." << std::endl;
@@ -1943,7 +1944,7 @@ int FPCCDSiliconTracking_MarlinTrk::getIntersectionEasy(HelixClass_double helix,
 
 
 
-int FPCCDSiliconTracking_MarlinTrk::getIntersectionEasyTest(HelixClass_double helix, TrackerHit* basis, int layer, std::vector<double> &isec){
+int FPCCDSiliconTracking_MarlinTrk::getIntersectionEasyTest(HelixClass_double& helix, TrackerHit* basis, int layer, std::vector<double> &isec){
 
   if(layer > 8){
     std::cout << "getIntersectionEasyTest uses only VXD or SIT layer. Check source code." << std::endl;
