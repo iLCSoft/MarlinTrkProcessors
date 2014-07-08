@@ -16,6 +16,13 @@
  
 
  =============================================================================================================
+
+  ---------
+ | v01-11  |
+  ---------
+      -  added processor for VXD tracking using a cellular automaton algorithm based on mini - vectors
+
+
   ---------
  | v01-10  |
   ---------
