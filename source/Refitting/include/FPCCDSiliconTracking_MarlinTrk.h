@@ -42,7 +42,9 @@ namespace DiagnosticsHistograms2D {
 using namespace lcio ;
 using namespace marlin ;
 
-class gear::GearMgr ;
+namespace  gear{
+  class GearMgr ;
+}
 
 namespace MarlinTrk {
   class HelixFit;
