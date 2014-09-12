@@ -313,6 +313,7 @@ protected:
   
   int SegmentRadialOverlap(TrackExtended* pTracki, TrackExtended* pTrackj);
   bool VetoMerge(TrackExtended* firstTrackExt, TrackExtended* secondTrackExt);
+  float* CalculateEnergyLoss(TrackerHitExtendedVec hitvec);
   
   
   int _nRun ;
@@ -426,6 +427,8 @@ protected:
   float _d0TrkCut,_z0TrkCut;
   
   int _forbidOverlapInZTPC,_forbidOverlapInZComb;
+
+  float _energyLossErrorTPC;
   
   LCEvent * _evt;
   

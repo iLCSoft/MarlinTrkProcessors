@@ -481,6 +481,10 @@ FullLDCTracking_MarlinTrk::FullLDCTracking_MarlinTrk() : Processor("FullLDCTrack
                              _maxAllowedSiHitRejectionsForTrackCombination,
                              int(2));
 
+  registerProcessorParameter( "EnergyLossErrorTPC",
+                             "Fractional error of dEdx in the TPC",
+                             _energyLossErrorTPC,
+                             float(0.05));
   
   
 #ifdef MARLINTRK_DIAGNOSTICS_ON
@@ -621,6 +625,23 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
     TrackExtended * trkCand = trkVec[iTRK];
     TrackerHitExtendedVec& hitVec = trkCand->getTrackerHitExtendedVec();
     
+    //calculate dEdx here when the subtrack is the TPC track!
+    //silicon dE/dx can also be calculated. is it necessary??
+    float dedx=0.0;
+    float unum=0.0;
+    TrackExtendedVec subtrk=trkCand->getGroupTracks()->getTrackExtendedVec();
+    if(subtrk.size()!=0){
+      for(unsigned int sdet=0;sdet<subtrk.size(); sdet++){
+        if(BitSet32( subtrk[sdet]->getTrack()->getType() )[  lcio::ILDDetID::TPC   ]){
+          TrackerHitExtendedVec& tpchitVec=subtrk[sdet]->getTrackerHitExtendedVec();
+          float *dummy=CalculateEnergyLoss(tpchitVec);
+          dedx=dummy[0];
+          unum=dummy[1];
+        }
+      }
+    }
+    //std::cout << dedx << " " << unum << std::endl;
+
     EVENT::TrackerHitVec trkHits;
     
     streamlog_out(DEBUG2) << " Trying to add track " << trkCand << " to final lcio collection " << std::endl;
@@ -919,7 +940,9 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
       nTotTracks++;
    
       streamlog_out(DEBUG3) << " Add Track to final Collection: ID = " << Track->id() << " for trkCand "<< trkCand << std::endl;
-      
+      //set dEdx here! this is dE/dx which is calculated using TPC tracks!
+      Track->setdEdx(dedx);
+      Track->setdEdxError(unum);
       colTRK->addElement(Track);
    
     }
@@ -5453,3 +5476,86 @@ void FullLDCTracking_MarlinTrk::setupGearGeom( const gear::GearMgr* gearMgr ){
   }
   
 }
+
+float* FullLDCTracking_MarlinTrk::CalculateEnergyLoss(TrackerHitExtendedVec hitVec){
+  int tH=hitVec.size();
+
+  //estimate truncated point(s) - (largest energy point(s)?)
+  int nTruncate=0;
+  //first, eatimate max. and min. enegy which shold be truncated
+  //making deposit energy vectors
+  float *depe= new float[tH];
+  //float *depe2= new float[tH];
+  int itpc=0;
+  //double dx=0.0,dy=0.0,dz=0.0,length=0.0;
+  for(int iH=1;iH<tH;iH++){
+    TrackerHitExtended * hitExt = hitVec[iH];
+    TrackerHit * hit = hitExt->getTrackerHit();
+    //std::cout << "hit type: " << hit->getType() << std::endl;
+    //if( BitSet32( hit->getType() )[  lcio::ILDDetID::TPC   ] )  {
+    if( true )  {
+      // dx=hit->getPosition()[0]-hitVec[iH-1]->getTrackerHit()->getPosition()[0];
+      // dy=hit->getPosition()[1]-hitVec[iH-1]->getTrackerHit()->getPosition()[1];
+      // dz=hit->getPosition()[2]-hitVec[iH-1]->getTrackerHit()->getPosition()[2];
+
+      // length=sqrt(dx*dx+dy*dy*dz*dz);
+      depe[itpc]=hit->getEDep();    ///length;  //already convert to dedx in TPCDigi, don't divide with length
+      //depe2[iH]=depe[iH];
+      itpc++;
+    }
+  }
+
+  //second, get truncated points vector
+  //changing vectors for descending order
+  float tmpe=0.0;
+  for(int iH=0;iH<itpc;iH++){
+    for(int jH=iH+1;jH<itpc;jH++){
+      if(depe[iH]<depe[jH]){
+        tmpe=depe[iH];
+        depe[iH]=depe[jH];
+        depe[jH]=tmpe;
+      }
+    }
+  }
+
+  //check max. and min energy to be truncated(min 8% and max 30%) (aleph: min 8% max 40%)
+  //20140311 check 40% truncation
+  //20140312 check 40%&8% truncation - doesn't go well
+  //20140313 check 20%&15% truncation - 4.2% for mu
+  //20140313 check 20%&20% truncation   
+  //20140314 resume to 30%& 8% because the problem seems solved
+
+  int maxi=std::max((int)(0.30*itpc)-1,0);
+  int mini=std::min((int)(0.92*itpc)-1,itpc-1);
+  float maxe=depe[maxi];
+  float mine=depe[mini];
+  //float unum=(float)(mini-maxi+1);
+
+  //std::cout << "check max and min: " << maxe << " " << mine << std::endl;
+  //
+  //    Reset
+  //
+  double dedx = 0.0;
+  //int biH=-1;
+  for(int iH=0;iH<itpc;iH++){
+    //TrackerHitExtended * hitExt = hitVec[iH];
+    //TrackerHit * hit = hitExt->getTrackerHit();
+    if(float(depe[iH])>mine && float(depe[iH])<maxe){   //need to check here
+      //if(float(depe[iH])<maxe){   //need to check here
+      dedx+=depe[iH];
+      nTruncate++;
+      //biH=iH;
+    }
+  }
+
+  //cal. truncated mean
+  dedx = dedx/(float)(nTruncate);
+  //std::cout << "check dedx: " << dedx << " " << unum << std::endl;
+
+  float *ret=new float[2];
+  ret[0]=dedx;
+  ret[1]=dedx*_energyLossErrorTPC/sqrt(nTruncate);
+
+  return ret;
+}
+
