@@ -219,11 +219,7 @@ void PlanarDigiProcessor::processEvent( LCEvent * evt ) {
       int module = encoder[lcio::ILDCellID0::module];
       int sensor = encoder[lcio::ILDCellID0::sensor];
       
-      streamlog_out( DEBUG3 ) << "Hit = "<< i << " has celId " << celId << std::endl;
-      streamlog_out( DEBUG3 ) << "side = " << side << std::endl;
-      streamlog_out( DEBUG3 ) << "layerNumber = " <<  layer << std::endl;
-      streamlog_out( DEBUG3 ) << "moduleNumber = " << module << std::endl;
-      streamlog_out( DEBUG3 ) << "sensorNumber = " << sensor << std::endl ;
+      streamlog_out( DEBUG3 ) << "Hit = "<< i << " has celId " << encoder.valueString() << std::endl;
 
       //      //************************************************************
       //      // Quick check if the MCParticle is in the list of MCParticles
