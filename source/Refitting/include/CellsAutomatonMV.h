@@ -60,8 +60,9 @@ namespace MarlinTrk{
   class IMarlinTrkSystem ;
 }
 
-class gear::GearMgr ;
-
+namespace gear{
+class GearMgr ;
+}
 /** a simple typedef, making writing shorter. And it makes sense: a track consists of hits. But as a real track
  * has more information, a vector of hits can be considered as a "raw track". */
 typedef std::vector< IHit* > RawTrack;
