@@ -48,10 +48,7 @@
 #include "MarlinTrk/MarlinTrkUtils.h"
 #include "MarlinTrk/HelixTrack.h"
 
-#include <TTree.h>
-// to calculate chi2 probability
-#include "Math/DistFunc.h"
-#include <vector.h>
+
 
 using namespace KiTrack;
 namespace MarlinTrk{
@@ -172,74 +169,12 @@ protected:
 
   StringVec  _colNamesTrackerHitRelations ;
 
-  std::string _bestSubsetFinder;
 
   
 } ;
 
 
-class TrackCompatibilityShare1SP{
-  
-public:
-   
-   inline bool operator()( TrackImpl* trackA, TrackImpl* trackB ){
-      
-      
-      TrackerHitVec hitsA = trackA->getTrackerHits();
-      TrackerHitVec hitsB = trackB->getTrackerHits();
 
-      for (TrackerHitVec::iterator itA=hitsA.begin(); itA!=hitsA.end(); ++itA) {
-
-	for (TrackerHitVec::iterator itB=hitsB.begin(); itB!=hitsB.end(); ++itB) {
-
-	  if ( *itA == *itB ){
-	    return false ;
-	  }
-	}
-      }
-
-      return true;      
-      
-   }
-   
-};
-
-
-/** A functor to return the quality of a track, in a CMS style. */
-class DoItLikeCMS{
-   
-public:
-   
-   inline double operator()( TrackImpl* track ){ 
-
-     std::vector< TrackerHit* > hitvec = track->getTrackerHits();
-     int hits = hitvec.size();
-
-     //double hits_norm = (hits * 1.0) / 8.0 ;
-
-     return hits ;
-
-   }
-   
-};
-
-
-/** A functor to return the quality of a track, which is currently the chi2 probability. */
-class TrackQI{
-   
-public:
-   
-  inline double operator()( TrackImpl* track ){ 
-
-    double dof = double(track->getNdf());
-    double xi2 = double(track->getChi2()) ;
-
-    //return ROOT::Math::chisquared_cdf_c (xi2, dof) ;
-    return xi2/dof ;
-
-  }
-
-};  
 
 
 #endif

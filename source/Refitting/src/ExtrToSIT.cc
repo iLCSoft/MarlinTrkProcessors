@@ -160,11 +160,6 @@ ExtrToSIT::ExtrToSIT() : Processor("ExtrToSIT") {
                              _nHitsChi2,
                              int(5));
 
-  registerProcessorParameter( "BestSubsetFinder",
-			      "The method used to find the best non overlapping subset of tracks. Available are: SubsetHopfieldNN, SubsetSimple and None",
-			      _bestSubsetFinder,
-			      std::string( "SubsetSimple" ) );
-
   StringVec trackerHitsRelInputColNamesDefault;
   trackerHitsRelInputColNamesDefault.push_back( "VXDTrackerHitRelations" );
   trackerHitsRelInputColNamesDefault.push_back( "SITTrackerHitRelations" );
@@ -732,7 +727,7 @@ void ExtrToSIT::processEvent( LCEvent * evt ) {
   
   ++_n_evt ;
   
-  cout << " event " << _n_evt << std::endl ;
+  //cout << " event " << _n_evt << std::endl ;
   
 }
 
