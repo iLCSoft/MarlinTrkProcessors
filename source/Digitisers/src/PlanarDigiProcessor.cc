@@ -196,7 +196,7 @@ void PlanarDigiProcessor::processEvent( LCEvent * evt ) {
     else if( det_id == lcio::ILDDetID::FTD ){}
     else{
       std::stringstream errorMsg;
-      errorMsg << "PlanarDigiProcessor::processEvent: unsupported detector ID = " << det_id << ": file " << __FILE__ << " line " << __LINE__ ;
+      errorMsg << "PlanarDigiProcessor::processEvent: unsupported detector ID = " << det_id << " in collection " << _inColName  << ": file " << __FILE__ << " line " << __LINE__ ;
       throw Exception( errorMsg.str() );  
     }
     
