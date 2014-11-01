@@ -1,5 +1,6 @@
 #include "SplitCollectionByLayer.h"
 #include <iostream>
+#include <cstdlib>
 
 #include <IMPL/LCCollectionVec.h>
 #include <EVENT/SimTrackerHit.h>
