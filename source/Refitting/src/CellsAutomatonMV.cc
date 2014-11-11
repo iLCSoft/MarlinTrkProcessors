@@ -1266,7 +1266,7 @@ bool CellsAutomatonMV::setCriteria( unsigned round ){
 void CellsAutomatonMV::finaliseTrack( TrackImpl* trackImpl ){
    
    
-   Fitter fitter( trackImpl , _trkSystem );
+  Fitter fitter( trackImpl , _trkSystem , 1 );
    
    trackImpl->trackStates().clear();
    
