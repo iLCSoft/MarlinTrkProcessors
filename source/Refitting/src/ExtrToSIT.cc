@@ -913,7 +913,7 @@ int ExtrToSIT::FitInit2( Track* track, MarlinTrk::IMarlinTrack* _marlinTrk ){
 			     track->getReferencePoint()
 			     ) ;
   
-  _marlinTrk->initialise( trackState, _bField, IMarlinTrack::backward ) ;
+  _marlinTrk->initialise( trackState, _bField, IMarlinTrack::forward ) ;
   
   return IMarlinTrack::success ;   
   
