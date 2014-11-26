@@ -114,6 +114,11 @@ RefitProcessor::RefitProcessor() : Processor("RefitProcessor") {
                              "Maximum Chi-squared value allowed when assigning a hit to a track",
                              _maxChi2PerHit,
                              float(1.e2));
+
+  registerProcessorParameter( "TrackSystemName",
+			      "Name of the track fitting system to be used (KalTest, DDKalTest, aidaTT, ... )",
+			      _trkSystemName,
+			      std::string("KalTest") );
   
   
 }
@@ -121,23 +126,24 @@ RefitProcessor::RefitProcessor() : Processor("RefitProcessor") {
 
 void RefitProcessor::init() { 
   
-  streamlog_out(DEBUG) << "   init called  "
-  << std::endl ;
+  streamlog_out(DEBUG) << "   init called  "  << std::endl ;
   
   // usually a good idea to
   printParameters() ;
   
   
+ 
   _bField = Global::GEAR->getBField().at( gear::Vector3D(0., 0., 0.) ).z();    //The B field in z direction
   
-  // set up the geometery needed by KalTest
-  //FIXME: for now do KalTest only - make this a steering parameter to use other fitters
-  _trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( "KalTest" , marlin::Global::GEAR , "" ) ;
+  //---- 
+  // set up the geometery needed for tracking
+
+  _trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( _trkSystemName , marlin::Global::GEAR , "" ) ;
+  
   
   if( _trksystem == 0 ){
     
-    throw EVENT::Exception( std::string("  Cannot initialize MarlinTrkSystem of Type: ") + std::string("KalTest" )  ) ;
-    
+    throw EVENT::Exception( std::string("  Cannot initialize MarlinTrkSystem of Type: ") + _trkSystemName ) ;
   }
   
   _trksystem->setOption( IMarlinTrkSystem::CFG::useQMS,        _MSOn ) ;
@@ -244,15 +250,21 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
         
         
         if( error != IMarlinTrack::success || refittedTrack->getNdf() < 0 ) {
-          streamlog_out(DEBUG2) << "TruthTracker::createTrack: EVENT: << " << evt->getEventNumber() << " >> Track fit returns error code " << error << " NDF = " << refittedTrack->getNdf() <<  ". Number of hits = "<< trkHits.size() << std::endl;
-          delete refittedTrack;
-          continue ;
+
+          streamlog_out(MESSAGE) << "TruthTracker::createTrack: EVENT: << " << evt->getEventNumber() 
+				 << " >> Track fit returns error code " << error << " NDF = " << refittedTrack->getNdf() 
+				 <<  ". Number of hits = "<< trkHits.size() << std::endl;
+
+	  //fg: write out also incomplete tracks
+          // delete refittedTrack;
+          // continue ;
         }
         
         
       } catch (...) {
         
-        streamlog_out(ERROR) << "RefitProcessor::processEvent: EVENT: << " << evt->getEventNumber() << " >> exception caught and rethown. Track = " << track_to_refit << std::endl;
+        streamlog_out(ERROR) << "RefitProcessor::processEvent: EVENT: << " << evt->getEventNumber() << " >> exception caught and rethown. Track = " 
+			     << track_to_refit << std::endl;
 
         delete refittedTrack;
         

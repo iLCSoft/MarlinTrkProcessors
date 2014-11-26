@@ -25,8 +25,11 @@ namespace MarlinTrk{
  * 
  * @param InputTrackCollectionName Name of the Track collection to be refitted
  * @param OutputTrackCollectionName Name of the refitted Track collection to be refitted
+ * @param TrackSystemName name of the track fitting system to be used (KalTest, DDKalTest, aidaTT, ... )
  * 
  * @author S. J. Aplin, DESY
+ * @history 
+ *   Nov 2014 F.Gaede CERN/DESY added processor parameter to instantiate other implementations of IMarlinTrk
  */
 
 class RefitProcessor : public marlin::Processor {
@@ -111,6 +114,8 @@ protected:
   
   int _n_run ;
   int _n_evt ;
+
+  std::string _trkSystemName ;
   
   float _bField;
   
