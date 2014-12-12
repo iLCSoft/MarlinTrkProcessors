@@ -71,10 +71,6 @@ DDPlanarDigiProcessor::DDPlanarDigiProcessor() : Processor("DDPlanarDigiProcesso
                               _isStrip,
                               bool(false) );
   
-  registerProcessorParameter( "Ladder_Number_encoded_in_cellID" , 
-                             "Mokka has encoded the ladder number in the cellID" ,
-                             _ladder_Number_encoded_in_cellID ,
-                             bool(true));
   
   registerProcessorParameter( "Sub_Detector_ID" , 
                              "ID of Sub-Detector from UTIL/ILDConf.h from lcio. Either for VXD, SIT or SET" ,
