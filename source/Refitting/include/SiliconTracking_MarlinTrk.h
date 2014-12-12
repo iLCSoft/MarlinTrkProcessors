@@ -415,7 +415,8 @@ protected:
   
   int _nTotalVTXHits,_nTotalFTDHits,_nTotalSITHits;
   int _useSIT;
-  
+
+  std::string _trkSystemName ;
   
   //  int _createMap;
   

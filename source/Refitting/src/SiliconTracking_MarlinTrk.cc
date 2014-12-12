@@ -547,7 +547,11 @@ SiliconTracking_MarlinTrk::SiliconTracking_MarlinTrk() : Processor("SiliconTrack
                              _createDiagnosticsHistograms,
                              bool(false));
 
-  
+  registerProcessorParameter( "TrackSystemName",
+			      "Name of the track fitting system to be used (KalTest, DDKalTest, aidaTT, ... )",
+			      _trkSystemName,
+			      std::string("KalTest") );
+
   
 #ifdef MARLINTRK_DIAGNOSTICS_ON
   
@@ -631,8 +635,7 @@ void SiliconTracking_MarlinTrk::init() {
   
   
   // set up the geometery needed by KalTest
-  //FIXME: for now do KalTest only - make this a steering parameter to use other fitters
-  _trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( "KalTest" , marlin::Global::GEAR , "" ) ;
+  _trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( _trkSystemName , marlin::Global::GEAR , "" ) ;
   
   if( _trksystem == 0 ){
     
