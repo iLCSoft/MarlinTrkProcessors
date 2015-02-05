@@ -20,9 +20,11 @@
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
 
-#include "marlin/ProcessorEventSeeder.h"
-#include "marlin/Global.h"
+#include "AIDA/AIDA.h"
 
+#include "marlin/ProcessorEventSeeder.h"
+#include "marlin/AIDAProcessor.h"
+#include "marlin/Global.h"
 
 #include "CLHEP/Vector/TwoVector.h"
 
@@ -105,6 +107,11 @@ DDPlanarDigiProcessor::DDPlanarDigiProcessor() : Processor("DDPlanarDigiProcesso
   
 }
 
+enum {
+  hu = 0,
+  hv,
+  hSize 
+} ;
 
 void DDPlanarDigiProcessor::init() { 
   
@@ -116,6 +123,9 @@ void DDPlanarDigiProcessor::init() {
   
   // initialize gsl random generator
   _rng = gsl_rng_alloc(gsl_rng_ranlxs2);
+
+
+  _h.resize( hSize ) ;
 
   Global::EVENTSEEDER->registerProcessor(this);
 
@@ -136,6 +146,8 @@ void DDPlanarDigiProcessor::init() {
   
   DD4hep::Geometry::DetElement::Children detectors = world.children() ;
 
+  lcio::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ;
+
 
   streamlog_out( DEBUG3 ) << " DDPlanarDigiProcessor::init(): searching for detector with id = " << _sub_det_id << std::endl ;
 
@@ -153,6 +165,9 @@ void DDPlanarDigiProcessor::init() {
 
         DD4hep::DDRec::Surface* surf =  *it ;
         
+        encoder.setValue( surf->id() ) ;
+        streamlog_out( DEBUG5 ) << " ++++  found surface : " << encoder.valueString() << std::endl ;
+
         _map[ surf->id() ] = surf ;
       }
 
@@ -176,7 +191,20 @@ void DDPlanarDigiProcessor::processRunHeader( LCRunHeader* run) {
 } 
 
 void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) { 
-  
+
+
+  if( isFirstEvent() ) {
+
+    streamlog_out( MESSAGE ) << " *** DDPlanarDigiProcessor::processEvent():   creating histograms for first event ! " << std::endl ;
+
+
+    //AIDA::ICloud1D* hMCPEnergy  = 
+    AIDAProcessor::histogramFactory(this) ; //->createHistogram1D( "hMCPEnergy", "energy of the MCParticles", 100 ) ;
+
+    _h[ hu ] = new TH1F( "hu" , "smearing u" , 50, -5. , +5. );
+    _h[ hv ] = new TH1F( "hv" , "smearing v" , 50, -5. , +5. );
+  }
+
   gsl_rng_set( _rng, Global::EVENTSEEDER->getSeed(this) ) ;   
   streamlog_out( DEBUG4 ) << "seed set to " << Global::EVENTSEEDER->getSeed(this) << std::endl;
   
@@ -300,6 +328,11 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
           
           accept_hit = true ;
           newPos     = newPosTmp ;
+
+          _h[hu]->Fill(  uSmear / resU ) ; 
+          _h[hv]->Fill(  vSmear / resV ) ; 
+
+
           break;  
 
         } else { 

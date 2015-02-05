@@ -639,7 +639,7 @@ void SiliconTracking_MarlinTrk::init() {
   
   if( _trksystem == 0 ){
     
-    throw EVENT::Exception( std::string("  Cannot initialize MarlinTrkSystem of Type: ") + std::string("KalTest" )  ) ;
+    throw EVENT::Exception( std::string("  Cannot initialize MarlinTrkSystem of Type: ") + _trkSystemName  ) ;
     
   }
   

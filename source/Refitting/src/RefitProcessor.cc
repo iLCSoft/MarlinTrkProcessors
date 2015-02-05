@@ -221,9 +221,9 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
 
 	// //DEBUG - only take VXD hits for now ....
 	// cellID_encoder.setValue( it->second->getCellID0() ) ;
-
+	
 	// if( cellID_encoder[lcio::ILDCellID0::subdet] ==  lcio::ILDDetID::VXD )
-	trkHits.push_back(it->second);
+	  trkHits.push_back(it->second);
        
       }
       

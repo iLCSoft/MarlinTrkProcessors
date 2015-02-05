@@ -12,6 +12,7 @@
 #include <gsl/gsl_rng.h>
 #include "DDRec/Surface.h"
 
+#include <TH1F.h>
 
 using namespace lcio ;
 using namespace marlin ;
@@ -106,6 +107,9 @@ protected:
   gsl_rng* _rng ;
   
   SurfaceMap _map ;
+
+
+  std::vector<TH1F*> _h ;
   
 } ;
 
