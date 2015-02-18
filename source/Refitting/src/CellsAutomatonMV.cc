@@ -1266,7 +1266,9 @@ bool CellsAutomatonMV::setCriteria( unsigned round ){
 void CellsAutomatonMV::finaliseTrack( TrackImpl* trackImpl ){
    
    
-  Fitter fitter( trackImpl , _trkSystem , 1 );
+
+  //Fitter fitter( trackImpl , _trkSystem ); //it gives problem at 90deg: sometimes the hits are taken in the inverse order resulting in a fitted track in the opposite quadrant of the hits
+  Fitter fitter( trackImpl , _trkSystem , 1); //it forces the hits ordering according to the radius (problem for very bent tracks that are coming back - TO STUDY)
    
    trackImpl->trackStates().clear();
    
@@ -1366,13 +1368,29 @@ bool CellsAutomatonMV::thetaAgreementImproved( EVENT::TrackerHit *toHit, EVENT::
   pos_outer[1] = fromHit->getPosition()[1];
   pos_outer[2] = fromHit->getPosition()[2];
   double radout = sqrt(pos_outer[0]*pos_outer[0]+pos_outer[1]*pos_outer[1]);
-  double theta_out = (180.0 * atan(radout/pos_outer[2])) / M_PI ;
+  //  double theta_out = (180.0 * atan(radout/pos_outer[2])) / M_PI ;
+  //BEFORE BAD RANGE - at 90deg possible flip of sign -- fixed track ineff, still bad track
+  double theta_out = atan2(radout,pos_outer[2]);
+  theta_out = 2*M_PI-theta_out;
+  //theta_out = theta_out % (2*M_PI);
+  //theta_out = fmod(theta_out,2*M_PI);
+  while(theta_out>=2*M_PI){
+    theta_out = theta_out - 2*M_PI; 
+  }
+  theta_out = theta_out*180./M_PI;
 
   pos_inner[0] = toHit->getPosition()[0];
   pos_inner[1] = toHit->getPosition()[1];
   pos_inner[2] = toHit->getPosition()[2];
   double radinn = sqrt(pos_inner[0]*pos_inner[0]+pos_inner[1]*pos_inner[1]);
-  double theta_inn = (180.0 *atan(radinn/pos_inner[2])) / M_PI;
+  //double theta_inn = (180.0 *atan(radinn/pos_inner[2])) / M_PI;
+  //BEFORE BAD RANGE - at 90deg possible flip of sign -- fixed track ineff, still bad track
+  double theta_inn = atan2(radinn,pos_inner[2]);
+  theta_inn = 2*M_PI-theta_inn;
+  while(theta_inn>=2*M_PI){
+    theta_inn = theta_inn - 2*M_PI; 
+  }
+  theta_inn = theta_inn*180./M_PI;
 
   double  diff_theta = fabs ( theta_out - theta_inn ) ;
 
