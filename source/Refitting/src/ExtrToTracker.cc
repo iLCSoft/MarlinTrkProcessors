@@ -728,7 +728,7 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 
 
 
-	      bool fit_backwards = IMarlinTrack::backward;
+	      bool fit_direction = IMarlinTrack::backward;
 	      //bool fit_forwards = IMarlinTrack::forward;
 	      MarlinTrk::IMarlinTrack* marlinTrk = _trksystem->createTrack();		
 	      //int error = 0;
@@ -752,9 +752,9 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 	      
 
 	      //Kalman filter smoothing - fit track from out to in
-	      int error_fit =  MarlinTrk::createFit(trkHits, marlinTrk, trkState, _bField, fit_backwards, _maxChi2PerHit);
+	      int error_fit =  MarlinTrk::createFit(trkHits, marlinTrk, trkState, _bField, fit_direction, _maxChi2PerHit);
 	      if (error_fit == 0) {
-		int error = finaliseLCIOTrack(marlinTrk, lcio_trk, trkHits);
+		int error = finaliseLCIOTrack(marlinTrk, lcio_trk, trkHits, fit_direction );
 		if (error!=0){	   
 		  delete lcio_trk;
 		  delete marlinTrk;

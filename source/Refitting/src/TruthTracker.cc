@@ -1181,7 +1181,7 @@ void TruthTracker::createTrack_iterative( MCParticle* mcp, UTIL::BitField64& cel
             if(_SmoothOn) marlinTrk->smooth();
             
             IMPL::TrackImpl* Track = new IMPL::TrackImpl();
-            int error = MarlinTrk::finaliseLCIOTrack(marlinTrk, Track, added_hits); 
+            int error = MarlinTrk::finaliseLCIOTrack(marlinTrk, Track, added_hits, IMarlinTrack::backward); 
             
             std::vector<std::pair<EVENT::TrackerHit* , double> > hits_in_fit ;  
             std::vector<std::pair<EVENT::TrackerHit* , double> > outliers ;
@@ -1304,7 +1304,7 @@ void TruthTracker::createTrack_iterative( MCParticle* mcp, UTIL::BitField64& cel
         if(_SmoothOn) marlinTrk->smooth();
         
         IMPL::TrackImpl* Track = new IMPL::TrackImpl();
-        int error = MarlinTrk::finaliseLCIOTrack(marlinTrk, Track, added_hits); 
+        int error = MarlinTrk::finaliseLCIOTrack(marlinTrk, Track, added_hits, IMarlinTrack::backward); 
 
         std::vector<std::pair<EVENT::TrackerHit* , double> > hits_in_fit ;  
         std::vector<std::pair<EVENT::TrackerHit* , double> > outliers ;

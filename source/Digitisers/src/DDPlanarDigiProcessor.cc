@@ -287,7 +287,7 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
       DDSurfaces::Vector3D v = surf->v() ;
       
       // get local coordinates on surface
-      DDSurfaces::ISurface::Vector2D lv = surf->globalToLocal( dd4hep::mm * oldPos  ) ;
+      DDSurfaces::Vector2D lv = surf->globalToLocal( dd4hep::mm * oldPos  ) ;
       double uL = lv[0] / dd4hep::mm ;
       double vL = lv[1] / dd4hep::mm ;
 
@@ -311,8 +311,8 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
         
         
         DDSurfaces::Vector3D newPosTmp = 1./dd4hep::mm  * ( ! _isStrip  ? 
-                                                            surf->localToGlobal( DDSurfaces::ISurface::Vector2D (  ( uL + uSmear ) * dd4hep::mm, ( vL + vSmear )  *dd4hep::mm ) )  :
-                                                            surf->localToGlobal( DDSurfaces::ISurface::Vector2D (  ( uL + uSmear ) * dd4hep::mm,          0.                  ) ) 
+                                                            surf->localToGlobal( DDSurfaces::Vector2D (  ( uL + uSmear ) * dd4hep::mm, ( vL + vSmear )  *dd4hep::mm ) )  :
+                                                            surf->localToGlobal( DDSurfaces::Vector2D (  ( uL + uSmear ) * dd4hep::mm,          0.                  ) ) 
                                                             ) ;
 
         streamlog_out( DEBUG1 ) << " hit at    : " << oldPos 

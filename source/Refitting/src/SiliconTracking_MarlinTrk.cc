@@ -1106,7 +1106,7 @@ int SiliconTracking_MarlinTrk::InitialiseVTX(LCEvent * evt) {
   _nTotalVTXHits = 0;
   _nTotalSITHits = 0;
   _sectors.clear();
-  _sectors.resize(_nLayers*_nDivisionsInPhi*_nDivisionsInTheta);
+  _sectors.resize(_nLayers+_nLayers*_nDivisionsInPhi*_nDivisionsInTheta);
   
   
   // Reading out VTX Hits Collection
@@ -1406,7 +1406,7 @@ void SiliconTracking_MarlinTrk::ProcessOneSector(int iPhi, int iTheta) {
     
     // get the all the hits in the outer most theta-phi bin 
     
-    TrackerHitExtendedVec& hitVecOuter =  _sectors[iCode]; 
+    TrackerHitExtendedVec& hitVecOuter =  _sectors.at( iCode ) ; 
     
     int nHitsOuter = int(hitVecOuter.size());
     if (nHitsOuter > 0) {
@@ -1533,6 +1533,7 @@ void SiliconTracking_MarlinTrk::ProcessOneSector(int iPhi, int iTheta) {
         } // endloop over theta in the Middle
       } // endloop over phi in the Middle
     } // endif nHitsOuter > 0
+
   } // endloop over triplets
   
   

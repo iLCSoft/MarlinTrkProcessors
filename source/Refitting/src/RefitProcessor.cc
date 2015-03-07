@@ -14,6 +14,7 @@
 
 #include <UTIL/BitField64.h>
 #include <UTIL/ILDConf.h>
+#include <UTIL/Operators.h>
 
 
 // ----- include for verbosity dependend logging ---------
@@ -223,7 +224,10 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
 	// cellID_encoder.setValue( it->second->getCellID0() ) ;
 	
 	// if( cellID_encoder[lcio::ILDCellID0::subdet] ==  lcio::ILDDetID::VXD )
-	  trkHits.push_back(it->second);
+	
+	streamlog_out( DEBUG1 ) << " -- added tracker hit : " << *it->second << std::endl ;
+	
+	trkHits.push_back(it->second);
        
       }
       
@@ -244,7 +248,8 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
       covMatrix[14] = ( _initialTrackError_tanL  ); //sigma_tanl^2
 
       
-      bool fit_backwards = IMarlinTrack::backward;
+      bool fit_direction = ( 1 ? IMarlinTrack::backward : IMarlinTrack::forward  ) ;
+
       
       MarlinTrk::IMarlinTrack* marlinTrk = _trksystem->createTrack();
       
@@ -254,8 +259,21 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
       
         int error = 0;
       
-        error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, trkHits, refittedTrack, fit_backwards, covMatrix, _bField, _maxChi2PerHit);
-        
+#if 1
+        error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, trkHits, refittedTrack, fit_direction , covMatrix, _bField, _maxChi2PerHit);
+#else
+
+       	//EVENT::TrackState* ts_AtLastHit = const_cast<EVENT::TrackState* > ( track_to_refit->getTrackState( EVENT::TrackState::AtLastHit )  ) ;  
+	EVENT::TrackState* ts_AtLastHit = const_cast<EVENT::TrackState* > ( track_to_refit->getTrackState( EVENT::TrackState::AtIP )  ) ;  
+
+	IMPL::TrackStateImpl pre_fit( *ts_AtLastHit  ) ;
+	pre_fit.setCovMatrix( covMatrix )  ;
+
+        error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, trkHits, refittedTrack, fit_direction , &pre_fit , _bField, _maxChi2PerHit);
+
+#endif
+
+       
         
         if( error != IMarlinTrack::success || refittedTrack->getNdf() < 0 ) {
 
