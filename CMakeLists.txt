@@ -98,7 +98,7 @@ ENDIF()
 # definitions to pass to the compiler
 ADD_DEFINITIONS( "-Wall -ansi -pedantic" )
 ADD_DEFINITIONS( "-Wno-long-long" )
-ADD_DEFINITIONS( "-DGEO1" )
+ADD_DEFINITIONS( "-DGEO2" )
 
 # include directories
 INCLUDE_DIRECTORIES( . ./source/Digitisers/include ./source/Refitting/include ./source/Utils/include ./source/ftf/include )

@@ -40,6 +40,11 @@
 #include <gear/ZPlanarLayerLayout.h>
 #include "gear/BField.h"
 
+#if defined GEO2
+#include "DDRec/Surface.h"
+
+#endif
+
 // ----- include for verbosity dependend logging ---------
 #include "marlin/VerbosityLevels.h"
 
@@ -63,7 +68,12 @@ namespace MarlinTrk{
 
 
 class ExtrToTracker : public marlin::Processor {
-  
+
+#if defined GEO2
+    typedef std::map< unsigned long, const DD4hep::DDRec::Surface* > SurfaceMap ;
+    
+#endif
+
 public:
 
 
@@ -116,7 +126,6 @@ public:
   
   //bool getSiHit(LCCollection*& sitHitsCol, int fitElID, MarlinTrk::IMarlinTrack*& marlin_trk, TrackerHit*& selectedHit);
   
-
   
 protected:
   
@@ -183,9 +192,13 @@ protected:
   float _bField;
 
   StringVec  _colNamesTrackerHitRelations ;
+  bool _performFinalRefit ;
+ 
 
-
-
+#if defined GEO2
+  SurfaceMap _map ;
+  
+#endif
 
   
 
