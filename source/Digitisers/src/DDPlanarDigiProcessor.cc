@@ -15,7 +15,7 @@
 
 #include "DD4hep/LCDD.h"
 #include "DD4hep/DD4hepUnits.h"
-#include "DDRec/SurfaceManager.h"
+#include "DDRec/SurfaceHelper.h"
 
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
@@ -144,6 +144,19 @@ void DDPlanarDigiProcessor::init() {
   DD4hep::Geometry::LCDD& lcdd = DD4hep::Geometry::LCDD::getInstance();
   DD4hep::Geometry::DetElement world = lcdd.world() ;
   
+
+  // // //fg: fixme: this is a workaround for getting all tracker DetElements
+  // // //    should be dealt with in the SurfaceHelper 
+  // // DD4hep::Geometry::LCDD::HandleMap sensDet = lcdd.sensitiveDetectors() ;
+
+  // // for( DD4hep::Geometry::LCDD::HandleMap::const_iterator it = sensDet.begin() ; it != sensDet.end() ; ++it ){
+
+  // //   SensitiveDetector sDet = it->second ;
+  // //   std::cout << "     " << it->first << " : type = " << sDet.type() << std::endl ;
+  // // }
+
+
+
   DD4hep::Geometry::DetElement::Children detectors = world.children() ;
 
   lcio::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ;
@@ -157,7 +170,7 @@ void DDPlanarDigiProcessor::init() {
     
     if( det.id() == _sub_det_id ){
         
-      DD4hep::DDRec::SurfaceManager ds( det ) ;
+      DD4hep::DDRec::SurfaceHelper ds( det ) ;
     
       const DD4hep::DDRec::SurfaceList& detSL = ds.surfaceList() ;
 

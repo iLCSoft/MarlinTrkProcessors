@@ -20,7 +20,7 @@
 //ALL THIS IS NOT REALLY NEEDED EXCEPT FOR THE NTUPLE FILLING
 #include "DD4hep/LCDD.h"
 #include "DD4hep/DD4hepUnits.h"
-#include "DDRec/SurfaceManager.h"
+#include "DDRec/SurfaceHelper.h"
 
 
 #else
@@ -278,7 +278,7 @@ void ExtrToTracker::init() {
         
       if( det.id() == _sub_det_ids[idx] ){
             
-	DD4hep::DDRec::SurfaceManager ds( det ) ;
+	DD4hep::DDRec::SurfaceHelper ds( det ) ;
             
 	const DD4hep::DDRec::SurfaceList& detSL = ds.surfaceList() ;
             
