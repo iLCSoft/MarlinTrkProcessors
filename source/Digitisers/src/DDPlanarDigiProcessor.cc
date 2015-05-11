@@ -15,7 +15,6 @@
 
 #include "DD4hep/LCDD.h"
 #include "DD4hep/DD4hepUnits.h"
-#include "DDRec/SurfaceHelper.h"
 
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
@@ -74,12 +73,11 @@ DDPlanarDigiProcessor::DDPlanarDigiProcessor() : Processor("DDPlanarDigiProcesso
                               bool(false) );
   
   
-  registerProcessorParameter( "Sub_Detector_ID" , 
-                             "ID of Sub-Detector from UTIL/ILDConf.h from lcio. Either for VXD, SIT or SET" ,
-                             _sub_det_id ,
-                             int(lcio::ILDDetID::VXD));
-  
-  
+  registerProcessorParameter( "SubDetectorName" , 
+                             "Name of dub detector" ,
+                             _subDetName ,
+                              std::string("VXD") );
+    
   // Input collections
   registerInputCollection( LCIO::SIMTRACKERHIT,
                           "SimTrackHitCollectionName" , 
@@ -139,62 +137,26 @@ void DDPlanarDigiProcessor::init() {
     throw EVENT::Exception( ss.str() ) ;
   }
 
-  //============ populate surface map =============================
-
   DD4hep::Geometry::LCDD& lcdd = DD4hep::Geometry::LCDD::getInstance();
-  DD4hep::Geometry::DetElement world = lcdd.world() ;
-  
-
-  // // //fg: fixme: this is a workaround for getting all tracker DetElements
-  // // //    should be dealt with in the SurfaceHelper 
-  // // DD4hep::Geometry::LCDD::HandleMap sensDet = lcdd.sensitiveDetectors() ;
-
-  // // for( DD4hep::Geometry::LCDD::HandleMap::const_iterator it = sensDet.begin() ; it != sensDet.end() ; ++it ){
-
-  // //   SensitiveDetector sDet = it->second ;
-  // //   std::cout << "     " << it->first << " : type = " << sDet.type() << std::endl ;
-  // // }
 
 
+  //===========  get the surface map from the SurfaceManager ================
 
-  DD4hep::Geometry::DetElement::Children detectors = world.children() ;
+  DD4hep::DDRec::SurfaceManager& surfMan = *lcdd.extension<DD4hep::DDRec::SurfaceManager>() ;
 
-  lcio::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ;
+  DD4hep::Geometry::DetElement det = lcdd.detector( _subDetName ) ;
 
+  _map = surfMan.map( det.name() ) ;
 
-  streamlog_out( DEBUG3 ) << " DDPlanarDigiProcessor::init(): searching for detector with id = " << _sub_det_id << std::endl ;
-
-  for ( DD4hep::Geometry::DetElement::Children::const_iterator it=detectors.begin() ; it != detectors.end() ; ++it ){
-    
-    DD4hep::Geometry::DetElement det = (*it).second ;
-    
-    if( det.id() == _sub_det_id ){
-        
-      DD4hep::DDRec::SurfaceHelper ds( det ) ;
-    
-      const DD4hep::DDRec::SurfaceList& detSL = ds.surfaceList() ;
-
-      for( DD4hep::DDRec::SurfaceList::const_iterator it = detSL.begin() ; it != detSL.end() ; ++it ){
-
-        DD4hep::DDRec::Surface* surf =  *it ;
-        
-        encoder.setValue( surf->id() ) ;
-        streamlog_out( DEBUG5 ) << " ++++  found surface : " << encoder.valueString() << std::endl ;
-
-        _map[ surf->id() ] = surf ;
-      }
-
-      break ;
-      //-----
-    }
-  }
-
-  streamlog_out( DEBUG3 ) << " DDPlanarDigiProcessor::init(): found " << _map.size() << " surfaces for detector with id:" <<  _sub_det_id << std::endl ;
-
-  if( _map.empty() ) {   std::stringstream err  ; err << " Could not find any surfaces for detector with id: " << _sub_det_id << " in processor " 
-                                                      <<   this->name() ;
+  if( ! _map ) {   
+    std::stringstream err  ; err << " Could not find any surfaces for detector: " 
+                                 << _subDetName << " in SurfaceMap " ;
     throw Exception( err.str() ) ;
   }
+
+  streamlog_out( DEBUG3 ) << " DDPlanarDigiProcessor::init(): found " << _map->size() 
+                          << " surfaces for detector:" <<  _subDetName << std::endl ;
+
   
 }
 
@@ -261,12 +223,18 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
       // get the measurement surface for this hit using the CellID
       //***********************************************************
       
-      const DD4hep::DDRec::Surface* surf = _map[ cellID0 ] ;
-      
-      if( ! surf ){    std::stringstream err ; err << " DDPlanarDigiProcessor::processEvent(): no surface found for cellID : " 
-                                                   <<   cellid_decoder( simTHit ).valueString()  ;
+      DD4hep::DDRec::SurfaceMap::const_iterator sI = _map->find( cellID0 ) ;
+
+      if( sI == _map->end() ){    
+        
+        std::stringstream err ; err << " DDPlanarDigiProcessor::processEvent(): no surface found for cellID : " 
+                                    <<   cellid_decoder( simTHit ).valueString()  ;
         throw Exception ( err.str() ) ;
       }
+
+
+      const DD4hep::DDRec::Surface* surf = sI->second ;
+
 
       int layer  = cellid_decoder( simTHit )["layer"];
 

@@ -11,6 +11,7 @@
 
 #include <gsl/gsl_rng.h>
 #include "DDRec/Surface.h"
+#include "DDRec/SurfaceManager.h"
 
 #include <TH1F.h>
 
@@ -54,8 +55,6 @@ namespace EVENT {
  */
 class DDPlanarDigiProcessor : public Processor {
   
-  typedef std::map< unsigned long, const DD4hep::DDRec::Surface* > SurfaceMap ;
-
 public:
   
   virtual Processor*  newProcessor() { return new DDPlanarDigiProcessor ; }
@@ -94,7 +93,7 @@ protected:
   std::string _outColName ;
   std::string _outRelColName ;
  
-  int _sub_det_id ;
+  std::string _subDetName ;
   
   int _nRun ;
   int _nEvt ;
@@ -106,7 +105,7 @@ protected:
   
   gsl_rng* _rng ;
   
-  SurfaceMap _map ;
+  const DD4hep::DDRec::SurfaceMap* _map ;
 
 
   std::vector<TH1F*> _h ;
