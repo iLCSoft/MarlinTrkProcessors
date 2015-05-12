@@ -1340,7 +1340,7 @@ void FPCCDSiliconTracking_MarlinTrk::end() {
 
   delete _fastfitter ; _fastfitter = 0;
   delete _encoder ; _encoder = 0;
-  delete _trksystem ; _trksystem = 0;
+ // delete _trksystem ; _trksystem = 0;
 
 
 }

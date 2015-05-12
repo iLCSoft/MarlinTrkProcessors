@@ -117,7 +117,7 @@ void CalcTrackerHitResiduals::init() {
   trksystem->init() ;  
   
   //FIXME:SJA gear surface store has now been filled so we can dispose of the MarlinTrkSystem
-  delete trksystem;
+  //delete trksystem;
   
   /// Write histogram to file
   _root_file = new TFile("CalcTrackerHitResiduals.root", "RECREATE");

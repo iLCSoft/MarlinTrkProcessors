@@ -601,7 +601,7 @@ void TruthTracker::end() {
   
   delete _encoder ;
   
-  delete _trksystem ;
+//  delete _trksystem ;
   
 }
 
