@@ -149,8 +149,8 @@ void DDPlanarDigiProcessor::init() {
   _map = surfMan.map( det.name() ) ;
 
   if( ! _map ) {   
-    std::stringstream err  ; err << " Could not find any surfaces for detector: " 
-                                 << _subDetName << " in SurfaceMap " ;
+    std::stringstream err  ; err << " Could not find surface map for detector: " 
+                                 << _subDetName << " in SurfaceManager " ;
     throw Exception( err.str() ) ;
   }
 
