@@ -118,6 +118,12 @@ TrackSubsetProcessor::TrackSubsetProcessor() : Processor("TrackSubsetProcessor")
                              _omega,
                              double( 0.75 ) );
   
+
+  registerProcessorParameter( "TrackSystemName",
+			      "Name of the track fitting system to be used (KalTest, DDKalTest, aidaTT, ... )",
+			      _trkSystemName,
+			      std::string("KalTest") );
+
 }
 
 
@@ -140,10 +146,14 @@ void TrackSubsetProcessor::init() {
   _bField = Global::GEAR->getBField().at( gear::Vector3D( 0.,0.,0.)  ).z() ;
   
   // set upt the geometry
-  _trkSystem =  MarlinTrk::Factory::createMarlinTrkSystem( "KalTest" , marlin::Global::GEAR , "" ) ;
+    _trkSystem =  MarlinTrk::Factory::createMarlinTrkSystem( _trkSystemName , marlin::Global::GEAR , "" ) ;
   
-  if( _trkSystem == 0 ) throw EVENT::Exception( std::string("  Cannot initialize MarlinTrkSystem of Type: ") + std::string("KalTest" )  ) ;
   
+  if( _trkSystem == 0 ){
+    
+    throw EVENT::Exception( std::string("  Cannot initialize MarlinTrkSystem of Type: ") + _trkSystemName ) ;
+  }
+
   
   // set the options   
   _trkSystem->setOption( MarlinTrk::IMarlinTrkSystem::CFG::useQMS,        _MSOn ) ;       //multiple scattering

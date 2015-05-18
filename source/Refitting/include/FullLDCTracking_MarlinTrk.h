@@ -324,7 +324,8 @@ protected:
   /** pointer to the IMarlinTrkSystem instance 
    */
   MarlinTrk::IMarlinTrkSystem* _trksystem ;
-  
+  std::string _trkSystemName ;
+
   bool _MSOn, _ElossOn, _SmoothOn ;
   
   std::string _TPCTrackCollection;

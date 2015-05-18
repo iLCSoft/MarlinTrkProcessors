@@ -92,6 +92,7 @@ class TrackSubsetProcessor : public Processor {
   std::string _trackOutputColName;
   
   MarlinTrk::IMarlinTrkSystem* _trkSystem;
+  std::string _trkSystemName ;
   
   bool _MSOn ;
   bool _ElossOn ;
@@ -166,8 +167,7 @@ public:
 protected:
   
   MarlinTrk::IMarlinTrkSystem* _trkSystem;
-  
-  
+    
 };
 
 

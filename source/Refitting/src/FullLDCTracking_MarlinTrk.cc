@@ -487,6 +487,13 @@ FullLDCTracking_MarlinTrk::FullLDCTracking_MarlinTrk() : Processor("FullLDCTrack
                              float(0.05));
   
   
+  registerProcessorParameter( "TrackSystemName",
+			      "Name of the track fitting system to be used (KalTest, DDKalTest, aidaTT, ... )",
+			      _trkSystemName,
+			      std::string("KalTest") );
+
+
+
 #ifdef MARLINTRK_DIAGNOSTICS_ON
   
   registerOptionalParameter("RunMarlinTrkDiagnostics", "Run MarlinTrk Diagnostics. MarlinTrk must be compiled with MARLINTRK_DIAGNOSTICS_ON defined", _runMarlinTrkDiagnostics, bool(false));
@@ -508,16 +515,15 @@ void FullLDCTracking_MarlinTrk::init() {
   PIOVER2 = 0.5*PI;
   TWOPI = 2*PI;
   
-  // set up the geometery needed by KalTest
-  //FIXME: for now do KalTest only - make this a steering parameter to use other fitters
-  _trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( "KalTest" , marlin::Global::GEAR , "" ) ;
+  // set upt the geometry
+    _trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( _trkSystemName , marlin::Global::GEAR , "" ) ;
+  
   
   if( _trksystem == 0 ){
     
-    throw EVENT::Exception( std::string("  Cannot initialize MarlinTrkSystem of Type: ") + std::string("KalTest" )  ) ;
-    
+    throw EVENT::Exception( std::string("  Cannot initialize MarlinTrkSystem of Type: ") + _trkSystemName ) ;
   }
-  
+
   
   _trksystem->setOption( IMarlinTrkSystem::CFG::useQMS,        _MSOn ) ;
   _trksystem->setOption( IMarlinTrkSystem::CFG::usedEdx,       _ElossOn) ;
