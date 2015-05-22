@@ -115,6 +115,9 @@ protected:
   int _n_run ;
   int _n_evt ;
 
+  int _initialTrackState;
+  int _fitDirection ; 
+
   std::string _trkSystemName ;
   
   float _bField;

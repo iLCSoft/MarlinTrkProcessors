@@ -121,7 +121,18 @@ RefitProcessor::RefitProcessor() : Processor("RefitProcessor") {
 			      _trkSystemName,
 			      std::string("KalTest") );
   
+  registerProcessorParameter( "InitialTrackState",
+			      "TrackState to use for initialization of the fit: -1: refit from hits [default], 1: AtIP, 2: AtFirstHit, 3: AtLastHit, 4:AtCalo" ,
+			      _initialTrackState,
+			      int(-1) );
+
+  registerProcessorParameter( "FitDirection",
+			      "Fit direction: -1: backward [default], +1: forward",
+			      _fitDirection,
+			      int(-1) );
   
+
+
 }
 
 
@@ -220,12 +231,7 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
 
       for (std::vector< std::pair<float, EVENT::TrackerHit*> >::iterator it=r2_values.begin(); it!=r2_values.end(); ++it) {
 
-	// //DEBUG - only take VXD hits for now ....
-	// cellID_encoder.setValue( it->second->getCellID0() ) ;
-	
-	// if( cellID_encoder[lcio::ILDCellID0::subdet] ==  lcio::ILDDetID::VXD )
-	
-	streamlog_out( DEBUG1 ) << " -- added tracker hit : " << *it->second << std::endl ;
+	streamlog_out( DEBUG0 ) << " -- added tracker hit : " << *it->second << std::endl ;
 	
 	trkHits.push_back(it->second);
        
@@ -248,9 +254,11 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
       covMatrix[14] = ( _initialTrackError_tanL  ); //sigma_tanl^2
 
       
-      bool fit_direction = ( 1 ? IMarlinTrack::backward : IMarlinTrack::forward  ) ;
-
+      bool fit_direction = (  (_fitDirection < 0  ) ? IMarlinTrack::backward : IMarlinTrack::forward  ) ;
       
+      streamlog_out( DEBUG1 ) << "TruthTracker::createTrack: fit direction used for fit (-1:backward,+1forward) : " << _fitDirection << std::endl ;
+
+
       MarlinTrk::IMarlinTrack* marlinTrk = _trksystem->createTrack();
       
       TrackImpl* refittedTrack = new TrackImpl ; 
@@ -259,25 +267,30 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
       
         int error = 0;
       
-#if 1
-        error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, trkHits, refittedTrack, fit_direction , covMatrix, _bField, _maxChi2PerHit);
-#else
+	if( _initialTrackState < 0 ) { // initialize the track from three hits
 
-       	//EVENT::TrackState* ts_AtLastHit = const_cast<EVENT::TrackState* > ( track_to_refit->getTrackState( EVENT::TrackState::AtLastHit )  ) ;  
-	EVENT::TrackState* ts_AtLastHit = const_cast<EVENT::TrackState* > ( track_to_refit->getTrackState( EVENT::TrackState::AtIP )  ) ;  
+	  error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, trkHits, refittedTrack, fit_direction, covMatrix, _bField, _maxChi2PerHit);
+	  
+	} else {  // use the specified track state 
+	  
+	  EVENT::TrackState* ts = const_cast<EVENT::TrackState* > ( track_to_refit->getTrackState( _initialTrackState ) ) ;  
+	  
+	  if( !ts ){
 
-	IMPL::TrackStateImpl pre_fit( *ts_AtLastHit  ) ;
-	pre_fit.setCovMatrix( covMatrix )  ;
+	    std::stringstream ess ; ess << "  Could not get track state at " << _initialTrackState << " from track to refit " ;
+	    throw EVENT::Exception( ess.str() ) ;
+	  } 
 
-        error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, trkHits, refittedTrack, fit_direction , &pre_fit , _bField, _maxChi2PerHit);
-
-#endif
-
-       
+	  IMPL::TrackStateImpl pre_fit( *ts ) ;
+	  pre_fit.setCovMatrix( covMatrix )  ;
+	  
+	  error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, trkHits, refittedTrack, fit_direction, &pre_fit , _bField, _maxChi2PerHit);
+	} 
         
+
         if( error != IMarlinTrack::success || refittedTrack->getNdf() < 0 ) {
 
-          streamlog_out(MESSAGE) << "TruthTracker::createTrack: EVENT: << " << evt->getEventNumber() 
+          streamlog_out(MESSAGE) << "::createTrack: EVENT: << " << evt->getEventNumber() 
 				 << " >> Track fit returns error code " << error << " NDF = " << refittedTrack->getNdf() 
 				 <<  ". Number of hits = "<< trkHits.size() << std::endl;
 
