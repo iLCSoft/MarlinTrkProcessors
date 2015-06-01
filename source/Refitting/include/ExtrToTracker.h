@@ -42,6 +42,7 @@
 
 #if defined GEO2
 #include "DDRec/Surface.h"
+#include "DDRec/SurfaceManager.h" 
 
 #endif
 
@@ -69,10 +70,10 @@ namespace MarlinTrk{
 
 class ExtrToTracker : public marlin::Processor {
 
-#if defined GEO2
-    typedef std::map< unsigned long, const DD4hep::DDRec::Surface* > SurfaceMap ;
+/* #if defined GEO2 */
+/*     typedef std::map< unsigned long, const DD4hep::DDRec::Surface* > SurfaceMap ; */
     
-#endif
+/* #endif */
 
 public:
 
@@ -101,12 +102,7 @@ public:
   /** Called after data processing for clean up.
    */
   virtual void end() ;
-  
-  void  SelectBestCandidate(EVENT::TrackerHitVec &HitsInLayer, const float* &pivot, EVENT::TrackerHit* &BestHit, bool &BestHitFound, int &pointer) ; 
 
-  void SelectBestCandidateLimited(EVENT::TrackerHitVec &HitsInLayer, const float* &pivot, EVENT::TrackerHit* &BestHit, const FloatVec& covLCIO, double& radius, bool &BestHitFound, double &sigma, int &pointer, int &PossibleHits, float &dU, float &dV, double &DimDist, TrackerHitVec &usedSiHits) ;
-  
-  int FitInit( std::vector < TrackerHit* > trackerHits , MarlinTrk::IMarlinTrack* _marlinTrk ) ;
   int FitInit2( Track* track , MarlinTrk::IMarlinTrack* _marlinTrk ) ;
 
   struct compare_r {
@@ -121,9 +117,9 @@ public:
   void setTreeBranches(int bufsize=32000);
   void clearEventVar();
   void clearLayerHelperVar();
-  void fillDummy();
-  TrackerHit* getSiHit(LCCollection*& sitHitsCol, int fitElID, MarlinTrk::IMarlinTrack*& marlin_trk, int& nHitsOnDetEl);
-  
+  /* void fillDummy(); */
+
+  TrackerHit* getSiHit(LCCollection*& sitHitsCol, int fitElID, MarlinTrk::IMarlinTrack*& marlin_trk, int& nHitsOnDetEl);  
   //bool getSiHit(LCCollection*& sitHitsCol, int fitElID, MarlinTrk::IMarlinTrack*& marlin_trk, TrackerHit*& selectedHit);
   
   
@@ -132,24 +128,17 @@ protected:
   /* helper function to get collection using try catch block */
   lcio::LCCollection* GetCollection( lcio::LCEvent * evt, std::string colName ) ;
   
-  /* helper function to get relations using try catch block */
-  lcio::LCRelationNavigator* GetRelations(lcio::LCEvent * evt, std::string RelName ) ;
+  /* /\* helper function to get relations using try catch block *\/ */
+  /* lcio::LCRelationNavigator* GetRelations(lcio::LCEvent * evt, std::string RelName ) ; */
   
   /** Input track collection name for refitting.
    */
   std::string _input_track_col_name ;
   
-  /** Input track relations name for refitting.
-   */
-  std::string _input_track_rel_name ;
 
   /** Input SIT tracker summer hit collection.
    */
   std::string _sitColName ;
-
-  /** Input VXD tracker summer hit collection.
-   */
-  std::string _vxdColName ;
   
   /** refitted track collection name.
    */
@@ -158,28 +147,18 @@ protected:
   /** Output track relations name for refitting.
    */
   std::string _output_track_rel_name ;
-
-  /** Output silicon track collection.
-   */
-  std::string _siTrkColName ;
   
   /** pointer to the IMarlinTrkSystem instance 
    */
   MarlinTrk::IMarlinTrkSystem* _trksystem ;
   
-  std::string _mcParticleCollectionName ;
+  /* std::string _mcParticleCollectionName ; */
 
   bool _MSOn ;
   bool _ElossOn ;
   bool _SmoothOn ;
   double _Max_Chi2_Incr ;
-  int _tpcHitsCut ;
-  float _chi2NDoFCut ;
-  float _DoCut ;
-  float _ZoCut ;
   double _searchSigma ;
-  bool _isSpacePoints ;
-  int _propToLayer ;
   
   int _n_run ;
   int _n_evt ;
@@ -191,22 +170,24 @@ protected:
   float _maxChi2PerHit;
   float _bField;
 
-  StringVec  _colNamesTrackerHitRelations ;
   bool _performFinalRefit ;
  
 
 #if defined GEO2
-  SurfaceMap _map ;
-  
+  const DD4hep::DDRec::SurfaceMap* _map ;
 #endif
 
   
 
   //processor parameters
+
+  int _detID;
+  std::string _detElName;
+
   bool _doNtuple;
   std::string _outFileName;
-  std::string _treeName;
-  
+  std::string _treeName;  
+
  //for tree
 
   TFile* _out; 
