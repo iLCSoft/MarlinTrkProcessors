@@ -139,6 +139,10 @@ protected:
   /** Input SIT tracker summer hit collection.
    */
   std::string _sitColName ;
+
+  /** Input Outer tracker summer hit collection.
+   */
+  std::string _otColName ;
   
   /** refitted track collection name.
    */
@@ -183,6 +187,8 @@ protected:
 
   int _detID;
   std::string _detElName;
+  int _detIDOT;
+  std::string _detElOTName;
 
   bool _doNtuple;
   std::string _outFileName;

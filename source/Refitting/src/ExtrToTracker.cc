@@ -89,12 +89,21 @@ ExtrToTracker::ExtrToTracker() : Processor("ExtrToTracker") {
 			   _input_track_col_name ,
 			   std::string("TruthTracks") ) ;
 
+
   registerInputCollection( LCIO::TRACKERHITPLANE,
 			   "digitisedSITHits" , 
 			   "Name of the SITTrackerHit collection"  ,
 			   _sitColName ,
-			   std::string("SITTrackerHits") ) ;
+			   std::string("ITrackerHits") ) ;
+
+
+  registerInputCollection( LCIO::TRACKERHITPLANE,
+			   "digitisedOTHits" , 
+			   "Name of the SITTrackerHit collection"  ,
+			   _otColName ,
+			   std::string("OTrackerHits") ) ;
   
+
   registerOutputCollection( LCIO::TRACK,
 			    "OutputTrackCollectionName" , 
 			    "Name of the output track collection"  ,
@@ -112,6 +121,20 @@ ExtrToTracker::ExtrToTracker() : Processor("ExtrToTracker") {
 			      _detID,
 			      int(3)
 			      );
+
+
+  registerProcessorParameter( "detectorElementOTName",
+			      "Name of the detector element you are extrapolating to",
+			      _detElOTName,
+			      std::string("OuterTrackerBarrel")
+			      );
+
+  registerProcessorParameter( "detectorIDOT",
+			      "ID of the detector element you are extrapolating to",
+			      _detIDOT,
+			      int(5)
+			      );
+
 
   registerProcessorParameter("MultipleScatteringOn",
                              "Use MultipleScattering in Fit",
@@ -321,6 +344,7 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
   // get input collection and relations 
   LCCollection* input_track_col = this->GetCollection( evt, _input_track_col_name ) ;
   LCCollection* sitHitsCol = this->GetCollection( evt, _sitColName ) ;
+  LCCollection* otHitsCol = this->GetCollection( evt, _otColName ) ;
 
   if( input_track_col != 0 ){
     
@@ -411,6 +435,12 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 	  DD4hep::DDRec::ZPlanarData* sit = sitDE.extension<DD4hep::DDRec::ZPlanarData>(); 
 	  int nSITR=sit->layers.size();
 	  streamlog_out(DEBUG1) << "ExtrToTracker - nSITR " << nSITR << std::endl;
+
+	  DD4hep::Geometry::DetElement otDE = lcdd.detector(_detElOTName);
+	  DD4hep::DDRec::ZPlanarData* ot = otDE.extension<DD4hep::DDRec::ZPlanarData>(); 
+	  int nOT=ot->layers.size();
+	  streamlog_out(DEBUG1) << "ExtrToTracker - nOT " << nOT << std::endl;
+
 #else
 #error Geometry type not defined
 #endif
@@ -438,24 +468,32 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 	  //for loop to all SIT layers
 	    
 	  printParameters();
+
+	  int nLayersTot = nSITR + nOT;
         
-	  for (int iL=0;iL<nSITR;iL++){
+	  for (int iL=0;iL<nLayersTot;iL++){
 	      
-	    if ( sitHitsCol != 0 ){
+	    if ( sitHitsCol != 0 && otHitsCol != 0){
 		
 	  
 	      streamlog_out(DEBUG4) << " Do I come into the loop " << std::endl;
 		
 	      streamlog_out(DEBUG4) << "LOOP" << iL << " begins "<< std::endl;
 		
+	      if (iL<nSITR) {
+		encoder[lcio::ILDCellID0::subdet] = _detID;
+		encoder[lcio::ILDCellID0::layer]  = iL ;   
+		layerID = encoder.lowWord() ;  
+		
+	      } else {
+		encoder[lcio::ILDCellID0::subdet] = _detIDOT;
+		streamlog_out(MESSAGE) << "-- layerOT = iL-nSITR = " << iL-nSITR << std::endl;
+		encoder[lcio::ILDCellID0::layer]  = iL-nSITR ;   
+		layerID = encoder.lowWord() ;  
+	      }
 
-	      encoder[lcio::ILDCellID0::subdet] = _detID;
-	      encoder[lcio::ILDCellID0::layer]  = iL ;   // in case we propagate outwards from VXD
-	      layerID = encoder.lowWord() ;  
-	      
 	      streamlog_out(DEBUG4) << "-- layerID " << layerID << std::endl;
 		
-
 	      ///////////////////////////////////////////////////////////
    
 
