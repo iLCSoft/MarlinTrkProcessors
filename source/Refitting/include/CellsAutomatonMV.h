@@ -296,6 +296,20 @@ public:
 };
 
 
+/** A functor to return the quality of a track, which is the number of associated hits. 
+*/
+class MaxHits{
+   
+public:
+   
+  inline double operator()( ITrack* track ){
+    
+    return track->getHits().size();
+  }
+   
+};
+
+
 /** A functor to return the quality of a track.
  For tracks with 4 hits or more the chi2prob is mapped to* 0.5-1, with x = prob/2 + 0.5.
  Tracks with 3 hits get the chi2 mapped to 0-0.5 by 1/(ln( e^2 + chi2 );
