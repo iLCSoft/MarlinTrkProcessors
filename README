@@ -9,13 +9,45 @@
 #
 ############################################################################################################
 
-  ==== This is still Work in Progress =======
-
-
 ------------------------------------------------------------
  
-
  =============================================================================================================
+  ---------
+ | v02-00  |
+  ---------
+
+   - adapted to  DD4hep::Surfaces and DDKalTest
+
+
+   - DDCellsAutomatonMV: adapted CA to DD4hep (R.Simoniello)
+
+   - modified RefitProcessor (F.Gaede)
+    - InitialTrackState: allows to select one of the track states (or use hits) 
+    - FitDirection: allow to fit forwards or backwards (default)
+    -> can use for CLIC SiBarrel tracker to refit TrackState AtIP 
+       in forward direction
+
+   - adapted to new MarlinTrk::Factory: no longer delete the IMarlinTrkSystem pointer
+     at the end of the processing for all fitters
+
+   - ExtrToTracker: add new processor that extracts an existing track to another 
+     tracking subdetector (R.Simoniello)
+
+   - added DDPlanarDigiProcessor which uses the DDRec::Surface
+     for smearing the hits (no gear needed) (F.Gaede)
+
+   - add option to use DDKalTest to all fitters (TrackSubsetProcessor, FullLDCTracking_MarlinTrk,
+      TrackSubsetProcessor, RefittProcessor)    (F.Gaede)
+      - set parameter "TrackSystemName" to "DDKalTest"
+
+   - PlanarDigiProcessor: add new utility processor that allows to split a collection 
+    of hits into several collections, based on the layerID
+    of the hits (works for all lcio hit types) (F.Gaede)
+
+   - ExtrToSIT: added processor for refitting and propagating track from TPC or VXD to SIT (Y.Voutsinas)
+
+
+
 
   ---------
  | v01-11  |
