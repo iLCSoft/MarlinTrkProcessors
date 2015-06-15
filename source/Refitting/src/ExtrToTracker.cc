@@ -348,7 +348,6 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 
   if( input_track_col != 0 ){
     
-;
 
     // establish the track collection that will be created 
     LCCollectionVec* trackVec = new LCCollectionVec( LCIO::TRACK )  ;    
@@ -487,18 +486,24 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 		
 	      } else {
 		encoder[lcio::ILDCellID0::subdet] = _detIDOT;
-		streamlog_out(MESSAGE) << "-- layerOT = iL-nSITR = " << iL-nSITR << std::endl;
+		//streamlog_out(DEBUG) << "-- layerOT = iL-nSITR = " << iL-nSITR << std::endl;
 		encoder[lcio::ILDCellID0::layer]  = iL-nSITR ;   
+		//encoder[lcio::ILDCellID0::layer]  = iL ;   
 		layerID = encoder.lowWord() ;  
 	      }
 
 	      streamlog_out(DEBUG4) << "-- layerID " << layerID << std::endl;
 		
 	      ///////////////////////////////////////////////////////////
+
    
 
 	      if ( marlin_trk->propagateToLayer( layerID, trkState, chi2, ndf, elementID, IMarlinTrack::modeClosest) == MarlinTrk::IMarlinTrack::success) {
 		    
+
+		streamlog_out(DEBUG4) << "-- layerID " << layerID << std::endl;
+
+
 		const FloatVec& covLCIO = trkState.getCovMatrix();
 		const float* pivot = trkState.getReferencePoint();
 		double r = sqrt( pivot[0]*pivot[0]+pivot[1]*pivot[1] ) ;
@@ -537,11 +542,14 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 
 		  int nhits=0;
 		  //TrackerHit* siHitToBeAdded = getSiHit(sitHitsCol, elementID, marlin_trk, nhits);
-		  TrackerHit* BestHit = getSiHit(sitHitsCol, elementID, marlin_trk, nhits);
+		  //TrackerHit* BestHit = getSiHit(sitHitsCol, elementID, marlin_trk, nhits);
+		  TrackerHitPlane* BestHit;
+		  if (iL<nSITR) BestHit = getSiHit(sitHitsCol, elementID, marlin_trk, nhits);
+		  else BestHit = getSiHit(otHitsCol, elementID, marlin_trk, nhits);
 		  if (BestHit != 0){
 		      		
 	  
-		    streamlog_out(MESSAGE4) << " --- Best hit found: call add and fit _Max_Chi2_Incr "<< _Max_Chi2_Incr<< std::endl ; 
+		    streamlog_out(DEBUG4) << " --- Best hit found: call add and fit _Max_Chi2_Incr "<< _Max_Chi2_Incr<< std::endl ; 
 						  
 		    double chi2_increment = 0.;
 
@@ -559,8 +567,8 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 		      delete TestHitPlane ;
 		    } else {
 		      isSuccessfulFit = marlin_trk->addAndFit( BestHit, chi2_increment, _Max_Chi2_Incr ) == IMarlinTrack::success ;
-		      streamlog_out(MESSAGE4) << " --- chi2_increment "<< chi2_increment << std::endl ; 
-		      streamlog_out(MESSAGE4) << " --- isSuccessfulFit "<< isSuccessfulFit << std::endl ; 
+		      streamlog_out(DEBUG4) << " --- chi2_increment "<< chi2_increment << std::endl ; 
+		      streamlog_out(DEBUG4) << " --- isSuccessfulFit "<< isSuccessfulFit << std::endl ; 
 		    }
 
 		  
@@ -1057,16 +1065,19 @@ int ExtrToTracker::FitInit2( Track* track, MarlinTrk::IMarlinTrack* _marlinTrk )
 
 
 
- TrackerHit* ExtrToTracker::getSiHit(LCCollection*& sitHitsCol, int fitElID, MarlinTrk::IMarlinTrack*& marlin_trk, int& nHitsOnDetEl){
+// TrackerHit* ExtrToTracker::getSiHit(LCCollection*& sitHitsCol, int fitElID, MarlinTrk::IMarlinTrack*& marlin_trk, int& nHitsOnDetEl){
+ TrackerHitPlane* ExtrToTracker::getSiHit(LCCollection*& sitHitsCol, int fitElID, MarlinTrk::IMarlinTrack*& marlin_trk, int& nHitsOnDetEl){
 
   if ( sitHitsCol != 0  ) { 
     int sitHits = sitHitsCol->getNumberOfElements();   
-    std::vector<TrackerHit* > hitsOnDetEl; 
+    //std::vector<TrackerHit* > hitsOnDetEl; 
+    std::vector<TrackerHitPlane* > hitsOnDetEl; 
     hitsOnDetEl.clear();
 
     for(int i=0; i<sitHits; i++){
             
-      TrackerHit* hit = dynamic_cast<TrackerHit*>( sitHitsCol->getElementAt( i ) );	
+      //TrackerHit* hit = dynamic_cast<TrackerHit*>( sitHitsCol->getElementAt( i ) );	
+      TrackerHitPlane* hit = dynamic_cast<TrackerHitPlane*>( sitHitsCol->getElementAt( i ) );	
 
       int cellID0 = hit->getCellID0();
       UTIL::BitField64 encoder0( lcio::ILDCellID0::encoder_string ); 	    
@@ -1106,7 +1117,8 @@ int ExtrToTracker::FitInit2( Track* track, MarlinTrk::IMarlinTrack* _marlinTrk )
     
     if (index == -1) return 0;
     else {
-      TrackerHit* selectedHit = dynamic_cast<TrackerHit*>( hitsOnDetEl.at(index) ) ;
+      //TrackerHit* selectedHit = dynamic_cast<TrackerHit*>( hitsOnDetEl.at(index) ) ;
+      TrackerHitPlane* selectedHit = dynamic_cast<TrackerHitPlane*>( hitsOnDetEl.at(index) ) ;
       return selectedHit;
     }
 
