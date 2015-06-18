@@ -126,8 +126,10 @@ ExtrToTracker::ExtrToTracker() : Processor("ExtrToTracker") {
   registerProcessorParameter( "detectorElementOTName",
 			      "Name of the detector element you are extrapolating to",
 			      _detElOTName,
-			      std::string("OuterTrackerBarrel")
+			      std::string("")
 			      );
+  //std::string("OuterTrackerBarrel")
+
 
   registerProcessorParameter( "detectorIDOT",
 			      "ID of the detector element you are extrapolating to",
@@ -429,15 +431,23 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 	  const gear::ZPlanarLayerLayout& layerSIT = gearSIT.getZPlanarLayerLayout(); 
 	  const unsigned int nSITR = layerSIT.getNLayers() ;
 #elif defined GEO2
-	  DD4hep::Geometry::LCDD& lcdd = DD4hep::Geometry::LCDD::getInstance();
-	  DD4hep::Geometry::DetElement sitDE = lcdd.detector(_detElName);
-	  DD4hep::DDRec::ZPlanarData* sit = sitDE.extension<DD4hep::DDRec::ZPlanarData>(); 
-	  int nSITR=sit->layers.size();
-	  streamlog_out(DEBUG1) << "ExtrToTracker - nSITR " << nSITR << std::endl;
 
-	  DD4hep::Geometry::DetElement otDE = lcdd.detector(_detElOTName);
-	  DD4hep::DDRec::ZPlanarData* ot = otDE.extension<DD4hep::DDRec::ZPlanarData>(); 
-	  int nOT=ot->layers.size();
+	  DD4hep::Geometry::LCDD& lcdd = DD4hep::Geometry::LCDD::getInstance();
+
+	  int nSITR = 0; 
+	  if (_detElName!="") {
+	    DD4hep::Geometry::DetElement sitDE = lcdd.detector(_detElName);
+	    DD4hep::DDRec::ZPlanarData* sit = sitDE.extension<DD4hep::DDRec::ZPlanarData>(); 
+	    nSITR=sit->layers.size();
+	  }
+	  streamlog_out(DEBUG1) << "ExtrToTracker - nSITR " << nSITR << std::endl;
+	  
+	  int nOT = 0;
+	  if (_detElOTName!=""){
+	    DD4hep::Geometry::DetElement otDE = lcdd.detector(_detElOTName);
+	    DD4hep::DDRec::ZPlanarData* ot = otDE.extension<DD4hep::DDRec::ZPlanarData>(); 
+	    nOT=ot->layers.size();
+	  }
 	  streamlog_out(DEBUG1) << "ExtrToTracker - nOT " << nOT << std::endl;
 
 #else
@@ -471,8 +481,11 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 	  int nLayersTot = nSITR + nOT;
         
 	  for (int iL=0;iL<nLayersTot;iL++){
-	      
-	    if ( sitHitsCol != 0 && otHitsCol != 0){
+
+	    bool coherent_SIT_layers_hits = nSITR>0 && sitHitsCol != 0;
+	    bool coherent_OT_layers_hits = (nOT>0 && otHitsCol != 0) || (nOT==0 && otHitsCol==0); //second part in case there is no outer tracker collection like in Simple_CLIC geometry
+	    //if ( sitHitsCol != 0 && otHitsCol != 0){
+	    if ( coherent_SIT_layers_hits && coherent_OT_layers_hits){
 		
 	  
 	      streamlog_out(DEBUG4) << " Do I come into the loop " << std::endl;
@@ -486,7 +499,6 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 		
 	      } else {
 		encoder[lcio::ILDCellID0::subdet] = _detIDOT;
-		//streamlog_out(DEBUG) << "-- layerOT = iL-nSITR = " << iL-nSITR << std::endl;
 		encoder[lcio::ILDCellID0::layer]  = iL-nSITR ;   
 		//encoder[lcio::ILDCellID0::layer]  = iL ;   
 		layerID = encoder.lowWord() ;  
