@@ -313,9 +313,7 @@ protected:
   
   int SegmentRadialOverlap(TrackExtended* pTracki, TrackExtended* pTrackj);
   bool VetoMerge(TrackExtended* firstTrackExt, TrackExtended* secondTrackExt);
-  float* CalculateEnergyLoss(TrackerHitExtendedVec hitvec);
-  
-  
+   
   int _nRun ;
   int _nEvt ;
   
@@ -325,7 +323,7 @@ protected:
    */
   MarlinTrk::IMarlinTrkSystem* _trksystem ;
   std::string _trkSystemName ;
-
+  
   bool _MSOn, _ElossOn, _SmoothOn ;
   
   std::string _TPCTrackCollection;
