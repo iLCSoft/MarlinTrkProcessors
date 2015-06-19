@@ -46,7 +46,7 @@
 
    - ExtrToSIT: added processor for refitting and propagating track from TPC or VXD to SIT (Y.Voutsinas)
 
-
+   - reverted changes for dEdx calculationin FullLDCMarlinTrk: moved to new processor (M.Kurata)
 
 
   ---------
