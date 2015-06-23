@@ -229,6 +229,9 @@ protected:
   std::vector<int> _colours;  
   float     _helix_max_r;
   
+  std::string _trkSystemName ;
+
+  int _fitDirection ;
 } ;
 
 #endif

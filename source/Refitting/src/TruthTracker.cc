@@ -224,6 +224,18 @@ TruthTracker::TruthTracker() : Processor("TruthTracker") {
                              _helix_max_r ,
                              float(2000.0) ) ;
   
+
+  registerProcessorParameter( "TrackSystemName",
+			      "Name of the track fitting system to be used (KalTest, DDKalTest, aidaTT, ... )",
+			      _trkSystemName,
+			      std::string("KalTest") );
+
+  registerProcessorParameter( "FitDirection",
+			      "Fit direction: -1: backward [default], +1: forward",
+			      _fitDirection,
+			      int(-1) );
+
+
 #ifdef MARLINTRK_DIAGNOSTICS_ON
   
   registerOptionalParameter("RunMarlinTrkDiagnostics", "Run MarlinTrk Diagnostics. MarlinTrk must be compiled with MARLINTRK_DIAGNOSTICS_ON defined", _runMarlinTrkDiagnostics, bool(false));
@@ -270,13 +282,12 @@ void TruthTracker::init() {
   _colours.push_back( 0xffffff );
 
   
-  //FIXME: for now do KalTest only - make this a steering parameter to use other fitters
+  // set up the trk system
+  _trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( _trkSystemName , marlin::Global::GEAR , "" ) ;
   
-  _trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( "KalTest" , marlin::Global::GEAR , "" ) ;
-  
-  if( _trksystem == 0 ) {
+  if( _trksystem == 0 ){
     
-    throw EVENT::Exception( std::string("  Cannot initialize MarlinTrkSystem of Type: ") + std::string("KalTest" )  ) ;
+    throw EVENT::Exception( std::string("  Cannot initialize MarlinTrkSystem of Type: ") + _trkSystemName  ) ;
     
   }
   
@@ -738,8 +749,13 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
         
     TrackStateImpl* prefit_trackState = 0;
     
-    bool fit_backwards = IMarlinTrack::backward;
+    //bool fit_backwards = IMarlinTrack::backward;
     
+    bool fit_direction = (  (_fitDirection < 0  ) ? IMarlinTrack::backward : IMarlinTrack::forward  ) ;
+    
+    streamlog_out( DEBUG1 ) << "TruthTracker::createTrack: fit direction used for fit (-1:backward,+1forward) : " << _fitDirection << std::endl ;
+
+
     MarlinTrk::IMarlinTrack* marlinTrk = _trksystem->createTrack();
     
     try {
@@ -763,11 +779,11 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
         
         
         
-        error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, hit_list_inner_r, Track, fit_backwards, prefit_trackState, _Bz, _maxChi2PerHit);
+        error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, hit_list_inner_r, Track, fit_direction, prefit_trackState, _Bz, _maxChi2PerHit);
                 
       } else {
         
-        error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, hit_list_inner_r, Track, fit_backwards, covMatrix, _Bz, _maxChi2PerHit);
+        error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, hit_list_inner_r, Track, fit_direction, covMatrix, _Bz, _maxChi2PerHit);
                 
       }    
         
