@@ -49,6 +49,12 @@
    - reverted changes for dEdx calculationin FullLDCMarlinTrk: moved to new processor (M.Kurata)
 
 
+   - new processors: 
+      Refitting/src/TruthTrackFinder.cc (D.Hynds)
+         alternative track cheating
+      Utils/src/ClicEfficiencyCalculator.cc (D.Hynds)
+         tracking efficiency for CLIC (all silicon)
+
   ---------
  | v01-11  |
   ---------
