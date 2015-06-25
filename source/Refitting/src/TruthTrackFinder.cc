@@ -185,12 +185,12 @@ void TruthTrackFinder::processEvent( LCEvent* evt ) {
 		
 		// Get the collection of tracker hits
 		LCCollection* trackerHitCollection = 0 ;
-		getCollection(trackerHitCollection, m_inputTrackerHitCollections[collection], evt); if(trackerHitCollection == 0) return;
+		getCollection(trackerHitCollection, m_inputTrackerHitCollections[collection], evt); if(trackerHitCollection == 0) continue;
 		trackerHitCollections.push_back(trackerHitCollection);
 
 	  // Get the collection of tracker hit relations
 	  LCCollection* trackerHitRelationCollection = 0 ;
-	  getCollection(trackerHitRelationCollection, m_inputTrackerHitRelationCollections[collection], evt); if(trackerHitRelationCollection == 0) return;
+	  getCollection(trackerHitRelationCollection, m_inputTrackerHitRelationCollections[collection], evt);
 		trackerHitRelationCollections.push_back(trackerHitRelationCollection);
   
 	  // Create the relations navigator
@@ -346,8 +346,7 @@ void TruthTrackFinder::getCollection(LCCollection* &collection, std::string coll
     collection = evt->getCollection( collectionName ) ;
   }
   catch(DataNotAvailableException &e){
-    std::cout<<"- cannot get collections !!"<<std::endl;
-		std::cout << "Collection " << collectionName.c_str() << " is unavailable" << std::endl;
+		streamlog_out( DEBUG5 )<<"- cannot get collection. Collection " << collectionName.c_str() << " is unavailable" << std::endl;
     return;
   }
   return;
