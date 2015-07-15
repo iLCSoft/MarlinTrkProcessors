@@ -233,7 +233,7 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
       }
 
 
-      const DD4hep::DDRec::Surface* surf = sI->second ;
+      const DDSurfaces::ISurface* surf = sI->second ;
 
 
       int layer  = cellid_decoder( simTHit )["layer"];
