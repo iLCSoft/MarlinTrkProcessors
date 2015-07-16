@@ -152,14 +152,17 @@ void PlanarDigiProcessor::processEvent( LCEvent * evt ) {
   streamlog_out( DEBUG4 ) << "seed set to " << Global::EVENTSEEDER->getSeed(this) << std::endl;
   
   LCCollection* STHcol = 0 ;
+  int nSimHits = 0 ;
+
   try{
     STHcol = evt->getCollection( _inColName ) ;
+    nSimHits = STHcol->getNumberOfElements()  ;
   }
   catch(DataNotAvailableException &e){
     streamlog_out(DEBUG4) << "Collection " << _inColName.c_str() << " is unavailable in event " << _nEvt << std::endl;
   }
   
-  if( STHcol != 0 ){    
+  if( nSimHits != 0){    
     
     unsigned nCreatedHits=0;
     unsigned nDismissedHits=0;
@@ -176,7 +179,6 @@ void PlanarDigiProcessor::processEvent( LCEvent * evt ) {
     
     CellIDEncoder<TrackerHitPlaneImpl> cellid_encoder( lcio::ILDCellID0::encoder_string , trkhitVec ) ;
     
-    int nSimHits = STHcol->getNumberOfElements()  ;
     
     int det_id = 0 ;
     UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ;
