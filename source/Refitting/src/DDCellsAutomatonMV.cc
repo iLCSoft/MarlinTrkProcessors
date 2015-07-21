@@ -351,7 +351,7 @@ void DDCellsAutomatonMV::processEvent( LCEvent * evt ) {
   IHit* virtualIPHitForward = createVirtualIPHit(_sectorSystemVXD );
   //HitsTemp.push_back( virtualIPHitForward );
   _map_sector_hits[0].push_back( virtualIPHitForward );
-  std::cout << " sector of the IP hit = " << virtualIPHitForward->getSector() << std::endl ;
+  streamlog_out(DEBUG4) << " sector of the IP hit = " << virtualIPHitForward->getSector() << std::endl ;
   
   //*********************************************************************************************************************  
 
@@ -372,7 +372,7 @@ void DDCellsAutomatonMV::processEvent( LCEvent * evt ) {
 
   while( setCriteria( round ) ){
 
-    std::cout << " DO I ENTER IN THE GAME " << std::endl ;
+    streamlog_out(DEBUG4) << " DO I ENTER IN THE GAME " << std::endl ;
     
     
     round++; // count up the round we are in
@@ -388,20 +388,20 @@ void DDCellsAutomatonMV::processEvent( LCEvent * evt ) {
     VXDSectorConnector secCon( _sectorSystemVXD , layerStepMax, lastLayerToIP );
     
 
-    std::cout << " _layerStepMax =  " << _layerStepMax << std::endl ;
-    std::cout << " _lastLayerToIP = " << _lastLayerToIP << std::endl ;
+    streamlog_out(DEBUG4) << " _layerStepMax =  " << _layerStepMax << std::endl ;
+    streamlog_out(DEBUG4) << " _lastLayerToIP = " << _lastLayerToIP << std::endl ;
 
     segBuilder.addSectorConnector ( & secCon ); // Add the sector connector (so the SegmentBuilder knows what hits from different sectors it is allowed to look for connections)
     
     // And get out the Cellular Automaton with the 1-segments 
     Automaton automaton = segBuilder.get1SegAutomaton();
 
-    std::cout << " automaton.getNumberOfConnections() = " << automaton.getNumberOfConnections() << std::endl ;
+    streamlog_out(DEBUG4) << " automaton.getNumberOfConnections() = " << automaton.getNumberOfConnections() << std::endl ;
     
     // Check if there are not too many connections
     if( automaton.getNumberOfConnections() > unsigned( _maxConnectionsAutomaton ) ){
       
-      std::cout << "Redo the Automaton with different parameters, because there are too many connections:\n"
+      streamlog_out(DEBUG4) << "Redo the Automaton with different parameters, because there are too many connections:\n"
 			      << "\tconnections( " << automaton.getNumberOfConnections() << " ) > MaxConnectionsAutomaton( " << _maxConnectionsAutomaton << " )\n";
       continue;
       
@@ -460,7 +460,7 @@ void DDCellsAutomatonMV::processEvent( LCEvent * evt ) {
       
       }
       
-      std::cout << " _hitsPerTrackMin = " << _hitsPerTrackMin << std::endl ;
+      streamlog_out(DEBUG4) << " _hitsPerTrackMin = " << _hitsPerTrackMin << std::endl ;
 
       // get the raw tracks (raw track = just a vector of hits, the most rudimentary form of a track)
       rawTracks = automaton.getTracks( _hitsPerTrackMin );
@@ -469,7 +469,7 @@ void DDCellsAutomatonMV::processEvent( LCEvent * evt ) {
     }
   }
 
-  std::cout << "Automaton returned " << rawTracks.size() << " raw tracks \n";
+  streamlog_out(DEBUG4) << "Automaton returned " << rawTracks.size() << " raw tracks \n";
  
 
 
@@ -525,7 +525,7 @@ void DDCellsAutomatonMV::processEvent( LCEvent * evt ) {
 	streamlog_out( DEBUG2 ) << "Discarding track because of bad helix fit: chi2/ndf = " << chi2OverNdf << "\n";
 
 	// debug
-	//std::cout << " pre-fitting: deleting track " << trackCand << std::endl ;
+	//streamlog_out(DEBUG4) << " pre-fitting: deleting track " << trackCand << std::endl ;
 	delete trackCand;
 	continue;
         
@@ -578,7 +578,7 @@ void DDCellsAutomatonMV::processEvent( LCEvent * evt ) {
 	streamlog_out( DEBUG2 ) << "Track rejected (chi2prob " << trackCand->getChi2Prob() << " < " << _chi2ProbCut << " chi2 over ndf " << test << "\n";
 
 	// debug
-	//std::cout << " Kalman fitting: deleting track " << trackCand << std::endl ;
+	//streamlog_out(DEBUG4) << " Kalman fitting: deleting track " << trackCand << std::endl ;
 
 	delete trackCand;
         
@@ -643,13 +643,13 @@ void DDCellsAutomatonMV::processEvent( LCEvent * evt ) {
   TrackQI trackQI;
 
 
-  std::cout << " best subset finder = " << _bestSubsetFinder << " no of tracks fed to the nnets " << trackCandidates.size() << std::endl ;
+  streamlog_out(DEBUG4) << " best subset finder = " << _bestSubsetFinder << " no of tracks fed to the nnets " << trackCandidates.size() << std::endl ;
 
   //FIX ME: implement properly HopfieldNN also
   /*
   if( _bestSubsetFinder == "SubsetHopfieldNN" ){  
    
-    std::cout << "Use SubsetHopfieldNN for getting the best subset\n" << std::endl ;
+    streamlog_out(DEBUG4) << "Use SubsetHopfieldNN for getting the best subset\n" << std::endl ;
     
     SubsetHopfieldNN< ITrack* > subset_tracks ;
     subset_tracks.add( trackCandidates );
@@ -679,7 +679,7 @@ void DDCellsAutomatonMV::processEvent( LCEvent * evt ) {
     
   }
   
-  std::cout <<  "End of Sorting, Good tracks number: " << GoodTracks.size() <<  std::endl;
+  streamlog_out(DEBUG4) <<  "End of Sorting, Good tracks number: " << GoodTracks.size() <<  std::endl;
 
  
  
@@ -776,7 +776,7 @@ void DDCellsAutomatonMV::end(){
    delete _sectorSystemVXD;
    _sectorSystemVXD = NULL; 
 
-   //std::cout << " no of candidate minivectors created with sectors apprach " << MiniVectors_sectors << " no of candidate minivectors created applying a cut selection " <<  MiniVectors_CutSelection  << std::endl ;
+   //streamlog_out(DEBUG4) << " no of candidate minivectors created with sectors apprach " << MiniVectors_sectors << " no of candidate minivectors created applying a cut selection " <<  MiniVectors_CutSelection  << std::endl ;
 
 }
 
@@ -1236,7 +1236,7 @@ bool DDCellsAutomatonMV::setCriteria( unsigned round ){
    _crit3Vec.clear();
    _crit4Vec.clear();
    
-   std::cout << " Calling setCriteria function - criteria vector size =  " << _criteriaNames.size() << std::endl ;
+   streamlog_out(DEBUG4) << " Calling setCriteria function - criteria vector size =  " << _criteriaNames.size() << std::endl ;
    
    bool newValuesGotUsed = false; // if new values are used
    
@@ -1248,7 +1248,7 @@ bool DDCellsAutomatonMV::setCriteria( unsigned round ){
       float min = _critMinima[critName].back();
       float max = _critMaxima[critName].back();
       
-      std::cout << " iterator " << i << " criterio " << critName << " min. value " << min << " max. value "  << max << std::endl ;
+      streamlog_out(DEBUG4) << " iterator " << i << " criterio " << critName << " min. value " << min << " max. value "  << max << std::endl ;
       
       // use the value corresponding to the round, if there are no new ones for this criterion, just do nothing (the previous value stays in place)
       if( round + 1 <= _critMinima[critName].size() ){
@@ -1270,7 +1270,7 @@ bool DDCellsAutomatonMV::setCriteria( unsigned round ){
       // Some debug output about the created criterion
       std::string type = crit->getType();
       
-      std::cout <<  "Added: Criterion " << critName << " (type =  " << type 
+      streamlog_out(DEBUG4) <<  "Added: Criterion " << critName << " (type =  " << type 
       << " ). Min = " << min
       << ", Max = " << max
       << ", round " << round << "\n";
