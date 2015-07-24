@@ -13,14 +13,19 @@
  
  =============================================================================================================
 
-  ------------
- | v02-00-01  |
-  ------------
+  ---------
+ | v02-01  |
+  ---------
 
-  - handle empty collections gracefully ( for lcgeo/ddsim ) 
-    in Digitisers/src/PlanarDigiProcessor.cc
+   R.Simoniello
+   - updated Refitting/src/ExtrToTracker.cc
+     - extrapolation also in endcap subdetectors + CA selecting longest (nhits) tracks
 
-  - use abstract ISurface
+   F.Gaede
+   - handle empty collections gracefully ( for lcgeo/ddsim ) 
+     in Digitisers/src/PlanarDigiProcessor.cc
+
+   - use abstract ISurface
 
 
   ---------
