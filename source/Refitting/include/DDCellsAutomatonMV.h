@@ -133,7 +133,8 @@ class DDCellsAutomatonMV : public Processor {
   
 
   void InitialiseVTX(LCEvent * evt, EVENT::TrackerHitVec HitsTemp);
-  void setupGearGeom( const gear::GearMgr* gearMgr ) ;
+  //void setupGearGeom( const gear::GearMgr* gearMgr ) ;
+  void setupGeom() ;
   bool setCriteria( unsigned round );
   void RawTrackFit( std::vector < MarlinTrk::IMarlinTrack* > candMarlinTracks, std::vector< IMPL::TrackImpl* > &finalTracks ) ;
   void FitFunc2( std::vector < RawTrack > rawTracks, std::vector < MarlinTrk::IMarlinTrack* > &candMarlinTracks ) ;
@@ -227,6 +228,11 @@ class DDCellsAutomatonMV : public Processor {
   std::string _VTXHitCollection;
   std::string _SITHitCollection;
   std::string _CATrackCollection;
+
+  std::string _detElVXDName;
+  std::string _detElITName;
+  std::string _detElOTName;
+
   
   std::map< LCCollection*, std::string > _colNamesTrackerHits;
   
@@ -301,6 +307,22 @@ public:
   
    
 };
+
+
+
+/** A functor to return the quality of a track, which is the number of associated hits. 
+*/
+class MaxHits{
+   
+public:
+   
+  inline double operator()( ITrack* track ){
+    
+    return track->getHits().size();
+  }
+   
+};
+
 
 
 /** A functor to return the quality of a track.

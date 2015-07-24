@@ -16,11 +16,13 @@
 #include "MarlinTrk/MarlinTrkUtils.h"
 
 
-
 #include "DD4hep/LCDD.h"
 #include "DD4hep/DD4hepUnits.h"
-//#include "DDRec/SurfaceManager.h"
-#include "DDRec/SurfaceHelper.h"
+#include "DDRec/Surface.h"
+#include "DDRec/SurfaceManager.h"
+#include "DDRec/DetectorData.h"
+#include "DDRec/DDGear.h"
+
 
 
 
@@ -181,6 +183,25 @@ DDCellsAutomatonMV::DDCellsAutomatonMV() : Processor("DDCellsAutomatonMV"){
                              "Maximal number of hits for which a track with n hits is better than one with n-1hits. (defaut 5)",
                              _nHitsChi2,
                              int(5));
+
+
+
+  
+  registerProcessorParameter("VXDName",
+			     "Name of the vertex detector element",
+			     _detElVXDName,
+			     std::string("VertexBarrel"));
+
+  registerProcessorParameter("InnerTrackerName",
+			     "Name of the inner tracker detector element",
+			     _detElITName,
+			     std::string("InnerTrackerBarrel"));
+
+  registerProcessorParameter("OuterTrackerName",
+			     "Name of the outer tracker detector element",
+			     _detElOTName,
+			     std::string("OuterTrackerBarrel"));
+
   
   // Input Collections
   
@@ -195,6 +216,7 @@ DDCellsAutomatonMV::DDCellsAutomatonMV() : Processor("DDCellsAutomatonMV"){
                           "SIT Hit Collection Name",
                           _SITHitCollection,
                           std::string("SITSpacePoints"));
+
   
   // Output Collections
   
@@ -242,7 +264,8 @@ DDCellsAutomatonMV::DDCellsAutomatonMV() : Processor("DDCellsAutomatonMV"){
 
 void DDCellsAutomatonMV::init() {
 
-  this->setupGearGeom(Global::GEAR);
+  //this->setupGearGeom(Global::GEAR);
+  this->setupGeom();
   
   /**********************************************************************************************/
   /*       Make a SectorSystemVXD                                                             */
@@ -549,11 +572,9 @@ void DDCellsAutomatonMV::processEvent( LCEvent * evt ) {
     streamlog_out( DEBUG3 ) << "Fitting with Kalman Filter\n";
     try{
       
-      streamlog_out( MESSAGE ) << "--- I am in the Kalman Filter step - inside try, before fit() \n";
 
       trackCand->fit();
 
-      streamlog_out( MESSAGE ) << "--- I am in the Kalman Filter step - inside try, after fit() \n";
       
       streamlog_out( DEBUG3 ) << " Track " << trackCand 
 			      << " chi2Prob = " << trackCand->getChi2Prob() 
@@ -565,7 +586,6 @@ void DDCellsAutomatonMV::processEvent( LCEvent * evt ) {
       double  test = trackCand->getChi2() /  (1.0*trackCand->getNdf()) ;  // FIXME: give a less dull name to this var. YV
       float NoOfHitsTimes2 = 2.0*( trackCand->getHits().size());
 
-      streamlog_out( MESSAGE ) << "--- I am in the Kalman Filter step ---- 1 : test = " << test <<"     _chi2OverNdfCut = " << _chi2OverNdfCut <<" \n";
       
       //if ( trackCand->getChi2Prob() >= _chi2ProbCut ){
       if ( test < _chi2OverNdfCut ){
@@ -590,9 +610,6 @@ void DDCellsAutomatonMV::processEvent( LCEvent * evt ) {
     }
     catch( FitterException e ){
       
-               
-      streamlog_out( MESSAGE ) << "--- I am in the Kalman Filter step - in catch \n";
-
       streamlog_out( DEBUG4 ) << "Track rejected, because fit failed: " <<  e.what() << "\n";
       delete trackCand;
       continue;
@@ -605,7 +622,7 @@ void DDCellsAutomatonMV::processEvent( LCEvent * evt ) {
     //____________________________________________________________________________________________________________
 
 
-    streamlog_out( MESSAGE ) << "------------ trackCand = " << trackCand  << "\n";
+    streamlog_out( DEBUG1 ) << "------------ trackCand = " << trackCand  << "\n";
 
     trackCandidates.push_back( trackCand );
 
@@ -641,6 +658,8 @@ void DDCellsAutomatonMV::processEvent( LCEvent * evt ) {
   //TrackQIChi2Prob_MV whatever;
   //TrackQISpecial_MV JustDoIt ;
   TrackQI trackQI;
+  MaxHits MaxLength;
+  
 
 
   streamlog_out(DEBUG4) << " best subset finder = " << _bestSubsetFinder << " no of tracks fed to the nnets " << trackCandidates.size() << std::endl ;
@@ -666,7 +685,8 @@ void DDCellsAutomatonMV::processEvent( LCEvent * evt ) {
             
     SubsetSimple< ITrack* > subset_tracks;
     subset_tracks.add( trackCandidates );
-    subset_tracks.calculateBestSet( comp, trackQI );
+    //subset_tracks.calculateBestSet( comp, trackQI );
+    subset_tracks.calculateBestSet( comp, MaxLength );
     GoodTracks = subset_tracks.getAccepted();
     RejectedTracks = subset_tracks.getRejected();
     
@@ -702,15 +722,13 @@ void DDCellsAutomatonMV::processEvent( LCEvent * evt ) {
 	  
 	  finaliseTrack( trackImpl );
 
-	    streamlog_out( MESSAGE ) << "DDCellsAutomatonMV: after finalise\n";
-
 	  // Applying a x2/ndf cut on final tracks
 	  
 	  if ( ((1.0*trackImpl->getChi2()) / (1.0*trackImpl->getNdf())) < 10.0 ) {
 	  
 	    trackVec->addElement( trackImpl );
 
-	    streamlog_out( MESSAGE ) << "DDCellsAutomatonMV: trackImpl added to trackVec\n";
+	    streamlog_out( DEBUG0 ) << "DDCellsAutomatonMV: trackImpl added to trackVec\n";
 
 	  }
 	}
@@ -724,7 +742,7 @@ void DDCellsAutomatonMV::processEvent( LCEvent * evt ) {
   }
   // Finalisation ends
 
-  streamlog_out( MESSAGE ) << "DDCellsAutomatonMV: _CATrackCollection = "<< _CATrackCollection <<"     trackVec->getNumberOfElements() = " << trackVec->getNumberOfElements() << "\n";
+  streamlog_out( DEBUG4 ) << "DDCellsAutomatonMV: _CATrackCollection = "<< _CATrackCollection <<"     trackVec->getNumberOfElements() = " << trackVec->getNumberOfElements() << "\n";
 
   evt->addCollection( trackVec , _CATrackCollection) ;
 
@@ -1177,51 +1195,39 @@ void DDCellsAutomatonMV::CreateMiniVectors( int sector ) {
 
 
 
-void DDCellsAutomatonMV::setupGearGeom( const gear::GearMgr* gearMgr ){
-  
-  _bField = gearMgr->getBField().at( gear::Vector3D( 0.,0.,0.)  ).z() ;
-  
-  //-- VXD Parameters--
-  _nLayersVTX = 0 ;
-  const gear::VXDParameters* pVXDDetMain = 0;
-  const gear::VXDLayerLayout* pVXDLayerLayout = 0;
-  
-  try{
-    
-    streamlog_out( DEBUG9 ) << " filling VXD parameters from gear::SITParameters " << std::endl ;
-    
-    pVXDDetMain = &Global::GEAR->getVXDParameters();
-    pVXDLayerLayout = &(pVXDDetMain->getVXDLayerLayout());
-    _nLayersVTX = pVXDLayerLayout->getNLayers();
-  }
-  catch( gear::UnknownParameterException& e){
-    
-    streamlog_out( DEBUG9 ) << " ### gear::VXDParameters Not Present in GEAR FILE" << std::endl ;
-    
-  }
-  
-  streamlog_out( MESSAGE ) << " _nLayersVTX = " << _nLayersVTX << std::endl ;
+//void DDCellsAutomatonMV::setupGearGeom( const gear::GearMgr* gearMgr ){
+void DDCellsAutomatonMV::setupGeom(){
 
+  DD4hep::Geometry::LCDD& lcdd = DD4hep::Geometry::LCDD::getInstance();
+  const double pos[3]={0,0,0}; 
+  double bFieldVec[3]={0,0,0}; 
+  lcdd.field().magneticField(pos,bFieldVec); // get the magnetic field vector from DD4hep
+  _bField = bFieldVec[2]/dd4hep::tesla; // z component at (0,0,0)
+
+  _nLayersVTX = 0; 
+  DD4hep::Geometry::DetElement vtxDE = lcdd.detector(_detElVXDName);
+  DD4hep::DDRec::ZPlanarData* vtx = vtxDE.extension<DD4hep::DDRec::ZPlanarData>(); 
+  _nLayersVTX=vtx->layers.size(); 
+
+
+  _nLayersSIT = 0;
+
+  int nIT = 0;
+  DD4hep::Geometry::DetElement itDE = lcdd.detector(_detElITName);
+  DD4hep::DDRec::ZPlanarData* it = itDE.extension<DD4hep::DDRec::ZPlanarData>(); 
+  nIT=it->layers.size();
+
+  int nOT = 0;
+  DD4hep::Geometry::DetElement otDE = lcdd.detector(_detElOTName);
+  DD4hep::DDRec::ZPlanarData* ot = otDE.extension<DD4hep::DDRec::ZPlanarData>(); 
+  nOT=ot->layers.size();
   
-  //-- SIT Parameters--
-  _nLayersSIT = 0 ;
-  const gear::ZPlanarParameters* pSITDetMain = 0;
-  const gear::ZPlanarLayerLayout* pSITLayerLayout = 0;
+  _nLayersSIT = nIT + nOT;  
+
+  streamlog_out( DEBUG0 ) << "###setupGeom: _bField = " << _bField << std::endl ;
+  streamlog_out( DEBUG0 ) << "###setupGeom: _nLayersVTX = " << _nLayersVTX << std::endl ;
+  streamlog_out( DEBUG0 ) << "###setupGeom: _nLayersSilicon (Inner + Outer) = " << _nLayersSIT << std::endl ;
   
-  try{
-    
-    streamlog_out( DEBUG9 ) << " filling SIT parameters from gear::SITParameters " << std::endl ;
-    
-    pSITDetMain = &Global::GEAR->getSITParameters();
-    pSITLayerLayout = &(pSITDetMain->getZPlanarLayerLayout());
-    _nLayersSIT = pSITLayerLayout->getNLayers();
-    
-  }
-  catch( gear::UnknownParameterException& e){
-    
-    streamlog_out( DEBUG9 ) << " ### gear::SITParameters Not Present in GEAR FILE" << std::endl ;
-    
-  }
   
 }
 
@@ -1304,14 +1310,11 @@ bool DDCellsAutomatonMV::setCriteria( unsigned round ){
 
 
 void DDCellsAutomatonMV::finaliseTrack( TrackImpl* trackImpl ){
-   
-  streamlog_out( MESSAGE ) << "DDCellsAutomatonMV: finaliseTrack - 0 - I am in - it is a strat... \n";
-   
+      
 
   //Fitter fitter( trackImpl , _trkSystem ); //it gives problem at 90deg: sometimes the hits are taken in the inverse order resulting in a fitted track in the opposite quadrant of the hits
   Fitter fitter( trackImpl , _trkSystem , 1); //it forces the hits ordering according to the radius (problem for very bent tracks that are coming back - TO STUDY)
    
-  streamlog_out( MESSAGE ) << "DDCellsAutomatonMV: finaliseTrack - 1 - still ok \n";
 
    trackImpl->trackStates().clear();
    
@@ -1328,24 +1331,19 @@ void DDCellsAutomatonMV::finaliseTrack( TrackImpl* trackImpl ){
    trkStateLastHit->setLocation( TrackState::AtLastHit );
    trackImpl->addTrackState( trkStateLastHit );
 
-   streamlog_out( MESSAGE ) << "DDCellsAutomatonMV: finaliseTrack - 2 - trackstate of hits ok \n";
    
    // TrackStateImpl* trkStateAtCalo = new TrackStateImpl( *fitter.getTrackState( TrackState::AtCalorimeter ) ) ;
    // trkStateAtCalo->setLocation( TrackState::AtCalorimeter );
    // trackImpl->addTrackState( trkStateAtCalo );
 
-   streamlog_out( MESSAGE ) << "DDCellsAutomatonMV: finaliseTrack - 3 - skipped trackstate at calo - to try without skipping \n";
    
    trackImpl->setChi2( fitter.getChi2( TrackState::AtIP ) );
    trackImpl->setNdf(  fitter.getNdf ( TrackState::AtIP ) );
 
-   streamlog_out( MESSAGE ) << "DDCellsAutomatonMV: finaliseTrack - 4 - chi2 and ndf ok \n";
    
    const float* p = trkStateFirstHit->getReferencePoint();
    trackImpl->setRadiusOfInnermostHit( sqrt( p[0]*p[0] + p[1]*p[1] + p[2]*p[2] ) );
 
-
-   streamlog_out( MESSAGE ) << "DDCellsAutomatonMV: finaliseTrack - 5 -  First hit ok - order is ok? - r = " <<  sqrt( p[0]*p[0] + p[1]*p[1] + p[2]*p[2] ) <<"\n";
 
    
    std::map<int, int> hitNumbers; 
@@ -1359,7 +1357,7 @@ void DDCellsAutomatonMV::finaliseTrack( TrackImpl* trackImpl ){
    
    std::vector< TrackerHit* > trackerHits = trackImpl->getTrackerHits();
 
-   streamlog_out( MESSAGE ) << "DDCellsAutomatonMV: finaliseTrack - 6 - trackerHits.size() = " << trackerHits.size() <<"\n";
+   streamlog_out( DEBUG0 ) << "DDCellsAutomatonMV: finaliseTrack - trackerHits.size() = " << trackerHits.size() <<"\n";
 
 
    for( unsigned j=0; j < trackerHits.size(); j++ ){
@@ -1368,15 +1366,11 @@ void DDCellsAutomatonMV::finaliseTrack( TrackImpl* trackImpl ){
       encoder.setValue( trackerHits[j]->getCellID0() );
       int subdet =  encoder[lcio::ILDCellID0::subdet];
      
-      streamlog_out( MESSAGE ) << "DDCellsAutomatonMV: finaliseTrack - 7 - subdet = " << subdet <<"\n";
+      streamlog_out( DEBUG0 ) << "DDCellsAutomatonMV: finaliseTrack - subdet = " << subdet <<"\n";
       
       ++hitNumbers[ subdet ];
       
    }
-
-   streamlog_out( MESSAGE ) << "DDCellsAutomatonMV: finaliseTrack - 8 - lcio::ILDDetID::ETD = " << lcio::ILDDetID::ETD <<"\n";
-   streamlog_out( MESSAGE ) << "DDCellsAutomatonMV: finaliseTrack - 8 - lcio::ILDDetID::VXD = " << lcio::ILDDetID::VXD <<"\n";
-   streamlog_out( MESSAGE ) << "DDCellsAutomatonMV: finaliseTrack - 8 - 2*lcio::ILDDetID::VXD -2 = " << 2*lcio::ILDDetID::VXD -2 <<"\n";
 
    
    trackImpl->subdetectorHitNumbers().resize(2 * lcio::ILDDetID::ETD);
@@ -1394,8 +1388,6 @@ void DDCellsAutomatonMV::finaliseTrack( TrackImpl* trackImpl ){
    trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::ETD - 1 ] = hitNumbers[lcio::ILDDetID::ETD];
    
 
-   streamlog_out( MESSAGE ) << "DDCellsAutomatonMV: finaliseTrack - it ends!!! \n";
-   
    return;
    
    

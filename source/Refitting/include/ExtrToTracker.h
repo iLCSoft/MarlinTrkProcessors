@@ -124,6 +124,14 @@ public:
   //bool getSiHit(LCCollection*& sitHitsCol, int fitElID, MarlinTrk::IMarlinTrack*& marlin_trk, TrackerHit*& selectedHit);
   
   
+
+  void addHitOnNextElID(int elementID, MarlinTrk::IMarlinTrack*& marlin_trk, EVENT::TrackerHitVec& trkHits, LCCollection*& sitHitsCol, LCCollection*& otHitsCol, int& iL, int& nSITR, int& TotalSITHits, int& SITHitsPerTrk, int& SITHitsFitted, int& SITHitsNonFitted);
+
+
+  void fillVecSubdet(lcio::LCEvent*& evt);
+
+
+
 protected:
   
   /* helper function to get collection using try catch block */
@@ -185,6 +193,14 @@ protected:
   
 
   //processor parameters
+
+  StringVec _vecDigiHits;
+  StringVec _vecSubdetName;
+  std::vector<int > _vecSubdetNLayers;
+  std::vector<int > _vecSubdetID;
+  std::vector<LCCollection* > _vecDigiHitsCol;
+
+
 
   int _detID;
   std::string _detElName;
