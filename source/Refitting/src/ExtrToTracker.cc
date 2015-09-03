@@ -3,19 +3,13 @@
 #include <IMPL/TrackerHitPlaneImpl.h>
 
 
-#include "TFile.h"
-#include "TTree.h"
-#include "LinkDef.h"
+// #include "TFile.h"
+// #include "TTree.h"
+// #include "LinkDef.h"
 #include "MarlinTrk/MarlinTrkUtils.h"
 
 #include "UTIL/Operators.h"
 
-#if defined GEO1 //ILD GEAR GEOMETRY
-#include "gear/gearsurf/MeasurementSurface.h"
-#include "gear/gearsurf/MeasurementSurfaceStore.h"
-#include "gear/gearsurf/ICoordinateSystem.h"
-#include "gear/gearsurf/CartesianCoordinateSystem.h"
-#elif defined GEO2 //CLIC DD4HEP GEOMETRY
 #include "DD4hep/LCDD.h"
 #include "DD4hep/DD4hepUnits.h"
 #include "DDRec/Surface.h"
@@ -23,9 +17,9 @@
 #include "DDRec/DetectorData.h"
 #include "DDRec/DDGear.h"
 
-#else
-#error Geometry type not defined
-#endif
+//CxxUtils/
+#include "fpcompare.h"
+
 
 
 
@@ -35,25 +29,12 @@ using namespace MarlinTrk ;
 
 
 
-// //----------------------------------------------------------------
-// struct Distance3D2{
-//   gear::Vector3D _pos ;
-//   Distance3D2( const gear::Vector3D& pos) : _pos( pos ) {}
-//   template <class T>
-//   double operator()( const T* t) { 
-//     gear::Vector3D p( t->getPosition() ) ;
-//     return ( p - _pos ).r2() ; 
-
-//   }
-// };
-// //----------------------------------------------------------------
-
-
 //------------------------------------------------------------------------------------------
 
 struct PtSort {  // sort tracks wtr to pt - largest first
   inline bool operator()( const lcio::LCObject* l, const lcio::LCObject* r) {      
-    return ( std::abs( ( (const lcio::Track*) l )->getOmega() ) < std::abs( ( (const lcio::Track*) r )->getOmega() )  );  // pt ~ 1./omega  
+    return CxxUtils::fpcompare::less( std::abs( ( (const lcio::Track*) l )->getOmega() ), std::abs( ( (const lcio::Track*) r )->getOmega() ) );
+    //return ( std::abs( ( (const lcio::Track*) l )->getOmega() ) < std::abs( ( (const lcio::Track*) r )->getOmega() )  );  // pt ~ 1./omega  
   }
 };
 
@@ -62,9 +43,10 @@ struct PtSort {  // sort tracks wtr to pt - largest first
 
 //------------------------------------------------------------------------------------------
 
-struct ZSort {  // sort TPC track segments wtr to Z - smallest first
+struct ZSort {  // sort track segments wtr to Z - smallest first
   inline bool operator()( const lcio::LCObject* l, const lcio::LCObject* r) {      
-    return ( std::abs( ( (const lcio::Track*) l )->getZ0() ) < std::abs( ( (const lcio::Track*) r )->getZ0() )  );  // pt ~ 1./omega  
+    return CxxUtils::fpcompare::less( std::abs( ( (const lcio::Track*) l )->getZ0() ), std::abs( ( (const lcio::Track*) r )->getZ0() ) );
+    //return ( std::abs( ( (const lcio::Track*) l )->getZ0() ) < std::abs( ( (const lcio::Track*) r )->getZ0() )  );  // pt ~ 1./omega  
   }
 };
 
@@ -77,7 +59,7 @@ ExtrToTracker aExtrToTracker ;
 ExtrToTracker::ExtrToTracker() : Processor("ExtrToTracker") {
   
   // modify processor description
-  _description = "ExtrToTracker refits an input track collection (TPC or VXD), and used IMarlinTrk tools to propagate it to SIT" ;
+  _description = "ExtrToTracker refits an input VXD track collection, and used IMarlinTrk tools to propagate it to the main tracker" ;
   
   
   // register steering parameters: name, description, class-variable, default value
@@ -96,6 +78,7 @@ ExtrToTracker::ExtrToTracker() : Processor("ExtrToTracker") {
   vecDigiHitsDefault.push_back( "OTrackerHits" );
   vecDigiHitsDefault.push_back( "ITrackerEndcapHits" );
   vecDigiHitsDefault.push_back( "OTrackerEndcapHits" );
+  //vecDigiHitsDefault.push_back( "VXDETrackerHits" );
 
   registerInputCollections(LCIO::TRACKERHITPLANE,
                            "vecDigiHits",
@@ -109,6 +92,7 @@ ExtrToTracker::ExtrToTracker() : Processor("ExtrToTracker") {
   vecSubdetNameDefault.push_back("OuterTrackerBarrel") ;
   vecSubdetNameDefault.push_back("InnerTrackerEndcap") ;
   vecSubdetNameDefault.push_back("OuterTrackerEndcap") ;
+  //vecSubdetNameDefault.push_back("VertexEndcap") ;
 
   registerProcessorParameter( "vecSubdetName" , 
                               "vector of names of all subdetector to exrapolate to" ,
@@ -120,54 +104,11 @@ ExtrToTracker::ExtrToTracker() : Processor("ExtrToTracker") {
 
 
 
-
-
-  registerInputCollection( LCIO::TRACKERHITPLANE,
-			   "digitisedSITHits" , 
-			   "Name of the SITTrackerHit collection"  ,
-			   _sitColName ,
-			   std::string("ITrackerHits") ) ;
-
-
-  registerInputCollection( LCIO::TRACKERHITPLANE,
-			   "digitisedOTHits" , 
-			   "Name of the SITTrackerHit collection"  ,
-			   _otColName ,
-			   std::string("OTrackerHits") ) ;
-  
-
   registerOutputCollection( LCIO::TRACK,
 			    "OutputTrackCollectionName" , 
 			    "Name of the output track collection"  ,
 			    _output_track_col_name ,
 			    std::string("ExtrTracks") ) ;
-
-  registerProcessorParameter( "detectorElementName",
-			      "Name of the detector element you are extrapolating to",
-			      _detElName,
-			      std::string("InnerTrackerBarrel")
-			      );
-
-  registerProcessorParameter( "detectorID",
-			      "ID of the detector element you are extrapolating to",
-			      _detID,
-			      int(3)
-			      );
-
-
-  registerProcessorParameter( "detectorElementOTName",
-			      "Name of the detector element you are extrapolating to",
-			      _detElOTName,
-			      std::string("")
-			      );
-  //std::string("OuterTrackerBarrel")
-
-
-  registerProcessorParameter( "detectorIDOT",
-			      "ID of the detector element you are extrapolating to",
-			      _detIDOT,
-			      int(5)
-			      );
 
 
   registerProcessorParameter("MultipleScatteringOn",
@@ -200,24 +141,6 @@ ExtrToTracker::ExtrToTracker() : Processor("ExtrToTracker") {
                              _performFinalRefit,
                              bool(false));
 
-  registerProcessorParameter( "doNtuple",
-			      "flag that say to fill and write the ntuple",
-			      _doNtuple,
-			      bool(false)
-			      );
-
-  registerProcessorParameter( "outFileName",
-			      "Name of the output root file",
-			      _outFileName,
-			      std::string("ExtrToTracker.root")
-			      );
-
-  registerProcessorParameter( "treeName",
-			      "Name of the tree",
-			      _treeName,
-			      std::string("extrtree")
-			      );
-
   
 
 }
@@ -233,14 +156,6 @@ void ExtrToTracker::init() {
   printParameters() ;
   
 
-#if defined GEO1
-
-  _bField = Global::GEAR->getBField().at( gear::Vector3D(0., 0., 0.) ).z();    //The B field in z direction
-
-  // set up the geometery needed by KalTest
-  //FIXME: for now do KalTest only - make this a steering parameter to use other fitters
-  _trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( "KalTest" , marlin::Global::GEAR , "" ) ;
-#elif defined GEO2
 
   DD4hep::Geometry::LCDD& lcdd = DD4hep::Geometry::LCDD::getInstance();
 
@@ -252,89 +167,15 @@ void ExtrToTracker::init() {
   _trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( "DDKalTest" , marlin::Global::GEAR , "" ) ;
 
 
-  // DD4hep::Geometry::LCDD& lcdd = DD4hep::Geometry::LCDD::getInstance();
-
-
-  // //===========  get the surface map from the SurfaceManager ================                                                                                 
-
-  // DD4hep::DDRec::SurfaceManager& surfMan = *lcdd.extension<DD4hep::DDRec::SurfaceManager>() ;
-
-  // std::string _subDetName = _detElName;
-  // DD4hep::Geometry::DetElement det = lcdd.detector( _subDetName ) ;
-
-  // _map = surfMan.map( det.name() ) ;
-
-  // if( ! _map ) {
-  //   std::stringstream err  ; err << " Could not find surface map for detector: "
-  //                                << _subDetName << " in SurfaceManager " ;
-  //   throw EVENT::Exception( err.str() ) ;
-  // }
-
-  // streamlog_out( DEBUG3 ) << " DDPlanarDigiProcessor::init(): found " << _map->size()
-  //                         << " surfaces for detector:" <<  _subDetName << std::endl ;
-
-  
-  // streamlog_out( DEBUG3 ) << " ExtrToTracker::init(): found " << _map->size() << " surfaces for detector with requested ids."<<std::endl ;
-  
-  // if( _map->empty() ) {   std::stringstream err  ; err << " Could not find any surfaces for requested detector ids in processor " 
-  // 						       <<   this->name() ;
-  //   throw EVENT::Exception( err.str() ) ;
-  // }
-
-  
-#else
-#error Geometry type not defined
-#endif
-
-
-
-
-
-
-  //   /////////////////////////////
-  // #if defined GEO1
-  //   const gear::ZPlanarParameters& gearSIT = Global::GEAR->getSITParameters() ;
-  //   const gear::ZPlanarLayerLayout& layerSIT = gearSIT.getZPlanarLayerLayout(); 
-  //   const unsigned int nSITR = layerSIT.getNLayers() ;
-  // #elif defined GEO2
-
-  //   DD4hep::Geometry::LCDD& lcdd = DD4hep::Geometry::LCDD::getInstance();
-
-  //   _vecSubdetNLayers.clear();
-  //   for(size_t i=0; i<_vecSubdetName.size(); i++){
-  //     streamlog_out(DEBUG2) << "ExtrToTracker - vecSubdetName.at("<<i<<") = " << _vecSubdetName.at(i) << std::endl;
-  //     int nSubdetLayers = 0;
-  //     if (_vecSubdetName.at(i)!="" && (_vecSubdetName.at(i).std::string::find("Barrel") != std::string::npos) ){
-  //       DD4hep::Geometry::DetElement detEl = lcdd.detector(_vecSubdetName.at(i));
-  //       DD4hep::DDRec::ZPlanarData* data = detEl.extension<DD4hep::DDRec::ZPlanarData>(); 
-  //       nSubdetLayers=data->layers.size();
-  //     } 
-  //     else if (_vecSubdetName.at(i).std::string::find("OuterTrackerEndcap") != std::string::npos){
-  //       nSubdetLayers=5;
-  //     }
-  //     else if (_vecSubdetName.at(i).std::string::find("InnerTrackerEndcap") != std::string::npos){
-  //       nSubdetLayers=6;
-  //     }
-  //     _vecSubdetNLayers.push_back(nSubdetLayers);
-  //     streamlog_out(DEBUG2) << "ExtrToTracker - vecSubdetName.at("<<i<<") = " << _vecSubdetName.at(i) << std::endl;
-  //     streamlog_out(DEBUG2) << "ExtrToTracker - vecSubdetNLayers.at("<<i<<") = " << _vecSubdetNLayers.at(i) << std::endl;
-
-  //   }
-   
-
-  // #else
-  // #error Geometry type not defined
-  // #endif
 
 
   //   /////////////////////////////
 	    
 
-
   
   if( _trksystem == 0 ){
     
-    throw EVENT::Exception( std::string("  Cannot initialize MarlinTrkSystem of Type: ") + std::string("KalTest" )  ) ;
+    throw EVENT::Exception( std::string("  Cannot initialize MarlinTrkSystem of Type: ") + std::string("DDKalTest" )  ) ;
     
   }
   
@@ -355,48 +196,6 @@ void ExtrToTracker::init() {
   _maxChi2PerHit = 100;
 
 
-
-  if (_doNtuple){  
-
-    _out = new TFile(_outFileName.c_str(),"RECREATE");
-    _tree = new TTree(_treeName.c_str(),_treeName.c_str());
-
-    // init tree variables 
-    this->clearEventVar();
-
-    // set tree branches 
-    int bufsize = 32000; //default buffer size 32KB
-    //setTreeBranches(bufsize);    
-  
-
-    _tree->Branch("nRun",&_n_run,"nRun/I");
-    _tree->Branch("nEvt",&_n_evt,"nEvt/I");
-    _tree->Branch("hitVXDN",&_hitVXDN,"hitVXDN/I");
-    _tree->Branch("hitN", "std::vector<std::vector<double > >",&_hitN,bufsize,0); 
-    _tree->Branch("hitX", "std::vector<std::vector<double > >",&_hitX,bufsize,0); 
-    _tree->Branch("hitY", "std::vector<std::vector<double > >",&_hitY,bufsize,0); 
-    _tree->Branch("hitZ", "std::vector<std::vector<double > >",&_hitZ,bufsize,0); 
-    _tree->Branch("hitR", "std::vector<std::vector<double > >",&_hitR,bufsize,0); 
-    _tree->Branch("hitU", "std::vector<std::vector<double > >",&_hitU,bufsize,0); 
-    _tree->Branch("hitV", "std::vector<std::vector<double > >",&_hitV,bufsize,0); 
-    _tree->Branch("hitW", "std::vector<std::vector<double > >",&_hitW,bufsize,0); 
-    _tree->Branch("hitID", "std::vector<std::vector<double > >",&_hitID,bufsize,0); 
-    _tree->Branch("fitN",&_fitN,"fitN/I");
-    _tree->Branch("fitX", "std::vector<std::vector<double > >",&_fitX,bufsize,0); 
-    _tree->Branch("fitY", "std::vector<std::vector<double > >",&_fitY,bufsize,0); 
-    _tree->Branch("fitZ", "std::vector<std::vector<double > >",&_fitZ,bufsize,0); 
-    _tree->Branch("fitR", "std::vector<std::vector<double > >",&_fitR,bufsize,0); 
-    _tree->Branch("fitU", "std::vector<std::vector<double > >",&_fitU,bufsize,0); 
-    _tree->Branch("fitV", "std::vector<std::vector<double > >",&_fitV,bufsize,0); 
-    _tree->Branch("fitW", "std::vector<std::vector<double > >",&_fitW,bufsize,0); 
-    _tree->Branch("fitID", "std::vector<std::vector<double > >",&_fitID,bufsize,0); 
-    _tree->Branch("fitD0Err", "std::vector<std::vector<double > >",&_fitD0Err,bufsize,0); 
-    _tree->Branch("fitD0", "std::vector<std::vector<double > >",&_fitD0,bufsize,0); 
-    _tree->Branch("fitZ0Err", "std::vector<std::vector<double > >",&_fitZ0Err,bufsize,0); 
-    _tree->Branch("fitZ0", "std::vector<std::vector<double > >",&_fitZ0,bufsize,0); 
-
-
-  }//end _doNtuple flag
     
 }
 
@@ -417,13 +216,10 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
   streamlog_out(DEBUG1) << "   processing event: " << _n_evt 
 			<< std::endl ;
   
-  if (_doNtuple) clearEventVar();
 
 
   // get input collection and relations 
   LCCollection* input_track_col = this->GetCollection( evt, _input_track_col_name ) ;
-  LCCollection* sitHitsCol = this->GetCollection( evt, _sitColName ) ;
-  LCCollection* otHitsCol = this->GetCollection( evt, _otColName ) ;
 
   if( input_track_col != 0 ){
     
@@ -453,19 +249,12 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 
     std::sort( inputTrackVec->begin() , inputTrackVec->end() ,  PtSort()  ) ;
 
-    int sitHits = 0 ; 
-    if ( sitHitsCol != 0  ) { sitHits = sitHitsCol->getNumberOfElements();   }
-    streamlog_out(DEBUG4) << "Number of sitHits in the collection " << sitHits << std::endl ;
-	
-
-    // std::vector< IMPL::TrackImpl* > trackCandidates ;
 
     // loop over the input tracks and refit using KalTest    
     for(int i=0; i< nTracks ; ++i) {
 
 
       
-      if (_doNtuple) this->clearLayerHelperVar();
      
 
       int SITHitsPerTrk = 0 ;
@@ -492,7 +281,6 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
       if (init_status==0) {
 	  
 
-	;
 
 	streamlog_out(DEBUG4) << "track initialised " << std::endl ;
 	  
@@ -624,10 +412,10 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 		      }
 
 		  
-		      double hitx = BestHit->getPosition()[0];
-		      double hity = BestHit->getPosition()[1];
-		      double hitz = BestHit->getPosition()[2];
-		      double hitr = sqrt(hitx*hitx+hity*hity);
+		      // double hitx = BestHit->getPosition()[0];
+		      // double hity = BestHit->getPosition()[1];
+		      // double hitz = BestHit->getPosition()[2];
+		      // double hitr = sqrt(hitx*hitx+hity*hity);
 	
 		
 		      TotalSITHits++;
@@ -848,36 +636,6 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
       
 
 
-      if (_doNtuple) {
-	  
-	_hitX.push_back(_hitX_layer_helper);
-	_hitY.push_back(_hitY_layer_helper);
-	_hitZ.push_back(_hitZ_layer_helper);
-	_hitR.push_back(_hitR_layer_helper);
-	_hitU.push_back(_hitU_layer_helper);
-	_hitV.push_back(_hitV_layer_helper);
-	_hitW.push_back(_hitW_layer_helper);
-	_hitID.push_back(_hitID_layer_helper);
-
-	_hitN.push_back(_hitN_layer_helper);
-
-	_fitX.push_back(_fitX_layer_helper);
-	_fitY.push_back(_fitY_layer_helper);
-	_fitZ.push_back(_fitZ_layer_helper);
-	_fitR.push_back(_fitR_layer_helper);
-	_fitU.push_back(_fitU_layer_helper);
-	_fitV.push_back(_fitV_layer_helper);
-	_fitW.push_back(_fitW_layer_helper);
-	_fitID.push_back(_fitID_layer_helper);
-
-	_fitD0Err.push_back(_fitD0Err_layer_helper);
-	_fitD0.push_back(_fitD0_layer_helper);
-
-	_fitZ0Err.push_back(_fitZ0Err_layer_helper);
-	_fitZ0.push_back(_fitZ0_layer_helper);
-
-      }    
-
 
       delete marlin_trk;
       
@@ -897,11 +655,6 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
   //cout << " event " << _n_evt << std::endl ;
 
 
-  if (_doNtuple){
-
-    _fitN = _fitX.size();
-    _tree->Fill();
-  }
 
   
 }
@@ -924,21 +677,7 @@ void ExtrToTracker::end(){
 
 
   
-  if (_doNtuple) {
-
-    _tree->Write();
-    _out->Write();
-    _out->Close();
-
-    // delete _tree;
-    // delete _out;
-
-  }  
-  
 }
-
-
-
 
 
 
@@ -1069,99 +808,6 @@ TrackerHitPlane* ExtrToTracker::getSiHit(LCCollection*& sitHitsCol, int fitElID,
 
 
 
-void ExtrToTracker::setTreeBranches(int bufsize){
-  //event variables
-  _tree->Branch("nRun",&_n_run,"nRun/I");
-  _tree->Branch("nEvt",&_n_evt,"nEvt/I");
-  _tree->Branch("hitVXDN",&_hitVXDN,"hitVXDN/I");
-  _tree->Branch("hitN", "std::vector<std::vector<double > >",&_hitN,bufsize,0); 
-  _tree->Branch("hitX", "std::vector<std::vector<double > >",&_hitX,bufsize,0); 
-  _tree->Branch("hitY", "std::vector<std::vector<double > >",&_hitY,bufsize,0); 
-  _tree->Branch("hitZ", "std::vector<std::vector<double > >",&_hitZ,bufsize,0); 
-  _tree->Branch("hitR", "std::vector<std::vector<double > >",&_hitR,bufsize,0); 
-  _tree->Branch("hitU", "std::vector<std::vector<double > >",&_hitU,bufsize,0); 
-  _tree->Branch("hitV", "std::vector<std::vector<double > >",&_hitV,bufsize,0); 
-  _tree->Branch("hitW", "std::vector<std::vector<double > >",&_hitW,bufsize,0); 
-  _tree->Branch("hitID", "std::vector<std::vector<double > >",&_hitID,bufsize,0); 
-  _tree->Branch("fitN",&_fitN,"fitN/I");
-  _tree->Branch("fitX", "std::vector<std::vector<double > >",&_fitX,bufsize,0); 
-  _tree->Branch("fitY", "std::vector<std::vector<double > >",&_fitY,bufsize,0); 
-  _tree->Branch("fitZ", "std::vector<std::vector<double > >",&_fitZ,bufsize,0); 
-  _tree->Branch("fitR", "std::vector<std::vector<double > >",&_fitR,bufsize,0); 
-  _tree->Branch("fitU", "std::vector<std::vector<double > >",&_fitU,bufsize,0); 
-  _tree->Branch("fitV", "std::vector<std::vector<double > >",&_fitV,bufsize,0); 
-  _tree->Branch("fitW", "std::vector<std::vector<double > >",&_fitW,bufsize,0); 
-  _tree->Branch("fitID", "std::vector<std::vector<double > >",&_fitID,bufsize,0); 
-  _tree->Branch("fitD0Err", "std::vector<std::vector<double > >",&_fitD0Err,bufsize,0); 
-  _tree->Branch("fitD0", "std::vector<std::vector<double > >",&_fitD0,bufsize,0); 
-  _tree->Branch("fitZ0Err", "std::vector<std::vector<double > >",&_fitZ0Err,bufsize,0); 
-  _tree->Branch("fitZ0", "std::vector<std::vector<double > >",&_fitZ0,bufsize,0); 
-}
-
-
-
-void ExtrToTracker::clearEventVar(){
-
-  _hitVXDN = 0;
-
-  _hitN.clear();
-  _hitX.clear();
-  _hitY.clear();
-  _hitZ.clear();
-  _hitR.clear();
-  _hitU.clear();
-  _hitV.clear();
-  _hitW.clear();
-  _hitID.clear();
-
-  _fitN=0;
-  _fitX.clear();
-  _fitY.clear();
-  _fitZ.clear();
-  _fitR.clear();
-  _fitU.clear();
-  _fitV.clear();
-  _fitW.clear();
-  _fitID.clear();
-
-  _fitD0Err.clear();
-  _fitD0.clear();
-
-  _fitZ0Err.clear();
-  _fitZ0.clear();
-
-}
-
-void ExtrToTracker::clearLayerHelperVar(){
-
-  _hitN_layer_helper.clear();
-  _hitX_layer_helper.clear();
-  _hitY_layer_helper.clear();
-  _hitZ_layer_helper.clear();
-  _hitR_layer_helper.clear();
-  _hitU_layer_helper.clear();
-  _hitV_layer_helper.clear();
-  _hitW_layer_helper.clear();
-  _hitID_layer_helper.clear();
-
-  _fitX_layer_helper.clear();
-  _fitY_layer_helper.clear();
-  _fitZ_layer_helper.clear();
-  _fitR_layer_helper.clear();
-  _fitU_layer_helper.clear();
-  _fitV_layer_helper.clear();
-  _fitW_layer_helper.clear();
-  _fitID_layer_helper.clear();
-
-  _fitD0Err_layer_helper.clear();
-  _fitD0_layer_helper.clear();
-
-  _fitZ0Err_layer_helper.clear();
-  _fitZ0_layer_helper.clear();
-
-}
-
-
 
 
 
@@ -1189,10 +835,10 @@ void ExtrToTracker::addHitOnNextElID(int elementID, MarlinTrk::IMarlinTrack*& ma
       streamlog_out(DEBUG4) << " --- chi2_increment "<< chi2_increment << std::endl ; 
       streamlog_out(DEBUG4) << " --- isSuccessfulFit "<< isSuccessfulFit << std::endl ; 
 		  
-      double hitx = BestHit->getPosition()[0];
-      double hity = BestHit->getPosition()[1];
-      double hitz = BestHit->getPosition()[2];
-      double hitr = sqrt(hitx*hitx+hity*hity);
+      // double hitx = BestHit->getPosition()[0];
+      // double hity = BestHit->getPosition()[1];
+      // double hitz = BestHit->getPosition()[2];
+      // double hitr = sqrt(hitx*hitx+hity*hity);
 	
 		
       TotalSITHits++;

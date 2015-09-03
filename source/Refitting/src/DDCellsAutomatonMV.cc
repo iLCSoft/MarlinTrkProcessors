@@ -659,7 +659,7 @@ void DDCellsAutomatonMV::processEvent( LCEvent * evt ) {
   //TrackQISpecial_MV JustDoIt ;
   TrackQI trackQI;
   MaxHits MaxLength;
-  
+  Test test;
 
 
   streamlog_out(DEBUG4) << " best subset finder = " << _bestSubsetFinder << " no of tracks fed to the nnets " << trackCandidates.size() << std::endl ;
@@ -686,7 +686,8 @@ void DDCellsAutomatonMV::processEvent( LCEvent * evt ) {
     SubsetSimple< ITrack* > subset_tracks;
     subset_tracks.add( trackCandidates );
     //subset_tracks.calculateBestSet( comp, trackQI );
-    subset_tracks.calculateBestSet( comp, MaxLength );
+    //subset_tracks.calculateBestSet( comp, MaxLength );
+    subset_tracks.calculateBestSet( comp, test );
     GoodTracks = subset_tracks.getAccepted();
     RejectedTracks = subset_tracks.getRejected();
     
@@ -696,6 +697,7 @@ void DDCellsAutomatonMV::processEvent( LCEvent * evt ) {
     
     streamlog_out( DEBUG3 ) << "Input for subset = \"" << _bestSubsetFinder << "\". All tracks are kept\n" ;
     GoodTracks = trackCandidates ;
+
     
   }
   
@@ -770,8 +772,8 @@ void DDCellsAutomatonMV::processEvent( LCEvent * evt ) {
   }
 
   // cleanup of tracks
-  for (unsigned int i=0; i < GoodTracks.size(); i++){ delete GoodTracks[i]; } 
-  for ( unsigned i=0; i<RejectedTracks.size(); i++){ delete RejectedTracks[i]; }
+  //if ( _bestSubsetFinder != "NoSelection") for (unsigned int i=0; i < GoodTracks.size(); i++){ delete GoodTracks[i]; } 
+  //for ( unsigned i=0; i<RejectedTracks.size(); i++){ delete RejectedTracks[i]; }
   //for ( unsigned i=0; i<trackCandidates.size(); i++){ delete trackCandidates[i]; }
 }
 
