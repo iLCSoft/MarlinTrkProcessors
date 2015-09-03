@@ -310,6 +310,9 @@ public:
 
 
 
+
+
+
 /** A functor to return the quality of a track, which is the number of associated hits. 
 */
 class MaxHits{
@@ -319,6 +322,37 @@ public:
   inline double operator()( ITrack* track ){
     
     return track->getHits().size();
+  }
+   
+};
+
+
+
+/** A functor to return the ....
+*/
+class Test{
+   
+public:
+   
+  inline double operator()( ITrack* track ){
+    
+    //std::cout<< " ----- track version with nhits = " << track->getHits().size() <<std::endl;
+
+    if( track->getHits().size() > 2 ){
+         
+      //std::cout<< " --------  getChi2Prob() = " << track->getChi2Prob()  <<std::endl;
+      //std::cout<< " --------  track->getChi2Prob()/2. +0.5 = " << track->getChi2Prob()/2. +0.5  <<std::endl;
+      return track->getChi2Prob()/2. +0.5; 
+         
+    }
+    else{
+         
+      //std::cout<< " --------  getChi2() = " << track->getChi2()  <<std::endl;
+      //std::cout<< " --------  1/( log( 7.3890561 + track->getChi2() ) ) = " << 1/( log( 7.3890561 + track->getChi2() ) ) <<std::endl;
+      return 1/( log( 7.3890561 + track->getChi2() ) ); //e^2 = 7.3890561
+         
+    }
+
   }
    
 };

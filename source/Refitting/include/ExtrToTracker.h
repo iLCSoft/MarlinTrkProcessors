@@ -33,18 +33,17 @@
 #include "KiTrack/SubsetHopfieldNN.h"
 #include "KiTrack/SubsetSimple.h"
 
-//---- GEAR ----
 #include "marlin/Global.h"
-#include "gear/GEAR.h"
-#include <gear/ZPlanarParameters.h>
-#include <gear/ZPlanarLayerLayout.h>
-#include "gear/BField.h"
 
-#if defined GEO2
+//---- GEAR ----
+/* #include "gear/GEAR.h" */
+/* #include <gear/ZPlanarParameters.h> */
+/* #include <gear/ZPlanarLayerLayout.h> */
+/* #include "gear/BField.h" */
+
 #include "DDRec/Surface.h"
 #include "DDRec/SurfaceManager.h" 
 
-#endif
 
 // ----- include for verbosity dependend logging ---------
 #include "marlin/VerbosityLevels.h"
@@ -57,9 +56,6 @@
 
 
 
-class TTree;
-class TFile;
-
 
 
 using namespace KiTrack;
@@ -70,10 +66,6 @@ namespace MarlinTrk{
 
 class ExtrToTracker : public marlin::Processor {
 
-/* #if defined GEO2 */
-/*     typedef std::map< unsigned long, const DD4hep::DDRec::Surface* > SurfaceMap ; */
-    
-/* #endif */
 
 public:
 
@@ -114,10 +106,6 @@ public:
   } ;
   
   
-  void setTreeBranches(int bufsize=32000);
-  void clearEventVar();
-  void clearLayerHelperVar();
-  /* void fillDummy(); */
 
   TrackerHitPlane* getSiHit(LCCollection*& sitHitsCol, int fitElID, MarlinTrk::IMarlinTrack*& marlin_trk, int& nHitsOnDetEl);  
   //TrackerHit* getSiHit(LCCollection*& sitHitsCol, int fitElID, MarlinTrk::IMarlinTrack*& marlin_trk, int& nHitsOnDetEl);  
@@ -144,14 +132,6 @@ protected:
    */
   std::string _input_track_col_name ;
   
-
-  /** Input SIT tracker summer hit collection.
-   */
-  std::string _sitColName ;
-
-  /** Input Outer tracker summer hit collection.
-   */
-  std::string _otColName ;
   
   /** refitted track collection name.
    */
@@ -186,9 +166,7 @@ protected:
   bool _performFinalRefit ;
  
 
-#if defined GEO2
   const DD4hep::DDRec::SurfaceMap* _map ;
-#endif
 
   
 
@@ -200,77 +178,6 @@ protected:
   std::vector<int > _vecSubdetID;
   std::vector<LCCollection* > _vecDigiHitsCol;
 
-
-
-  int _detID;
-  std::string _detElName;
-  int _detIDOT;
-  std::string _detElOTName;
-
-  bool _doNtuple;
-  std::string _outFileName;
-  std::string _treeName;  
-
- //for tree
-
-  TFile* _out; 
-  TTree* _tree;
-
-  int _hitVXDN;
-
-  std::vector<std::vector<double > > _hitN;
-  std::vector<std::vector<double > > _hitX;
-  std::vector<std::vector<double > > _hitY;
-  std::vector<std::vector<double > > _hitZ;
-  std::vector<std::vector<double > > _hitR;
-  std::vector<std::vector<double > > _hitU;
-  std::vector<std::vector<double > > _hitV;
-  std::vector<std::vector<double > > _hitW;
-  std::vector<std::vector<double > > _hitID;
-
-  int _fitN;
-  std::vector<std::vector<double > > _fitX;
-  std::vector<std::vector<double > > _fitY;
-  std::vector<std::vector<double > > _fitZ;
-  std::vector<std::vector<double > > _fitR;
-  std::vector<std::vector<double > > _fitU;
-  std::vector<std::vector<double > > _fitV;
-  std::vector<std::vector<double > > _fitW;
-  std::vector<std::vector<double > > _fitID;
-
-  std::vector<std::vector<double > > _fitD0Err;
-  std::vector<std::vector<double > > _fitD0;
-
-
-  std::vector<std::vector<double > > _fitZ0Err;
-  std::vector<std::vector<double > > _fitZ0;
-
-
-
-  std::vector<double > _hitN_layer_helper;
-  std::vector<double > _hitX_layer_helper;
-  std::vector<double > _hitY_layer_helper;
-  std::vector<double > _hitZ_layer_helper;
-  std::vector<double > _hitR_layer_helper;
-  std::vector<double > _hitU_layer_helper;
-  std::vector<double > _hitV_layer_helper;
-  std::vector<double > _hitW_layer_helper;
-  std::vector<double > _hitID_layer_helper;
-
-  std::vector<double > _fitX_layer_helper;
-  std::vector<double > _fitY_layer_helper;
-  std::vector<double > _fitZ_layer_helper;
-  std::vector<double > _fitR_layer_helper;
-  std::vector<double > _fitU_layer_helper;
-  std::vector<double > _fitV_layer_helper;
-  std::vector<double > _fitW_layer_helper;
-  std::vector<double > _fitID_layer_helper;
-
-  std::vector<double > _fitD0Err_layer_helper;
-  std::vector<double > _fitD0_layer_helper;
-
-  std::vector<double > _fitZ0Err_layer_helper;
-  std::vector<double > _fitZ0_layer_helper;
 
   
   
