@@ -367,9 +367,15 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
       
       trkHit->setdU( resU ) ;
 
-      if( _isStrip ) trkHit->setdV( 0 ); // no error in v direction for strip hits as there is no meesurement information in v direction
-      else trkHit->setdV( resV ) ;
-      
+      if( _isStrip ) {
+
+        // store the resolution from the length of the wafer - in case a fitter might want to treat this as 2d hit ....
+        double stripRes = (surf->length_along_v() / dd4hep::mm ) / std::sqrt( 12. ) ;
+        trkHit->setdV( stripRes ); 
+
+      } else {
+        trkHit->setdV( resV ) ;
+      }
 
       if( _isStrip ){
         trkHit->setType( UTIL::set_bit( trkHit->getType() ,  UTIL::ILDTrkHitTypeBit::ONE_DIMENSIONAL ) ) ;

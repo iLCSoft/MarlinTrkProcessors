@@ -269,8 +269,14 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
       
 	if( _initialTrackState < 0 ) { // initialize the track from three hits
 
-	  error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, trkHits, refittedTrack, fit_direction, covMatrix, _bField, _maxChi2PerHit);
+	  // error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, trkHits, refittedTrack, fit_direction, covMatrix, _bField, _maxChi2PerHit);
 	  
+	  // call with empty pre_fit  -> should use default initialisation of the implementation, e.g.
+	  // use an internal pre fit in aidaTT
+	  error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, trkHits, refittedTrack, fit_direction, 0 , _bField, _maxChi2PerHit);
+
+
+
 	} else {  // use the specified track state 
 	  
 	  EVENT::TrackState* ts = const_cast<EVENT::TrackState* > ( track_to_refit->getTrackState( _initialTrackState ) ) ;  
@@ -294,9 +300,9 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
 				 << " >> Track fit returns error code " << error << " NDF = " << refittedTrack->getNdf() 
 				 <<  ". Number of hits = "<< trkHits.size() << std::endl;
 
-	  //fg: write out also incomplete tracks
-          // delete refittedTrack;
-          // continue ;
+	  //fg: to write out also incomplete tracks comment this out 
+	  delete refittedTrack;
+	  continue ;
         }
         
         
