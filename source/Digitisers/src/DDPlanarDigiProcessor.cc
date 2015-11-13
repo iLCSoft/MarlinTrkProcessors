@@ -99,6 +99,11 @@ DDPlanarDigiProcessor::DDPlanarDigiProcessor() : Processor("DDPlanarDigiProcesso
                            _outRelColName,
                            std::string("VTXTrackerHitRelations"));
   
+  registerProcessorParameter( "ForceHitsOntoSurface" , 
+                              "Project hits onto the surface in case they are not yet on the surface (default: false)" ,
+                              _forceHitsOntoSurface ,
+                              bool(false) );
+
   
   // setup the list of supported detectors
   
@@ -255,9 +260,25 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
                                 << " distance: " << surf->distance(  dd4hep::mm * oldPos )
                                 << std::endl;        
         
-        ++nDismissedHits;
         
-        continue; 
+        
+        if( _forceHitsOntoSurface ){
+          
+          DDSurfaces::Vector2D lv = surf->globalToLocal( dd4hep::mm * oldPos  ) ;
+          
+          DDSurfaces::Vector3D oldPosOnSurf = (1./dd4hep::mm) * surf->localToGlobal( lv ) ; 
+          
+          streamlog_out( DEBUG3 ) << " moved to " << oldPosOnSurf << " distance " << (oldPosOnSurf-oldPos).r()
+                                  << std::endl;        
+            
+          oldPos = oldPosOnSurf ;
+
+        } else {
+
+          ++nDismissedHits;
+        
+          continue; 
+        }
       }
       
       //**************************************************************************

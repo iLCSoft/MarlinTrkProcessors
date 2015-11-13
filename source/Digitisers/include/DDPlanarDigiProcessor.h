@@ -107,6 +107,7 @@ protected:
   
   const DD4hep::DDRec::SurfaceMap* _map ;
 
+  bool _forceHitsOntoSurface  ;
 
   std::vector<TH1F*> _h ;
   
