@@ -360,11 +360,11 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
       delete marlinTrk;
       
       
-      int nhits_in_vxd = refittedTrack->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::VXD - 2 ];
-      int nhits_in_ftd = refittedTrack->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::FTD - 2 ];
-      int nhits_in_sit = refittedTrack->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SIT - 2 ];
-      int nhits_in_tpc = refittedTrack->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::TPC - 2 ];
-      int nhits_in_set = refittedTrack->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SET - 2 ];
+      int nhits_in_vxd = refittedTrack->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::VXD - 1 ];
+      int nhits_in_ftd = refittedTrack->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::FTD - 1 ];
+      int nhits_in_sit = refittedTrack->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SIT - 1 ];
+      int nhits_in_tpc = refittedTrack->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::TPC - 1 ];
+      int nhits_in_set = refittedTrack->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SET - 1 ];
       
       
       streamlog_out( DEBUG3 ) << " Hit numbers for Track "<< refittedTrack->id() << ": "
