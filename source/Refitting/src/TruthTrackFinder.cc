@@ -295,14 +295,30 @@ void TruthTrackFinder::processEvent( LCEvent* evt ) {
 //    } catch (...) {
 //      throw;
 //    }
-		
+    std::vector<std::pair<EVENT::TrackerHit*, double> > hits_in_fit;
+    hits_in_fit.reserve(trackHits.size()); //Reserve at most the total number of hits
+    marlinTrack->getHitsInFit(hits_in_fit);
+
 		// Check track quality - if fit fails chi2 will be 0
 		if(track->getChi2() == 0.){delete track; delete relationTrack; delete marlinTrack; m_fitFails++; continue;}
 		
     // Add hit information - this is just a fudge for the moment, since we only use vertex hits. Should do for each subdetector once enabled
-    track->subdetectorHitNumbers().resize(2 * lcio::ILDDetID::ETD);
-    track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::VXD - 2 ] = trackHits.size();
+//     track->subdetectorHitNumbers().resize(2 * lcio::ILDDetID::ETD);
+//     track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::VXD - 2 ] = trackHits.size();
 
+    ///NOTE: Check that this is indeed what we want to do
+    UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ; 
+    encoder.reset() ;  // reset to 0
+    MarlinTrk::addHitNumbersToTrack(track, trackHits, false, encoder);
+    MarlinTrk::addHitNumbersToTrack(track, hits_in_fit, true, encoder);
+
+//     streamlog_out( DEBUG5 )<<"TruthTrackFinder: trackHits.size(): "<<trackHits.size()<<" trackfitHits.size(): "<<trackfitHits.size()<<" hits_in_fit.size(): "<<hits_in_fit.size()   << std::endl;
+
+    
+    
+    
+
+    
     // Push back to the output container
     trackCollection->addElement(track);
 		
