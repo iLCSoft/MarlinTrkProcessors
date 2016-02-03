@@ -82,8 +82,11 @@ class TrackSubsetProcessor : public Processor {
   
  protected:
 
-
- 
+  /** helper method that removes short tracks from the list that have the same hits as another, longer track in the list 
+   *  by setting the corresponding pointer to NULL.
+   */
+  void removeShortTracks( std::vector< EVENT::Track*>& tracks ) ; 
+  
   
   /** Input collection names */
   std::vector< std::string > _trackInputColNames;
@@ -97,6 +100,8 @@ class TrackSubsetProcessor : public Processor {
   bool _MSOn ;
   bool _ElossOn ;
   bool _SmoothOn ;
+  bool _removeShortTracks ;
+
 
   float _initialTrackError_d0;
   float _initialTrackError_phi0;

@@ -9,6 +9,7 @@
 #include "IMPL/TrackImpl.h"
 
 #include <UTIL/ILDConf.h>
+#include <UTIL/Operators.h>
 
 #include <gear/BField.h>
 
@@ -75,6 +76,11 @@ TrackSubsetProcessor::TrackSubsetProcessor() : Processor("TrackSubsetProcessor")
                              _ElossOn,
                              bool(true));
   
+  registerProcessorParameter("RemoveShortTracks",
+                             "Remove short tracks from the list that have a longer track sharing the same hits",
+                             _removeShortTracks,
+                             bool(false));
+
   registerProcessorParameter("SmoothOn",
                              "Smooth All Measurement Sites in Fit",
                              _SmoothOn,
@@ -275,12 +281,28 @@ void TrackSubsetProcessor::processEvent( LCEvent * evt ) {
     
   }
   
+  std::vector< EVENT::Track*> finalTracks ;
+  finalTracks.reserve( tracks.size() ) ;
+
+  if( _removeShortTracks ){
+    
+    removeShortTracks( tracks ) ;
+  } 
+
+  // copy all non-zero track pointers to final tracks list
+
+  for( unsigned i=0,N=tracks.size() ; i<N ; ++i){
+
+    if( tracks[i] ) finalTracks.push_back( tracks[i] ) ;
+  }
+
+
   TrackCompatibility comp;
-  
-  
+
   SubsetHopfieldNN< Track* > subset;
 //   SubsetSimple< Track* > subset;
-  subset.add( tracks );
+
+  subset.add( finalTracks );
   subset.setOmega( _omega );
   subset.calculateBestSet( comp, trackQI );
 
@@ -455,6 +477,69 @@ streamlog_out( DEBUG4 ) << "Saving " << trackVec->getNumberOfElements() << " tra
   
 }
 
+namespace{
+  struct TrackLength{
+    bool operator()(const Track* trk0, const Track* trk1 ){
+      return trk0->getTrackerHits().size() > trk1->getTrackerHits().size() ;
+    }
+  } ;
+}
+
+
+void TrackSubsetProcessor::removeShortTracks( std::vector< EVENT::Track*>& tracks ){
+
+
+  std::sort( tracks.begin() , tracks.end() , ::TrackLength() ) ;
+
+  unsigned nRemovedTracks = 0 ;
+
+  for( unsigned i=0,N=tracks.size() ; i<N ; ++i){
+
+    Track* trk0 = tracks[i] ;
+
+    if( trk0 == 0 ) 
+      continue ;
+
+    const TrackerHitVec& hits0 =  trk0->getTrackerHits() ;
+
+    streamlog_out( DEBUG3 ) << " removeShortTracs() compare track0 with  " << hits0.size() << " hits " << std::endl ;
+    streamlog_out( DEBUG )  << *trk0 << std::endl ;
+
+    for( unsigned j=i+1,M=tracks.size() ; j<M ; ++j){
+
+      Track* trk1 = tracks[j] ;
+      
+      if( trk1 == 0 ) 
+	continue ;
+
+      const TrackerHitVec& hits1 =  trk1->getTrackerHits() ;
+
+      streamlog_out( DEBUG3 ) << "                        to  track1 with  " << hits1.size() << " hits " << std::endl ;
+      streamlog_out( DEBUG  ) << *trk1 << std::endl ;
+
+      unsigned nShared = 0 ;
+      for( unsigned k=0,L=hits0.size() ; k<L ; ++k){
+
+
+	TrackerHitVec::const_iterator it = std::find( hits1.begin() , hits1.end() ,  hits0[ k ] ) ;
+
+	if( it != hits1.end() )
+	    ++nShared ;
+      } 
+
+      streamlog_out( DEBUG2 ) << "                        tracks share    " <<  nShared     << " hits " << std::endl ;
+
+      if( nShared == hits1.size() ){
+	++nRemovedTracks;
+	tracks[j] = 0 ;
+	streamlog_out( DEBUG3 ) << "                        removing track1 with " <<  tracks[j]->getTrackerHits().size() << " hits from list !!!  " << std::endl ;
+      }
+
+    }
+  }
+
+  streamlog_out( DEBUG4 ) << " removeShortTracks() removed " << nRemovedTracks << " tracks  from "  << tracks.size() << std::endl ;
+}
 
 
 void TrackSubsetProcessor::check( LCEvent * evt ) { 
