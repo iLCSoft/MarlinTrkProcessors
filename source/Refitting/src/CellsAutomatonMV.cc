@@ -606,8 +606,7 @@ void CellsAutomatonMV::processEvent( LCEvent * evt ) {
   TrackCompatibilityShare1_MV comp;
 
   // Various ways to define the quality of a track. They are defined in  the header file
-  TrackQI trackQI;
-  MaxHits MaxLength;
+  TrackQISpecial_MV  testQty;
 
   streamlog_out(DEBUG4) << " best subset finder = " << _bestSubsetFinder << " no of tracks fed to the nnets " << trackCandidates.size() << std::endl ;
 
@@ -632,7 +631,7 @@ void CellsAutomatonMV::processEvent( LCEvent * evt ) {
             
     SubsetSimple< ITrack* > subset_tracks;
     subset_tracks.add( trackCandidates );
-    subset_tracks.calculateBestSet( comp, MaxLength );
+    subset_tracks.calculateBestSet( comp, testQty );
     GoodTracks = subset_tracks.getAccepted();
     RejectedTracks = subset_tracks.getRejected();
     
