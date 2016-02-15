@@ -14,6 +14,34 @@
  =============================================================================================================
 
   ---------
+ | v02-02  |
+  ---------
+  R.Simoniello
+   - RefitProcessor
+     - for each subdetctor X, store nhits in fit in lcio::ILDDetID::X -1 and nhits 
+       in track in lcio::ILDDetIDX -2. Structure needed for Pandora.
+   - file added for correct comparison for float and double: fpcompare.h 
+   -DDCellsAutomatonMV/ ExtrToTracker
+     - criteria based on nhits ans QI for CA vertex tracks, remove the possibility of geo from gear file (option GEO1 in compilation) 
+       for extrapolated tracks
+
+  F.Gaede
+  - DDPlanarDigiProcessor:
+   - introduced parameter ForceHitsOntoSurface:
+     - if true hits are projected onto the planar surface
+       if they are putside the bounds
+     - no check on distance is applied !
+    - store the resolution from the length of the wafer for 1D hits
+      ( could be treated as 2d measurements )
+
+  - RefitProcessor:
+     - no longer write incomplete tracks (w/o) track state at calo
+     - rely on MarlinTrkTrack's implementation of initialise() if
+       no already fitted TrackState is used
+
+
+
+  ---------
  | v02-01  |
   ---------
 
