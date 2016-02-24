@@ -323,7 +323,7 @@ public:
    
    inline double operator()( ITrack* track ){ 
       
-      if( track->getHits().size() > 3 ){
+      if( track->getHits().size() > 2 ){
          
          return track->getChi2Prob()/2. +0.5; 
          
