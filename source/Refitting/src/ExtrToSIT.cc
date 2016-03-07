@@ -860,7 +860,7 @@ int ExtrToSIT::FitInit( std::vector < TrackerHit* > trackerHits , MarlinTrk::IMa
    
    helixTrack.moveRefPoint(0.0, 0.0, 0.0);
    
-   const float referencePoint[3] = { helixTrack.getRefPointX() , helixTrack.getRefPointY() , helixTrack.getRefPointZ() };
+   const float referencePoint[3] = { float( helixTrack.getRefPointX()) , float(helixTrack.getRefPointY()) , float(helixTrack.getRefPointZ()) };
    
    
    

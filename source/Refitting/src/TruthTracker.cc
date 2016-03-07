@@ -766,7 +766,7 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
         
         hel.moveRefPoint(hit_list_inner_r.front()->getPosition()[0], hit_list_inner_r.front()->getPosition()[1], hit_list_inner_r.front()->getPosition()[2]);
         
-        const float referencePoint[3] = { hel.getRefPointX() , hel.getRefPointY() , hel.getRefPointZ() };
+        const float referencePoint[3] = { float(hel.getRefPointX()) , float(hel.getRefPointY()) , float(hel.getRefPointZ()) };
         
         prefit_trackState = new TrackStateImpl( lcio::TrackState::AtIP, 
                                                hel.getD0(), 
@@ -1067,7 +1067,7 @@ void TruthTracker::createTrack_iterative( MCParticle* mcp, UTIL::BitField64& cel
         
         // set up the initial track and fit parameters
         
-        const float referencePoint[3] = { hel_at_end.getRefPointX() , hel_at_end.getRefPointY() , hel_at_end.getRefPointZ() };
+        const float referencePoint[3] = { float(hel_at_end.getRefPointX()) , float(hel_at_end.getRefPointY()) , float(hel_at_end.getRefPointZ()) };
         
         prefit_trackState = new TrackStateImpl( lcio::TrackState::AtLastHit, 
                                                hel_at_end.getD0(), 
@@ -1604,7 +1604,7 @@ void TruthTracker::createTrack_old( MCParticle* mcp, UTIL::BitField64& cellID_en
       
       hel.moveRefPoint(hit_list.front()->getPosition()[0], hit_list.front()->getPosition()[1], hit_list.front()->getPosition()[2]);
       
-      const float referencePoint[3] = { hel.getRefPointX() , hel.getRefPointY() , hel.getRefPointZ() };
+      const float referencePoint[3] = { float(hel.getRefPointX()) , float(hel.getRefPointY()) , float(hel.getRefPointZ()) };
       
       prefit_trackState = new TrackStateImpl( lcio::TrackState::AtIP, 
                                              hel.getD0(), 
@@ -1635,7 +1635,7 @@ void TruthTracker::createTrack_old( MCParticle* mcp, UTIL::BitField64& cellID_en
       
       helixTrack.moveRefPoint(hit_list.back()->getPosition()[0], hit_list.back()->getPosition()[1], hit_list.back()->getPosition()[2]);
       
-      const float referencePoint[3] = { helixTrack.getRefPointX() , helixTrack.getRefPointY() , helixTrack.getRefPointZ() };
+      const float referencePoint[3] = { float(helixTrack.getRefPointX()) , float(helixTrack.getRefPointY()) , float(helixTrack.getRefPointZ()) };
       
       prefit_trackState = new TrackStateImpl( lcio::TrackState::AtIP, 
                                              helixTrack.getD0(), 
