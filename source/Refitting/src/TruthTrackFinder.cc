@@ -5,6 +5,10 @@
 //#include "DD4hep/LCDD.h"
 //#include "DD4hep/VolumeManager.h"
 
+
+
+#include <marlinutil/HelixClass.h>
+
 #include "MarlinTrk/MarlinTrkUtils.h"
 #include "MarlinTrk/HelixTrack.h"
 #include "MarlinTrk/HelixFit.h"
@@ -49,11 +53,16 @@
 #include <climits>
 #include <cfloat>
 
+//CxxUtils/
+#include "fpcompare.h"
+
+
 using namespace lcio ;
 using namespace marlin ;
 using namespace std ;
 using namespace DD4hep ;
 using namespace AIDA ;
+
 
 TruthTrackFinder aTruthTrackFinder;
 
@@ -80,15 +89,6 @@ TruthTrackFinder::TruthTrackFinder() : Processor("TruthTrackFinder") {
                           "Name of the TrackerHit input collections"  ,
                           m_inputTrackerHitCollections ,
                           inputTrackerHitCollections ) ;
-
-//	std::vector<std::string> inputSimTrackerHitCollections;
-//	inputSimTrackerHitCollections.push_back(std::string("VXDCollection"));
-//
-//  registerInputCollections( LCIO::SIMTRACKERHIT,
-//                          "SimTrackerHitCollectionNames" ,
-//                          "Name of the SimTrackerHit input collections"  ,
-//                          m_inputSimTrackerHitCollections ,
-//                          inputSimTrackerHitCollections ) ;
 	
 	std::vector<std::string> inputTrackerHitRelationCollections;
 	inputTrackerHitRelationCollections.push_back(std::string("VXDTrackerHitRelations"));
@@ -117,13 +117,34 @@ TruthTrackFinder::TruthTrackFinder() : Processor("TruthTrackFinder") {
                            "Silicon track particle relation Collection Name",
                            m_outputTrackRelationCollection,
                            std::string("SiTrackRelations"));
+  
+  // Flag parameters
+
+  registerProcessorParameter( "UseTruthInPrefit",
+                              "If true use the truth information to initialise the helical prefit, otherwise use prefit by fitting 3 hits",
+                              m_useTruthInPrefit,
+                              bool(false));
+  
+  registerProcessorParameter( "FitForward",
+                              "If true fit 'forward' (go forward + smooth back adding last two hits with Kalman FIlter steps), otherwise fit backward ",
+                              m_fitForward,
+                              bool(false));
+  
 	
 }
 
 bool sort_by_radius(EVENT::TrackerHit* hit1, EVENT::TrackerHit* hit2){
 	double radius1 = sqrt((hit1->getPosition()[0])*(hit1->getPosition()[0]) + (hit1->getPosition()[1])*(hit1->getPosition()[1]));
 	double radius2 = sqrt((hit2->getPosition()[0])*(hit2->getPosition()[0]) + (hit2->getPosition()[1])*(hit2->getPosition()[1]));
- return (radius1 < radius2);
+  //return (radius1 < radius2);
+  return CxxUtils::fpcompare::less(radius1 , radius2);
+}
+
+bool sort_by_z(EVENT::TrackerHit* hit1, EVENT::TrackerHit* hit2){
+	double z1 = hit1->getPosition()[2];
+	double z2 = hit2->getPosition()[2];
+  //return (z1 < z2);
+  return CxxUtils::fpcompare::less(z1 , z2);
 }
 
 void TruthTrackFinder::init() {
@@ -150,7 +171,7 @@ void TruthTrackFinder::init() {
   m_initialTrackError_omega = 1.e-4;
   m_initialTrackError_z0 = 1.e6;
   m_initialTrackError_tanL = 1.e2;
-  m_maxChi2perHit = 1.e2;
+  m_maxChi2perHit = 1.e3;
   
   // Get the magnetic field
   DD4hep::Geometry::LCDD& lcdd = DD4hep::Geometry::LCDD::getInstance();
@@ -261,6 +282,7 @@ void TruthTrackFinder::processEvent( LCEvent* evt ) {
 		// Sort the hits from smaller to larger radius
 		std::sort(trackHits.begin(),trackHits.end(),sort_by_radius);
 
+
     /*
      Fit - this gets complicated. 
      Need to pass a series of objects, including some initial states,
@@ -271,14 +293,17 @@ void TruthTrackFinder::processEvent( LCEvent* evt ) {
 		LCRelationImpl* relationTrack = new LCRelationImpl;
 		TrackImpl* track = new TrackImpl ;
 
-    // First, for some reason there are 2 track objects, one which gets saved and one which is used for fitting. Don't ask...
+    // IMarlinTrk used to fit track - IMarlinTrk interface to separete pattern recogition from fit implementation
     MarlinTrk::IMarlinTrack* marlinTrack = trackFactory->createTrack();
+    MarlinTrk::IMarlinTrack* marlinTrackZSort = trackFactory->createTrack();
 
     // Save a vector of the hits to be used (why is this not attached to the track directly?? MarlinTrkUtils to be updated?)
     EVENT::TrackerHitVec trackfitHits;
     for(unsigned int itTrackHit=0;itTrackHit<trackHits.size();itTrackHit++){
       trackfitHits.push_back(trackHits[itTrackHit]);
     }
+
+
 		
     // Make an initial covariance matrix with very broad default values
     EVENT::FloatVec covMatrix (15,0); // Size 15, filled with 0s
@@ -288,36 +313,109 @@ void TruthTrackFinder::processEvent( LCEvent* evt ) {
     covMatrix[9]  = ( m_initialTrackError_z0    ); //sigma_z0^2
     covMatrix[14] = ( m_initialTrackError_tanL  ); //sigma_tanl^2
 
-    // Try to fit
+
+
+
+    bool direction = (  (m_fitForward  ) ? MarlinTrk::IMarlinTrack::forward :  MarlinTrk::IMarlinTrack::backward ) ;
+
     int fitError = 0;
-//    try {
-      fitError = MarlinTrk::createFinalisedLCIOTrack(marlinTrack, trackfitHits, track, MarlinTrk::IMarlinTrack::forward, covMatrix, m_magneticField, m_maxChi2perHit);
-//    } catch (...) {
-//      throw;
-//    }
+
+
+    if (m_useTruthInPrefit) {
+
+
+      HelixTrack helix(mcParticle->getVertex(), mcParticle->getMomentum(), mcParticle->getCharge(), m_magneticField);
+  
+      double trueD0 = helix.getD0() ;
+      double truePhi = helix.getPhi0() ;
+      double trueOmega = helix.getOmega() ;
+      double trueZ0 = helix.getZ0() ;
+      double trueTanLambda = helix.getTanLambda() ;
+
+
+      //float ref_point[3] = { 0., 0., 0. };
+      helix.moveRefPoint(trackfitHits.at(0)->getPosition()[0], trackfitHits.at(0)->getPosition()[1], trackfitHits.at(0)->getPosition()[2]);
+      float ref_point[3] = {helix.getRefPointX(),helix.getRefPointY(),helix.getRefPointZ()} ;
+      TrackStateImpl* trkState = new TrackStateImpl(TrackState::AtIP, trueD0, truePhi, trueOmega, trueZ0, trueTanLambda, covMatrix, ref_point);
+
+      // int prefitError =  createFit(trackfitHits, marlinTrack, trkState, m_magneticField,  direction, m_maxChi2perHit);
+      // streamlog_out(DEBUG2) << "---- createFit - error_fit = " << error_fit << std::endl;
+
+      // if (prefitError == 0) {
+      //   fitError = finaliseLCIOTrack(marlinTrack, track, trackfitHits,  direction );
+      //   streamlog_out(DEBUG2) << "---- finalisedLCIOTrack - error = " << error << std::endl;
+      // }
+
+      fitError = MarlinTrk::createFinalisedLCIOTrack(marlinTrack, trackfitHits, track, direction, trkState, m_magneticField, m_maxChi2perHit);
+
+
+      //If first fit attempt fails, try a new fit with hits ordered by z
+      
+      if (fitError!=0) {        
+        
+        // Sort the hits from smaller to larger z
+        std::sort(trackfitHits.begin(),trackfitHits.end(),sort_by_z);        
+
+        // If fit with hits ordered by radius has failed, the track is probably a 'spiral' track. 
+        // Fitting 'backward' is very difficult for spiral track, so the default directiin here is set as 'forward'
+        fitError = MarlinTrk::createFinalisedLCIOTrack(marlinTrackZSort, trackfitHits, track,  MarlinTrk::IMarlinTrack::forward, trkState, m_magneticField, m_maxChi2perHit);
+      }
+
+    
+      delete trkState;
+
+    ////////////////////////
+
+    } // end: helical prefit initialised with info from truth and then track fitted and saved as a lcio track 
+
+    else {
+
+      // DEFAULT procedure: Try to fit
+      fitError = MarlinTrk::createFinalisedLCIOTrack(marlinTrack, trackfitHits, track, direction, covMatrix, m_magneticField, m_maxChi2perHit);
+
+
+      //If first fit attempt fails, try a new fit with hits ordered by z
+      
+      if (fitError!=0) {
+        
+        // Sort the hits from smaller to larger z
+        std::sort(trackfitHits.begin(),trackfitHits.end(),sort_by_z);        
+
+        // If fit with hits ordered by radius has failed, the track is probably a 'spiral' track. 
+        // Fitting 'backward' is very difficult for spiral track, so the default directiin here is set as 'forward'
+        fitError = MarlinTrk::createFinalisedLCIOTrack(marlinTrackZSort, trackfitHits, track,  MarlinTrk::IMarlinTrack::forward, covMatrix, m_magneticField, m_maxChi2perHit);
+
+      }
+
+
+    } // end: track fitted (prefit from fit from 3 hits) and saved as a lcio track
+
+    /////////////////////////////////////////////
+
+
+    streamlog_out( DEBUG2 )<<"TruthTrackFinder: fitError "<< fitError << std::endl;
+
+		// Check track quality - if fit fails chi2 will be 0
+		if(fitError!=0){ delete track; delete relationTrack; delete marlinTrack; delete marlinTrackZSort; m_fitFails++;  continue;}
+		if(track->getChi2() <= 0.){ delete track; delete relationTrack; delete marlinTrack; delete marlinTrackZSort; m_fitFails++;  continue;}
+		if(track->getNdf() <= 0.){ delete track; delete relationTrack; delete marlinTrack; delete marlinTrackZSort; m_fitFails++;  continue;}
+
+
     std::vector<std::pair<EVENT::TrackerHit*, double> > hits_in_fit;
     hits_in_fit.reserve(trackHits.size()); //Reserve at most the total number of hits
     marlinTrack->getHitsInFit(hits_in_fit);
 
-		// Check track quality - if fit fails chi2 will be 0
-		if(track->getChi2() == 0.){delete track; delete relationTrack; delete marlinTrack; m_fitFails++; continue;}
-		
-    // Add hit information - this is just a fudge for the moment, since we only use vertex hits. Should do for each subdetector once enabled
-//     track->subdetectorHitNumbers().resize(2 * lcio::ILDDetID::ETD);
-//     track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::VXD - 2 ] = trackHits.size();
 
-    ///NOTE: Check that this is indeed what we want to do
+    ///Fill hits associated to the track by pattern recognition and hits in fit
     UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ; 
     encoder.reset() ;  // reset to 0
     MarlinTrk::addHitNumbersToTrack(track, trackHits, false, encoder);
     MarlinTrk::addHitNumbersToTrack(track, hits_in_fit, true, encoder);
 
-//     streamlog_out( DEBUG5 )<<"TruthTrackFinder: trackHits.size(): "<<trackHits.size()<<" trackfitHits.size(): "<<trackfitHits.size()<<" hits_in_fit.size(): "<<hits_in_fit.size()   << std::endl;
+    streamlog_out( DEBUG5 )<<"TruthTrackFinder: trackHits.size(): "<<trackHits.size()<<" trackfitHits.size(): "<<trackfitHits.size()<<" hits_in_fit.size(): "<<hits_in_fit.size()   << std::endl;
 
     
     
-    
-
     
     // Push back to the output container
     trackCollection->addElement(track);
@@ -329,6 +427,7 @@ void TruthTrackFinder::processEvent( LCEvent* evt ) {
     trackRelationCollection->addElement(relationTrack);
 
 		delete marlinTrack;
+		delete marlinTrackZSort;
   }
   
   // Save the output track collection
@@ -353,7 +452,6 @@ void TruthTrackFinder::end(){
 	<< " processed " << m_eventNumber << " events in " << m_runNumber << " runs "
 	<< std::endl ;
 	
-//	std::cout<<"Fit fails: "<<m_fitFails<<std::endl;
 	
 }
 
