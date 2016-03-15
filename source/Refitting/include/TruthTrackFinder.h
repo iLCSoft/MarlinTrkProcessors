@@ -23,58 +23,62 @@ using namespace AIDA ;
 
 class TruthTrackFinder : public Processor {
 		
-public:
+ public:
 	
-	virtual Processor*  newProcessor() { return new TruthTrackFinder ; }
+  virtual Processor*  newProcessor() { return new TruthTrackFinder ; }
 	
-	TruthTrackFinder() ;
+  TruthTrackFinder() ;
 	
-	// Initialisation - run at the beginning to start histograms, etc.
-	virtual void init() ;
+  // Initialisation - run at the beginning to start histograms, etc.
+  virtual void init() ;
 	
-	// Called at the beginning of every run
-	virtual void processRunHeader( LCRunHeader* run ) ;
+  // Called at the beginning of every run
+  virtual void processRunHeader( LCRunHeader* run ) ;
 	
-	// Run over each event - the main algorithm
-	virtual void processEvent( LCEvent * evt ) ;
+  // Run over each event - the main algorithm
+  virtual void processEvent( LCEvent * evt ) ;
 	
   // Run at the end of each event
-	virtual void check( LCEvent * evt ) ;
+  virtual void check( LCEvent * evt ) ;
 	
-	// Called at the very end for cleanup, histogram saving, etc.
-	virtual void end() ;
+  // Called at the very end for cleanup, histogram saving, etc.
+  virtual void end() ;
 	
   // Call to get collections
   void getCollection(LCCollection*&, std::string, LCEvent*);
 	
-	// Sort hits by radius
+  // Sort hits by radius
 
 	
-protected:
+ protected:
 	
   // Collection names for (in/out)put
-	std::vector<std::string> m_inputTrackerHitCollections ;
-	std::vector<std::string> m_inputTrackerHitRelationCollections ;
+  std::vector<std::string> m_inputTrackerHitCollections ;
+  std::vector<std::string> m_inputTrackerHitRelationCollections ;
   std::string m_inputParticleCollection ;
   std::string m_outputTrackCollection ;
   std::string m_outputTrackRelationCollection;
+
+  bool m_useTruthInPrefit;
+  bool m_fitForward;
  	
   // Run and event counters
-	int m_eventNumber ;
-	int m_runNumber ;
+  int m_eventNumber ;
+  int m_runNumber ;
   
   // Track fit factory
   MarlinTrk::IMarlinTrkSystem* trackFactory;
 
   // Track fit parameters
   double m_initialTrackError_d0;
- 	double  m_initialTrackError_phi0;
+  double m_initialTrackError_phi0;
   double m_initialTrackError_omega;
   double m_initialTrackError_z0;
   double m_initialTrackError_tanL;
   double m_maxChi2perHit;
   double m_magneticField;
-	int m_fitFails;
+  int m_fitFails;
+
 		
 } ;
 
