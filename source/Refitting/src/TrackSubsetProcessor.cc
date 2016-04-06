@@ -531,10 +531,9 @@ void TrackSubsetProcessor::removeShortTracks( std::vector< EVENT::Track*>& track
 
       if( nShared == hits1.size() ){
 	++nRemovedTracks;
-	tracks[j] = 0 ;
 	streamlog_out( DEBUG3 ) << "                        removing track1 with " <<  tracks[j]->getTrackerHits().size() << " hits from list !!!  " << std::endl ;
+	tracks[j] = 0 ;
       }
-
     }
   }
 
