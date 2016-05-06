@@ -107,16 +107,27 @@ public:
   
   
 
-  TrackerHitPlane* getSiHit(LCCollection*& sitHitsCol, int fitElID, MarlinTrk::IMarlinTrack*& marlin_trk, int& nHitsOnDetEl);  
+  //TrackerHitPlane* getSiHit(LCCollection*& sitHitsCol, int fitElID, MarlinTrk::IMarlinTrack*& marlin_trk, int& nHitsOnDetEl);  
   //TrackerHit* getSiHit(LCCollection*& sitHitsCol, int fitElID, MarlinTrk::IMarlinTrack*& marlin_trk, int& nHitsOnDetEl);  
   //bool getSiHit(LCCollection*& sitHitsCol, int fitElID, MarlinTrk::IMarlinTrack*& marlin_trk, TrackerHit*& selectedHit);
   
   
+  TrackerHitPlane* getSiHit(std::vector<TrackerHitPlane* >& hitsOnDetEl, MarlinTrk::IMarlinTrack*& marlin_trk);
 
-  void addHitOnNextElID(int elementID, MarlinTrk::IMarlinTrack*& marlin_trk, EVENT::TrackerHitVec& trkHits, LCCollection*& sitHitsCol, LCCollection*& otHitsCol, int& iL, int& nSITR, int& TotalSITHits, int& SITHitsPerTrk, int& SITHitsFitted, int& SITHitsNonFitted);
+  TrackerHitPlane* getSiHit(std::vector<int >& vecElID, std::map<int , std::vector<TrackerHitPlane* > >& mapElHits, MarlinTrk::IMarlinTrack*& marlin_trk);
+
+  void getNeighbours(int elID, std::vector<int >& vecIDs, std::string cellIDEcoding, std::map<int , int > mapLayerNModules);
+
+
+  void fillMapElHits(std::vector<LCCollection* >& vecHitCol, std::vector<std::map<int , std::vector<TrackerHitPlane* > > >& vecMaps);
+
+
+  /* void addHitOnNextElID(int elementID, MarlinTrk::IMarlinTrack*& marlin_trk, EVENT::TrackerHitVec& trkHits, LCCollection*& sitHitsCol, LCCollection*& otHitsCol, int& iL, int& nSITR, int& TotalSITHits, int& SITHitsPerTrk, int& SITHitsFitted, int& SITHitsNonFitted); */
 
 
   void fillVecSubdet(lcio::LCEvent*& evt);
+
+  void getGeoInfo();
 
 
 
@@ -177,7 +188,9 @@ protected:
   std::vector<int > _vecSubdetNLayers;
   std::vector<int > _vecSubdetID;
   std::vector<LCCollection* > _vecDigiHitsCol;
+  std::vector<std::map<int , int > > _vecMapLayerNModules;
 
+  std::vector<std::map<int , std::vector<TrackerHitPlane* > > > _vecMapsElHits;
 
   
   
