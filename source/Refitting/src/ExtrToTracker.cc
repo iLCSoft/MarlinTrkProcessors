@@ -16,6 +16,10 @@
 #include "DDRec/SurfaceManager.h"
 #include "DDRec/DetectorData.h"
 #include "DDRec/DDGear.h"
+#include "DD4hep/DetType.h"
+#include "DD4hep/DetectorSelector.h"
+
+#include <algorithm>
 
 //CxxUtils/
 #include "fpcompare.h"
@@ -35,6 +39,13 @@ struct PtSort {  // sort tracks wtr to pt - largest first
   inline bool operator()( const lcio::LCObject* l, const lcio::LCObject* r) {      
     return CxxUtils::fpcompare::less( std::abs( ( (const lcio::Track*) l )->getOmega() ), std::abs( ( (const lcio::Track*) r )->getOmega() ) );
     //return ( std::abs( ( (const lcio::Track*) l )->getOmega() ) < std::abs( ( (const lcio::Track*) r )->getOmega() )  );  // pt ~ 1./omega  
+  }
+};
+//------------------------------------------------------------------------------------------
+
+struct InversePtSort {  // sort tracks wtr to pt - smallest first
+  inline bool operator()( const lcio::LCObject* l, const lcio::LCObject* r) {      
+    return CxxUtils::fpcompare::greater( std::abs( ( (const lcio::Track*) l )->getOmega() ), std::abs( ( (const lcio::Track*) r )->getOmega() ) );
   }
 };
 
@@ -99,6 +110,35 @@ ExtrToTracker::ExtrToTracker() : Processor("ExtrToTracker") {
 			      _vecSubdetName ,
                               vecSubdetNameDefault );
 
+  /*
+  IntVec vecSubdetNLayersDefault;
+  vecSubdetNLayersDefault.push_back(2);
+  vecSubdetNLayersDefault.push_back(3);
+  vecSubdetNLayersDefault.push_back(7);
+  vecSubdetNLayersDefault.push_back(5);
+  //vecSubdetNLayersDefault.push_back(6);
+  
+  registerProcessorParameter( "vecSubdetNLayers" , 
+                              "vector of the number of layers in each subdetector - need to be syncro with vecSubdetName!" ,
+  			      _vecSubdetNLayers ,
+                              vecSubdetNLayersDefault );
+
+
+
+  IntVec vecSubdetIDDefault;
+  vecSubdetIDDefault.push_back(3);
+  vecSubdetIDDefault.push_back(5);
+  vecSubdetIDDefault.push_back(4);
+  vecSubdetIDDefault.push_back(6);
+  //vecSubdetIDDefault.push_back(2);
+  
+  registerProcessorParameter( "vecSubdetID" , 
+                              "vector of the ID of each subdetector - need to be syncro with vecSubdetName!" ,
+  			      _vecSubdetID ,
+                              vecSubdetIDDefault );
+
+  */
+
   /////////////////////////
 
 
@@ -157,12 +197,16 @@ void ExtrToTracker::init() {
   
 
 
-  DD4hep::Geometry::LCDD& lcdd = DD4hep::Geometry::LCDD::getInstance();
+  // DD4hep::Geometry::LCDD& lcdd = DD4hep::Geometry::LCDD::getInstance();
 
-  const double pos[3]={0,0,0}; 
-  double bFieldVec[3]={0,0,0}; 
-  lcdd.field().magneticField(pos,bFieldVec); // get the magnetic field vector from DD4hep
-  _bField = bFieldVec[2]/dd4hep::tesla; // z component at (0,0,0)
+  // const double pos[3]={0,0,0}; 
+  // double bFieldVec[3]={0,0,0}; 
+  // lcdd.field().magneticField(pos,bFieldVec); // get the magnetic field vector from DD4hep
+  // _bField = bFieldVec[2]/dd4hep::tesla; // z component at (0,0,0)
+
+
+  getGeoInfo();
+
 
   _trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( "DDKalTest" , marlin::Global::GEAR , "" ) ;
 
@@ -193,9 +237,8 @@ void ExtrToTracker::init() {
 
 
 
-  _maxChi2PerHit = 100;
-
-
+  //_maxChi2PerHit = 100;
+  _maxChi2PerHit = _Max_Chi2_Incr;
     
 }
 
@@ -224,6 +267,15 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
   if( input_track_col != 0 ){
     
 
+
+    ////////////////////////
+
+    fillVecSubdet(evt);
+    fillMapElHits(_vecDigiHitsCol, _vecMapsElHits);
+
+    ////////////////////////
+
+
     // establish the track collection that will be created 
     LCCollectionVec* trackVec = new LCCollectionVec( LCIO::TRACK )  ;    
 
@@ -248,6 +300,7 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
     }
 
     std::sort( inputTrackVec->begin() , inputTrackVec->end() ,  PtSort()  ) ;
+    //std::sort( inputTrackVec->begin() , inputTrackVec->end() ,  InversePtSort()  ) ;
 
 
     // loop over the input tracks and refit using KalTest    
@@ -312,16 +365,11 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 	  // starting loop on subdetectors and loop on each subdetector layer
 	  //________________________________________________________________________________________________________
 	      
-	  printParameters();
+	  //printParameters();
 
 
 
 
-	  ////////////////////////
-
-	  fillVecSubdet(evt);
-
-	  ////////////////////////
 
 
 	  for (size_t idet=0; idet<_vecSubdetName.size(); idet++){
@@ -384,9 +432,21 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 
 		    bool isSuccessfulFit = false; 
 
+
+
+
+		    std::string cellIDEcoding = _vecDigiHitsCol.at(idet)->getParameters().getStringVal("CellIDEncoding") ;  
+		    std::vector<int > vecIDs;
+		    vecIDs.push_back(elementID);
+		    //getNeighbours(elementID, vecIDs, cellIDEcoding, _vecMapLayerNModules.at(idet)); // TO BE IMPROVED AND STUDIED
+
+
 		    int nhits=0;
 		    TrackerHitPlane* BestHit;
-		    BestHit = getSiHit(_vecDigiHitsCol.at(idet), elementID, marlin_trk, nhits);
+		    //BestHit = getSiHit(_vecDigiHitsCol.at(idet), elementID, marlin_trk, nhits);
+		    //BestHit = getSiHit( _vecMapsElHits.at(idet)[elementID], marlin_trk);
+		    BestHit = getSiHit(vecIDs, _vecMapsElHits.at(idet), marlin_trk);
+
 		    if (BestHit != 0){
 		      			  
 		      streamlog_out(DEBUG4) << " --- Best hit found: call add and fit _Max_Chi2_Incr "<< _Max_Chi2_Incr<< std::endl ; 
@@ -412,11 +472,6 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 		      }
 
 		  
-		      // double hitx = BestHit->getPosition()[0];
-		      // double hity = BestHit->getPosition()[1];
-		      // double hitz = BestHit->getPosition()[2];
-		      // double hitr = sqrt(hitx*hitx+hity*hity);
-	
 		
 		      TotalSITHits++;
 			
@@ -434,7 +489,6 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 			SITHitsPerTrk++;
 			SITHitsFitted++;
 			  
-			//HitsInLayer.erase( HitsInLayer.begin() + pointer ) ;
 			  
 		      } //end successful fit
 		      else{
@@ -444,14 +498,9 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 			  
 		      }
 
-		      // if (doSinglePointResolutionSmearing) delete TestHitPlane ;
 
 		    }   // besthit found
-		    //    HitsInLayer.clear();
 		    		  
-		    // addHitOnNextElID(elementID+1, marlin_trk, trkHits, sitHitsCol, otHitsCol, iL, nSITR, TotalSITHits, SITHitsPerTrk, SITHitsFitted, SITHitsNonFitted);
-		    // addHitOnNextElID(elementID-1, marlin_trk, trkHits, sitHitsCol, otHitsCol, iL, nSITR, TotalSITHits, SITHitsPerTrk, SITHitsFitted, SITHitsNonFitted);
-
 
 		  }//elementID !=0 
 		  
@@ -632,9 +681,6 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 	}  // good fit status
       } // good initialisation status
 
-      // } //minimum acceptable TPC hits
-      
-
 
 
       delete marlin_trk;
@@ -742,156 +788,19 @@ int ExtrToTracker::FitInit2( Track* track, MarlinTrk::IMarlinTrack* _marlinTrk )
 
 
 
-// TrackerHit* ExtrToTracker::getSiHit(LCCollection*& sitHitsCol, int fitElID, MarlinTrk::IMarlinTrack*& marlin_trk, int& nHitsOnDetEl){
-TrackerHitPlane* ExtrToTracker::getSiHit(LCCollection*& sitHitsCol, int fitElID, MarlinTrk::IMarlinTrack*& marlin_trk, int& nHitsOnDetEl){
-
-  if ( sitHitsCol != 0  ) { 
-    int sitHits = sitHitsCol->getNumberOfElements();   
-    //std::vector<TrackerHit* > hitsOnDetEl; 
-    std::vector<TrackerHitPlane* > hitsOnDetEl; 
-    hitsOnDetEl.clear();
-
-    for(int i=0; i<sitHits; i++){
-            
-      //TrackerHit* hit = dynamic_cast<TrackerHit*>( sitHitsCol->getElementAt( i ) );	
-      TrackerHitPlane* hit = dynamic_cast<TrackerHitPlane*>( sitHitsCol->getElementAt( i ) );	
-
-      int cellID0 = hit->getCellID0();
-      UTIL::BitField64 encoder0( lcio::ILDCellID0::encoder_string ); 	    
-      encoder0.reset();  // reset to 0
-      encoder0.setValue(cellID0);
-      int hitElID = encoder0.lowWord();  
-      
-      streamlog_out(DEBUG4) << "-- hit element ID: " << hitElID << ", fit element ID = " << fitElID << std::endl ;
-
-      if (hitElID==fitElID) {
-	hitsOnDetEl.push_back(hit);
-      }//hit and extr fit on the same detector element
-
-    }//end loop on siHits
-
-    double min = 9999999.;
-    double testChi2=0.;
-    //size_t nHitsOnDetEl = hitsOnDetEl.size();
-    nHitsOnDetEl = hitsOnDetEl.size();
-    int index = -1; //index of the selected hits
-
-    streamlog_out(DEBUG2) << "-- number of hits on the same detector element: " << nHitsOnDetEl << std::endl ;
-
-    if (nHitsOnDetEl==0) return 0;
-
-    for(size_t i=0; i<nHitsOnDetEl; i++){
-      //if ( marlin_trk->testChi2Increment(hitsOnDetEl.at(i), testChi2) == MarlinTrk::IMarlinTrack::success ) {..} // no do not do this the testChi2 internally call the addandfir setting as max acceptable chi2 a very small number to be sure to never add the the hit to the fit (so it always fails)
-      marlin_trk->testChi2Increment(hitsOnDetEl.at(i), testChi2);
-      streamlog_out(DEBUG2) << "-- testChi2: " << testChi2 << std::endl ;
-      if (min>testChi2) {
-	min = testChi2;
-	index = i;
-      } //end min chi2
-    }//end loop on hits on same detector element
-
-    streamlog_out(DEBUG2) << "-- index of the selected hit: " << index << std::endl ;
-    
-    if (index == -1) return 0;
-    else {
-      //TrackerHit* selectedHit = dynamic_cast<TrackerHit*>( hitsOnDetEl.at(index) ) ;
-      TrackerHitPlane* selectedHit = dynamic_cast<TrackerHitPlane*>( hitsOnDetEl.at(index) ) ;
-      return selectedHit;
-    }
-
-  }//end hit collection not empty
-
-  else return 0;
-
-}//end getSiHit
-
-
-
-
-
-
-
-
-
-
-
-void ExtrToTracker::addHitOnNextElID(int elementID, MarlinTrk::IMarlinTrack*& marlin_trk, EVENT::TrackerHitVec& trkHits, LCCollection*& sitHitsCol, LCCollection*& otHitsCol, int& iL, int& nSITR, int& TotalSITHits, int& SITHitsPerTrk, int& SITHitsFitted, int& SITHitsNonFitted){
-
-  if ( elementID != 0 ){
-		    
-    bool isSuccessfulFit = false; 
-
-    int nhits=0;
-    TrackerHitPlane* BestHit;
-    if (iL<nSITR) BestHit = getSiHit(sitHitsCol, elementID, marlin_trk, nhits);
-    else BestHit = getSiHit(otHitsCol, elementID, marlin_trk, nhits);
-    if (BestHit != 0){
-		      			  
-      streamlog_out(DEBUG4) << " --- Best hit found: call add and fit _Max_Chi2_Incr "<< _Max_Chi2_Incr<< std::endl ; 
-						  
-      double chi2_increment = 0.;
-
-      isSuccessfulFit = marlin_trk->addAndFit( BestHit, chi2_increment, _Max_Chi2_Incr ) == IMarlinTrack::success ;
-      streamlog_out(DEBUG4) << " --- chi2_increment "<< chi2_increment << std::endl ; 
-      streamlog_out(DEBUG4) << " --- isSuccessfulFit "<< isSuccessfulFit << std::endl ; 
-		  
-      // double hitx = BestHit->getPosition()[0];
-      // double hity = BestHit->getPosition()[1];
-      // double hitz = BestHit->getPosition()[2];
-      // double hitr = sqrt(hitx*hitx+hity*hity);
-	
-		
-      TotalSITHits++;
-			
-      if ( isSuccessfulFit ){
-			  
-	streamlog_out(DEBUG4) << " successful fit " << std::endl ; 
-	streamlog_out(DEBUG4) << " incriment in the chi2 = " << chi2_increment << "  , max chi2 to accept the hit " << _Max_Chi2_Incr  << std::endl;
-			  
-	trkHits.push_back(BestHit) ;
-			  			  
-	streamlog_out(DEBUG4) << " +++ hit added " << BestHit << std::endl ;
-			  
-
-	SITHitsPerTrk++;
-	SITHitsFitted++;
-			  			  
-      } //end successful fit
-      else{
-			  
-	SITHitsNonFitted++;
-	streamlog_out(DEBUG4) << " +++ HIT NOT ADDED "<< std::endl;
-			  
-      }
-
-    }   // besthit found
-		    
-    streamlog_out(DEBUG4) << "LOOP" << iL << " ends "<< std::endl;
-    streamlog_out(DEBUG4) << "###########$$$$$$$$$$##############" << std::endl;
-  }  //end elementID != 0
-
-
-}
-
-
-
-
-
-
-
 void ExtrToTracker::fillVecSubdet(lcio::LCEvent*& evt){
 
 
-  _vecSubdetNLayers.clear();
-  _vecSubdetID.clear();
+  //_vecSubdetNLayers.clear();
+  //_vecSubdetID.clear();
   _vecDigiHitsCol.clear();
 
   for (size_t idet=0; idet<_vecSubdetName.size(); idet++){
        
     streamlog_out(DEBUG4) << "idet = " << idet << std::endl;   
  
-    int nSubdetLayers = 0;
-    int idSubdet = 0;
+    // int nSubdetLayers = 0;
+    // int idSubdet = 0;
 
     if ( _vecDigiHits.at(idet)!="" ){ 
 	 	
@@ -902,31 +811,374 @@ void ExtrToTracker::fillVecSubdet(lcio::LCEvent*& evt){
 	streamlog_out(DEBUG4) << "Collection " << _vecDigiHits.at(idet).c_str() << " is unavailable " << std::endl;
       }	
 
-      if( colDigi != 0 ){ 
-	CellIDDecoder<TrackerHitPlane> cellid_decoder(colDigi);
-	int last_element = colDigi->getNumberOfElements()-1;
-	streamlog_out(DEBUG2) << "last_element = " << last_element << std::endl;
-	if (last_element>=0) {
-	  _vecDigiHitsCol.push_back(colDigi);
-	  TrackerHitPlane* hit_helper2 = dynamic_cast<TrackerHitPlane*>( colDigi->getElementAt(last_element) ) ;
-	  nSubdetLayers = cellid_decoder( hit_helper2 )["layer"] + 1; //from 0 to n-1
-	  idSubdet = cellid_decoder( hit_helper2 )["subdet"]; 
-	}
-	else   _vecDigiHitsCol.push_back(0); 
-      }//end colDigi!=0 
-      else {
+     //  if( colDigi != 0 ){ 
+     // 	CellIDDecoder<TrackerHitPlane> cellid_decoder(colDigi);
+     // 	int last_element = colDigi->getNumberOfElements()-1;
+     // 	streamlog_out(DEBUG2) << "last_element = " << last_element << std::endl;
+     // 	if (last_element>=0) {
+     // 	  _vecDigiHitsCol.push_back(colDigi);
+     // 	  TrackerHitPlane* hit_helper2 = dynamic_cast<TrackerHitPlane*>( colDigi->getElementAt(last_element) ) ;
+     // 	  nSubdetLayers = cellid_decoder( hit_helper2 )["layer"] + 1; //from 0 to n-1
+     // 	  idSubdet = cellid_decoder( hit_helper2 )["subdet"]; 
+     // 	}
+     // 	else   _vecDigiHitsCol.push_back(0); 
+     // }//end colDigi!=0 
+     //  else {
 	_vecDigiHitsCol.push_back(colDigi);
-      }
-      streamlog_out(DEBUG2) << "_vecDigiHitsCol.back() = " << _vecDigiHitsCol.back() << std::endl;
+      // }
+      // streamlog_out(DEBUG2) << "_vecDigiHitsCol.back() = " << _vecDigiHitsCol.back() << std::endl;
       
     }// diginame !=0
 
-    _vecSubdetNLayers.push_back(nSubdetLayers);
-    _vecSubdetID.push_back(idSubdet);
 
-    streamlog_out(DEBUG4) << "nSubdetLayers = " << nSubdetLayers << std::endl;
-    streamlog_out(DEBUG4) << "idSubdet = " << idSubdet << std::endl;
+    //NEW LINE
+    else _vecDigiHitsCol.push_back(0); 
+    ///////
+
+
+    //_vecSubdetNLayers.push_back(nSubdetLayers);
+    //_vecSubdetID.push_back(idSubdet);
+
+    // streamlog_out(DEBUG4) << "nSubdetLayers = " << nSubdetLayers << std::endl;
+    // streamlog_out(DEBUG4) << "idSubdet = " << idSubdet << std::endl;
 
   }//end loop on subdetectors
 	  
 }//end 
+
+
+
+
+
+
+TrackerHitPlane* ExtrToTracker::getSiHit(std::vector<TrackerHitPlane* >& hitsOnDetEl, MarlinTrk::IMarlinTrack*& marlin_trk){
+  
+  double min = 9999999.;
+  double testChi2=0.;
+  size_t nHitsOnDetEl = hitsOnDetEl.size();
+  int index = -1; //index of the selected hits
+
+  streamlog_out(DEBUG2) << "-- number of hits on the same detector element: " << nHitsOnDetEl << std::endl ;
+
+  if (nHitsOnDetEl==0) return 0;
+
+  for(size_t i=0; i<nHitsOnDetEl; i++){
+    //if ( marlin_trk->testChi2Increment(hitsOnDetEl.at(i), testChi2) == MarlinTrk::IMarlinTrack::success ) {..} // do not do this the testChi2 internally call the addandfir setting as max acceptable chi2 a very small number to be sure to never add the the hit to the fit (so it always fails)
+    marlin_trk->testChi2Increment(hitsOnDetEl.at(i), testChi2);
+    streamlog_out(DEBUG2) << "-- testChi2: " << testChi2 << std::endl ;
+    if (min>testChi2 && testChi2>0) {
+      min = testChi2;
+      index = i;
+    } //end min chi2
+  }//end loop on hits on same detector element
+
+  streamlog_out(DEBUG2) << "-- index of the selected hit: " << index << std::endl ;
+    
+  if (index == -1) return 0;
+  else {
+    TrackerHitPlane* selectedHit = dynamic_cast<TrackerHitPlane*>( hitsOnDetEl.at(index) ) ;
+
+    if (nHitsOnDetEl>1) std::iter_swap(hitsOnDetEl.begin()+index,hitsOnDetEl.begin()+nHitsOnDetEl-1); 
+    hitsOnDetEl.pop_back();
+    //hitsOnDetEl.erase(hitsOnDetEl.begin()+index);
+
+
+    return selectedHit;
+  }
+
+}//end getSiHit
+
+
+
+
+
+
+
+TrackerHitPlane* ExtrToTracker::getSiHit(std::vector<int >& vecElID, std::map<int , std::vector<TrackerHitPlane* > >& mapElHits, MarlinTrk::IMarlinTrack*& marlin_trk){
+  
+  double min = 9999999.;
+  double testChi2=0.;
+  size_t nElID = vecElID.size();
+  int indexel = -1; //element index (in vecElID) of the selected hits
+  int index = -1; //index of the selected hits
+
+  for(size_t ie=0; ie<nElID; ie++){
+    
+    int elID = vecElID.at(ie);
+    size_t nHitsOnDetEl = 0;
+    if (mapElHits.count(elID)>0) {
+      nHitsOnDetEl = mapElHits[elID].size();
+    }
+
+    // streamlog_out(MESSAGE2) << "-- elID at index = "<< ie <<" / " << nElID << " : " << vecElID.at(ie) << std::endl ;
+
+    streamlog_out(MESSAGE2) << "-- number of hits on the same detector element: " << nHitsOnDetEl << std::endl ;
+
+
+    for(size_t i=0; i<nHitsOnDetEl; i++){
+      marlin_trk->testChi2Increment(mapElHits[elID].at(i), testChi2);
+      // streamlog_out(MESSAGE2) << "-- trackerhit at index = " << i << " / "<< nHitsOnDetEl << std::endl ;
+      // streamlog_out(MESSAGE2) << "-- testChi2: " << testChi2 << std::endl ;
+      if (min>testChi2 && testChi2>0) {
+	min = testChi2;
+	indexel = elID;
+	index = i;	
+      }
+    }//end loop on hits on the same elID
+
+  }//end loop on elIDs
+
+
+  if (index == -1 || indexel == -1) return 0;
+  else {
+
+    streamlog_out(MESSAGE2) << "-- hit added " << std::endl ;
+    // if ( vecElID.at(0) != indexel) streamlog_out(MESSAGE2) << "-- but not from the first elementID " << std::endl ;
+
+
+    TrackerHitPlane* selectedHit = dynamic_cast<TrackerHitPlane*>( mapElHits[indexel].at(index) ) ;
+
+    int nHitsOnSelectedEl = mapElHits[indexel].size();
+    if (nHitsOnSelectedEl>1) std::iter_swap(mapElHits[indexel].begin()+index,mapElHits[indexel].begin()+nHitsOnSelectedEl-1); 
+    mapElHits[indexel].pop_back();
+    ////(mapElHits[indexel].erase((mapElHits[indexel].begin()+index);
+    
+    return selectedHit;
+  }
+
+  return 0;
+
+}//end getSiHit
+
+
+
+
+void ExtrToTracker::fillMapElHits(std::vector<LCCollection* >& vecHitCol, std::vector<std::map<int , std::vector<TrackerHitPlane* > > >& vecMaps){
+
+
+  //fill map (el - vector of hits) for each subdtector
+
+  vecMaps.clear();
+
+  for(size_t icol=0; icol<vecHitCol.size(); icol++){
+
+    std::map<int , std::vector<TrackerHitPlane* > > map_el_hits;
+
+    if(vecHitCol.at(icol)!=NULL){
+
+      int nhits = vecHitCol.at(icol)->getNumberOfElements();
+      streamlog_out(MESSAGE2) << "  nhits = "<< nhits << std::endl ; 
+
+
+      for(int ihit=0; ihit<nhits; ihit++){
+
+	TrackerHitPlane* hit = dynamic_cast<TrackerHitPlane*>( vecHitCol.at(icol)->getElementAt(ihit) );
+  
+	int cellID0 = hit->getCellID0();
+	UTIL::BitField64 encoder0( lcio::ILDCellID0::encoder_string ); 	    
+	encoder0.reset();  // reset to 0
+	encoder0.setValue(cellID0);
+	int hitElID = encoder0.lowWord();  
+
+	map_el_hits[hitElID].push_back(hit);
+	
+      }//end loop on hits
+
+    }//collection not empty
+
+    vecMaps.push_back(map_el_hits);
+
+  }//end loop on collections of hits
+
+
+}//end fillMapElHits
+
+
+
+
+
+
+
+
+void ExtrToTracker::getGeoInfo(){
+  
+
+  _vecSubdetID.clear();
+  _vecSubdetNLayers.clear();
+  _vecMapLayerNModules.clear();
+
+  DD4hep::Geometry::LCDD & lcdd = DD4hep::Geometry::LCDD::getInstance();
+     
+  //alternative way 
+  // const std::vector< DD4hep::Geometry::DetElement>& barrelDets = DD4hep::Geometry::DetectorSelector(lcdd).detectors(  ( DD4hep::DetType::TRACKER | DD4hep::DetType::BARREL )) ;
+  
+  // streamlog_out( MESSAGE2 ) << " --- flag = " << (DD4hep::DetType::TRACKER | DD4hep::DetType::BARREL) <<std::endl;
+  // streamlog_out( MESSAGE2 ) << " --- number of barrel detectors = " << barrelDets.size() <<std::endl;
+
+
+  const double pos[3]={0,0,0}; 
+  double bFieldVec[3]={0,0,0}; 
+  lcdd.field().magneticField(pos,bFieldVec); // get the magnetic field vector from DD4hep
+  _bField = bFieldVec[2]/dd4hep::tesla; // z component at (0,0,0)
+
+
+  streamlog_out( MESSAGE2 ) << " - _bField = " << _bField <<std::endl;
+
+
+  for (size_t i=0; i<_vecSubdetName.size(); i++){
+
+    int detID = 0;
+    int nlayers = 0;
+    std::map<int , int > map_layerID_nmodules;
+    
+    try{
+
+  
+	const DD4hep::Geometry::DetElement& theDetector = lcdd.detector(_vecSubdetName.at(i));
+	
+	detID = theDetector.id();
+	streamlog_out( MESSAGE2 ) << " --- subdet: " << _vecSubdetName.at(i) << " - id = " << detID <<std::endl;
+
+
+	if (_vecSubdetName.at(i).find("Barrel") != std::string::npos) {
+
+	  DD4hep::DDRec::ZPlanarData * theExtension = 0;
+	  theExtension = theDetector.extension<DD4hep::DDRec::ZPlanarData>();
+
+	  nlayers = theExtension->layers.size();
+
+	  streamlog_out( MESSAGE2 ) << " - n layers = " << nlayers <<std::endl;
+
+
+	  for(int il=0; il<nlayers; il++){
+
+	    int nmodules = theExtension->layers.at(il).ladderNumber;
+            
+	    streamlog_out( MESSAGE2 ) << " --- n modules = " << nmodules << "  per layer " << il <<std::endl;
+
+	    map_layerID_nmodules.insert( std::pair<int,int>(il,nmodules) );
+
+	  }
+
+	}//end barrel type
+	else {
+
+	  DD4hep::DDRec::ZDiskPetalsData * theExtension = 0;  
+	  theExtension = theDetector.extension<DD4hep::DDRec::ZDiskPetalsData>();
+            
+	  nlayers = theExtension->layers.size();
+
+	  streamlog_out( MESSAGE2 ) << " - n layers = " << nlayers <<std::endl;
+
+
+	  for(int il=0; il<nlayers; il++){
+
+	    int nmodules = theExtension->layers.at(il).petalNumber;
+            
+	    streamlog_out( MESSAGE2 ) << " --- n modules = " << nmodules << "  per layer " << il <<std::endl;
+
+	    map_layerID_nmodules.insert( std::pair<int,int>(il,nmodules) );
+
+	  }
+
+	  
+	}//end endcap type
+
+    } catch (std::runtime_error &exception){
+            
+      streamlog_out(WARNING) << "ExtrToTracker::getGeoInfo - exception in retriving number of modules per layer for subdetector : "<< _vecSubdetName.at(i) <<" : " << exception.what() << std::endl;
+
+    }
+
+    _vecSubdetID.push_back(detID);
+    _vecSubdetNLayers.push_back(nlayers);
+    _vecMapLayerNModules.push_back(map_layerID_nmodules);
+
+
+  }//end loop on subdetector names
+ 
+
+}//end getGeoInfo
+
+
+
+
+
+void ExtrToTracker::getNeighbours(int elID, std::vector<int >& vecIDs, std::string cellIDEcoding, std::map<int , int > mapLayerNModules){
+
+  UTIL::BitField64 cellid_decoder( cellIDEcoding ) ;
+
+  cellid_decoder.setValue( elID ) ;
+
+  streamlog_out(DEBUG1) << "-- cellid_decoder.valueString() = " << cellid_decoder.valueString() <<std::endl;
+
+  int newmodule = 0; //stave
+  int newsensor = 0;
+
+  int subdet = cellid_decoder["subdet"].value();
+  int layer = cellid_decoder["layer"].value();
+  int module = cellid_decoder["module"].value(); //stave
+  int sensor = cellid_decoder["sensor"].value();
+
+  streamlog_out(DEBUG2) << "-- subdet = " << subdet <<std::endl;
+  streamlog_out(DEBUG2) << "-- layer = " << layer <<std::endl;
+  streamlog_out(DEBUG2) << "-- module (stave) = " << module <<std::endl;
+  streamlog_out(DEBUG2) << "-- sensor = " << sensor <<std::endl;
+
+
+  int lastModule = mapLayerNModules[layer]-1;
+
+
+  int steps[] = {-1, 0, +1};
+  std::vector<int > phiSteps (steps, steps + sizeof(steps) / sizeof(int) ); // add sensors on -1 and +1 staves around the current one
+  std::vector<int > zSteps (steps, steps + sizeof(steps) / sizeof(int) ); // add sensors -1 before and +1 after the current one on the same stave 
+  
+  for(size_t ip=0; ip<phiSteps.size(); ip++) { 
+    for(size_t iz=0; iz<zSteps.size(); iz++) { 
+      if (phiSteps.at(ip)!=0 || zSteps.at(iz)!=0) { // if it is not the sensor itself
+		
+	newmodule = module + phiSteps.at(ip);
+	newsensor = sensor + zSteps.at(iz);
+
+	//make the module a cycle (tis is actually true for the barrels but not for the disks)
+	if(lastModule>0) { //check to be removed in future but at the moment the endcap data structure is not correctly filled
+	  if (newmodule == (lastModule+1)) newmodule = 0;
+	  else if (newmodule==-1) newmodule = lastModule;
+	}
+
+	if(newsensor>0){
+
+	  cellid_decoder.reset();
+    	 	  
+	  try{
+
+	    cellid_decoder[lcio::ILDCellID0::subdet] = subdet;
+	    cellid_decoder[lcio::ILDCellID0::layer]  = layer;   
+	    cellid_decoder[lcio::ILDCellID0::module]  = newmodule;   
+	    cellid_decoder[lcio::ILDCellID0::sensor]  = newsensor; 
+
+	    int newElID = cellid_decoder.lowWord();  
+
+	    streamlog_out(MESSAGE2) << "-- new element ID = " << newElID <<std::endl;
+	    vecIDs.push_back(newElID);
+
+	  } catch(lcio::Exception &e){
+
+	    streamlog_out(MESSAGE2) << "BitFieldValue out of range - sensor was at the edge of the module of 1 make it out of range - the -1 one case it is cut out by asking for a sensor number > 0" << std::endl;
+
+	  }	
+	  
+	}//sensor number >0
+
+      }//end not same elementID we started with
+    }//end loop on z    
+  }//end loop on phi
+
+  return;
+
+}//end getNeighbours
+
+
+
+
+
