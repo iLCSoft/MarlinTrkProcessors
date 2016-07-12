@@ -183,9 +183,7 @@ class CellsAutomatonMV : public Processor {
   MarlinTrk::IMarlinTrkSystem* _trkSystem;
   
   bool _MSOn, _ElossOn, _SmoothOn, _middleLayer ;
-  /** pointer to the IMarlinTrkSystem instance 
-   */
-  MarlinTrk::IMarlinTrkSystem* _trksystem ;
+  std::string _trkSystemName ;
 
   int _useSIT ;
 

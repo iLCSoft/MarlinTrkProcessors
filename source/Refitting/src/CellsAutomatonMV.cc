@@ -269,7 +269,7 @@ void CellsAutomatonMV::init() {
   
   // set upt the geometry
   // set up the geometery needed by KalTest
-  _trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( _trkSystemName , marlin::Global::GEAR , "" ) ;
+  _trkSystem =  MarlinTrk::Factory::createMarlinTrkSystem( _trkSystemName , marlin::Global::GEAR , "" ) ;
   
   if( _trkSystem == 0 ) throw EVENT::Exception( std::string("  Cannot initialize MarlinTrkSystem of Type: ") + std::string("KalTest" )  ) ;
   
