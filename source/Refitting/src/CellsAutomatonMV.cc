@@ -65,11 +65,6 @@ CellsAutomatonMV::CellsAutomatonMV() : Processor("CellsAutomatonMV"){
                              "Smooth All Mesurement Sites in Fit",
                              _SmoothOn,
                              bool(true));
-
-  registerProcessorParameter( "TrackSystemName",
-			      "Name of the track fitting system to be used (KalTest, DDKalTest, aidaTT, ... )",
-			      _trkSystemName,
-			      std::string("KalTest") );
   /*
   registerProcessorParameter("UseMiddleLayer",
                              "Use middle layer for the cellular automaton",
@@ -169,15 +164,31 @@ CellsAutomatonMV::CellsAutomatonMV() : Processor("CellsAutomatonMV"){
 			     _hitPairThDiff,
 			     double(0.5) );
 
-  registerProcessorParameter("MVHitsThetaDifference",
+  registerProcessorParameter("MVHitsThetaDifferenceInner",
 			     "The difference in polar angle (in degrees)  between two hits in the INNER layer in order to form a minivector",
 			     _hitPairThDiffInner,
 			     double(0.1) );
+
+  registerProcessorParameter("MVHitsThetaDifferenceSIT",
+			     "The difference in polar angle (in degrees)  between two hits in SIT layer in order to form a minivector",
+			     _hitPairThDiffSIT,
+			     double(2.0) );
 
   registerProcessorParameter("NHitsChi2",
                              "Maximal number of hits for which a track with n hits is better than one with n-1hits. (defaut 5)",
                              _nHitsChi2,
                              int(5));
+
+  registerProcessorParameter( "InitialTrackState",
+			      "TrackState to use for initialization of the fit: -1: refit from hits [default], 1: AtIP, 2: AtFirstHit, 3: AtLastHit, 4:AtCalo" ,
+			      _initialTrackState,
+			      int(-1) );
+
+  registerProcessorParameter( "FitDirection",
+			      "Fit direction: -1: backward [default], +1: forward",
+			      _fitDirection,
+			      int(-1) );
+  
   
   // Input Collections
   
@@ -267,9 +278,8 @@ void CellsAutomatonMV::init() {
   /*       Initialise the MarlinTrkSystem, needed by the tracks for fitting                     */
   /**********************************************************************************************/
   
-  // set upt the geometry
-  // set up the geometery needed by KalTest
-  _trkSystem =  MarlinTrk::Factory::createMarlinTrkSystem( _trkSystemName , marlin::Global::GEAR , "" ) ;
+    // set upt the geometry
+  _trkSystem =  MarlinTrk::Factory::createMarlinTrkSystem( "KalTest" , marlin::Global::GEAR , "" ) ;
   
   if( _trkSystem == 0 ) throw EVENT::Exception( std::string("  Cannot initialize MarlinTrkSystem of Type: ") + std::string("KalTest" )  ) ;
   
@@ -477,7 +487,7 @@ void CellsAutomatonMV::processEvent( LCEvent * evt ) {
     }
     
     VXDTrack* trackCand = new VXDTrack( _trkSystem );
-    
+   
     // add the hits to the track
     for( unsigned k=0; k<rawTrack.size(); k++ ){
                
@@ -486,6 +496,8 @@ void CellsAutomatonMV::processEvent( LCEvent * evt ) {
       else streamlog_out( DEBUG4 ) << "Hit " << rawTrack[k] << " could not be casted to IMiniVector\n";
 
     }
+
+    // Make here a loop on track hits to see what is finally written to VXDTrack candidate
 
 
     /*-----------------------------------------------*/
@@ -580,7 +592,7 @@ void CellsAutomatonMV::processEvent( LCEvent * evt ) {
     // Kalman fitting over
     //____________________________________________________________________________________________________________
 
-
+    
     trackCandidates.push_back( trackCand );
 
   }
@@ -613,6 +625,7 @@ void CellsAutomatonMV::processEvent( LCEvent * evt ) {
 
   // Various ways to define the quality of a track. They are defined in  the header file
   TrackQISpecial_MV  testQty;
+  MaxHits TheMoreTheMerrier ;
 
   streamlog_out(DEBUG4) << " best subset finder = " << _bestSubsetFinder << " no of tracks fed to the nnets " << trackCandidates.size() << std::endl ;
 
@@ -637,7 +650,7 @@ void CellsAutomatonMV::processEvent( LCEvent * evt ) {
             
     SubsetSimple< ITrack* > subset_tracks;
     subset_tracks.add( trackCandidates );
-    subset_tracks.calculateBestSet( comp, testQty );
+    subset_tracks.calculateBestSet( comp, TheMoreTheMerrier );
     GoodTracks = subset_tracks.getAccepted();
     RejectedTracks = subset_tracks.getRejected();
     
@@ -650,7 +663,7 @@ void CellsAutomatonMV::processEvent( LCEvent * evt ) {
     
   }
   
-  streamlog_out(DEBUG4) <<  "End of Sorting, Good tracks number: " << GoodTracks.size() <<  std::endl;
+  streamlog_out(DEBUG4) <<  "######### End of Sorting, Good tracks number: " << GoodTracks.size() <<  std::endl;
 
  
  
@@ -663,33 +676,78 @@ void CellsAutomatonMV::processEvent( LCEvent * evt ) {
   for (unsigned int i=0; i < GoodTracks.size(); i++){
     
     VXDTrack* myTrack = dynamic_cast< VXDTrack* >( GoodTracks[i] );
-
+    
+    
+    
+    
     if ( myTrack != NULL ){
       
-      
-	TrackImpl* trackImpl = new TrackImpl( *(myTrack->getLcioTrack()) );   // possible leak
-	
-	try{
-	  
-	  finaliseTrack( trackImpl );
+      TrackerHitVec CompSpcpoints ;
 
-	  // Applying a x2/ndf cut on final tracks
-	  
-	  if ( ((1.0*trackImpl->getChi2()) / (1.0*trackImpl->getNdf())) < 10.0 ) {
-	  
-	    trackVec->addElement( trackImpl );
+      //----------------------------------------------------------------------------
+      // turn SIT mini-vectors consisting of 1D hits to spacepoints
+      
+      std::vector< IMiniVector* > MVTrkHits =   myTrack->getMVs();
+
+      for (int mv = 0 ; mv <  MVTrkHits.size() ; mv++ ){
+	
+	MiniVector *testMV = MVTrkHits[mv]->getMiniVector() ;
+	TrackerHitVec spchits = testMV->getTrackerHitVec() ;
+	if ( BitSet32( spchits[0]->getType() )[ UTIL::ILDTrkHitTypeBit::ONE_DIMENSIONAL ] ) {
+
+	  TrackerHitPlane * mvhit0 = dynamic_cast<TrackerHitPlane*>(spchits[0]);
+	  TrackerHitPlane * mvhit1 = dynamic_cast<TrackerHitPlane*>(spchits[1]);
+
+	  if ( _map_1dhits_spacepoints[mvhit0->id()] == _map_1dhits_spacepoints[mvhit1->id()]){
+	    CompSpcpoints.push_back(_map_1dhits_spacepoints[mvhit0->id()]);
 	  }
 	}
-	
-	catch( FitterException e ){
-	  
-	  streamlog_out( DEBUG4 ) << "CellsAutomatonMV: track couldn't be finalized due to fitter error: " << e.what() << "\n";
-	  delete trackImpl;
+      }
+
+      //--------------------------------------------------------------------------
+      
+      
+      TrackImpl* trackImpl = new TrackImpl( *(myTrack->getLcioTrack()) );   // possible leak
+
+      //--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      // Create a new vector of hits, where we keep the 2D hits coming from 2D hits mini-vectors, but the 1D hits mini-vectors are turned back to the initial spacepoints
+      // The reason for doing so is to be compatible with the trackerhit extended classes, that maps the @D hits and composite spacepoints to extended hits
+
+      TrackImpl* newTrackImpl = new TrackImpl();
+      // loop on hits of track's implementation , to see what's there
+      TrackerHitVec testHitVector = trackImpl->getTrackerHits();
+      for( unsigned kk=0; kk<testHitVector.size(); kk++ ){
+	if ( BitSet32(testHitVector[kk]->getType() )[ UTIL::ILDTrkHitTypeBit::ONE_DIMENSIONAL ] ) {
+	  streamlog_out(DEBUG2) << " we skip an 1D hit " <<  std::endl;
 	}
+	else{   // add the 2D hits
+	  newTrackImpl->addHit( testHitVector[kk]  ) ;
+	}
+      }
+
+      // Now add the spacepoints
+      for( unsigned kk=0; kk<CompSpcpoints.size(); kk++ ){
+	newTrackImpl->addHit( CompSpcpoints[kk]  ) ;
+      }
+      //--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+      try{
+	
+	finaliseTrack( newTrackImpl, trackVec );
+	
+	//trackVec->addElement( newTrackImpl );
+	
+      }
+      
+      catch( FitterException e ){
+	  
+	streamlog_out( DEBUG4 ) << "CellsAutomatonMV: track couldn't be finalized due to fitter error: " << e.what() << "\n";
+	  delete newTrackImpl;
+      }
     }
   }
   // Finalisation ends
-
+  
   evt->addCollection( trackVec , _CATrackCollection) ;
 
 
@@ -807,7 +865,7 @@ void CellsAutomatonMV::InitialiseVTX( LCEvent * evt, EVENT::TrackerHitVec HitsTe
       int iTheta = int ((cosTheta + double(1.0))/_dTheta);
       int iCode = layer + _nLayers*iPhi + _nLayers*_nDivisionsInPhi*iTheta;   
 
-      streamlog_out(DEBUG4) << " CA: making a VXD hit at layer " << layer << " phi sector " << iPhi << " theta sector " << iTheta << " theta angle " << acos(cosTheta)*(180.0/M_PI) << " sector code " << iCode << " total layers " << _nLayers << " no of phi sectors " << _nDivisionsInPhi << " no of theta sectors " << _nDivisionsInTheta  << std::endl ; 
+      streamlog_out(DEBUG4) << " CA: making the VXD hit "  << hit  << " at layer " << layer << " phi sector " << iPhi << " theta sector " << iTheta << " theta angle " << acos(cosTheta)*(180.0/M_PI) << " sector code " << iCode << " total layers " << _nLayers << " no of phi sectors " << _nDivisionsInPhi << " no of theta sectors " << _nDivisionsInTheta  << std::endl ; 
 
       
       //Make an VXDHit01 from the TrackerHit 
@@ -837,42 +895,11 @@ void CellsAutomatonMV::InitialiseVTX( LCEvent * evt, EVENT::TrackerHitVec HitsTe
       
       streamlog_out(DEBUG4) << "Number of SIT hits = " << nelem << std::endl;
       
-      TrackerHit*          trkhit   = 0;
-      TrackerHitPlane*     trkhit_P = 0;
-      TrackerHitZCylinder* trkhit_C = 0;
-      
-      double drphi(NAN);
-      double dz(NAN);
+      TrackerHit* trkhit = 0;
       
       for (int ielem=0; ielem<nelem; ++ielem) {
 	
-	// hit could be of the following type
-	// 1) TrackerHit, either ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT or just standard TrackerHit
-	// 2) TrackerHitPlane, either 1D or 2D
-	// 3) TrackerHitZCylinder, if coming from a simple cylinder design as in the LOI
-	
-	// Establish which of these it is in the following order of likelyhood
-	//    i)   ILDTrkHitTypeBit::ONE_DIMENSIONAL (TrackerHitPlane) Should Never Happen: SpacePoints Must be Used Instead
-	//    ii)  ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT (TrackerHit)
-	//    iii) TrackerHitPlane (Two dimentional)
-	//    iv)  TrackerHitZCylinder 
-	//    v)   Must be standard TrackerHit
-	
 	trkhit = dynamic_cast<TrackerHit*>(hitCollection->getElementAt(ielem));
-	
-	int celId_SIT = trkhit->getCellID0() ;
-	
-	UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ; 
-	encoder.setValue(celId_SIT) ;
-	int layer  = encoder[lcio::ILDCellID0::layer] + 1 ;  // + 1 cause IP is considered layer 0
-        
-	// VXD and SIT are treated as one system so SIT layers start from _nLayersVTX
-	layer = layer + _nLayersVTX;
-	
-	if (layer < 0 || layer >= _nLayers) {
-	  streamlog_out(ERROR) << "SiliconTracking_MarlinTrk => fatal error in SIT : layer is outside allowed range : " << layer << std::endl;
-          exit(1);
-	}
 	
 	// first check that we have not been given 1D hits by mistake, as they won't work here
 	if ( BitSet32( trkhit->getType() )[ UTIL::ILDTrkHitTypeBit::ONE_DIMENSIONAL ] ) {
@@ -883,90 +910,61 @@ void CellsAutomatonMV::InitialiseVTX( LCEvent * evt, EVENT::TrackerHitVec HitsTe
 	} 
 	// most likely case: COMPOSITE_SPACEPOINT hits formed from stereo strip hits
 	else if ( BitSet32( trkhit->getType() )[ UTIL::ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT ] ) {
+	  
+	  const LCObjectVec rawObjects = trkhit->getRawHits();
+	  
+	  for(unsigned k = 0; k < rawObjects.size(); k++){
+	    
+	    TrackerHit* rawHit = dynamic_cast< TrackerHit* >(rawObjects[k]);
+	    TrackerHit* planarhit = dynamic_cast<TrackerHit*>(rawHit);
 
-	  streamlog_out(DEBUG1) << " We deal with composite spacepoints " << std::endl ;
-	  
-	  drphi =  2 * sqrt(trkhit->getCovMatrix()[0] + trkhit->getCovMatrix()[2]);         
-	  dz    =      sqrt(trkhit->getCovMatrix()[5]);         
-	  
-	} 
-	// or a PIXEL based SIT, using 2D TrackerHitPlane like the VXD above
-	else if ( ( trkhit_P = dynamic_cast<TrackerHitPlane*>( hitCollection->getElementAt( ielem ) ) ) )  {
-	  
-	  // first we need to check if the measurement vectors are aligned with the global coordinates 
-	  gear::Vector3D U(1.0,trkhit_P->getU()[1],trkhit_P->getU()[0],gear::Vector3D::spherical);
-	  gear::Vector3D V(1.0,trkhit_P->getV()[1],trkhit_P->getV()[0],gear::Vector3D::spherical);
-	  gear::Vector3D Z(0.0,0.0,1.0);
-	  
-	  const float eps = 1.0e-07;
-	  // V must be the global z axis 
-	  if( fabs(1.0 - V.dot(Z)) > eps ) {
-	    streamlog_out(ERROR) << "SiliconTracking_MarlinTrk: PIXEL SIT Hit measurment vectors V is not equal to the global Z axis. \n\n  exit(1) called from file " << __FILE__ << " and line " << __LINE__ << std::endl;
-	    exit(1);
+	    _pairs_1dhits_spacepoints = std::make_pair( planarhit, trkhit ) ;
+	    _map_1dhits_spacepoints[planarhit->id()] = trkhit ;
+
+	    int celId_SIT = planarhit->getCellID0() ;
+	
+	    UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ; 
+	    encoder.setValue(celId_SIT) ;
+	    int layer  = encoder[lcio::ILDCellID0::layer] + 1 ;  // + 1 cause IP is considered layer 0
+        
+	    // VXD and SIT are treated as one system so SIT layers start from _nLayersVTX
+	    layer = layer + _nLayersVTX;
+	
+	    if (layer < 0 || layer >= _nLayers) {
+	      streamlog_out(ERROR) << "SiliconTracking_MarlinTrk => fatal error in SIT : layer is outside allowed range : " << layer << std::endl;
+	      exit(1);
+	    }
+
+	    double pos[3];
+	    double radius = 0;
+	
+
+	    for (int i=0; i<3; ++i) {
+	      pos[i] = planarhit->getPosition()[i];
+	      radius += pos[i]*pos[i];
+	    }
+	
+	    radius = sqrt(radius);
+	
+	    double cosTheta = pos[2]/radius;
+	    double Phi = atan2(pos[1],pos[0]);
+
+	    if (Phi < 0.) Phi = Phi + TWOPI;
+	
+	    int iPhi = int(Phi/_dPhi);
+	    int iTheta = int ((cosTheta + double(1.0))/_dTheta);
+	    int iCode = layer + _nLayers*iPhi + _nLayers*_nDivisionsInPhi*iTheta;  
+
+	    streamlog_out(DEBUG2) << " CA: making the SIT hit " << planarhit << " at layer " << layer << " phi sector " << iPhi << " theta sector " << iTheta << " sector code " << iCode << " total layers " << _nLayers << " no of phi sectors " << _nDivisionsInPhi << std::endl ;    
+
+	    _map_sector_spacepoints[ iCode ].push_back( planarhit );
 	  }
-          
-	  // U must be normal to the global z axis
-	  if( fabs(U.dot(Z)) > eps ) {
-	    streamlog_out(ERROR) << "SiliconTracking_MarlinTrk: PIXEL SIT Hit measurment vectors U is not in the global X-Y plane. \n\n exit(1) called from file " << __FILE__ << " and line " << __LINE__ << std::endl;
-	    exit(1);
-	  }
-	  
-	  drphi = trkhit_P->getdU();
-	  dz    = trkhit_P->getdV();                                                 
-	  
 	} 
-	// or a simple cylindrical design, as used in the LOI      
-	else if ( ( trkhit_C = dynamic_cast<TrackerHitZCylinder*>( hitCollection->getElementAt( ielem ) ) ) ) {
-	  
-	  drphi = trkhit_C->getdRPhi();
-	  dz    = trkhit_C->getdZ();
-	  
-	} 
-	// this would be very unlikely, but who knows ... just an ordinary TrackerHit, which is not a COMPOSITE_SPACEPOINT
-	else {
-	  
-	  drphi =  2 * sqrt(trkhit->getCovMatrix()[0] + trkhit->getCovMatrix()[2]);         
-	  dz =     sqrt(trkhit->getCovMatrix()[5]);             
-	  
-	}
-	
-	double pos[3];
-	double radius = 0;
-	
-
-	for (int i=0; i<3; ++i) {
-	  pos[i] = trkhit->getPosition()[i];
-          radius += pos[i]*pos[i];
-	}
-	
-	radius = sqrt(radius);
-	
-	double cosTheta = pos[2]/radius;
-	double Phi = atan2(pos[1],pos[0]);
-
-	if (Phi < 0.) Phi = Phi + TWOPI;
-	
-	int iPhi = int(Phi/_dPhi);
-	int iTheta = int ((cosTheta + double(1.0))/_dTheta);
-	int iCode = layer + _nLayers*iPhi + _nLayers*_nDivisionsInPhi*iTheta;  
-
-	
-	streamlog_out(DEBUG2) << " CA: making an SIT hit at layer " << layer << " phi sector " << iPhi << " theta sector " << iTheta << " sector code " << iCode << " total layers " << _nLayers << " no of phi sectors " << _nDivisionsInPhi << std::endl ;    
-	
-	//Make an VXDHit01 from the TrackerHit 
-	//VXDHit01* vxdHit = new VXDHit01 ( trkhit , _sectorSystemVXD );   // Don't need to create VXDHits, we stick to mini - vectors
-	HitsTemp.push_back(trkhit); //so we can easily delete every created hit afterwards
-	
-	_map_sector_spacepoints[ iCode ].push_back( trkhit ); 
-	
       }
-	 
     } catch(DataNotAvailableException &e) {
       streamlog_out( DEBUG4 ) << " collection not found : " << _SITHitCollection.c_str() << std::endl ;
     }
   }
-  
-
 
 }
 
@@ -1021,7 +1019,7 @@ void CellsAutomatonMV::CreateMiniVectors( int sector ) {
     if (detID==lcio::ILDDetID::VXD ){
 
       //if (layer==5 || layer==3 || layer==1) {
-      if (layer==6 || layer==4 || layer==2) {     // in case of considering an IP hit
+      if ( layer==6 || layer==4 || layer==2 ) {     // in case of considering an IP hit
 	
 	for (int iPhi = iPhi_Low ; iPhi < iPhi_Up ; iPhi++){
 
@@ -1081,17 +1079,15 @@ void CellsAutomatonMV::CreateMiniVectors( int sector ) {
 	
 	layer = layer + _nLayersVTX;
       
-	//if (layer==8) {
-	if (layer==7 || layer==9) {
+	if ( layer==10 || layer==8) {
 	  
+	  int iPhi_Up_Mod    = iPhi + 8;
+	  int iPhi_Low_Mod   = iPhi - 8;
 	  
-	  //double from_x = fromHit->getPosition()[0] ;
-	  //double from_y = fromHit->getPosition()[1] ;
-	  
-	  for (int iPhi = iPhi_Low ; iPhi < iPhi_Up ; iPhi++){
+	  for (int iPhi = iPhi_Low_Mod ; iPhi < iPhi_Up_Mod ; iPhi++){
 	    
-	    int iTheta_Up_mod  = iTheta + 10; 
-	    int iTheta_Low_mod = iTheta - 10;
+	    int iTheta_Up_mod  = iTheta + 8; 
+	    int iTheta_Low_mod = iTheta - 8;
 	    if (iTheta_Low_mod < 0) iTheta_Low_mod = 0;
 	    if (iTheta_Up_mod  >= _nDivisionsInTheta) iTheta_Up_mod = _nDivisionsInTheta-1;
 	    
@@ -1103,22 +1099,27 @@ void CellsAutomatonMV::CreateMiniVectors( int sector ) {
 	      
 	      TrackerHitVec targetHits = _map_sector_spacepoints[target_sector];
 	    
-	      streamlog_out(DEBUG3) << " How many hits on the target sector " << targetHits.size() << std::endl ;
+	      streamlog_out(DEBUG2) << " Checking with TARGET sector " << target_sector << " of layer " << layer-1 << " Phi sector " << iPhi << " Theta sector " << iTheta << std::endl ;
+	      streamlog_out(DEBUG2) << " No of hits in the sector " << targetHits.size() << std::endl ;	      
 	      
 	      for (TrackerHitVec::iterator iter2=targetHits.begin(); iter2!=targetHits.end(); ++iter2) {
 		
 		TrackerHit *toHit = *iter2 ;
 		
-		if ( Dist(fromHit,toHit) < _maxDist ){
+		//if ( Dist(fromHit,toHit) < _maxDist ){
+		if (thetaAgreementImproved(toHit,fromHit,layer) == true){
+
+		  MiniVector *testMiniVectorMod = new MiniVector(fromHit,toHit) ;
+		  MiniVectorHit01* miniVectorHitMod = new MiniVectorHit01( testMiniVectorMod , _sectorSystemVXD );  
+		  MiniVectors_CutSelection++;
+		  _map_sector_hits[ sector ].push_back( miniVectorHitMod );
 		  
-		  MiniVector *sitTestMiniVector = new MiniVector(fromHit,toHit) ;
-		  MiniVectorHit01* sitMiniVectorHit = new MiniVectorHit01( sitTestMiniVector , _sectorSystemVXD );  
+		  streamlog_out(DEBUG4) << " making the SIT mini-vector hit " << miniVectorHitMod << " at sector " << sector << std::endl ;
 		  
-		  streamlog_out(DEBUG4) << " making a SIT mini-vector hit at sector " << sector << std::endl ;
+		  MiniVectorsTemp.push_back(miniVectorHitMod);
+		  TestMiniVectorsTemp.push_back(testMiniVectorMod);
 		  
-		  //MiniVectors_sectors++;
 		  
-		  _map_sector_hits[ sector ].push_back( sitMiniVectorHit );
 		}
 	      }
 	      
@@ -1266,75 +1267,181 @@ bool CellsAutomatonMV::setCriteria( unsigned round ){
 }
 
 
-void CellsAutomatonMV::finaliseTrack( TrackImpl* trackImpl ){
-   
-   
-
-  //Fitter fitter( trackImpl , _trkSystem ); //it gives problem at 90deg: sometimes the hits are taken in the inverse order resulting in a fitted track in the opposite quadrant of the hits
-  Fitter fitter( trackImpl , _trkSystem , 1); //it forces the hits ordering according to the radius (problem for very bent tracks that are coming back - TO STUDY)
-   
-   trackImpl->trackStates().clear();
+void CellsAutomatonMV::finaliseTrack( TrackImpl* trackImpl, LCCollectionVec* trackVec ){
    
 
-   TrackStateImpl* trkStateIP = new TrackStateImpl( *fitter.getTrackState( lcio::TrackState::AtIP ) ) ;
-   trkStateIP->setLocation( TrackState::AtIP );
-   trackImpl->addTrackState( trkStateIP );
-   
-   TrackStateImpl* trkStateFirstHit = new TrackStateImpl( *fitter.getTrackState( TrackState::AtFirstHit ) ) ;
-   trkStateFirstHit->setLocation( TrackState::AtFirstHit );
-   trackImpl->addTrackState( trkStateFirstHit );
-   
-   TrackStateImpl* trkStateLastHit = new TrackStateImpl( *fitter.getTrackState( TrackState::AtLastHit ) ) ;
-   trkStateLastHit->setLocation( TrackState::AtLastHit );
-   trackImpl->addTrackState( trkStateLastHit );
-   
-   TrackStateImpl* trkStateAtCalo = new TrackStateImpl( *fitter.getTrackState( TrackState::AtCalorimeter ) ) ;
-   trkStateAtCalo->setLocation( TrackState::AtCalorimeter );
-   trackImpl->addTrackState( trkStateAtCalo );
-   
-   trackImpl->setChi2( fitter.getChi2( TrackState::AtIP ) );
-   trackImpl->setNdf(  fitter.getNdf ( TrackState::AtIP ) );
-   
-   const float* p = trkStateFirstHit->getReferencePoint();
-   trackImpl->setRadiusOfInnermostHit( sqrt( p[0]*p[0] + p[1]*p[1] + p[2]*p[2] ) );
-   
-   std::map<int, int> hitNumbers; 
-   
-   hitNumbers[lcio::ILDDetID::VXD] = 0;
-   hitNumbers[lcio::ILDDetID::SIT] = 0;
-   hitNumbers[lcio::ILDDetID::FTD] = 0;
-   hitNumbers[lcio::ILDDetID::TPC] = 0;
-   hitNumbers[lcio::ILDDetID::SET] = 0;
-   hitNumbers[lcio::ILDDetID::ETD] = 0;
-   
-   std::vector< TrackerHit* > trackerHits = trackImpl->getTrackerHits();
-   for( unsigned j=0; j < trackerHits.size(); j++ ){
+
+  MarlinTrk::IMarlinTrack* marlinTrk = _trkSystem->createTrack();
+
+
+  //EVENT::FloatVec covMatrix = trackImpl->getCovMatrix();
+  // setup initial dummy covariance matrix
+  EVENT::FloatVec covMatrix;
+  covMatrix.resize(15);
       
-      UTIL::BitField64 encoder( ILDCellID0::encoder_string );
-      encoder.setValue( trackerHits[j]->getCellID0() );
-      int subdet =  encoder[lcio::ILDCellID0::subdet];
-     
+  for (unsigned icov = 0; icov<covMatrix.size(); ++icov) {
+    covMatrix[icov] = 0;
+  }
       
-      ++hitNumbers[ subdet ];
+  covMatrix[0]  = ( _initialTrackError_d0    ); //sigma_d0^2
+  covMatrix[2]  = ( _initialTrackError_phi0  ); //sigma_phi0^2
+  covMatrix[5]  = ( _initialTrackError_omega ); //sigma_omega^2
+  covMatrix[9]  = ( _initialTrackError_z0    ); //sigma_z0^2
+  covMatrix[14] = ( _initialTrackError_tanL  ); //sigma_tanl^2
+
+
+  bool fit_direction =  IMarlinTrack::backward ;
+
+  
+  EVENT::TrackerHitVec trkHits = trackImpl->getTrackerHits() ;
+  
+  std::vector< std::pair<float, EVENT::TrackerHit*> > r2_values;
+  r2_values.reserve(trkHits.size());
+  
+  for (TrackerHitVec::iterator it=trkHits.begin(); it!=trkHits.end(); ++it) {
+    EVENT::TrackerHit* h = *it;
+    float r2 = h->getPosition()[0]*h->getPosition()[0]+h->getPosition()[1]*h->getPosition()[1];
+    r2_values.push_back(std::make_pair(r2, *it));
+  }
+  
+  sort(r2_values.begin(),r2_values.end());
+  
+  trkHits.clear();
+  trkHits.reserve(r2_values.size());
+  
+  //UTIL::BitField64 cellID_encoder( lcio::ILDCellID0::encoder_string ) ;
+  
+  for (std::vector< std::pair<float, EVENT::TrackerHit*> >::iterator it=r2_values.begin(); it!=r2_values.end(); ++it) {
+    
+    trkHits.push_back(it->second);
+    
+  }
+
+  TrackImpl* refittedTrack = new TrackImpl ; 
+
+  try {
       
-   }
+    int error = 0;
+    
+    if( _initialTrackState < 0 ) { // initialize the track from three hits
+
+      // error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, trkHits, refittedTrack, fit_direction, covMatrix, _bField, _maxChi2PerHit);
+	  
+      // call with empty pre_fit  -> should use default initialisation of the implementation, e.g.
+      // use an internal pre fit in aidaTT
+      error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, trkHits, refittedTrack, fit_direction, covMatrix , _bField, _maxChi2PerHit);
+
+
+
+    } else {  // use the specified track state 
+
+  
+      EVENT::TrackState* ts = const_cast<EVENT::TrackState* > ( trackImpl->getTrackState(lcio::TrackState::AtIP) )  ;  
+	  
+      if( !ts ){
+
+	std::stringstream ess ; ess << "  Could not get track state from track to refit " ;
+	throw EVENT::Exception( ess.str() ) ;
+      } 
+
+      IMPL::TrackStateImpl pre_fit( *ts ) ;
+      pre_fit.setCovMatrix( covMatrix )  ;
+	  
+      error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, trkHits, refittedTrack, fit_direction, &pre_fit , _bField, _maxChi2PerHit);
+    }
+        
+
+    if( error != IMarlinTrack::success || refittedTrack->getNdf() < 0 ) {
+
+      streamlog_out(MESSAGE) << "::createTrack: Track fit returns error code " << error << " NDF = " << refittedTrack->getNdf() 
+			     <<  ". Number of hits = "<< trkHits.size() << std::endl;
+
+      //fg: to write out also incomplete tracks comment this out 
+      delete refittedTrack;
+      //continue ;
+    }
+        
+        
+  } catch (...) {
+        
+    streamlog_out(ERROR) << "CellsAutomatonMV::finaliseTrack exception caught and rethown. Track = " 
+			 << refittedTrack << std::endl;
+
+    delete refittedTrack;
+        
+    throw ;
+        
+  }
+
+  //std::cout << " Track " << refittedTrack << " after the final refit has "  <<   (refittedTrack->getTrackerHits()).size() << " hits " << " and track state " << refittedTrack->getTrackState(lcio::TrackState::AtIP) << std::endl ;
+
+
+  // fitting finished get hit in the fit
+      
+  std::vector<std::pair<EVENT::TrackerHit*, double> > hits_in_fit;
+  std::vector<std::pair<EVENT::TrackerHit* , double> > outliers ;
+      
+  // remember the hits are ordered in the order in which they were fitted
+  // here we are fitting inwards to the first is the last and vice verse
+      
+  marlinTrk->getHitsInFit(hits_in_fit);
+      
+  if( hits_in_fit.size() < 3 ) {
+    streamlog_out(DEBUG3) << "RefitProcessor: Less than 3 hits in fit: Track Discarded. Number of hits =  " << trkHits.size() << std::endl;
+    delete marlinTrk ;
+    delete refittedTrack;
+    //continue ; 
+  }
+      
+    
+  std::vector<TrackerHit*> all_hits;
+  all_hits.reserve(300);
+      
+      
+  for ( unsigned ihit = 0; ihit < hits_in_fit.size(); ++ihit) {
+    all_hits.push_back(hits_in_fit[ihit].first);
+  }
+      
+  UTIL::BitField64 cellID_encoder( lcio::ILDCellID0::encoder_string ) ;
+      
+  MarlinTrk::addHitNumbersToTrack(refittedTrack, all_hits, true, cellID_encoder);
+      
+  marlinTrk->getOutliers(outliers);
+      
+  for ( unsigned ihit = 0; ihit < outliers.size(); ++ihit) {
+    all_hits.push_back(outliers[ihit].first);
+  }
+      
+  MarlinTrk::addHitNumbersToTrack(refittedTrack, all_hits, false, cellID_encoder);
+      
+  delete marlinTrk;
+      
+      
+  int nhits_in_vxd = refittedTrack->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::VXD - 1 ];
+  int nhits_in_ftd = refittedTrack->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::FTD - 1 ];
+  int nhits_in_sit = refittedTrack->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SIT - 1 ];
+  int nhits_in_tpc = refittedTrack->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::TPC - 1 ];
+  int nhits_in_set = refittedTrack->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SET - 1 ];
+      
+      
+  streamlog_out( DEBUG3 ) << " Hit numbers for Track "<< refittedTrack->id() << ": "
+			  << " vxd hits = " << nhits_in_vxd
+			  << " ftd hits = " << nhits_in_ftd
+			  << " sit hits = " << nhits_in_sit
+			  << " tpc hits = " << nhits_in_tpc
+			  << " set hits = " << nhits_in_set
+			  << std::endl;
+      
+
+  if (nhits_in_vxd > 0) refittedTrack->setTypeBit( lcio::ILDDetID::VXD ) ;
+  if (nhits_in_ftd > 0) refittedTrack->setTypeBit( lcio::ILDDetID::FTD ) ;
+  if (nhits_in_sit > 0) refittedTrack->setTypeBit( lcio::ILDDetID::SIT ) ;
+  if (nhits_in_tpc > 0) refittedTrack->setTypeBit( lcio::ILDDetID::TPC ) ;
+  if (nhits_in_set > 0) refittedTrack->setTypeBit( lcio::ILDDetID::SET ) ;
+ 
+  trackVec->addElement( refittedTrack );   
    
-   trackImpl->subdetectorHitNumbers().resize(2 * lcio::ILDDetID::ETD);
-   trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::VXD - 2 ] = hitNumbers[lcio::ILDDetID::VXD];
-   trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::FTD - 2 ] = hitNumbers[lcio::ILDDetID::FTD];
-   trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SIT - 2 ] = hitNumbers[lcio::ILDDetID::SIT];
-   trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::TPC - 2 ] = hitNumbers[lcio::ILDDetID::TPC];
-   trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SET - 2 ] = hitNumbers[lcio::ILDDetID::SET];
-   trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::ETD - 2 ] = hitNumbers[lcio::ILDDetID::ETD];
-   trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::VXD - 1 ] = hitNumbers[lcio::ILDDetID::VXD];
-   trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::FTD - 1 ] = hitNumbers[lcio::ILDDetID::FTD];
-   trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SIT - 1 ] = hitNumbers[lcio::ILDDetID::SIT];
-   trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::TPC - 1 ] = hitNumbers[lcio::ILDDetID::TPC];
-   trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SET - 1 ] = hitNumbers[lcio::ILDDetID::SET];
-   trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::ETD - 1 ] = hitNumbers[lcio::ILDDetID::ETD];
-   
-   
-   return;
+  return;
    
    
 }
@@ -1399,28 +1506,7 @@ bool CellsAutomatonMV::thetaAgreementImproved( EVENT::TrackerHit *toHit, EVENT::
 
   streamlog_out(DEBUG4) << "Theta of outer hit " << theta_out << " Theta of inner hit " << theta_inn << " Theta diff between the adjacent hits " << diff_theta << " maximum value " << _hitPairThDiff << std::endl ;
 
-  /*  
-  int celId_inner = toHit->getCellID0() ;
-  UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ; 
-  encoder.setValue(celId_inner) ;
-  int inner_layer  = encoder[lcio::ILDCellID0::layer] ;
-  
-  double resolution = _resU[inner_layer] ;
-
-  //double deltaTheta = 3*resolution*sqrt( (radinn/((radinn*radinn) + (pos_inner[2]*pos_inner[2])))*(radinn/((radinn*radinn) + (pos_inner[2]*pos_inner[2])))  +  ((pos_inner[0]*pos_inner[2])/(((radinn*radinn) + (pos_inner[2]*pos_inner[2]))*radinn))*((pos_inner[0]*pos_inner[2])/(((radinn*radinn) + (pos_inner[2]*pos_inner[2]))*radinn))  +  ((pos_inner[1]*pos_inner[2])/(((radinn*radinn) + (pos_inner[2]*pos_inner[2]))*radinn))*((pos_inner[1]*pos_inner[2])/(((radinn*radinn) + (pos_inner[2]*pos_inner[2]))*radinn)) ) ;
-
-  double deltazent = radinn/((radinn*radinn) + (pos_inner[2]*pos_inner[2])) ;
-  double deltaxi = (pos_inner[0]*pos_inner[2])/(((radinn*radinn) + (pos_inner[2]*pos_inner[2]))*radinn) ;
-  double deltapsi = (pos_inner[1]*pos_inner[2])/(((radinn*radinn) + (pos_inner[2]*pos_inner[2]))*radinn) ;
-
-  double deltaTheta = 5*resolution*sqrt((deltaxi*deltaxi) + (deltapsi*deltapsi) + (deltazent*deltazent)) ; 
-
-  if ( theta_inn < (theta_out + (deltaTheta + MPS_factor)) &&  theta_inn > (theta_out - (deltaTheta + MPS_factor)) ){
-    agreement = true ;
-  }
-
-  streamlog_out(DEBUG3) << " outer radius " << radout << " inner radius " << radinn << " resolution " << _resU[inner_layer] << " outer theta " << theta_out*(180.0/M_PI) << " inner theta " << theta_inn*(180.0/M_PI) << " deltaTheta "  << deltaTheta*(180.0/M_PI)  << " Agreement " << agreement << " deltaxi = " << deltaxi  << " deltapsi = " << deltapsi  << " deltazent = " << deltazent << std::endl ;
-  */
+ 
 
   if ( layer == 6 || layer == 4 ){
 
@@ -1436,7 +1522,16 @@ bool CellsAutomatonMV::thetaAgreementImproved( EVENT::TrackerHit *toHit, EVENT::
     }
   }
 
+  if ( layer == 10 || layer == 8 ) {
+
+    if ( diff_theta < _hitPairThDiffSIT ){
+      agreement = true ;
+    }
+  }
+
 
   return agreement ;
 
 }
+
+

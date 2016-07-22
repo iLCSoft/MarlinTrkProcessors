@@ -11,6 +11,7 @@
 #include <EVENT/LCCollection.h>
 #include <EVENT/TrackerHit.h>
 #include <EVENT/TrackerHitPlane.h>
+#include <IMPL/TrackerHitImpl.h>
 #include <EVENT/TrackerHitZCylinder.h>
 #include <IMPL/LCCollectionVec.h>
 #include <IMPL/TrackImpl.h>
@@ -49,6 +50,17 @@
 #include <gear/VXDLayerLayout.h>
 #include <gear/VXDParameters.h>
 #include <gear/BField.h>
+#include "gear/gearsurf/MeasurementSurfaceStore.h"
+#include "gear/gearsurf/MeasurementSurface.h"
+#include "gear/gearsurf/ICoordinateSystem.h"
+#include "gear/gearsurf/CartesianCoordinateSystem.h"
+
+//#include "SpacePointBuilder.h"
+// CLHEP tools
+#include "CLHEP/Vector/ThreeVector.h"
+#include "CLHEP/Matrix/SymMatrix.h"
+#include "CLHEP/Matrix/Matrix.h"
+
 
 using namespace lcio ;
 using namespace marlin ;
@@ -97,9 +109,27 @@ class CellsAutomatonMV : public Processor {
    */
   virtual void end() ;
 
+  /*
+    private:  
+
+    unsigned _nOutOfBoundary;
+    unsigned _nStripsTooParallel;
+    unsigned _nPlanesNotParallel;
+    
+    // functions copied from spacepointbuilder
+    static int calculatePointBetweenTwoLines_UsingVertex( 
+    const CLHEP::Hep3Vector& PA, 
+    const CLHEP::Hep3Vector& PB, 
+    const CLHEP::Hep3Vector& PC, 
+    const CLHEP::Hep3Vector& PD,
+    const CLHEP::Hep3Vector& Vertex,
+    CLHEP::Hep3Vector& point);
+    
+    
+    // @return a spacepoint (in the form of a TrackerHitImpl* ) created from two TrackerHitPlane* which stand for si-strips 
+    TrackerHitImpl* createSpacePoint( TrackerHitPlane* a , TrackerHitPlane* b, double stripLength );
+*/
   
-
-
  protected:
 
   int nEvt;
@@ -130,11 +160,14 @@ class CellsAutomatonMV : public Processor {
   bool setCriteria( unsigned round );
   void RawTrackFit( std::vector < MarlinTrk::IMarlinTrack* > candMarlinTracks, std::vector< IMPL::TrackImpl* > &finalTracks ) ;
   void FitFunc2( std::vector < RawTrack > rawTracks, std::vector < MarlinTrk::IMarlinTrack* > &candMarlinTracks ) ;
-  void finaliseTrack( TrackImpl* trackImpl ) ;   
+  //void finaliseTrack( TrackImpl* trackImpl ) ;   
+  void finaliseTrack( TrackImpl* trackImpl, LCCollectionVec* trackVec ) ;
   void CreateMiniVectors( int sector ) ;
   bool thetaAgreement( EVENT::TrackerHit *toHit, EVENT::TrackerHit *fromHit ) ;
   bool thetaAgreementImproved( EVENT::TrackerHit *toHit, EVENT::TrackerHit *fromHit, int layer ) ;
   double Dist( EVENT::TrackerHit *toHit, EVENT::TrackerHit *fromHit ) ;
+  //IMPL::TrackImpl* Refit( TrackImpl* track_to_refit ) ;
+
 
   unsigned int _nLayersVTX;
   unsigned int _nLayersSIT;
@@ -142,6 +175,10 @@ class CellsAutomatonMV : public Processor {
   /** A map to store the hits according to their sectors */
   std::map< int , EVENT::TrackerHitVec > _map_sector_spacepoints;
   std::map< int , std::vector< IHit* > > _map_sector_hits;
+  std::map< int , EVENT::TrackerHit* > _map_1dhits_spacepoints ;
+
+  /** A pair to keep information for composite spacepoints */
+  std::pair <EVENT::TrackerHit*, EVENT::TrackerHit*  > _pairs_1dhits_spacepoints ;
   
   /** Names of the used criteria */
   std::vector< std::string > _criteriaNames;
@@ -183,7 +220,6 @@ class CellsAutomatonMV : public Processor {
   MarlinTrk::IMarlinTrkSystem* _trkSystem;
   
   bool _MSOn, _ElossOn, _SmoothOn, _middleLayer ;
-  std::string _trkSystemName ;
 
   int _useSIT ;
 
@@ -201,6 +237,7 @@ class CellsAutomatonMV : public Processor {
   double _maxDist ;
   double _hitPairThDiff ;
   double _hitPairThDiffInner ;
+  double _hitPairThDiffSIT ;
   
   //std::vector< MarlinTrk::IMarlinTrack* > GoodTracks;
   //std::vector< MarlinTrk::IMarlinTrack* > RejectedTracks;
@@ -213,6 +250,9 @@ class CellsAutomatonMV : public Processor {
   float _initialTrackError_z0;
   float _initialTrackError_tanL;
   float _maxChi2PerHit;
+
+  int _initialTrackState;
+  int _fitDirection ; 
 
   int _maxHitsPerSector ;
   
