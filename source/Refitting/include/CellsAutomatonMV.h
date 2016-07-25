@@ -7,6 +7,7 @@
 #include <marlin/Processor.h>
 #include <marlin/Global.h>
 #include "marlin/VerbosityLevels.h"
+#include <marlin/Exceptions.h>
 
 #include <EVENT/LCCollection.h>
 #include <EVENT/TrackerHit.h>
@@ -160,8 +161,8 @@ class CellsAutomatonMV : public Processor {
   bool setCriteria( unsigned round );
   void RawTrackFit( std::vector < MarlinTrk::IMarlinTrack* > candMarlinTracks, std::vector< IMPL::TrackImpl* > &finalTracks ) ;
   void FitFunc2( std::vector < RawTrack > rawTracks, std::vector < MarlinTrk::IMarlinTrack* > &candMarlinTracks ) ;
-  //void finaliseTrack( TrackImpl* trackImpl ) ;   
-  void finaliseTrack( TrackImpl* trackImpl, LCCollectionVec* trackVec ) ;
+  void finaliseTrack( TrackImpl* newTrackImpl, LCCollectionVec* trackVec ) ;   
+  //void finaliseTrack( TrackImpl* trackImpl, LCCollectionVec* trackVec, const EVENT::TrackState * init_ts,  const EVENT::FloatVec covMatrix ) ;
   void CreateMiniVectors( int sector ) ;
   bool thetaAgreement( EVENT::TrackerHit *toHit, EVENT::TrackerHit *fromHit ) ;
   bool thetaAgreementImproved( EVENT::TrackerHit *toHit, EVENT::TrackerHit *fromHit, int layer ) ;
