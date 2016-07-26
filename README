@@ -14,6 +14,22 @@
  =============================================================================================================
 
   ---------
+ | v02-03  |
+  ---------
+
+  R. Simoniello
+     - Add procedure to handle with spiral tracks. Fit direction and fit initialisation configurable by steering macro (default fit direction: backward)
+     - improved speed, map of hits on each element introduced, find neighbours of element ID and extrapolate to them (to be improved to some problem in the geo datat structure)	
+
+  F. Gaede
+     - made compatible with c++11
+       - removed -ansi -pedantic -Wno-long-long
+       - fixed narrowing in initializer lists
+
+  Y. Voutsinas
+     - Minivector creation from 1D SIT hits added 
+
+  ---------
  | v02-02  |
   ---------
   R.Simoniello
