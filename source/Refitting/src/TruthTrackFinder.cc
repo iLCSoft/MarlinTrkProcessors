@@ -335,7 +335,7 @@ void TruthTrackFinder::processEvent( LCEvent* evt ) {
 
       //float ref_point[3] = { 0., 0., 0. };
       helix.moveRefPoint(trackfitHits.at(0)->getPosition()[0], trackfitHits.at(0)->getPosition()[1], trackfitHits.at(0)->getPosition()[2]);
-      float ref_point[3] = {helix.getRefPointX(),helix.getRefPointY(),helix.getRefPointZ()} ;
+      float ref_point[3] = {float(helix.getRefPointX()),float(helix.getRefPointY()),float(helix.getRefPointZ())} ;
       TrackStateImpl* trkState = new TrackStateImpl(TrackState::AtIP, trueD0, truePhi, trueOmega, trueZ0, trueTanLambda, covMatrix, ref_point);
 
       // int prefitError =  createFit(trackfitHits, marlinTrack, trkState, m_magneticField,  direction, m_maxChi2perHit);
