@@ -223,6 +223,7 @@ class CellsAutomatonMV : public Processor {
   bool _MSOn, _ElossOn, _SmoothOn, _middleLayer ;
 
   int _useSIT ;
+  int _ipHit ;
 
   int _layerStepMax ;
 

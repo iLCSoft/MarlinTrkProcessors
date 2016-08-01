@@ -76,6 +76,11 @@ CellsAutomatonMV::CellsAutomatonMV() : Processor("CellsAutomatonMV"){
                              _useSIT,
                              int(1));
 
+  registerProcessorParameter("IPhit",
+                             "Use IP hit",
+                             _ipHit,
+                             int(0));
+
 
   registerProcessorParameter( "HitsPerTrackMin",
 			      "The minimum number of hits to create a track",
@@ -348,12 +353,12 @@ void CellsAutomatonMV::processEvent( LCEvent * evt ) {
   /**********************************************************************************************/
   /*                Add the IP as a virtual hit                                                 */
   /**********************************************************************************************/
-  
-  IHit* virtualIPHitForward = createVirtualIPHit(_sectorSystemVXD );
-  //HitsTemp.push_back( virtualIPHitForward );
-  _map_sector_hits[0].push_back( virtualIPHitForward );
-  streamlog_out(DEBUG4) << " sector of the IP hit = " << virtualIPHitForward->getSector() << std::endl ;
-  
+  if (_ipHit == 1 ){
+    IHit* virtualIPHitForward = createVirtualIPHit(_sectorSystemVXD );
+    //HitsTemp.push_back( virtualIPHitForward );
+    _map_sector_hits[0].push_back( virtualIPHitForward );
+    streamlog_out(DEBUG4) << " sector of the IP hit = " << virtualIPHitForward->getSector() << std::endl ;
+  }
   //*********************************************************************************************************************  
 
 
@@ -700,7 +705,7 @@ void CellsAutomatonMV::processEvent( LCEvent * evt ) {
 
 	  if ( _map_1dhits_spacepoints[mvhit0->id()] == _map_1dhits_spacepoints[mvhit1->id()]){
 	    CompSpcpoints.push_back(_map_1dhits_spacepoints[mvhit0->id()]);
-	    std::cout << " I am recreating and adding to the track the spacepoint " << _map_1dhits_spacepoints[mvhit0->id()] << " made of " << mvhit0 << " and " << mvhit1 << std::endl ;
+	    streamlog_out(DEBUG4) << " I am recreating and adding to the track the spacepoint " << _map_1dhits_spacepoints[mvhit0->id()] << " made of " << mvhit0 << " and " << mvhit1 << std::endl ;
 	  }
 	}
       }
@@ -868,7 +873,7 @@ void CellsAutomatonMV::InitialiseVTX( LCEvent * evt, EVENT::TrackerHitVec HitsTe
       int iTheta = int ((cosTheta + double(1.0))/_dTheta);
       int iCode = layer + _nLayers*iPhi + _nLayers*_nDivisionsInPhi*iTheta;   
 
-      std::cout << " CA: making the VXD hit "  << hit  << " at layer " << layer << " phi sector " << iPhi << " theta sector " << iTheta << " theta angle " << acos(cosTheta)*(180.0/M_PI) << " sector code " << iCode << " total layers " << _nLayers << " no of phi sectors " << _nDivisionsInPhi << " no of theta sectors " << _nDivisionsInTheta  << std::endl ; 
+      streamlog_out(DEBUG4) << " CA: making the VXD hit "  << hit  << " at layer " << layer << " phi sector " << iPhi << " theta sector " << iTheta << " theta angle " << acos(cosTheta)*(180.0/M_PI) << " sector code " << iCode << " total layers " << _nLayers << " no of phi sectors " << _nDivisionsInPhi << " no of theta sectors " << _nDivisionsInTheta  << std::endl ; 
 
       
       //Make an VXDHit01 from the TrackerHit 
@@ -916,13 +921,13 @@ void CellsAutomatonMV::InitialiseVTX( LCEvent * evt, EVENT::TrackerHitVec HitsTe
 	  
 	  const LCObjectVec rawObjects = trkhit->getRawHits();
 
-	  std::cout << " I am taking spacepoint " << trkhit << " made of " << std::endl ;
+	  streamlog_out(DEBUG4) << " I am taking spacepoint " << trkhit << " made of " << std::endl ;
 	  
 	  for(unsigned k = 0; k < rawObjects.size(); k++){
 	    
 	    TrackerHit* rawHit = dynamic_cast< TrackerHit* >(rawObjects[k]);
 	    TrackerHit* planarhit = dynamic_cast<TrackerHit*>(rawHit);
-	    std::cout << " made of " << planarhit << std::endl ; 
+	    streamlog_out(DEBUG4) << " made of " << planarhit << std::endl ; 
 
 	    _pairs_1dhits_spacepoints = std::make_pair( planarhit, trkhit ) ;
 	    _map_1dhits_spacepoints[planarhit->id()] = trkhit ;
@@ -961,7 +966,7 @@ void CellsAutomatonMV::InitialiseVTX( LCEvent * evt, EVENT::TrackerHitVec HitsTe
 	    int iTheta = int ((cosTheta + double(1.0))/_dTheta);
 	    int iCode = layer + _nLayers*iPhi + _nLayers*_nDivisionsInPhi*iTheta;  
 
-	    std::cout << " CA: making the SIT hit " << planarhit << " at layer " << layer << " phi sector " << iPhi << " theta sector " << iTheta << " sector code " << iCode << " total layers " << _nLayers << " no of phi sectors " << _nDivisionsInPhi << std::endl ;    
+	    streamlog_out(DEBUG4) << " CA: making the SIT hit " << planarhit << " at layer " << layer << " phi sector " << iPhi << " theta sector " << iTheta << " sector code " << iCode << " total layers " << _nLayers << " no of phi sectors " << _nDivisionsInPhi << std::endl ;    
 
 	    _map_sector_spacepoints[ iCode ].push_back( planarhit );
 	  }
