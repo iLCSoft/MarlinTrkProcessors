@@ -65,12 +65,12 @@ CellsAutomatonMV::CellsAutomatonMV() : Processor("CellsAutomatonMV"){
                              "Smooth All Mesurement Sites in Fit",
                              _SmoothOn,
                              bool(true));
-  /*
-  registerProcessorParameter("UseMiddleLayer",
-                             "Use middle layer for the cellular automaton",
-                             _middleLayer,
-                             bool(true));
-  */
+
+  registerProcessorParameter( "TrackSystemName",
+                              "Name of the track fitting system to be used (KalTest, DDKalTest, aidaTT, ... )",
+                              _trkSystemName,
+                              std::string("KalTest") );
+
   registerProcessorParameter("UseSIT",
                              "Use SIT",
                              _useSIT,
@@ -283,8 +283,9 @@ void CellsAutomatonMV::init() {
   /*       Initialise the MarlinTrkSystem, needed by the tracks for fitting                     */
   /**********************************************************************************************/
   
-    // set upt the geometry
-  _trkSystem =  MarlinTrk::Factory::createMarlinTrkSystem( "KalTest" , marlin::Global::GEAR , "" ) ;
+  // set upt the geometry
+  // set up the geometery needed by KalTest
+  _trkSystem =  MarlinTrk::Factory::createMarlinTrkSystem( _trkSystemName , marlin::Global::GEAR , "" ) ;
   
   if( _trkSystem == 0 ) throw EVENT::Exception( std::string("  Cannot initialize MarlinTrkSystem of Type: ") + std::string("KalTest" )  ) ;
   

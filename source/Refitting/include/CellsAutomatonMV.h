@@ -217,8 +217,11 @@ class CellsAutomatonMV : public Processor {
   /** the maximum number of connections that are allowed in the automaton, if this value is surpassed, rerun
    * the automaton with tighter cuts or stop it entirely. */
   int _maxConnectionsAutomaton;
-  
+
+  /** pointer to the IMarlinTrkSystem instance 
+   */
   MarlinTrk::IMarlinTrkSystem* _trkSystem;
+  std::string _trkSystemName ;
   
   bool _MSOn, _ElossOn, _SmoothOn, _middleLayer ;
 
