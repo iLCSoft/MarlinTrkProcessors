@@ -232,6 +232,10 @@ class CellsAutomatonMV : public Processor {
 
   int _lastLayerToIP ;
 
+  int _neighPhi ;
+  int _neighTheta ;
+  int _layerMax ;
+
   int _nHitsChi2 ;
 
   int MiniVectors_sectors ;

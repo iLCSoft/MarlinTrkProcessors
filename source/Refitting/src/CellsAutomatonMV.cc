@@ -92,6 +92,21 @@ CellsAutomatonMV::CellsAutomatonMV() : Processor("CellsAutomatonMV"){
 			      _layerStepMax,
 			      int( 2 ) );
 
+  registerProcessorParameter( "neighPhi",
+			      "number of neighbouring phi sectors to search",
+			      _neighPhi,
+			      int( 8 ) );
+
+  registerProcessorParameter( "neighTheta",
+			      "number of neighbouring theta sectors to search",
+			      _neighTheta,
+			      int( 1 ) );
+
+  registerProcessorParameter( "layerMax",
+			      "The layer to start the automaton",
+			      _layerMax,
+			      int( 10 ) );
+
   registerProcessorParameter( "LastLayerToIP",
 			      "The maximum step between layers",
 			      _lastLayerToIP,
@@ -392,7 +407,7 @@ void CellsAutomatonMV::processEvent( LCEvent * evt ) {
     unsigned lastLayerToIP = _lastLayerToIP ;  
     //bool MiddleLayer = _middleLayer ;
     //VXDSectorConnector secCon( _sectorSystemVXD , layerStepMax, lastLayerToIP, MiddleLayer );  
-    VXDSectorConnector secCon( _sectorSystemVXD , layerStepMax, lastLayerToIP );
+    VXDSectorConnector secCon( _sectorSystemVXD , layerStepMax, lastLayerToIP, neighPhi, neighTheta, layerMax );
     
     segBuilder.addSectorConnector ( & secCon ); // Add the sector connector (so the SegmentBuilder knows what hits from different sectors it is allowed to look for connections)
     
