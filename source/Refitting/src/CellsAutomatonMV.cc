@@ -404,7 +404,10 @@ void CellsAutomatonMV::processEvent( LCEvent * evt ) {
     segBuilder.addCriteria ( _crit2Vec ); // Add the criteria on when to connect two hits. The vector has been filled by the method setCriteria
     
     unsigned layerStepMax = _layerStepMax ; // how many layers to go at max
-    unsigned lastLayerToIP = _lastLayerToIP ;  
+    unsigned lastLayerToIP = _lastLayerToIP ;
+    int neighPhi = _neighPhi ;
+    int neighTheta = _neighTheta ;
+    int layerMax = _layerMax ;   
     //bool MiddleLayer = _middleLayer ;
     //VXDSectorConnector secCon( _sectorSystemVXD , layerStepMax, lastLayerToIP, MiddleLayer );  
     VXDSectorConnector secCon( _sectorSystemVXD , layerStepMax, lastLayerToIP, neighPhi, neighTheta, layerMax );
