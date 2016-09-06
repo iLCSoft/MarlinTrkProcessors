@@ -112,8 +112,12 @@ ExtrToSIT::ExtrToSIT() : Processor("ExtrToSIT") {
                              "Smooth All Mesurement Sites in Fit",
                              _SmoothOn,
                              bool(false));
-  
 
+  registerProcessorParameter("DirInsideOut",
+                             "direction for the extrapolation. if true it means we extrapolate from VXD, otherwise from TPC",
+                             _dirInsideOut,
+                             bool(true));
+  
   registerProcessorParameter("Max_Chi2_Incr",
                              "maximum allowable chi2 increment when moving from one site to another",
                              _Max_Chi2_Incr,
@@ -312,6 +316,16 @@ void ExtrToSIT::processEvent( LCEvent * evt ) {
 	  if ( fit_status == 0 ){
 	    
 	    int testFlag=0;
+
+	    // some testing
+	    TrackStateImpl testTS ;
+	    double chi2_test = 0 ;
+	    int ndf_test = 0 ; 
+	    int testTrackState =  marlin_trk->getTrackState( testTS, chi2_test, ndf_test ) ;
+	    if (testTrackState==0){
+	      const float* testpivot = testTS.getReferencePoint() ;
+	      streamlog_out(DEBUG4) << "test pivot    " << testpivot[0] << ", " << testpivot[1] << ", "  << testpivot[2] << " - r: " << sqrt( testpivot[0]*testpivot[0]+testpivot[1]*testpivot[1] ) << std::endl;
+	    }
 	    
 	    streamlog_out(DEBUG3) << "###########$$$$$$$$$$##############" << std::endl;
 	    
@@ -374,8 +388,12 @@ void ExtrToSIT::processEvent( LCEvent * evt ) {
 		
 
 		encoder[lcio::ILDCellID0::subdet] = ILDDetID::SIT ;
-		//encoder[lcio::ILDCellID0::layer]  = iL ;   // in case we propagate outwards from VXD
-		encoder[lcio::ILDCellID0::layer]  = 3 - iL ;  //  in case we propagate inwards from TPC
+
+		if ( _dirInsideOut )
+		  encoder[lcio::ILDCellID0::layer]  = iL ;   // in case we propagate outwards from VXD
+		else
+		  encoder[lcio::ILDCellID0::layer]  = 3 - iL ;  //  in case we propagate inwards from TPC
+
 		layerID = encoder.lowWord() ;  
 	      
 		  

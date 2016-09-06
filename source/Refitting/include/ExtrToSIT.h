@@ -148,6 +148,8 @@ protected:
   bool _MSOn ;
   bool _ElossOn ;
   bool _SmoothOn ;
+  bool _dirInsideOut ;
+
   double _Max_Chi2_Incr ;
   int _tpcHitsCut ;
   float _chi2NDoFCut ;
