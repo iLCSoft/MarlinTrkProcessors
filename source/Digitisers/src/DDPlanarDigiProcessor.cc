@@ -173,6 +173,7 @@ void DDPlanarDigiProcessor::processRunHeader( LCRunHeader* run) {
 void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) { 
 
 
+
   if( isFirstEvent() ) {
 
     streamlog_out( MESSAGE ) << " *** DDPlanarDigiProcessor::processEvent():   creating histograms for first event ! " << std::endl ;
@@ -188,6 +189,9 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
   gsl_rng_set( _rng, Global::EVENTSEEDER->getSeed(this) ) ;   
   streamlog_out( DEBUG4 ) << "seed set to " << Global::EVENTSEEDER->getSeed(this) << std::endl;
   
+
+
+
   LCCollection* STHcol = 0 ;
   try{
     STHcol = evt->getCollection( _inColName ) ;
@@ -198,6 +202,8 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
   
   if( STHcol != 0 ){    
     
+
+
     unsigned nCreatedHits=0;
     unsigned nDismissedHits=0;
     
@@ -220,6 +226,8 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
     
     for(int i=0; i< nSimHits; ++i){
       
+
+
       SimTrackerHit* simTHit = dynamic_cast<SimTrackerHit*>( STHcol->getElementAt( i ) ) ;
       
       const int cellID0 = simTHit->getCellID0() ;
@@ -231,6 +239,10 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
       DD4hep::DDRec::SurfaceMap::const_iterator sI = _map->find( cellID0 ) ;
 
       if( sI == _map->end() ){    
+
+        std::cout<< " DDPlanarDigiProcessor::processEvent(): no surface found for cellID : " 
+                 <<   cellid_decoder( simTHit ).valueString() <<std::endl;
+
         
         std::stringstream err ; err << " DDPlanarDigiProcessor::processEvent(): no surface found for cellID : " 
                                     <<   cellid_decoder( simTHit ).valueString()  ;
@@ -238,10 +250,13 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
       }
 
 
+
       const DDSurfaces::ISurface* surf = sI->second ;
 
 
       int layer  = cellid_decoder( simTHit )["layer"];
+
+
 
       DDSurfaces::Vector3D oldPos( simTHit->getPosition()[0], simTHit->getPosition()[1], simTHit->getPosition()[2] );
       
@@ -259,6 +274,7 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
                                 << *surf  
                                 << " distance: " << surf->distance(  dd4hep::mm * oldPos )
                                 << std::endl;        
+
         
         
         
@@ -288,10 +304,12 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
       DDSurfaces::Vector3D u = surf->u() ;
       DDSurfaces::Vector3D v = surf->v() ;
       
+
       // get local coordinates on surface
       DDSurfaces::Vector2D lv = surf->globalToLocal( dd4hep::mm * oldPos  ) ;
       double uL = lv[0] / dd4hep::mm ;
       double vL = lv[1] / dd4hep::mm ;
+
 
       bool accept_hit = false ;
       unsigned  tries   =  0 ;              
@@ -300,16 +318,17 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
       float resU = ( _resU.size() > 1 ?   _resU.at(  layer )     : _resU.at(0)   )  ;
       float resV = ( _resV.size() > 1 ?   _resV.at(  layer )     : _resV.at(0)   )  ; 
 
+
       while( tries < MaxTries ) {
         
         if( tries > 0 ) streamlog_out(DEBUG0) << "retry smearing for " <<  cellid_decoder( simTHit ).valueString() << " : retries " << tries << std::endl;
         
         double uSmear  = gsl_ran_gaussian( _rng, resU ) ;
         double vSmear  = gsl_ran_gaussian( _rng, resV ) ;
+
         
         // DDSurfaces::Vector3D newPosTmp = oldPos +  uSmear * u ;  
         // if( ! _isStrip )  newPosTmp = newPosTmp +  vSmear * v ;  
-        
         
         
         DDSurfaces::Vector3D newPosTmp = 1./dd4hep::mm  * ( ! _isStrip  ? 

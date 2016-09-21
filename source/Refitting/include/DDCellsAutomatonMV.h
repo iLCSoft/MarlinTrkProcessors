@@ -16,7 +16,7 @@
 #include <IMPL/TrackImpl.h>
 #include <IMPL/TrackerHitPlaneImpl.h>
 #include <UTIL/BitField64.h>
-#include <UTIL/ILDConf.h>
+/* #include <UTIL/ILDConf.h> */
 
 // KiTrack tools
 #include "KiTrack/SubsetHopfieldNN.h"
@@ -37,39 +37,44 @@
 #include "Tools/VXDHelixFitter.h"
 #include "ILDImpl/MiniVectorHit01.h"
 
+
+
+
+
 // IMarlin tools
 #include "MarlinTrk/IMarlinTrkSystem.h"
 #include "MarlinTrk/IMarlinTrack.h"
-#include "MarlinTrk/Factory.h"
+/* #include "MarlinTrk/Factory.h" */
 #include "MarlinTrk/MarlinTrkUtils.h"
 
-// GEAR tools
-#include <gear/GEAR.h>
-#include <gear/GearParameters.h>
-#include <gear/VXDLayerLayout.h>
-#include <gear/VXDParameters.h>
-#include <gear/BField.h>
 
 //DD4HEP
-#include "DDRec/Surface.h"
-#include "DD4hep/LCDD.h"
-#include "DD4hep/DD4hepUnits.h"
-#include "DDRec/SurfaceManager.h"
+/* #include "DDRec/Surface.h" */
+/* #include "DD4hep/LCDD.h" */
+/* #include "DD4hep/DD4hepUnits.h" */
+/* #include "DDRec/SurfaceManager.h" */
 
+
+
+////// FOR TEST VXDFitter
+
+#include "EVENT/Track.h"
+#include "EVENT/TrackerHit.h"
+#include "lcio.h"
+
+
+
+using namespace lcio;
 
 using namespace lcio ;
 using namespace marlin ;
 using namespace std ;
-using namespace gear ;
 using namespace KiTrack;
 using namespace KiTrackMarlin;
 namespace MarlinTrk{
   class IMarlinTrkSystem ;
 }
 
-namespace gear{
-class GearMgr ;
-}
 /** a simple typedef, making writing shorter. And it makes sense: a track consists of hits. But as a real track
  * has more information, a vector of hits can be considered as a "raw track". */
 typedef std::vector< IHit* > RawTrack;
@@ -133,7 +138,6 @@ class DDCellsAutomatonMV : public Processor {
   
 
   void InitialiseVTX(LCEvent * evt, EVENT::TrackerHitVec HitsTemp);
-  //void setupGearGeom( const gear::GearMgr* gearMgr ) ;
   void setupGeom() ;
   bool setCriteria( unsigned round );
   void RawTrackFit( std::vector < MarlinTrk::IMarlinTrack* > candMarlinTracks, std::vector< IMPL::TrackImpl* > &finalTracks ) ;
@@ -387,7 +391,6 @@ public:
    
    
 };
-
 
 
 #endif

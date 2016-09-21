@@ -8,9 +8,9 @@
 #include <climits>
 
 #include <UTIL/BitField64.h>
-#include <UTIL/ILDConf.h>
+// #include <UTIL/ILDConf.h>
 
-#include "MarlinTrk/Factory.h"
+// #include "MarlinTrk/Factory.h"
 #include "MarlinTrk/IMarlinTrack.h"
 #include "MarlinTrk/HelixTrack.h"
 #include "MarlinTrk/MarlinTrkUtils.h"
@@ -21,7 +21,6 @@
 #include "DDRec/Surface.h"
 #include "DDRec/SurfaceManager.h"
 #include "DDRec/DetectorData.h"
-#include "DDRec/DDGear.h"
 
 
 
@@ -264,7 +263,7 @@ DDCellsAutomatonMV::DDCellsAutomatonMV() : Processor("DDCellsAutomatonMV"){
 
 void DDCellsAutomatonMV::init() {
 
-  //this->setupGearGeom(Global::GEAR);
+
   this->setupGeom();
   
   /**********************************************************************************************/
@@ -294,10 +293,9 @@ void DDCellsAutomatonMV::init() {
   /**********************************************************************************************/
   
     // set upt the geometry
-  //_trkSystem =  MarlinTrk::Factory::createMarlinTrkSystem( "KalTest" , marlin::Global::GEAR , "" ) ;
-  
 
-  _trkSystem =  MarlinTrk::Factory::createMarlinTrkSystem( "DDKalTest" , marlin::Global::GEAR , "" ) ;
+  // _trkSystem =  MarlinTrk::Factory::createMarlinTrkSystem( "DDKalTest" , marlin::Global::GEAR , "" ) ;
+  _trkSystem =  MarlinTrk::Factory::createMarlinTrkSystem( "DDKalTest" , 0, "" ) ;
   // std::vector<int> _sub_det_ids;
   // _sub_det_ids.push_back(1); //Vertex id
   // _sub_det_ids.push_back(2); //SiTracker //FIXME: THIS SHOULD BE A PROPERTY
@@ -532,7 +530,9 @@ void DDCellsAutomatonMV::processEvent( LCEvent * evt ) {
            
     streamlog_out( DEBUG2 ) << "Fitting with Helix Fit\n";
     try{
-               
+
+
+      
       VXDHelixFitter helixFitter( trackCand->getLcioTrack() );
 
       TrackerHitVec testVec = trackCand->getLcioTrack()->getTrackerHits() ;
@@ -544,7 +544,8 @@ void DDCellsAutomatonMV::processEvent( LCEvent * evt ) {
 
       
       if( chi2OverNdf > _helixFitMax ){
-                  
+      
+          
 	streamlog_out( DEBUG2 ) << "Discarding track because of bad helix fit: chi2/ndf = " << chi2OverNdf << "\n";
 
 	// debug
@@ -553,8 +554,9 @@ void DDCellsAutomatonMV::processEvent( LCEvent * evt ) {
 	continue;
         
       }
-      else streamlog_out( DEBUG2 ) << "Keeping track because of good helix fit: chi2/ndf = " << chi2OverNdf << "\n";
-      
+      else {
+	streamlog_out( DEBUG2 ) << "Keeping track because of good helix fit: chi2/ndf = " << chi2OverNdf << "\n";
+      }
     }
     catch( VXDHelixFitterException e ){
       
@@ -571,11 +573,9 @@ void DDCellsAutomatonMV::processEvent( LCEvent * evt ) {
           
     streamlog_out( DEBUG3 ) << "Fitting with Kalman Filter\n";
     try{
-      
-
+            
       trackCand->fit();
 
-      
       streamlog_out( DEBUG3 ) << " Track " << trackCand 
 			      << " chi2Prob = " << trackCand->getChi2Prob() 
 			      << "( chi2=" << trackCand->getChi2() 
@@ -818,9 +818,9 @@ void DDCellsAutomatonMV::InitialiseVTX( LCEvent * evt, EVENT::TrackerHitVec Hits
       
       TrackerHitPlane * hit = dynamic_cast<TrackerHitPlane*>(hitCollection->getElementAt(ielem));
 
-      gear::Vector3D U(1.0,hit->getU()[1],hit->getU()[0],gear::Vector3D::spherical);
-      gear::Vector3D V(1.0,hit->getV()[1],hit->getV()[0],gear::Vector3D::spherical);
-      gear::Vector3D Z(0.0,0.0,1.0);
+      DDSurfaces::Vector3D U(1.0,hit->getU()[1],hit->getU()[0],DDSurfaces::Vector3D::spherical);
+      DDSurfaces::Vector3D V(1.0,hit->getV()[1],hit->getV()[0],DDSurfaces::Vector3D::spherical);
+      DDSurfaces::Vector3D Z(0.0,0.0,1.0);
       
       const float eps = 1.0e-07;
       // V must be the global z axis 
@@ -950,10 +950,11 @@ void DDCellsAutomatonMV::InitialiseVTX( LCEvent * evt, EVENT::TrackerHitVec Hits
 	else if ( ( trkhit_P = dynamic_cast<TrackerHitPlane*>( hitCollection->getElementAt( ielem ) ) ) )  {
 	  
 	  // first we need to check if the measurement vectors are aligned with the global coordinates 
-	  gear::Vector3D U(1.0,trkhit_P->getU()[1],trkhit_P->getU()[0],gear::Vector3D::spherical);
-	  gear::Vector3D V(1.0,trkhit_P->getV()[1],trkhit_P->getV()[0],gear::Vector3D::spherical);
-	  gear::Vector3D Z(0.0,0.0,1.0);
-	  
+	  DDSurfaces::Vector3D U(1.0,trkhit_P->getU()[1],trkhit_P->getU()[0],DDSurfaces::Vector3D::spherical);
+	  DDSurfaces::Vector3D V(1.0,trkhit_P->getV()[1],trkhit_P->getV()[0],DDSurfaces::Vector3D::spherical);
+	  DDSurfaces::Vector3D Z(0.0,0.0,1.0);
+
+
 	  const float eps = 1.0e-07;
 	  // V must be the global z axis 
 	  if( fabs(1.0 - V.dot(Z)) > eps ) {
@@ -1197,7 +1198,6 @@ void DDCellsAutomatonMV::CreateMiniVectors( int sector ) {
 
 
 
-//void DDCellsAutomatonMV::setupGearGeom( const gear::GearMgr* gearMgr ){
 void DDCellsAutomatonMV::setupGeom(){
 
   DD4hep::Geometry::LCDD& lcdd = DD4hep::Geometry::LCDD::getInstance();

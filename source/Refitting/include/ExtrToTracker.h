@@ -143,8 +143,12 @@ protected:
    */
   std::string _input_track_col_name ;
   
+
+  /** output collection name for the not used hits.
+   */
+  std::string _output_not_used_col_name ;
   
-  /** refitted track collection name.
+  /** output track collection name.
    */
   std::string _output_track_col_name ;
   
@@ -192,7 +196,6 @@ protected:
 
   std::vector<std::map<int , std::vector<TrackerHitPlane* > > > _vecMapsElHits;
 
-  
   
 } ;
 
