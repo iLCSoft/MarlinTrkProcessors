@@ -111,7 +111,8 @@ protected:
   float _initialTrackError_z0;
   float _initialTrackError_tanL;
   float _maxChi2PerHit;
-  
+  double _mass ;
+
   int _n_run ;
   int _n_evt ;
 

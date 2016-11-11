@@ -13,9 +13,15 @@
  
  =============================================================================================================
 
+
   ---------
  | v02-04  |
   ---------
+
+  F.Gaede
+   - add parameter ParticleMass to RefitProcessor
+      - can fit with different mass hypotheses
+   
 
   Y. Voutsinas 
    - added DDSpacePointBuilder :  using DDRec rather than GEAR 

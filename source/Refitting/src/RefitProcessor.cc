@@ -130,8 +130,11 @@ RefitProcessor::RefitProcessor() : Processor("RefitProcessor") {
 			      "Fit direction: -1: backward [default], +1: forward",
 			      _fitDirection,
 			      int(-1) );
-  
 
+  registerProcessorParameter( "ParticleMass",
+			      "particle mass that is used in the fit - default is the pion mass: 0.13957018 )",
+			      _mass ,
+			      double(0.13957018) ) ;
 
 }
 
@@ -261,6 +264,9 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
 
       MarlinTrk::IMarlinTrack* marlinTrk = _trksystem->createTrack();
       
+      marlinTrk->setMass( _mass ) ;
+
+
       TrackImpl* refittedTrack = new TrackImpl ; 
       
       try {
