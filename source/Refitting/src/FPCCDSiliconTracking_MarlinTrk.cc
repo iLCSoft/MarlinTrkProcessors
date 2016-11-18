@@ -1644,35 +1644,35 @@ TrackExtended * FPCCDSiliconTracking_MarlinTrk::TestTriplet(TrackerHitExtended *
 
   if(std::isnormal(d0) == false){
     if( std::isinf(d0) == true ){ streamlog_out(DEBUG1) << "d0 is inf" << std::endl; }
-    else if( isnan(d0) == true ){ streamlog_out(DEBUG1) << "d0 is nan" << std::endl; }
+    else if( std::isnan(d0) == true ){ streamlog_out(DEBUG1) << "d0 is nan" << std::endl; }
     else{  streamlog_out(DEBUG1) << "Something is wrong with d0" << std::endl; }
     failed = true;
     quality_code += 10;
   }
   else if(std::isnormal(z0) == false){
     if(std::isinf(z0)){streamlog_out(DEBUG1) << "z0 is inf" << std::endl;}
-    else if(isnan(z0)){streamlog_out(DEBUG1) << "z0 is nan" << std::endl;}
+    else if(std::isnan(z0)){streamlog_out(DEBUG1) << "z0 is nan" << std::endl;}
     else{  streamlog_out(DEBUG1) << "Something is wrong with z0" << std::endl;}
     failed = true;
     quality_code += 100;
   }
   else if(std::isnormal(omega) == false){
     if(std::isinf(omega)){streamlog_out(DEBUG1) << "omega is inf" << std::endl;}
-    else if(isnan(omega)){streamlog_out(DEBUG1) << "omega is nan" << std::endl;}
+    else if(std::isnan(omega)){streamlog_out(DEBUG1) << "omega is nan" << std::endl;}
     else{streamlog_out(DEBUG1) << "Something is wrong with omega" << std::endl;}
     failed = true;
     quality_code += 1000;
   }
   else if(std::isnormal(phi0) == false){
     if(std::isinf(phi0)){streamlog_out(DEBUG1) << "phi0 is inf" << std::endl;}
-    else if(isnan(phi0)){streamlog_out(DEBUG1) << "phi0 is nan" << std::endl;}
+    else if(std::isnan(phi0)){streamlog_out(DEBUG1) << "phi0 is nan" << std::endl;}
     else{streamlog_out(DEBUG1) << "Something is wrong with phi0" << std::endl;}
     failed = true;
     quality_code += 10000;
   }
   else if(std::isnormal(tanlambda) == false){
     if(std::isinf(tanlambda)){streamlog_out(DEBUG1) << "tanlambda is inf" << std::endl;}
-    else if(isnan(tanlambda)){streamlog_out(DEBUG1) << "tanlambda is nan" << std::endl;}
+    else if(std::isnan(tanlambda)){streamlog_out(DEBUG1) << "tanlambda is nan" << std::endl;}
     else{streamlog_out(DEBUG1) << "Something is wrong with tanlambda" << std::endl;}
     failed = true;
     quality_code += 100000;
