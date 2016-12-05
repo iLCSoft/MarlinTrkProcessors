@@ -35,14 +35,10 @@
 
 #include "marlin/Global.h"
 
-//---- GEAR ----
-/* #include "gear/GEAR.h" */
-/* #include <gear/ZPlanarParameters.h> */
-/* #include <gear/ZPlanarLayerLayout.h> */
-/* #include "gear/BField.h" */
-
 #include "DDRec/Surface.h"
 #include "DDRec/SurfaceManager.h" 
+#include "DDRec/DetectorSurfaces.h"
+#include "DDRec/SurfaceHelper.h"
 
 
 // ----- include for verbosity dependend logging ---------
@@ -63,6 +59,8 @@ namespace MarlinTrk{
   class IMarlinTrkSystem ;
 }
 
+using namespace DD4hep::DDRec;
+
 
 class ExtrToTracker : public marlin::Processor {
 
@@ -73,7 +71,7 @@ public:
   virtual marlin::Processor*  newProcessor() { return new ExtrToTracker ; }
   
   ExtrToTracker() ;
-  
+
   /** Called at the begin of the job before anything is read.
    * Use to initialize the processor, e.g. book histograms.
    */
@@ -129,6 +127,9 @@ public:
 
   void getGeoInfo();
 
+  void FindAndAddHit(size_t& idet, int& elID, MarlinTrk::IMarlinTrack*& mtrk, EVENT::TrackerHitVec& trkHits, int& SITHitsPerTrk, int& layer);
+
+  void getCellID0AndPositionInfo(LCCollection*& col );
 
 
 protected:
@@ -175,7 +176,6 @@ protected:
   int TotalSITHits ;
   int _nHitsChi2 ;
 
-  float _maxChi2PerHit;
   float _bField;
 
   bool _performFinalRefit ;
@@ -189,6 +189,7 @@ protected:
 
   StringVec _vecDigiHits;
   StringVec _vecSubdetName;
+  std::vector<bool > _vecSubdetIsBarrel;
   std::vector<int > _vecSubdetNLayers;
   std::vector<int > _vecSubdetID;
   std::vector<LCCollection* > _vecDigiHitsCol;
@@ -196,7 +197,11 @@ protected:
 
   std::vector<std::map<int , std::vector<TrackerHitPlane* > > > _vecMapsElHits;
 
-  
+  std::vector<std::vector<TrackerHitPlane* > > _vecvecHitsInCol;
+ 
+//  DD4hep::DDRec::SurfaceMap _surfMap;
+
+ 
 } ;
 
 

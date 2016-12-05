@@ -2,22 +2,20 @@
 
 #include <IMPL/TrackerHitPlaneImpl.h>
 
-
-// #include "TFile.h"
-// #include "TTree.h"
-// #include "LinkDef.h"
 #include "MarlinTrk/MarlinTrkUtils.h"
 
 #include "UTIL/Operators.h"
 
 #include "DD4hep/LCDD.h"
 #include "DD4hep/DD4hepUnits.h"
-#include "DDRec/Surface.h"
-#include "DDRec/SurfaceManager.h"
 #include "DDRec/DetectorData.h"
-#include "DDRec/DDGear.h"
 #include "DD4hep/DetType.h"
 #include "DD4hep/DetectorSelector.h"
+
+#include <UTIL/BitField64.h>
+#include <UTIL/BitSet32.h>
+#include <UTIL/ILDConf.h>
+#include "DDKalTest/DDKalTestConf.h"
 
 #include <algorithm>
 
@@ -31,14 +29,13 @@ using namespace lcio ;
 using namespace marlin ;
 using namespace MarlinTrk ;
 
-
+using namespace DD4hep::DDRec;
 
 //------------------------------------------------------------------------------------------
 
 struct PtSort {  // sort tracks wtr to pt - largest first
   inline bool operator()( const lcio::LCObject* l, const lcio::LCObject* r) {      
     return CxxUtils::fpcompare::less( std::abs( ( (const lcio::Track*) l )->getOmega() ), std::abs( ( (const lcio::Track*) r )->getOmega() ) );
-    //return ( std::abs( ( (const lcio::Track*) l )->getOmega() ) < std::abs( ( (const lcio::Track*) r )->getOmega() )  );  // pt ~ 1./omega  
   }
 };
 //------------------------------------------------------------------------------------------
@@ -57,7 +54,6 @@ struct InversePtSort {  // sort tracks wtr to pt - smallest first
 struct ZSort {  // sort track segments wtr to Z - smallest first
   inline bool operator()( const lcio::LCObject* l, const lcio::LCObject* r) {      
     return CxxUtils::fpcompare::less( std::abs( ( (const lcio::Track*) l )->getZ0() ), std::abs( ( (const lcio::Track*) r )->getZ0() ) );
-    //return ( std::abs( ( (const lcio::Track*) l )->getZ0() ) < std::abs( ( (const lcio::Track*) r )->getZ0() )  );  // pt ~ 1./omega  
   }
 };
 
@@ -70,7 +66,7 @@ ExtrToTracker aExtrToTracker ;
 ExtrToTracker::ExtrToTracker() : Processor("ExtrToTracker") {
   
   // modify processor description
-  _description = "ExtrToTracker refits an input VXD track collection, and used IMarlinTrk tools to propagate it to the main tracker" ;
+  _description = "ExtrToTracker refits an input VXD track collection and uses IMarlinTrk tools to propagate it to the main tracker" ;
   
   
   // register steering parameters: name, description, class-variable, default value
@@ -92,7 +88,7 @@ ExtrToTracker::ExtrToTracker() : Processor("ExtrToTracker") {
 
   registerInputCollections(LCIO::TRACKERHITPLANE,
                            "vecDigiHits",
-                           "vector of name of the digi hits collection - nned to be syncro with vecSubdetName!",
+                           "vector of name of the digi hits collection - need to be syncro with vecSubdetName!",
                            _vecDigiHits,
                            vecDigiHitsDefault );
 
@@ -167,19 +163,15 @@ void ExtrToTracker::init() {
   // usually a good idea to
   printParameters() ;
   
-
-
+  
   getGeoInfo();
 
 
-  _trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( "DDKalTest" , marlin::Global::GEAR , "" ) ;
+  _trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( "DDKalTest" , 0 , "" ) ;
 
 
-
-
-  //   /////////////////////////////
+  ///////////////////////////////
 	    
-
   
   if( _trksystem == 0 ){
     
@@ -200,10 +192,6 @@ void ExtrToTracker::init() {
   TotalSITHits = 0 ;
 
 
-
-  //_maxChi2PerHit = 100;
-  _maxChi2PerHit = _Max_Chi2_Incr;
-    
 }
 
 
@@ -215,7 +203,7 @@ void ExtrToTracker::processRunHeader( LCRunHeader* run) {
 void ExtrToTracker::processEvent( LCEvent * evt ) { 
 
 
-
+  //printParameters();
 
 
   //-- note: this will not be printed if compiled w/o MARLINDEBUG=1 !
@@ -270,10 +258,6 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
     // loop over the input tracks and refit using KalTest    
     for(int i=0; i< nTracks ; ++i) {
 
-
-      
-     
-
       int SITHitsPerTrk = 0 ;
       
       Track* track = dynamic_cast<Track*>( inputTrackVec->getElementAt( i ) ) ;
@@ -282,10 +266,13 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
      
       EVENT::TrackerHitVec trkHits = track->getTrackerHits() ;
       
+      streamlog_out(DEBUG2) <<"---- tracks n = "<< i << "   n VTX hits = "<<  trkHits.size() << std::endl;
 	
       // sort the hits in R, so here we are assuming that the track came from the IP 
  
       sort(trkHits.begin(), trkHits.end(), ExtrToTracker::compare_r() );
+
+      double z_last_hit = (trkHits.back())->getPosition()[2]; //mm
 	
       EVENT::TrackerHitVec::iterator it = trkHits.begin();
 	
@@ -304,19 +291,14 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 	int fit_status = marlin_trk->fit(); 
 	  
 	if ( fit_status == 0 ){
-	    
-	  int testFlag=0;
-
-
-
-
+ 
 	    
 	  double chi2 = 0 ;
 	  int ndf = 0 ;
-	  TrackStateImpl trkState;	
+	  TrackStateImpl trkState0;	
 	    
 	    
-	  UTIL::BitField64 encoder(  lcio::ILDCellID0::encoder_string ) ; //do not change it, code will not work with a different encoder
+	  UTIL::BitField64 encoder(  lcio::ILDCellID0::encoder_string ) ; 
 	    
 	  encoder.reset() ;  // reset to 0
 	    
@@ -329,24 +311,30 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 	  // starting loop on subdetectors and loop on each subdetector layer
 	  //________________________________________________________________________________________________________
 	      
-	  //printParameters();
-
-
-
 
 
 
 	  for (size_t idet=0; idet<_vecSubdetName.size(); idet++){
-	    streamlog_out(DEBUG4) << "LOOP - idet = " << idet << " begins "<< std::endl;
+	    streamlog_out(DEBUG4) << "LOOP - detID = " <<  _vecSubdetID.at(idet) << " begins "<< std::endl;
         
 	    if( _vecDigiHitsCol.at(idet) != 0 ){ 
 
 
-	      for (int iL=0;iL<_vecSubdetNLayers.at(idet);iL++){
-		streamlog_out(DEBUG4) << "LOOP" << iL << " begins "<< std::endl;
+	      for (int iL=0; iL<_vecSubdetNLayers.at(idet); iL++){
+		streamlog_out(DEBUG4) << "LOOP - layer = " << iL << " begins "<< std::endl;
 	 	
-		encoder[lcio::ILDCellID0::subdet] = _vecSubdetID.at(idet);
-		encoder[lcio::ILDCellID0::layer]  = iL;   
+		encoder[DDKalTest::CellIDEncoding::instance().subdet()] = _vecSubdetID.at(idet);
+		int side = 0;
+		if ( _vecSubdetIsBarrel.at(idet) ) side = 0; //lcio::ILDDetID::barrel;
+		else {
+		  // for disks: side +1 corresposds to positive z and -1 to negative z 
+		  // decide to go to either the left or right side according to the z position of the last hit in the track 
+		  if ( z_last_hit > 0. ) side = 1; 
+		  else  side = -1;
+		}
+		encoder[DDKalTest::CellIDEncoding::instance().side()] = side;
+		encoder[DDKalTest::CellIDEncoding::instance().layer()] = iL;  
+		
 		layerID = encoder.lowWord();  
 		streamlog_out(DEBUG4) << "layerID = " << layerID << std::endl;
 		
@@ -354,25 +342,21 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 
    
 
-		if ( marlin_trk->propagateToLayer( layerID, trkState, chi2, ndf, elementID, IMarlinTrack::modeClosest) == MarlinTrk::IMarlinTrack::success) {
-		    
+		if ( marlin_trk->propagateToLayer( layerID, trkState0, chi2, ndf, elementID, IMarlinTrack::modeClosest) == MarlinTrk::IMarlinTrack::success) {
 
-		  streamlog_out(DEBUG4) << "-- layerID " << layerID << std::endl;
-
-
-		  const FloatVec& covLCIO = trkState.getCovMatrix();
-		  const float* pivot = trkState.getReferencePoint();
+		  const FloatVec& covLCIO = trkState0.getCovMatrix();
+		  const float* pivot = trkState0.getReferencePoint();
 		  double r = sqrt( pivot[0]*pivot[0]+pivot[1]*pivot[1] ) ;
 		  
 		  streamlog_out( DEBUG4 ) << " kaltest track parameters: "
 					  << " chi2/ndf " << chi2 / ndf  
 					  << " chi2 " <<  chi2 << std::endl 
-		    
-					  << "\t D0 "          <<  trkState.getD0() <<  "[+/-" << sqrt( covLCIO[0] ) << "] " 
-					  << "\t Phi :"        <<  trkState.getPhi()<<  "[+/-" << sqrt( covLCIO[2] ) << "] " 
-					  << "\t Omega "       <<  trkState.getOmega() <<  "[+/-" << sqrt( covLCIO[5] ) << "] " 
-					  << "\t Z0 "          <<  trkState.getZ0() <<  "[+/-" << sqrt( covLCIO[9] ) << "] " 
-					  << "\t tan(Lambda) " <<  trkState.getTanLambda() <<  "[+/-" << sqrt( covLCIO[14]) << "] " 
+		      
+					  << "\t D0 "          <<  trkState0.getD0() <<  "[+/-" << sqrt( covLCIO[0] ) << "] " 
+					  << "\t Phi :"        <<  trkState0.getPhi()<<  "[+/-" << sqrt( covLCIO[2] ) << "] " 
+					  << "\t Omega "       <<  trkState0.getOmega() <<  "[+/-" << sqrt( covLCIO[5] ) << "] " 
+					  << "\t Z0 "          <<  trkState0.getZ0() <<  "[+/-" << sqrt( covLCIO[9] ) << "] " 
+					  << "\t tan(Lambda) " <<  trkState0.getTanLambda() <<  "[+/-" << sqrt( covLCIO[14]) << "] " 
 		      
 					  << "\t pivot : [" << pivot[0] << ", " << pivot[1] << ", "  << pivot[2] 
 					  << " - r: " << r << "]" 
@@ -381,93 +365,8 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 		  
 		  streamlog_out(DEBUG4) << " layer " << iL << " max search distances Z : Rphi " << _searchSigma*sqrt( covLCIO[9] ) << " : " << _searchSigma*sqrt( covLCIO[0] ) << std::endl ;
 
+		  FindAndAddHit(idet, elementID, marlin_trk, trkHits, SITHitsPerTrk, iL);
 
-		  //_______________________________________________________________________________________
-		  //
-		  
-		  streamlog_out(DEBUG2) << " element ID " << elementID << std::endl;
-		  
-		  if ( elementID != 0 ){
-		    
-		    testFlag = 1;
-		    
-		    float dU_spres = 0.007;
-		    float dV_spres = 0.05;
-
-		    bool isSuccessfulFit = false; 
-
-
-
-
-		    std::string cellIDEcoding = _vecDigiHitsCol.at(idet)->getParameters().getStringVal("CellIDEncoding") ;  
-		    std::vector<int > vecIDs;
-		    vecIDs.push_back(elementID);
-		    getNeighbours(elementID, vecIDs, cellIDEcoding, _vecMapLayerNModules.at(idet)); // TO BE IMPROVED AND STUDIED
-
-
-		    TrackerHitPlane* BestHit;
-		    //int nhits=0;
-		    //BestHit = getSiHit(_vecDigiHitsCol.at(idet), elementID, marlin_trk, nhits);
-		    //BestHit = getSiHit( _vecMapsElHits.at(idet)[elementID], marlin_trk);
-		    BestHit = getSiHit(vecIDs, _vecMapsElHits.at(idet), marlin_trk);
-
-		    if (BestHit != 0){
-		      			  
-		      streamlog_out(DEBUG4) << " --- Best hit found: call add and fit _Max_Chi2_Incr "<< _Max_Chi2_Incr<< std::endl ; 
-						  
-		      double chi2_increment = 0.;
-
-			
-		      //smearing on the hit is really needed? has not been done in digi? - turned off for the moment
-		      bool doSinglePointResolutionSmearing = false; //make it a general parameter
-
-		      if (doSinglePointResolutionSmearing){
-			TrackerHitPlaneImpl *TestHitPlane = new TrackerHitPlaneImpl ;   
-			TestHitPlane->setCellID0(BestHit->getCellID0()) ;
-			TestHitPlane->setPosition(BestHit->getPosition());
-			TestHitPlane->setdU(dU_spres);
-			TestHitPlane->setdV(dV_spres);
-			isSuccessfulFit = marlin_trk->addAndFit( TestHitPlane, chi2_increment, _Max_Chi2_Incr ) == IMarlinTrack::success ;
-			delete TestHitPlane ;
-		      } else {
-			isSuccessfulFit = marlin_trk->addAndFit( BestHit, chi2_increment, _Max_Chi2_Incr ) == IMarlinTrack::success ;
-			streamlog_out(DEBUG4) << " --- chi2_increment "<< chi2_increment << std::endl ; 
-			streamlog_out(DEBUG4) << " --- isSuccessfulFit "<< isSuccessfulFit << std::endl ; 
-		      }
-
-		  
-		
-		      TotalSITHits++;
-			
-		      if ( isSuccessfulFit ){
-			  
-			streamlog_out(DEBUG4) << " successful fit " << std::endl ; 
-			streamlog_out(DEBUG4) << " increment in the chi2 = " << chi2_increment << "  , max chi2 to accept the hit " << _Max_Chi2_Incr  << std::endl;
-			  
-			trkHits.push_back(BestHit) ;
-			  
-			  
-			streamlog_out(DEBUG4) << " +++ hit added " << BestHit << std::endl ;
-	      
-
-			SITHitsPerTrk++;
-			SITHitsFitted++;
-			  
-			  
-		      } //end successful fit
-		      else{
-			  
-			SITHitsNonFitted++;
-			streamlog_out(DEBUG4) << " +++ HIT NOT ADDED "<< std::endl;
-			  
-		      }
-
-
-		    }   // besthit found
-		    		  
-
-		  }//elementID !=0 
-		  
 		} // successful propagation to layer
 		  	      
 	      } // loop to all subdetector layers
@@ -501,79 +400,79 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 	  } else { //fg: ------- perform a final refit - does not work right now ...
 
 	    // refitted track collection creation
-	    if (  testFlag==1 ){
 	      
+	    TrackStateImpl* trkState = new TrackStateImpl() ;
+	    double chi2_fin = 0. ;
+	    int ndf_fin = 0 ;
 	      
-	      TrackStateImpl* trkState = new TrackStateImpl() ;
-	      double chi2_fin = 0. ;
-	      int ndf_fin = 0 ;
-	      
-	      marlin_trk->getTrackState(*trkState, chi2_fin, ndf_fin);
-	      //const FloatVec& covMatrix = trkState->getCovMatrix();
+	    marlin_trk->getTrackState(*trkState, chi2_fin, ndf_fin);
+	    //const FloatVec& covMatrix = trkState->getCovMatrix();
 
 
-	      //////////////////////////////////////////////////////////////////////////////////
+	    //////////////////////////////////////////////////////////////////////////////////
 	      
 
-	      sort(trkHits.begin(), trkHits.end(), ExtrToTracker::compare_r() );
+	    sort(trkHits.begin(), trkHits.end(), ExtrToTracker::compare_r() );
 
 
 
-	      bool fit_backwards = IMarlinTrack::backward;
-	      //bool fit_forwards = IMarlinTrack::forward;
-	      MarlinTrk::IMarlinTrack* marlinTrk = _trksystem->createTrack();		
+	    bool fit_backwards = IMarlinTrack::backward;
+	    //bool fit_forwards = IMarlinTrack::forward;
+	    MarlinTrk::IMarlinTrack* marlinTrk = _trksystem->createTrack();		
 
 
-	      std::vector<EVENT::TrackerHit* > vec_hits;
-	      vec_hits.clear();
-	      for(unsigned int ih=0; ih<trkHits.size(); ih++){
-		vec_hits.push_back(trkHits.at(ih));
-	      }//end loop on hits
-	      streamlog_out(DEBUG) << " --- vec_hits.size() = " <<   vec_hits.size()  <<std::endl;	
+	    std::vector<EVENT::TrackerHit* > vec_hits;
+	    vec_hits.clear();
+	    for(unsigned int ih=0; ih<trkHits.size(); ih++){
+	      vec_hits.push_back(trkHits.at(ih));
+	    }//end loop on hits
+	    streamlog_out(DEBUG1) << " --- vec_hits.size() = " <<   vec_hits.size()  <<std::endl;	
 
 
-	      int ndf_test_0;
-	      int return_error_0 = marlinTrk->getNDF(ndf_test_0);
-	      streamlog_out(DEBUG3) << "++++ 0 - getNDF returns " << return_error_0 << std::endl;
-	      streamlog_out(DEBUG3) << "++++ 0 - getNDF returns ndf = " << ndf_test_0 << std::endl;
+	    // int ndf_test_0;
+	    // int return_error_0 = marlinTrk->getNDF(ndf_test_0);
+	    // streamlog_out(DEBUG1) << "++++ 0 - getNDF returns " << return_error_0 << std::endl;
+	    // streamlog_out(DEBUG1) << "++++ 0 - getNDF returns ndf = " << ndf_test_0 << std::endl;
 
 
-	      //Kalman filter smoothing - fit track from out to in
-	      int error_fit =  createFit(vec_hits, marlinTrk, trkState, _bField, fit_backwards, _maxChi2PerHit);
-	      streamlog_out(DEBUG) << "---- createFit - error_fit = " << error_fit << std::endl;
+	    //Kalman filter smoothing - fit track from out to in
+	    int error_fit =  createFit(vec_hits, marlinTrk, trkState, _bField, fit_backwards, _Max_Chi2_Incr);
+	    streamlog_out(DEBUG) << "---- createFit - error_fit = " << error_fit << std::endl;
 
-	      bool fit_direction  = fit_backwards ;
+	    bool fit_direction  = fit_backwards ;
 
-	      if (error_fit == 0) {
-		int error = finaliseLCIOTrack(marlinTrk, lcio_trk, vec_hits, fit_direction );
-		streamlog_out(DEBUG) << "---- finalisedLCIOTrack - error = " << error << std::endl;
+	    if (error_fit == 0) {
+	      int error = finaliseLCIOTrack(marlinTrk, lcio_trk, vec_hits, fit_direction );
+	      streamlog_out(DEBUG) << "---- finalisedLCIOTrack - error = " << error << std::endl;
 		
-		int ndf_test;
-		int return_error = marlinTrk->getNDF(ndf_test);
-		streamlog_out(DEBUG3) << "++++ getNDF returns " << return_error << std::endl;
-		streamlog_out(DEBUG3) << "++++ getNDF returns ndf = " << ndf_test << std::endl;
+	      // int ndf_test;
+	      // int return_error = marlinTrk->getNDF(ndf_test);
+	      // streamlog_out(DEBUG3) << "++++ getNDF returns " << return_error << std::endl;
+	      // streamlog_out(DEBUG3) << "++++ getNDF returns ndf = " << ndf_test << std::endl;
 
 
-		if (error!=0){
+	      if (error!=0){
             
-		  streamlog_out(DEBUG3) << "Error from finaliseLCIOTrack non zero! deleting tracks. error=" << error <<" noHits: "<<trkHits.size()<<" marlinTrk: "<<marlinTrk<<" lcio_trk: "<<lcio_trk<< std::endl;
-            
-		  delete lcio_trk;
-		  continue ; 
-          
-		}
-	      } else {
-		streamlog_out(DEBUG3) << "Error from createFit non zero! deleting tracks. error_fit=" << error_fit << std::endl;
-              
+		streamlog_out(DEBUG3) << "Error from finaliseLCIOTrack non zero! deleting tracks. error=" << error <<" noHits: "<<trkHits.size()<<" marlinTrk: "<<marlinTrk<<" lcio_trk: "<<lcio_trk<< std::endl;
+  
 		delete lcio_trk;
+		delete marlinTrk;
 		continue ; 
-        
+          
 	      }
+	    } else {
+	      streamlog_out(DEBUG3) << "Error from createFit non zero! deleting tracks. error_fit=" << error_fit << std::endl;
+              
+	      delete lcio_trk;
+	      delete marlinTrk;
+	      continue ; 
+        
+	    }
 
-	      delete trkState;
+	    delete trkState;
 
-	    } // end of the creation of the refitted track collection
 	  } // !_perfomFinalRefit 
+
 
 	      
 	  // fit finished - get hits in the fit
@@ -592,51 +491,37 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 	    continue ; 
 	  }
 	    
-	    
+	  marlinTrk->getOutliers(outliers);
+	  
 	  std::vector<TrackerHit*> all_hits;
-	  all_hits.reserve(300);
-	    
-	    
+	  all_hits.reserve( hits_in_fit.size() + outliers.size() );
+
 	  for ( unsigned ihit = 0; ihit < hits_in_fit.size(); ++ihit) {
 	    all_hits.push_back(hits_in_fit[ihit].first);
 	  }
-	    
-	  UTIL::BitField64 cellID_encoder(  lcio::ILDCellID0::encoder_string ) ; //do not change it, code will not work with a different encoder
-	    
-	  MarlinTrk::addHitNumbersToTrack(lcio_trk, all_hits, true, cellID_encoder);
-	    
-	  marlinTrk->getOutliers(outliers);
-	    
+
 	  for ( unsigned ihit = 0; ihit < outliers.size(); ++ihit) {
 	    all_hits.push_back(outliers[ihit].first);
 	  }
-	    
-	  MarlinTrk::addHitNumbersToTrack(lcio_trk, all_hits, false, cellID_encoder);
-	    
-	  int nhits_in_vxd = lcio_trk->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::VXD - 2 ];
-	  int nhits_in_ftd = lcio_trk->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::FTD - 2 ];
-	  int nhits_in_sit = lcio_trk->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SIT - 2 ];
-	  int nhits_in_tpc = lcio_trk->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::TPC - 2 ];
-	  int nhits_in_set = lcio_trk->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SET - 2 ];
-	    
-	    
-	  streamlog_out( DEBUG4 ) << " Hit numbers for Track "<< lcio_trk->id() << ": "
-				  << " vxd hits = " << nhits_in_vxd
-				  << " ftd hits = " << nhits_in_ftd
-				  << " sit hits = " << nhits_in_sit
-				  << " tpc hits = " << nhits_in_tpc
-				  << " set hits = " << nhits_in_set
-				  << std::endl;
-	    
-	    
-	  if (nhits_in_vxd > 0) lcio_trk->setTypeBit( lcio::ILDDetID::VXD ) ;
-	  if (nhits_in_ftd > 0) lcio_trk->setTypeBit( lcio::ILDDetID::FTD ) ;
-	  if (nhits_in_sit > 0) lcio_trk->setTypeBit( lcio::ILDDetID::SIT ) ;
-	  if (nhits_in_tpc > 0) lcio_trk->setTypeBit( lcio::ILDDetID::TPC ) ;
-	  if (nhits_in_set > 0) lcio_trk->setTypeBit( lcio::ILDDetID::SET ) ;
-	    
-	  // trackCandidates.push_back(lcio_trk) ;  // trackCandidates vector stores all the candidate tracks of the event
-	    
+	     
+
+	  UTIL::BitField64 encoder2(  lcio::ILDCellID0::encoder_string );
+	  encoder2.reset() ;  // reset to 0
+	  MarlinTrk::addHitNumbersToTrack(lcio_trk, all_hits, false, encoder2);
+	  MarlinTrk::addHitNumbersToTrack(lcio_trk, hits_in_fit, true, encoder2);
+	  
+	  
+	  streamlog_out( MESSAGE4 )  << "ExtrToTracker::processEvent - Hit numbers for track " << lcio_trk->id() << ":  " << std::endl;
+	  int detID = 0;
+	  for (size_t ip=0; ip<lcio_trk->subdetectorHitNumbers().size(); ip=ip+2){
+	    detID++;
+	    streamlog_out( MESSAGE4 )  << "  det id " << detID 
+				       << " , nhits in track = " << lcio_trk->subdetectorHitNumbers()[ip] 
+				       << " , nhits in fit = " << lcio_trk->subdetectorHitNumbers()[ip+1]
+				       << std::endl;
+	    if (lcio_trk->subdetectorHitNumbers()[ip] > 0) lcio_trk->setTypeBit( detID ) ;
+	  }
+	    	    
 	  trackVec->addElement( lcio_trk );
 	    
 
@@ -646,11 +531,12 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
       } // good initialisation status
 
 
-
       delete marlin_trk;
       
     }    // for loop to the tracks 
     
+
+
     //-------------------------------------------------------------------------------------------------------		
    
 
@@ -673,7 +559,6 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
       for(std::map<int , std::vector<TrackerHitPlane* > >::iterator iterator = _vecMapsElHits.at(iDet).begin(); iterator != _vecMapsElHits.at(iDet).end(); iterator++) {
 	std::vector<TrackerHitPlane* > vecHits = iterator->second;
 	for(size_t iHitOnEl=0; iHitOnEl<vecHits.size(); iHitOnEl++){
-	  std::cout<< "-------- pointer to tracker hit =  " << vecHits.at(iHitOnEl) << std::endl;
 	  notUsedHitsVec->addElement( vecHits.at(iHitOnEl) );
 	}//end loop on hits on each det element
       }//end loop on map detEl <--> vector of hits on the detEl
@@ -690,8 +575,6 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
   ++_n_evt ;
   
   //cout << " event " << _n_evt << std::endl ;
-
-
 
   
 }
@@ -782,60 +665,95 @@ int ExtrToTracker::FitInit2( Track* track, MarlinTrk::IMarlinTrack* _marlinTrk )
 void ExtrToTracker::fillVecSubdet(lcio::LCEvent*& evt){
 
 
-  //_vecSubdetNLayers.clear();
-  //_vecSubdetID.clear();
   _vecDigiHitsCol.clear();
 
   for (size_t idet=0; idet<_vecSubdetName.size(); idet++){
        
     streamlog_out(DEBUG4) << "idet = " << idet << std::endl;   
- 
-    // int nSubdetLayers = 0;
-    // int idSubdet = 0;
 
     if ( _vecDigiHits.at(idet)!="" ){ 
 	 	
       LCCollection* colDigi = 0 ;
       try{
 	colDigi = evt->getCollection( _vecDigiHits.at(idet) ) ;
+	getCellID0AndPositionInfo(colDigi);
+	
       }catch(DataNotAvailableException &e){
 	streamlog_out(DEBUG4) << "Collection " << _vecDigiHits.at(idet).c_str() << " is unavailable " << std::endl;
       }	
 
-     //  if( colDigi != 0 ){ 
-     // 	CellIDDecoder<TrackerHitPlane> cellid_decoder(colDigi);
-     // 	int last_element = colDigi->getNumberOfElements()-1;
-     // 	streamlog_out(DEBUG2) << "last_element = " << last_element << std::endl;
-     // 	if (last_element>=0) {
-     // 	  _vecDigiHitsCol.push_back(colDigi);
-     // 	  TrackerHitPlane* hit_helper2 = dynamic_cast<TrackerHitPlane*>( colDigi->getElementAt(last_element) ) ;
-     // 	  nSubdetLayers = cellid_decoder( hit_helper2 )["layer"] + 1; //from 0 to n-1
-     // 	  idSubdet = cellid_decoder( hit_helper2 )["subdet"]; 
-     // 	}
-     // 	else   _vecDigiHitsCol.push_back(0); 
-     // }//end colDigi!=0 
-     //  else {
-	_vecDigiHitsCol.push_back(colDigi);
-      // }
-      // streamlog_out(DEBUG2) << "_vecDigiHitsCol.back() = " << _vecDigiHitsCol.back() << std::endl;
+      _vecDigiHitsCol.push_back(colDigi);
       
     }// diginame !=0
 
 
-    //NEW LINE
     else _vecDigiHitsCol.push_back(0); 
-    ///////
-
-
-    //_vecSubdetNLayers.push_back(nSubdetLayers);
-    //_vecSubdetID.push_back(idSubdet);
-
-    // streamlog_out(DEBUG4) << "nSubdetLayers = " << nSubdetLayers << std::endl;
-    // streamlog_out(DEBUG4) << "idSubdet = " << idSubdet << std::endl;
 
   }//end loop on subdetectors
 	  
 }//end 
+
+
+
+
+void ExtrToTracker::getCellID0AndPositionInfo(LCCollection*& col ){
+
+
+  std::string cellIDEcoding0 = col->getParameters().getStringVal("CellIDEncoding") ;  
+  UTIL::BitField64 cellid_decoder( cellIDEcoding0 ) ;
+
+  for (int i=0; i<col->getNumberOfElements(); i++){    
+    TrackerHitPlane* trackerHit = dynamic_cast<TrackerHitPlane*>( col->getElementAt(i) ) ;
+
+    DD4hep::long64 id = trackerHit->getCellID0() ;
+    cellid_decoder.setValue( id ) ;
+
+    int subdet = cellid_decoder[DDKalTest::CellIDEncoding::instance().subdet()];
+    int side = cellid_decoder[DDKalTest::CellIDEncoding::instance().side()];
+    int layer = cellid_decoder[DDKalTest::CellIDEncoding::instance().layer()];
+    int module = cellid_decoder[DDKalTest::CellIDEncoding::instance().module()];
+    int sensor = cellid_decoder[DDKalTest::CellIDEncoding::instance().sensor()];
+
+
+    streamlog_out(MESSAGE2) << " hit" << i
+			    << " ( subdetector: " << subdet
+			    <<", side: " << side
+			    <<", layer: " << layer
+			    <<", module: " << module
+			    <<", sensor: " << sensor
+			    <<" ) ( r: " << sqrt(pow(trackerHit->getPosition()[0],2)+pow(trackerHit->getPosition()[1],2))
+			    <<" , phi: " << atan(trackerHit->getPosition()[1]/trackerHit->getPosition()[0])
+			    <<" , z: " << trackerHit->getPosition()[2] 
+			    <<" ) \n";
+
+    // SurfaceMap::const_iterator si = _surfMap.find(id);
+
+    // if( si == _surfMap.end()) {
+    //   streamlog_out(MESSAGE2) << "----- IT IS A SURFACES PROBLEM "  <<std::endl;
+    // } else {  
+    //   streamlog_out(MESSAGE2) << "----- OK I HAVE SOMETHING "  <<std::endl;
+    // }
+
+    // ISurface* surf = (si != _surfMap.end() ?  si->second  : 0);
+    
+    // streamlog_out(MESSAGE2) << " surf = " << surf <<std::endl;
+    
+    // const double* hit_pos = trackerHit->getPosition();
+    // DDSurfaces::Vector3D hit_global(hit_pos[0],hit_pos[1],hit_pos[2]);
+    // DDSurfaces::Vector2D hit_local = surf->globalToLocal( dd4hep::mm * hit_global ); 
+
+    // streamlog_out(MESSAGE2) << "----- hit global x, y, r = " << hit_global[0] <<"   "<< hit_global[1] <<"   "<< sqrt(pow(hit_global[0],2)+pow(hit_global[1],2)) <<std::endl;
+    // streamlog_out(MESSAGE2) << "----- hit local U, V = " << hit_local[0] <<"   "<< hit_local[1] <<std::endl;
+    
+  }
+
+ 
+  return;
+}
+
+
+
+
 
 
 
@@ -949,10 +867,15 @@ void ExtrToTracker::fillMapElHits(std::vector<LCCollection* >& vecHitCol, std::v
   //fill map (el - vector of hits) for each subdtector
 
   vecMaps.clear();
+  _vecvecHitsInCol.clear();
 
   for(size_t icol=0; icol<vecHitCol.size(); icol++){
 
     std::map<int , std::vector<TrackerHitPlane* > > map_el_hits;
+
+    std::vector<TrackerHitPlane* > vecHelper;
+    vecHelper.clear();
+
 
     if(vecHitCol.at(icol)!=NULL){
 
@@ -963,6 +886,8 @@ void ExtrToTracker::fillMapElHits(std::vector<LCCollection* >& vecHitCol, std::v
       for(int ihit=0; ihit<nhits; ihit++){
 
 	TrackerHitPlane* hit = dynamic_cast<TrackerHitPlane*>( vecHitCol.at(icol)->getElementAt(ihit) );
+
+	vecHelper.push_back(hit);
   
 	int cellID0 = hit->getCellID0();
 	UTIL::BitField64 encoder0(  lcio::ILDCellID0::encoder_string );  //do not change it, code will not work with a different encoder	    
@@ -977,6 +902,8 @@ void ExtrToTracker::fillMapElHits(std::vector<LCCollection* >& vecHitCol, std::v
     }//collection not empty
 
     vecMaps.push_back(map_el_hits);
+
+    _vecvecHitsInCol.push_back(vecHelper);
 
   }//end loop on collections of hits
 
@@ -996,6 +923,7 @@ void ExtrToTracker::getGeoInfo(){
   _vecSubdetID.clear();
   _vecSubdetNLayers.clear();
   _vecMapLayerNModules.clear();
+  _vecSubdetIsBarrel.clear();
 
   DD4hep::Geometry::LCDD & lcdd = DD4hep::Geometry::LCDD::getInstance();
      
@@ -1019,60 +947,66 @@ void ExtrToTracker::getGeoInfo(){
 
     int detID = 0;
     int nlayers = 0;
+    bool isBarrel = false;
     std::map<int , int > map_layerID_nmodules;
     
     try{
 
   
-	const DD4hep::Geometry::DetElement& theDetector = lcdd.detector(_vecSubdetName.at(i));
+      const DD4hep::Geometry::DetElement& theDetector = lcdd.detector(_vecSubdetName.at(i));
+      auto detType = DD4hep::DetType( theDetector.typeFlag() );
+      isBarrel = detType.is( DD4hep::DetType::BARREL );
 	
-	detID = theDetector.id();
-	streamlog_out( DEBUG2 ) << " --- subdet: " << _vecSubdetName.at(i) << " - id = " << detID <<std::endl;
+      //streamlog_out( DEBUG1 ) << " is an endcap " << std::boolalpha << detType.is( DD4hep::DetType::ENDCAP ) << std::endl;
+      streamlog_out( DEBUG1 ) << " is a barrel " << std::boolalpha << detType.is( DD4hep::DetType::BARREL ) << std::endl;
+
+      detID = theDetector.id();
+      streamlog_out( DEBUG2 ) << " --- subdet: " << _vecSubdetName.at(i) << " - id = " << detID <<std::endl;
 
 
-	if (_vecSubdetName.at(i).find("Barrel") != std::string::npos) {
+      if ( isBarrel ) {
 
-	  DD4hep::DDRec::ZPlanarData * theExtension = 0;
-	  theExtension = theDetector.extension<DD4hep::DDRec::ZPlanarData>();
+	DD4hep::DDRec::ZPlanarData * theExtension = 0;
+	theExtension = theDetector.extension<DD4hep::DDRec::ZPlanarData>();
 
-	  nlayers = theExtension->layers.size();
+	nlayers = theExtension->layers.size();
 
-	  streamlog_out( DEBUG2 ) << " - n layers = " << nlayers <<std::endl;
+	streamlog_out( DEBUG2 ) << " - n layers = " << nlayers <<std::endl;
 
 
-	  for(int il=0; il<nlayers; il++){
+	for(int il=0; il<nlayers; il++){
 
-	    int nmodules = theExtension->layers.at(il).ladderNumber;
+	  int nmodules = theExtension->layers.at(il).ladderNumber;
             
-	    streamlog_out( DEBUG2 ) << " --- n modules = " << nmodules << "  per layer " << il <<std::endl;
+	  streamlog_out( DEBUG2 ) << " --- n modules = " << nmodules << "  per layer " << il <<std::endl;
 
-	    map_layerID_nmodules.insert( std::pair<int,int>(il,nmodules) );
+	  map_layerID_nmodules.insert( std::pair<int,int>(il,nmodules) );
 
-	  }
+	}
 
-	}//end barrel type
-	else {
+      }//end barrel type
+      else {
 
-	  DD4hep::DDRec::ZDiskPetalsData * theExtension = 0;  
-	  theExtension = theDetector.extension<DD4hep::DDRec::ZDiskPetalsData>();
+	DD4hep::DDRec::ZDiskPetalsData * theExtension = 0;  
+	theExtension = theDetector.extension<DD4hep::DDRec::ZDiskPetalsData>();
             
-	  nlayers = theExtension->layers.size();
+	nlayers = theExtension->layers.size();
 
-	  streamlog_out( DEBUG2 ) << " - n layers = " << nlayers <<std::endl;
+	streamlog_out( DEBUG2 ) << " - n layers = " << nlayers <<std::endl;
 
 
-	  for(int il=0; il<nlayers; il++){
+	for(int il=0; il<nlayers; il++){
 
-	    int nmodules = theExtension->layers.at(il).petalNumber;
+	  int nmodules = theExtension->layers.at(il).petalNumber;
             
-	    streamlog_out( DEBUG2 ) << " --- n modules = " << nmodules << "  per layer " << il <<std::endl;
+	  streamlog_out( DEBUG2 ) << " --- n modules = " << nmodules << "  per layer " << il <<std::endl;
 
-	    map_layerID_nmodules.insert( std::pair<int,int>(il,nmodules) );
+	  map_layerID_nmodules.insert( std::pair<int,int>(il,nmodules) );
 
-	  }
+	}
 
 	  
-	}//end endcap type
+      }//end endcap type
 
     } catch (std::runtime_error &exception){
             
@@ -1083,6 +1017,7 @@ void ExtrToTracker::getGeoInfo(){
     _vecSubdetID.push_back(detID);
     _vecSubdetNLayers.push_back(nlayers);
     _vecMapLayerNModules.push_back(map_layerID_nmodules);
+    _vecSubdetIsBarrel.push_back(isBarrel);
 
 
   }//end loop on subdetector names
@@ -1105,12 +1040,15 @@ void ExtrToTracker::getNeighbours(int elID, std::vector<int >& vecIDs, std::stri
   int newmodule = 0; //stave
   int newsensor = 0;
 
-  int subdet = cellid_decoder["subdet"].value();
-  int layer = cellid_decoder["layer"].value();
-  int module = cellid_decoder["module"].value(); //stave
-  int sensor = cellid_decoder["sensor"].value();
+  int subdet = cellid_decoder[DDKalTest::CellIDEncoding::instance().subdet()];
+  int side = cellid_decoder[DDKalTest::CellIDEncoding::instance().side()];
+  int layer = cellid_decoder[DDKalTest::CellIDEncoding::instance().layer()];
+  int module = cellid_decoder[DDKalTest::CellIDEncoding::instance().module()];
+  int sensor = cellid_decoder[DDKalTest::CellIDEncoding::instance().sensor()];
 
-  streamlog_out(DEBUG2) << "-- subdet = " << subdet <<std::endl;
+
+  streamlog_out(DEBUG2) << "-- system = " << subdet <<std::endl;
+  streamlog_out(DEBUG2) << "-- side = " << side <<std::endl;
   streamlog_out(DEBUG2) << "-- layer = " << layer <<std::endl;
   streamlog_out(DEBUG2) << "-- module (stave) = " << module <<std::endl;
   streamlog_out(DEBUG2) << "-- sensor = " << sensor <<std::endl;
@@ -1142,10 +1080,11 @@ void ExtrToTracker::getNeighbours(int elID, std::vector<int >& vecIDs, std::stri
     	 	  
 	  try{
 
-	    cellid_decoder[lcio::ILDCellID0::subdet] = subdet;
-	    cellid_decoder[lcio::ILDCellID0::layer]  = layer;   
-	    cellid_decoder[lcio::ILDCellID0::module]  = newmodule;   
-	    cellid_decoder[lcio::ILDCellID0::sensor]  = newsensor; 
+	    cellid_decoder[DDKalTest::CellIDEncoding::instance().subdet()] = subdet;
+	    cellid_decoder[DDKalTest::CellIDEncoding::instance().side()] = side;
+	    cellid_decoder[DDKalTest::CellIDEncoding::instance().layer()] = layer;
+	    cellid_decoder[DDKalTest::CellIDEncoding::instance().module()] = newmodule;
+	    cellid_decoder[DDKalTest::CellIDEncoding::instance().sensor()] = newsensor;
 
 	    int newElID = cellid_decoder.lowWord();  
 
@@ -1172,3 +1111,75 @@ void ExtrToTracker::getNeighbours(int elID, std::vector<int >& vecIDs, std::stri
 
 
 
+void  ExtrToTracker::FindAndAddHit(size_t& idet, int& elID, MarlinTrk::IMarlinTrack*& mtrk, EVENT::TrackerHitVec& trkHits, int& SITHitsPerTrk, int& layer){
+  
+
+  //_______________________________________________________________________________________
+  //
+		    
+  streamlog_out(DEBUG2) << " element ID " << elID << std::endl;
+		  
+  if ( elID != 0 ){
+		    
+		      
+    bool isSuccessfulFit = false; 
+
+    std::string cellIDEcoding4 = _vecDigiHitsCol.at(idet)->getParameters().getStringVal("CellIDEncoding") ;  
+    std::vector<int > vecIDs;
+    vecIDs.push_back(elID);
+
+    getNeighbours(elID, vecIDs, cellIDEcoding4, _vecMapLayerNModules.at(idet)); // TO BE IMPROVED AND STUDIED
+
+    TrackerHitPlane* BestHit;
+    BestHit = getSiHit(vecIDs, _vecMapsElHits.at(idet), mtrk);
+
+    //BestHit = getSiHit(_vecvecHitsInCol.at(idet), mtrk);
+
+    if (BestHit != 0){
+		      			  
+      streamlog_out(MESSAGE2) << " --- Best hit found " << std::endl ; 
+						  
+      double chi2_increment = 0.;			
+      isSuccessfulFit = mtrk->addAndFit( BestHit, chi2_increment, _Max_Chi2_Incr*(layer+1) ) == IMarlinTrack::success ;
+
+      streamlog_out(MESSAGE4) << " --- layer+1 = " << layer+1 << std::endl;
+      streamlog_out(MESSAGE4) << " --- _Max_Chi2_Incr = " << _Max_Chi2_Incr << std::endl;
+      streamlog_out(MESSAGE4) << " --- increment in the chi2 = " << chi2_increment << "  , max chi2 to accept the hit " << _Max_Chi2_Incr*(layer+1)  << std::endl;
+      streamlog_out(MESSAGE4) << " --- isSuccessfulFit = "<< isSuccessfulFit << std::endl ; 
+		  
+			
+      // TotalSITHits++;
+			
+      if ( isSuccessfulFit ){
+			  
+			  
+	trkHits.push_back(BestHit) ;
+			  
+			  
+	streamlog_out(MESSAGE4) << " +++ hit added " << BestHit << std::endl ;
+	      
+
+	SITHitsPerTrk++;
+	// SITHitsFitted++;
+			  
+	streamlog_out(MESSAGE4) << " --- SITHitsPerTrk " << SITHitsPerTrk << std::endl ;
+			  
+      } //end successful fit
+      else{
+			  
+	// SITHitsNonFitted++;
+	streamlog_out(DEBUG4) << " +++ HIT NOT ADDED "<< std::endl;
+			  
+      }
+
+
+    }// besthit found
+
+    // streamlog_out(DEBUG4) << " -- SITHitsFitted = " << SITHitsFitted << std::endl;
+    // streamlog_out(DEBUG4) << " -- SITHitsNonFitted = " << SITHitsNonFitted << std::endl;
+		    		  
+  }//elID !=0 
+
+
+  return;
+}

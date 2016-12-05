@@ -82,6 +82,13 @@ ADD_DEFINITIONS( ${RAIDA_DEFINITIONS} )
 
 
 
+### FIXME: depedence from DDKalTest is here only for getting the cellIDEndcoding 
+### if we move the implementation to LCIO it can go away
+FIND_PACKAGE( DDKalTest REQUIRED )
+INCLUDE_DIRECTORIES( SYSTEM ${DDKalTest_INCLUDE_DIRS} )
+LINK_LIBRARIES( ${DDKalTest_Libraries} )
+ADD_DEFINITIONS( ${DDKalTest_DEFINITIONS} )
+
 
 ### DOCUMENTATION ###########################################################
 
@@ -98,7 +105,7 @@ ENDIF()
 # definitions to pass to the compiler
 #ADD_DEFINITIONS( "-Wall -ansi -pedantic" )
 #ADD_DEFINITIONS( "-Wno-long-long" )
-ADD_DEFINITIONS( "-DGEO2" )
+#ADD_DEFINITIONS( "-DGEO2" )
 
 # include directories
 INCLUDE_DIRECTORIES( . ./source/Digitisers/include ./source/Refitting/include ./source/Utils/include ./source/ftf/include )
