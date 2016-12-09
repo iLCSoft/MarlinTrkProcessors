@@ -803,7 +803,7 @@ TrackerHitPlane* ExtrToTracker::getSiHit(std::vector<TrackerHitPlane* >& hitsOnD
 
 
 
-TrackerHitPlane* ExtrToTracker::getSiHit(std::vector<int >& vecElID, std::map<int , std::vector<TrackerHitPlane* > >& mapElHits, MarlinTrk::IMarlinTrack*& marlin_trk){
+TrackerHitPlane* ExtrToTracker::getSiHit(std::vector<DD4hep::long64 >& vecElID, std::map<int , std::vector<TrackerHitPlane* > >& mapElHits, MarlinTrk::IMarlinTrack*& marlin_trk){
   
   double min = 9999999.;
   double testChi2=0.;
@@ -922,8 +922,9 @@ void ExtrToTracker::getGeoInfo(){
 
   _vecSubdetID.clear();
   _vecSubdetNLayers.clear();
-  _vecMapLayerNModules.clear();
+  // _vecMapLayerNModules.clear();
   _vecSubdetIsBarrel.clear();
+  _vecMapNeighbours.clear();
 
   DD4hep::Geometry::LCDD & lcdd = DD4hep::Geometry::LCDD::getInstance();
      
@@ -948,10 +949,10 @@ void ExtrToTracker::getGeoInfo(){
     int detID = 0;
     int nlayers = 0;
     bool isBarrel = false;
-    std::map<int , int > map_layerID_nmodules;
+    // std::map<int , int > map_layerID_nmodules;
+    std::map<DD4hep::long64 , std::vector<DD4hep::long64 > > map_neighbours_cellID;
     
     try{
-
   
       const DD4hep::Geometry::DetElement& theDetector = lcdd.detector(_vecSubdetName.at(i));
       auto detType = DD4hep::DetType( theDetector.typeFlag() );
@@ -973,16 +974,18 @@ void ExtrToTracker::getGeoInfo(){
 
 	streamlog_out( DEBUG2 ) << " - n layers = " << nlayers <<std::endl;
 
+	map_neighbours_cellID = theExtension->mapNeighbours;
 
-	for(int il=0; il<nlayers; il++){
 
-	  int nmodules = theExtension->layers.at(il).ladderNumber;
+	// for(int il=0; il<nlayers; il++){
+
+	//   int nmodules = theExtension->layers.at(il).ladderNumber;
             
-	  streamlog_out( DEBUG2 ) << " --- n modules = " << nmodules << "  per layer " << il <<std::endl;
+	//   streamlog_out( DEBUG2 ) << " --- n modules = " << nmodules << "  per layer " << il <<std::endl;
 
-	  map_layerID_nmodules.insert( std::pair<int,int>(il,nmodules) );
+	//   map_layerID_nmodules.insert( std::pair<int,int>(il,nmodules) );
 
-	}
+	// }
 
       }//end barrel type
       else {
@@ -994,17 +997,17 @@ void ExtrToTracker::getGeoInfo(){
 
 	streamlog_out( DEBUG2 ) << " - n layers = " << nlayers <<std::endl;
 
+	map_neighbours_cellID = theExtension->mapNeighbours;
 
-	for(int il=0; il<nlayers; il++){
+	// for(int il=0; il<nlayers; il++){
 
-	  int nmodules = theExtension->layers.at(il).petalNumber;
+	//   int nmodules = theExtension->layers.at(il).petalNumber;
             
-	  streamlog_out( DEBUG2 ) << " --- n modules = " << nmodules << "  per layer " << il <<std::endl;
+	//   streamlog_out( DEBUG2 ) << " --- n modules = " << nmodules << "  per layer " << il <<std::endl;
 
-	  map_layerID_nmodules.insert( std::pair<int,int>(il,nmodules) );
+	//   map_layerID_nmodules.insert( std::pair<int,int>(il,nmodules) );
 
-	}
-
+	// }
 	  
       }//end endcap type
 
@@ -1016,9 +1019,9 @@ void ExtrToTracker::getGeoInfo(){
 
     _vecSubdetID.push_back(detID);
     _vecSubdetNLayers.push_back(nlayers);
-    _vecMapLayerNModules.push_back(map_layerID_nmodules);
+    // _vecMapLayerNModules.push_back(map_layerID_nmodules);
     _vecSubdetIsBarrel.push_back(isBarrel);
-
+    _vecMapNeighbours.push_back(map_neighbours_cellID);
 
   }//end loop on subdetector names
  
@@ -1029,83 +1032,83 @@ void ExtrToTracker::getGeoInfo(){
 
 
 
-void ExtrToTracker::getNeighbours(int elID, std::vector<int >& vecIDs, std::string cellIDEcoding, std::map<int , int > mapLayerNModules){
+// void ExtrToTracker::getNeighbours(int elID, std::vector<int >& vecIDs, std::string cellIDEcoding, std::map<int , int > mapLayerNModules){
 
-  UTIL::BitField64 cellid_decoder( cellIDEcoding ) ;
+//   UTIL::BitField64 cellid_decoder( cellIDEcoding ) ;
 
-  cellid_decoder.setValue( elID ) ;
+//   cellid_decoder.setValue( elID ) ;
 
-  streamlog_out(DEBUG1) << "-- cellid_decoder.valueString() = " << cellid_decoder.valueString() <<std::endl;
+//   streamlog_out(DEBUG1) << "-- cellid_decoder.valueString() = " << cellid_decoder.valueString() <<std::endl;
 
-  int newmodule = 0; //stave
-  int newsensor = 0;
+//   int newmodule = 0; //stave
+//   int newsensor = 0;
 
-  int subdet = cellid_decoder[DDKalTest::CellIDEncoding::instance().subdet()];
-  int side = cellid_decoder[DDKalTest::CellIDEncoding::instance().side()];
-  int layer = cellid_decoder[DDKalTest::CellIDEncoding::instance().layer()];
-  int module = cellid_decoder[DDKalTest::CellIDEncoding::instance().module()];
-  int sensor = cellid_decoder[DDKalTest::CellIDEncoding::instance().sensor()];
-
-
-  streamlog_out(DEBUG2) << "-- system = " << subdet <<std::endl;
-  streamlog_out(DEBUG2) << "-- side = " << side <<std::endl;
-  streamlog_out(DEBUG2) << "-- layer = " << layer <<std::endl;
-  streamlog_out(DEBUG2) << "-- module (stave) = " << module <<std::endl;
-  streamlog_out(DEBUG2) << "-- sensor = " << sensor <<std::endl;
+//   int subdet = cellid_decoder[DDKalTest::CellIDEncoding::instance().subdet()];
+//   int side = cellid_decoder[DDKalTest::CellIDEncoding::instance().side()];
+//   int layer = cellid_decoder[DDKalTest::CellIDEncoding::instance().layer()];
+//   int module = cellid_decoder[DDKalTest::CellIDEncoding::instance().module()];
+//   int sensor = cellid_decoder[DDKalTest::CellIDEncoding::instance().sensor()];
 
 
-  int lastModule = mapLayerNModules[layer]-1;
+//   streamlog_out(DEBUG2) << "-- system = " << subdet <<std::endl;
+//   streamlog_out(DEBUG2) << "-- side = " << side <<std::endl;
+//   streamlog_out(DEBUG2) << "-- layer = " << layer <<std::endl;
+//   streamlog_out(DEBUG2) << "-- module (stave) = " << module <<std::endl;
+//   streamlog_out(DEBUG2) << "-- sensor = " << sensor <<std::endl;
 
 
-  int steps[] = {-1, 0, +1};
-  std::vector<int > phiSteps (steps, steps + sizeof(steps) / sizeof(int) ); // add sensors on -1 and +1 staves around the current one
-  std::vector<int > zSteps (steps, steps + sizeof(steps) / sizeof(int) ); // add sensors -1 before and +1 after the current one on the same stave 
+//   int lastModule = mapLayerNModules[layer]-1;
+
+
+//   int steps[] = {-1, 0, +1};
+//   std::vector<int > phiSteps (steps, steps + sizeof(steps) / sizeof(int) ); // add sensors on -1 and +1 staves around the current one
+//   std::vector<int > zSteps (steps, steps + sizeof(steps) / sizeof(int) ); // add sensors -1 before and +1 after the current one on the same stave 
   
-  for(size_t ip=0; ip<phiSteps.size(); ip++) { 
-    for(size_t iz=0; iz<zSteps.size(); iz++) { 
-      if (phiSteps.at(ip)!=0 || zSteps.at(iz)!=0) { // if it is not the sensor itself
+//   for(size_t ip=0; ip<phiSteps.size(); ip++) { 
+//     for(size_t iz=0; iz<zSteps.size(); iz++) { 
+//       if (phiSteps.at(ip)!=0 || zSteps.at(iz)!=0) { // if it is not the sensor itself
 		
-	newmodule = module + phiSteps.at(ip);
-	newsensor = sensor + zSteps.at(iz);
+// 	newmodule = module + phiSteps.at(ip);
+// 	newsensor = sensor + zSteps.at(iz);
 
-	//make the module a cycle (tis is actually true for the barrels but not for the disks)
-	if(lastModule>0) { //check to be removed in future but at the moment the endcap data structure is not correctly filled
-	  if (newmodule == (lastModule+1)) newmodule = 0;
-	  else if (newmodule==-1) newmodule = lastModule;
-	}
+// 	//make the module a cycle (tis is actually true for the barrels but not for the disks)
+// 	if(lastModule>0) { //check to be removed in future but at the moment the endcap data structure is not correctly filled
+// 	  if (newmodule == (lastModule+1)) newmodule = 0;
+// 	  else if (newmodule==-1) newmodule = lastModule;
+// 	}
 
-	if(newsensor>0){
+// 	if(newsensor>0){
 
-	  cellid_decoder.reset();
+// 	  cellid_decoder.reset();
     	 	  
-	  try{
+// 	  try{
 
-	    cellid_decoder[DDKalTest::CellIDEncoding::instance().subdet()] = subdet;
-	    cellid_decoder[DDKalTest::CellIDEncoding::instance().side()] = side;
-	    cellid_decoder[DDKalTest::CellIDEncoding::instance().layer()] = layer;
-	    cellid_decoder[DDKalTest::CellIDEncoding::instance().module()] = newmodule;
-	    cellid_decoder[DDKalTest::CellIDEncoding::instance().sensor()] = newsensor;
+// 	    cellid_decoder[DDKalTest::CellIDEncoding::instance().subdet()] = subdet;
+// 	    cellid_decoder[DDKalTest::CellIDEncoding::instance().side()] = side;
+// 	    cellid_decoder[DDKalTest::CellIDEncoding::instance().layer()] = layer;
+// 	    cellid_decoder[DDKalTest::CellIDEncoding::instance().module()] = newmodule;
+// 	    cellid_decoder[DDKalTest::CellIDEncoding::instance().sensor()] = newsensor;
 
-	    int newElID = cellid_decoder.lowWord();  
+// 	    int newElID = cellid_decoder.lowWord();  
 
-	    streamlog_out(DEBUG2) << "-- new element ID = " << newElID <<std::endl;
-	    vecIDs.push_back(newElID);
+// 	    streamlog_out(DEBUG2) << "-- new element ID = " << newElID <<std::endl;
+// 	    vecIDs.push_back(newElID);
 
-	  } catch(lcio::Exception &e){
+// 	  } catch(lcio::Exception &e){
 
-	    streamlog_out(DEBUG2) << "BitFieldValue out of range - sensor was at the edge of the module of 1 make it out of range - the -1 one case it is cut out by asking for a sensor number > 0" << std::endl;
+// 	    streamlog_out(DEBUG2) << "BitFieldValue out of range - sensor was at the edge of the module of 1 make it out of range - the -1 one case it is cut out by asking for a sensor number > 0" << std::endl;
 
-	  }	
+// 	  }	
 	  
-	}//sensor number >0
+// 	}//sensor number >0
 
-      }//end not same elementID we started with
-    }//end loop on z    
-  }//end loop on phi
+//       }//end not same elementID we started with
+//     }//end loop on z    
+//   }//end loop on phi
 
-  return;
+//   return;
 
-}//end getNeighbours
+// }//end getNeighbours
 
 
 
@@ -1124,11 +1127,14 @@ void  ExtrToTracker::FindAndAddHit(size_t& idet, int& elID, MarlinTrk::IMarlinTr
 		      
     bool isSuccessfulFit = false; 
 
-    std::string cellIDEcoding4 = _vecDigiHitsCol.at(idet)->getParameters().getStringVal("CellIDEncoding") ;  
-    std::vector<int > vecIDs;
-    vecIDs.push_back(elID);
+    // std::string cellIDEcoding4 = _vecDigiHitsCol.at(idet)->getParameters().getStringVal("CellIDEncoding") ;  
+    // std::vector<int > vecIDs;
+    // vecIDs.push_back(elID);
+    // getNeighbours(elID, vecIDs, cellIDEcoding4, _vecMapLayerNModules.at(idet)); // TO BE IMPROVED AND STUDIED
 
-    getNeighbours(elID, vecIDs, cellIDEcoding4, _vecMapLayerNModules.at(idet)); // TO BE IMPROVED AND STUDIED
+    std::vector<DD4hep::long64 > vecIDs;
+    vecIDs = _vecMapNeighbours.at(idet)[elID];
+    vecIDs.insert( std::begin(vecIDs), elID );
 
     TrackerHitPlane* BestHit;
     BestHit = getSiHit(vecIDs, _vecMapsElHits.at(idet), mtrk);
