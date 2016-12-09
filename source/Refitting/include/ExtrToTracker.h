@@ -193,7 +193,6 @@ protected:
   std::vector<int > _vecSubdetNLayers;
   std::vector<int > _vecSubdetID;
   std::vector<LCCollection* > _vecDigiHitsCol;
-  /* std::vector<std::map<int , int > > _vecMapLayerNModules; */
   std::vector<std::map<DD4hep::long64 , std::vector<DD4hep::long64 > > >  _vecMapNeighbours;
 
   std::vector<std::map<int , std::vector<TrackerHitPlane* > > > _vecMapsElHits;
