@@ -1140,7 +1140,8 @@ void  ExtrToTracker::FindAndAddHit(size_t& idet, int& elID, MarlinTrk::IMarlinTr
       streamlog_out(MESSAGE2) << " --- Best hit found " << std::endl ; 
 						  
       double chi2_increment = 0.;			
-      isSuccessfulFit = mtrk->addAndFit( BestHit, chi2_increment, _Max_Chi2_Incr*(layer+1) ) == IMarlinTrack::success ;
+      // isSuccessfulFit = mtrk->addAndFit( BestHit, chi2_increment, _Max_Chi2_Incr*(layer+1) ) == IMarlinTrack::success ;
+      isSuccessfulFit = mtrk->addAndFit( BestHit, chi2_increment, _Max_Chi2_Incr ) == IMarlinTrack::success ;
 
       streamlog_out(MESSAGE4) << " --- layer+1 = " << layer+1 << std::endl;
       streamlog_out(MESSAGE4) << " --- _Max_Chi2_Incr = " << _Max_Chi2_Incr << std::endl;
