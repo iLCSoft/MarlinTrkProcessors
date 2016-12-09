@@ -151,6 +151,11 @@ ExtrToTracker::ExtrToTracker() : Processor("ExtrToTracker") {
                              _performFinalRefit,
                              bool(false));  
 
+  registerProcessorParameter("extrapolateForward",
+                             "if true extrapolation in the forward direction (in-out), otherwise backward (out-in)",
+                             _extrapolateForward,
+                             bool(true));  
+
 }
 
 
@@ -324,6 +329,7 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 		streamlog_out(DEBUG4) << "LOOP - layer = " << iL << " begins "<< std::endl;
 	 	
 		encoder[DDKalTest::CellIDEncoding::instance().subdet()] = _vecSubdetID.at(idet);
+
 		int side = 0;
 		if ( _vecSubdetIsBarrel.at(idet) ) side = 0; //lcio::ILDDetID::barrel;
 		else {
@@ -333,7 +339,11 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 		  else  side = -1;
 		}
 		encoder[DDKalTest::CellIDEncoding::instance().side()] = side;
-		encoder[DDKalTest::CellIDEncoding::instance().layer()] = iL;  
+
+		int layer = 0;
+		if ( _extrapolateForward ) layer = iL;
+		else layer = _vecSubdetNLayers.at(idet) - (iL +1);
+		encoder[DDKalTest::CellIDEncoding::instance().layer()] = layer;  
 		
 		layerID = encoder.lowWord();  
 		streamlog_out(DEBUG4) << "layerID = " << layerID << std::endl;
@@ -647,13 +657,13 @@ int ExtrToTracker::FitInit2( Track* track, MarlinTrk::IMarlinTrack* _marlinTrk )
 			     ) ;
   
 
-  //_marlinTrk->initialise( trackState, _bField, IMarlinTrack::backward ) ;
-  _marlinTrk->initialise( trackState, _bField, IMarlinTrack::forward ) ;
-
+  bool direction;
+  if (_extrapolateForward) direction = IMarlinTrack::forward ;
+  else direction = IMarlinTrack::backward ;
+  _marlinTrk->initialise( trackState, _bField, direction ) ;
   
   return IMarlinTrack::success ;   
   
-
 }
 
 
