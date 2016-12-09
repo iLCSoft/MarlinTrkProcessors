@@ -180,6 +180,7 @@ protected:
 
   bool _performFinalRefit ;
  
+  bool _extrapolateForward;
 
   const DD4hep::DDRec::SurfaceMap* _map ;
 
