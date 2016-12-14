@@ -3,9 +3,10 @@
 ## A collection of Tracking Relelated Processors Based on MarlinTrk
 
 Authors:
-	- S. Aplin, DESY
-	- F. Gaede, DESY
-	- Y.Voutsinas, DESY
+
+- S. Aplin, DESY
+- F. Gaede, DESY
+- Y.Voutsinas, DESY
 
 ## License and Copyright
 
@@ -52,16 +53,17 @@ You should have received a copy of the GNU General Public License long with this
   
 
   R. Simoniello
-     - Add procedure to handle with spiral tracks. Fit direction and fit initialisation configurable by steering macro (default fit direction: backward)
-     - improved speed, map of hits on each element introduced, find neighbours of element ID and extrapolate to them (to be improved to some problem in the geo datat structure)	
+ 
+ - Add procedure to handle with spiral tracks. Fit direction and fit initialisation configurable by steering macro (default fit direction: backward)
+  - improved speed, map of hits on each element introduced, find neighbours of element ID and extrapolate to them (to be improved to some problem in the geo datat structure)	
 
   F. Gaede
-     - made compatible with c++11
-       - removed -ansi -pedantic -Wno-long-long
-       - fixed narrowing in initializer lists
+  - made compatible with c++11
+	- removed -ansi -pedantic -Wno-long-long
+	- fixed narrowing in initializer lists
 
   Y. Voutsinas
-     - Minivector creation from 1D SIT hits added 
+  - Minivector creation from 1D SIT hits added 
 
 
 ### v02-02
@@ -152,50 +154,47 @@ You should have received a copy of the GNU General Public License long with this
   
 ### v01-11  
   
-      -  added processor for VXD tracking using a cellular automaton algorithm based on mini - vectors
+ -  added processor for VXD tracking using a cellular automaton algorithm based on mini - vectors
 
 
   
 ### v01-10  
   
-      -  added FPCCDTracking code by Tatsuya Mori
+ -  added FPCCDTracking code by Tatsuya Mori
 
-
-  -
 ### v01-09-01  
-  -
-      - updated calling attrinbutes of ced_hit_ID to new CED ### v01-09
+
+  - updated calling attrinbutes of ced_hit_ID to new CED ### v01-09
 
   
-### v01-09  
+### v01-09
   
-
-     - FullLDCTracking_MarlinTrk
-       - Use the Chi2 probability to remove badly fitted silicon tracks so that the don't pollute the TPC Si track merging.
-       - Reject combinations of TPC and Silicon Tracks if more that a certain number of Silicon Hits, default 2, get rejected by the fit of the combined track.
+  - FullLDCTracking_MarlinTrk
+    - Use the Chi2 probability to remove badly fitted silicon tracks so that the don't pollute the TPC Si track merging.
+    - Reject combinations of TPC and Silicon Tracks if more that a certain number of Silicon Hits, default 2, get rejected by the fit of the combined track.
 
   
 ### v01-08 
   
 
-     - General 
-       - SimplePlanarTestDigiProcessor renamed as PlanarDigiProcessor
-       - Fixed signed unsigned warning.
-       - Fix memory leaks.
+ - General 
+   - SimplePlanarTestDigiProcessor renamed as PlanarDigiProcessor
+   - Fixed signed unsigned warning.
+   - Fix memory leaks.
 
-     - PlanarDigiProcessor
-       - Made processor parameters ResolutionU(V) vectors
-       	 in order to allow for different point resolution values per layer
-       	 ( needed for the VXD in the DBD)
+ - PlanarDigiProcessor
+   - Made processor parameters ResolutionU(V) vectors
+   	 in order to allow for different point resolution values per layer
+   	 ( needed for the VXD in the DBD)
 
-     - FullLDCTracking_MarlinTrk
-       - Added SET hits. 
-       - Make sure hits flagged as not to be used in the fit are not included.
-       - ForceTPCSegmentsMerging off by default
-       - Ensure that trying to add a false hits, cannot derail the whole track creation. 
-         Test number of Outliers using MaxAllowedPercentageOfOutliersForTrackCombination. 
-       - When not using ForceTPCSegmentsMerging, make sure that TPC tracks which do not get 
-       	 merged with Silicon Tracks have their hits set to setUsedInFit.
+ - FullLDCTracking_MarlinTrk
+   - Added SET hits. 
+   - Make sure hits flagged as not to be used in the fit are not included.
+   - ForceTPCSegmentsMerging off by default
+   - Ensure that trying to add a false hits, cannot derail the whole track creation. 
+     Test number of Outliers using MaxAllowedPercentageOfOutliersForTrackCombination. 
+   - When not using ForceTPCSegmentsMerging, make sure that TPC tracks which do not get 
+   	 merged with Silicon Tracks have their hits set to setUsedInFit.
 
 
   
@@ -204,23 +203,23 @@ You should have received a copy of the GNU General Public License long with this
 
   General:
 
-      - Debug output has been made more consistent throughout.	
+   - Debug output has been made more consistent throughout.	
 
   FullLDCTracking_MarlinTrk
   
-      - Use existing tracks parameters when refitting. 
-      - Updated for new lcio TrackState copy constructor taking const reference. 
+   - Use existing tracks parameters when refitting. 
+   - Updated for new lcio TrackState copy constructor taking const reference. 
      
   TruthTracker	
 
-      - Updated for new lcio TrackState copy constructor taking const reference. 
-      - Corrected Helix orientation for pre-fit.
+   - Updated for new lcio TrackState copy constructor taking const reference. 
+   - Corrected Helix orientation for pre-fit.
 
 
   RefitProcessor
 
-      - Corrected Helix orientation for pre-fit.			
-      - Protect against missing truth relations.
+   - Corrected Helix orientation for pre-fit.			
+   - Protect against missing truth relations.
 
   
 ### v01-06-01 
@@ -228,69 +227,74 @@ You should have received a copy of the GNU General Public License long with this
 
   General:			
 
-      - RIADA dependency added
+   - RIADA dependency added
 
   FullLDCTracking_MarlinTrk:
 
-      - Increased debug output
-      - Use fit from TPC to initialise fit when doing SiTrack TPCTrack comparisons.
-      	Added debug output which can we removed at a later stage
-      - Use Tracks from the TPC which are composed only of the innermost segment, which contains the fit needed 
-      	for matching to the Silicon Tracks. The Silicon Track, TPC Track, and the segments are added to the final track, 
+ - Increased debug output
+ - Use fit from TPC to initialise fit when doing SiTrack TPCTrack comparisons.
+ 	Added debug output which can we removed at a later stage
+ - Use Tracks from the TPC which are composed only of the innermost segment, which contains the fit needed 
+ 	for matching to the Silicon Tracks. The Silicon Track, TPC Track, and the segments are added to the final track, 
 	which is then itself added to the Final Track collection. 
-      - Added type bits for the final Track collection. 
+ - Added type bits for the final Track collection. 
 
-    - SiliconTracking_MarlinTrk:
-      
-      - Make sure that float[6] is used for getPointOnCircle. 
-      - Added diagnostic histograms. 
-      - Check error return of fast fitter. 
-      - Use iopt 2 instead of 3, as newtonian part of fast fitter is not performing well.     
-      - Added type bits for the final Track collection. Increased debug for FTD tracking.
-
-    - SpacePointBuilder:
-     
-      - Added extra check for valid line intersection when creating space points. This fixes problems from very low pt tracks.
+ SiliconTracking_MarlinTrk:
+    
+- Make sure that float[6] is used for getPointOnCircle. 
+- Added diagnostic histograms. 
+- Check error return of fast fitter. 
+- Use iopt 2 instead of 3, as newtonian part of fast fitter is not performing well.     
+- Added type bits for the final Track collection. Increased debug for FTD tracking.
+ 
+  SpacePointBuilder:
+   
+    - Added extra check for valid line intersection when creating space points. This fixes problems from very low pt tracks.
 
 
   
 ### v01-06 
    
 
-  General:			 Removed use of sort predicate. Use sorted list of std pairs instead.
-  				 Use _maxChi2PerHit in fits. 
+  General:			 
+  - Removed use of sort predicate. Use sorted list of std pairs instead.
+  - Use _maxChi2PerHit in fits. 
 
-  FullLDCTracking_MarlinTrk:	 Corrected uninitialised covariance matrix in combine tracks method.
-  				 Fixed sorting hits in r2 during TPCTrack SiTracks combination.
-  				 Improved hit and geometry handling. 
-				 Removed unused parameters. 
-				 Fixed problem in allocating left over silicon hits, track fit was incorrect after adding a hit. 
-				 Corrected point_res_rphi for FTD SpacePoints. 
-				 Removed unused code.     
+  FullLDCTracking_MarlinTrk:	 
+  - Corrected uninitialised covariance matrix in combine tracks method.
+  - Fixed sorting hits in r2 during TPCTrack SiTracks combination.
+  - Improved hit and geometry handling. 
+  - Removed unused parameters. 
+  - Fixed problem in allocating left over silicon hits, track fit was incorrect after adding a hit. 
+  - Corrected point_res_rphi for FTD SpacePoints. 
+  - Removed unused code.
 
-  TruthTracker:			 Added new mode to fit tracks iteratively, off by default. Allow the CED event display to be used during track creation.
-  				 
-				 For the iterative mode split Tracks now have the individual segments added to a separate collection. 
-				 These segments are used to produce a combined track which uses the innermost and outermost segments to 
-				 provided the track states at the IP, FirstHit, LastHit and Calo respectively. 
-				 The combined track is added to the main track collection, the NDF and chi2 are set with the values from the innermost segment.
-				 The NDF and chi2 values for the other segments can be retrieved from the tracks added to the composite track.  
-				 
-				 Hits with no MCParticle are discarded.
+  TruthTracker:	 
+ - Added new mode to fit tracks iteratively, off by default. Allow the CED event display to be used during track creation.	 
+ - For the iterative mode split Tracks now have the individual segments added to a separate collection. 
+ - These segments are used to produce a combined track which uses the innermost and outermost segments to 
+ - provided the track states at the IP, FirstHit, LastHit and Calo respectively. 
+ - The combined track is added to the main track collection, the NDF and chi2 are set with the values from the innermost segment.
+ - The NDF and chi2 values for the other segments can be retrieved from the tracks added to the composite track.  
+	 
+ -	Hits with no MCParticle are discarded.
 
-  SiliconTracking_MarlinTrk:	 Added protection against being overwhelmed by a very large number of hits within one sector. 
- 				 The default is set to 100. For now an ERROR message is printed and the sector is dropped.
-				 Quality parameter added to output collection set to "Poor"
-				 This will be removed when the problem is more properly addressed.
-				 Make sure sort predicate for chi2 fulfils strict weak ordering.
-  				 Fixed problem where using return instead of continue caused loss of all fitted tracks when single track fit failed.
-				 Improved hit and geometry handling. 
-				 Instrumented with CEDEventDisplay to improve debugging. 
-				 Removed unused parameters.
+  SiliconTracking_MarlinTrk:	 
+  - Added protection against being overwhelmed by a very large number of hits within one sector. 
+  - The default is set to 100. For now an ERROR message is printed and the sector is dropped.
+  - Quality parameter added to output collection set to "Poor"
+  - This will be removed when the problem is more properly addressed.
+  - Make sure sort predicate for chi2 fulfils strict weak ordering.
+  - Fixed problem where using return instead of continue caused loss of all fitted tracks when single track fit failed.
+  - Improved hit and geometry handling. 
+  - Instrumented with CEDEventDisplay to improve debugging. 
+  - Removed unused parameters.
 
-  SpacePointBuilder:		 Corrected SpacePoint creation bug. Endpoint of rear strip swapped with endpoint of front strip. Added debug output for checking whether a strip is created from a real combination or ghost combination.
+  SpacePointBuilder:		 
+  - Corrected SpacePoint creation bug. Endpoint of rear strip swapped with endpoint of front strip. Added debug output for checking whether a strip is created from a real combination or ghost combination.
 
-  TrackSubsetProcessor		 Add hit numbers and additional trackstates. Use MarlinTrk utilities. 
+  TrackSubsetProcessor:		 
+  - Add hit numbers and additional trackstates. Use MarlinTrk utilities. 
 
   
 ### v01-05 
