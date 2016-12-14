@@ -521,11 +521,11 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 	  MarlinTrk::addHitNumbersToTrack(lcio_trk, hits_in_fit, true, encoder2);
 	  
 	  
-	  streamlog_out( MESSAGE4 )  << "ExtrToTracker::processEvent - Hit numbers for track " << lcio_trk->id() << ":  " << std::endl;
+	  streamlog_out( DEBUG4 )  << "ExtrToTracker::processEvent - Hit numbers for track " << lcio_trk->id() << ":  " << std::endl;
 	  int detID = 0;
 	  for (size_t ip=0; ip<lcio_trk->subdetectorHitNumbers().size(); ip=ip+2){
 	    detID++;
-	    streamlog_out( MESSAGE4 )  << "  det id " << detID 
+	    streamlog_out( DEBUG4 )  << "  det id " << detID 
 				       << " , nhits in track = " << lcio_trk->subdetectorHitNumbers()[ip] 
 				       << " , nhits in fit = " << lcio_trk->subdetectorHitNumbers()[ip+1]
 				       << std::endl;
@@ -725,7 +725,7 @@ void ExtrToTracker::getCellID0AndPositionInfo(LCCollection*& col ){
     int sensor = cellid_decoder[DDKalTest::CellIDEncoding::instance().sensor()];
 
 
-    streamlog_out(MESSAGE2) << " hit" << i
+    streamlog_out(DEBUG2) << " hit" << i
 			    << " ( subdetector: " << subdet
 			    <<", side: " << side
 			    <<", layer: " << layer
@@ -958,7 +958,7 @@ void ExtrToTracker::getGeoInfo(){
     int detID = 0;
     int nlayers = 0;
     bool isBarrel = false;
-    std::map<DD4hep::long64 , std::vector<DD4hep::long64 > > map_neighbours_cellID;
+
     
     try{
   
@@ -982,7 +982,9 @@ void ExtrToTracker::getGeoInfo(){
 
 	streamlog_out( DEBUG2 ) << " - n layers = " << nlayers <<std::endl;
 
-	map_neighbours_cellID = theExtension->mapNeighbours;
+	std::map<DD4hep::long64 , std::vector<DD4hep::long64 > >& map_neighbours_cellID = theExtension->mapNeighbours;
+	_vecMapNeighbours.push_back(map_neighbours_cellID);
+
 
       }//end barrel type
       else {
@@ -994,8 +996,9 @@ void ExtrToTracker::getGeoInfo(){
 
 	streamlog_out( DEBUG2 ) << " - n layers = " << nlayers <<std::endl;
 
-	map_neighbours_cellID = theExtension->mapNeighbours;
-	  
+	std::map<DD4hep::long64 , std::vector<DD4hep::long64 > >& map_neighbours_cellID = theExtension->mapNeighbours;
+	_vecMapNeighbours.push_back(map_neighbours_cellID);
+
       }//end endcap type
 
     } catch (std::runtime_error &exception){
@@ -1007,7 +1010,6 @@ void ExtrToTracker::getGeoInfo(){
     _vecSubdetID.push_back(detID);
     _vecSubdetNLayers.push_back(nlayers);
     _vecSubdetIsBarrel.push_back(isBarrel);
-    _vecMapNeighbours.push_back(map_neighbours_cellID);
 
   }//end loop on subdetector names
  
@@ -1043,16 +1045,16 @@ void  ExtrToTracker::FindAndAddHit(size_t& idet, int& elID, MarlinTrk::IMarlinTr
 
     if (BestHit != 0){
 		      			  
-      streamlog_out(MESSAGE2) << " --- Best hit found " << std::endl ; 
+      streamlog_out(DEBUG2) << " --- Best hit found " << std::endl ; 
 						  
       double chi2_increment = 0.;			
       // isSuccessfulFit = mtrk->addAndFit( BestHit, chi2_increment, _Max_Chi2_Incr*(layer+1) ) == IMarlinTrack::success ;
       isSuccessfulFit = mtrk->addAndFit( BestHit, chi2_increment, _Max_Chi2_Incr ) == IMarlinTrack::success ;
 
-      streamlog_out(MESSAGE4) << " --- layer+1 = " << layer+1 << std::endl;
-      streamlog_out(MESSAGE4) << " --- _Max_Chi2_Incr = " << _Max_Chi2_Incr << std::endl;
-      streamlog_out(MESSAGE4) << " --- increment in the chi2 = " << chi2_increment << "  , max chi2 to accept the hit " << _Max_Chi2_Incr*(layer+1)  << std::endl;
-      streamlog_out(MESSAGE4) << " --- isSuccessfulFit = "<< isSuccessfulFit << std::endl ; 
+      streamlog_out(DEBUG4) << " --- layer+1 = " << layer+1 << std::endl;
+      streamlog_out(DEBUG4) << " --- _Max_Chi2_Incr = " << _Max_Chi2_Incr << std::endl;
+      streamlog_out(DEBUG4) << " --- increment in the chi2 = " << chi2_increment << "  , max chi2 to accept the hit " << _Max_Chi2_Incr*(layer+1)  << std::endl;
+      streamlog_out(DEBUG4) << " --- isSuccessfulFit = "<< isSuccessfulFit << std::endl ; 
 		  
 			
       // TotalSITHits++;
@@ -1063,13 +1065,13 @@ void  ExtrToTracker::FindAndAddHit(size_t& idet, int& elID, MarlinTrk::IMarlinTr
 	trkHits.push_back(BestHit) ;
 			  
 			  
-	streamlog_out(MESSAGE4) << " +++ hit added " << BestHit << std::endl ;
+	streamlog_out(DEBUG4) << " +++ hit added " << BestHit << std::endl ;
 	      
 
 	SITHitsPerTrk++;
 	// SITHitsFitted++;
 			  
-	streamlog_out(MESSAGE4) << " --- SITHitsPerTrk " << SITHitsPerTrk << std::endl ;
+	streamlog_out(DEBUG4) << " --- SITHitsPerTrk " << SITHitsPerTrk << std::endl ;
 			  
       } //end successful fit
       else{
