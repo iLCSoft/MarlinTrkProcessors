@@ -377,7 +377,11 @@ void TruthTrackFinder::processEvent( LCEvent* evt ) {
       //If first fit attempt fails, try a new fit with hits ordered by z
       
       if (fitError!=0) {
-        
+
+        // we need to clean the track object
+        delete track;
+        track = new TrackImpl;
+
         // Sort the hits from smaller to larger z
         std::sort(trackfitHits.begin(),trackfitHits.end(),sort_by_z);        
 
