@@ -1,28 +1,34 @@
-############################################################################################################
-#
-#    MarlinTrkProcessors
-#
-#    Collection of Tracking Relelated Processors Based on MarlinTrk
-#
-#    S. Aplin, F. Gaede DESY, 2011
-#
-#
-############################################################################################################
+# MarlinTrkProcessors
 
-------------------------------------------------------------
- 
- =============================================================================================================
+## A collection of Tracking Relelated Processors Based on MarlinTrk
 
-  -----------
- | v02-04-01 |
-  -----------
+Authors:
+	- S. Aplin, DESY
+	- F. Gaede, DESY
+	- Y.Voutsinas, DESY
 
-   - FPCCDSiliconTracking_MarlinTrk.cc:
-      - patch from K.Fujii for macos (use std::isnan)
+## License and Copyright
 
-  ---------
- | v02-04  |
-  ---------
+Copyright (C) 2011-2016 DESY, Deutsches Elektronen Synchrotron
+
+MarlinTrkProcessors is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License long with this program.  If not, see [http://www.gnu.org/licenses](http://www.gnu.org/licenses).
+
+
+
+## Changelog - Release Notes 
+
+###  v02-04-01 
+
+- FPCCDSiliconTracking_MarlinTrk.cc:
+	- patch from K.Fujii for macos (use std::isnan)
+
+  
+### v02-04
+  
 
   F.Gaede
    - add parameter ParticleMass to RefitProcessor
@@ -41,9 +47,9 @@
 
 
 
-  ---------
- | v02-03  |
-  ---------
+  
+### v02-03
+  
 
   R. Simoniello
      - Add procedure to handle with spiral tracks. Fit direction and fit initialisation configurable by steering macro (default fit direction: backward)
@@ -57,9 +63,9 @@
   Y. Voutsinas
      - Minivector creation from 1D SIT hits added 
 
-  ---------
- | v02-02  |
-  ---------
+
+### v02-02
+  
   R.Simoniello
    - RefitProcessor
      - for each subdetctor X, store nhits in fit in lcio::ILDDetID::X -1 and nhits 
@@ -85,9 +91,9 @@
 
 
 
-  ---------
- | v02-01  |
-  ---------
+  
+### v02-01
+  
 
    R.Simoniello
    - updated Refitting/src/ExtrToTracker.cc
@@ -100,9 +106,9 @@
    - use abstract ISurface
 
 
-  ---------
- | v02-00  |
-  ---------
+  
+### v02-00  
+  
 
    - adapted to  DD4hep::Surfaces and DDKalTest
 
@@ -143,34 +149,34 @@
       Utils/src/ClicEfficiencyCalculator.cc (D.Hynds)
          tracking efficiency for CLIC (all silicon)
 
-  ---------
- | v01-11  |
-  ---------
+  
+### v01-11  
+  
       -  added processor for VXD tracking using a cellular automaton algorithm based on mini - vectors
 
 
-  ---------
- | v01-10  |
-  ---------
+  
+### v01-10  
+  
       -  added FPCCDTracking code by Tatsuya Mori
 
 
-  ------------
- | v01-09-01  |
-  ------------
-      - updated calling attrinbutes of ced_hit_ID to new CED v01-09
+  -
+### v01-09-01  
+  -
+      - updated calling attrinbutes of ced_hit_ID to new CED ### v01-09
 
-  ---------
- | v01-09  |
-  ---------
+  
+### v01-09  
+  
 
      - FullLDCTracking_MarlinTrk
        - Use the Chi2 probability to remove badly fitted silicon tracks so that the don't pollute the TPC Si track merging.
        - Reject combinations of TPC and Silicon Tracks if more that a certain number of Silicon Hits, default 2, get rejected by the fit of the combined track.
 
-  --------
- | v01-08 |
-  --------
+  
+### v01-08 
+  
 
      - General 
        - SimplePlanarTestDigiProcessor renamed as PlanarDigiProcessor
@@ -192,9 +198,9 @@
        	 merged with Silicon Tracks have their hits set to setUsedInFit.
 
 
-  --------
- | v01-07 |
-  --------
+  
+### v01-07 
+  
 
   General:
 
@@ -216,9 +222,9 @@
       - Corrected Helix orientation for pre-fit.			
       - Protect against missing truth relations.
 
-  -----------
- | v01-06-01 |
-  -----------
+  
+### v01-06-01 
+  
 
   General:			
 
@@ -247,9 +253,9 @@
       - Added extra check for valid line intersection when creating space points. This fixes problems from very low pt tracks.
 
 
-  --------
- | v01-06 |
-  -------- 
+  
+### v01-06 
+   
 
   General:			 Removed use of sort predicate. Use sorted list of std pairs instead.
   				 Use _maxChi2PerHit in fits. 
@@ -286,9 +292,9 @@
 
   TrackSubsetProcessor		 Add hit numbers and additional trackstates. Use MarlinTrk utilities. 
 
-  --------
- | v01-05 |
-  -------- 
+  
+### v01-05 
+   
 
  General:			 Added dependencies on KiTrack and KiTrackMarlin to MarlinTrkProcessors.
  
@@ -303,9 +309,9 @@
 
  SpacePointBuilder:		 Corrected bias in position by using vertex constraint	
 
-  --------
- | v01-04 |
-  -------- 
+  
+### v01-04 
+   
 
   SimplePlanarDigiProcessor:	 When calling getLadderNumber the "ladderNumber" was given as input instead of the "layerNumber" (typo).
   				 In getLadderNumber some hits were not assigned to the right layer due to rounding errors 
@@ -326,9 +332,9 @@
   TruthTracker:			 Allow Helix parameters for fit to be take from MCParticle using UseMCParticleParametersFotInitOfFit == true. 
   				 Allow steering of values used for the initial diagonal elements of the trackfit via InitialTrackErrors.
 
-  --------
- | v01-03 |
-  -------- 
+  
+### v01-03 
+   
 
   General:			Make use of MeasurementSurface classes from GEAR, as well as new UTIL::BitSet32 and 
    				UTIL::ILDTrkHitTypeBit from ILDConf (LCIO). 			
@@ -348,9 +354,9 @@
 
 
 
-  --------
- | v01-02 |
-  -------- 
+  
+### v01-02 
+   
 
 SiliconTracking_MarlinTrk &	First version which is able to reconstruct LOI data.
  FullLDCTracking_MarlinTrk:     Fixed situation where, although more that 3 hits are excepted for fitting, 
@@ -363,17 +369,17 @@ SiliconTracking_MarlinTrk &	First version which is able to reconstruct LOI data.
  SimpleDiscDigiProcessor:	For LOI data the z coordinate is now set to that of the disk and the tolerance for dz has been increased to 10 microns.
 
 
-  --------
- | v01-01 |
-  -------- 
+  
+### v01-01 
+   
 
  SiliconTracking_MarlinTrk &   Modified to use getHitsInFit from MarlinTrk to get the correct TrackState for the first and last hits. 
  FullLDCTracking_MarlinTrk:    SiliconTracking has had the work around applied for the optimization problem of compare_r as applied 
                                to FullLDCTracking. 
 
-  --------
- | v01-00 |
-  -------- 
+  
+### v01-00 
+   
 
   SimplePlanarDigiProcessor:  
   			      Creates TrackerHits from SimTrackerHits, smearing them according to the input parameters. 
