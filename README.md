@@ -1,5 +1,7 @@
 # MarlinTrkProcessors
 
+[![Build Status](https://travis-ci.org/iLCSoft/MarlinTrkProcessors.svg?branch=master)](https://travis-ci.org/iLCSoft/MarlinTrkProcessors)
+
 ## A collection of Tracking Relelated Processors Based on MarlinTrk
 
 Authors:
