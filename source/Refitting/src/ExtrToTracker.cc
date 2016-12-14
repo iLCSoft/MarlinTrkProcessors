@@ -982,8 +982,7 @@ void ExtrToTracker::getGeoInfo(){
 
 	streamlog_out( DEBUG2 ) << " - n layers = " << nlayers <<std::endl;
 
-	std::map<DD4hep::long64 , std::vector<DD4hep::long64 > >& map_neighbours_cellID = theExtension->mapNeighbours;
-	_vecMapNeighbours.push_back(map_neighbours_cellID);
+	_vecMapNeighbours.push_back(&(theExtension->mapNeighbours));
 
 
       }//end barrel type
@@ -996,8 +995,7 @@ void ExtrToTracker::getGeoInfo(){
 
 	streamlog_out( DEBUG2 ) << " - n layers = " << nlayers <<std::endl;
 
-	std::map<DD4hep::long64 , std::vector<DD4hep::long64 > >& map_neighbours_cellID = theExtension->mapNeighbours;
-	_vecMapNeighbours.push_back(map_neighbours_cellID);
+	_vecMapNeighbours.push_back(&(theExtension->mapNeighbours));
 
       }//end endcap type
 
@@ -1035,13 +1033,14 @@ void  ExtrToTracker::FindAndAddHit(size_t& idet, int& elID, MarlinTrk::IMarlinTr
     bool isSuccessfulFit = false; 
 
     std::vector<DD4hep::long64 > vecIDs;
-    vecIDs = _vecMapNeighbours.at(idet)[elID];
+    vecIDs = _vecMapNeighbours.at(idet)->find(elID)->second;
+
     vecIDs.insert( std::begin(vecIDs), elID );
 
     TrackerHitPlane* BestHit;
     BestHit = getSiHit(vecIDs, _vecMapsElHits.at(idet), mtrk);
 
-    //BestHit = getSiHit(_vecvecHitsInCol.at(idet), mtrk);
+    // BestHit = getSiHit(_vecvecHitsInCol.at(idet), mtrk);
 
     if (BestHit != 0){
 		      			  
