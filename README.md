@@ -8,7 +8,8 @@ Authors:
 
 - S. Aplin, DESY
 - F. Gaede, DESY
-- Y.Voutsinas, DESY
+- R. Simoniello, CERN
+- Y. Voutsinas, DESY
 
 ## License and Copyright
 
