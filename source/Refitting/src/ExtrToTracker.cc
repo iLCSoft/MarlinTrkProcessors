@@ -982,8 +982,6 @@ void ExtrToTracker::getGeoInfo(){
 
 	streamlog_out( DEBUG2 ) << " - n layers = " << nlayers <<std::endl;
 
-	_vecMapNeighbours.push_back(&(theExtension->mapNeighbours));
-
 
       }//end barrel type
       else {
@@ -995,9 +993,11 @@ void ExtrToTracker::getGeoInfo(){
 
 	streamlog_out( DEBUG2 ) << " - n layers = " << nlayers <<std::endl;
 
-	_vecMapNeighbours.push_back(&(theExtension->mapNeighbours));
-
       }//end endcap type
+
+      DD4hep::DDRec::NeighbourSurfacesData *neighbourSurfaces = 0;  
+      neighbourSurfaces = theDetector.extension<DD4hep::DDRec::NeighbourSurfacesData>();
+      _vecMapNeighbours.push_back(&(neighbourSurfaces->sameLayer));
 
     } catch (std::runtime_error &exception){
             
