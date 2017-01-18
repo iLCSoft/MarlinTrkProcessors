@@ -162,6 +162,12 @@ void DDPlanarDigiProcessor::init() {
   streamlog_out( DEBUG3 ) << " DDPlanarDigiProcessor::init(): found " << _map->size() 
                           << " surfaces for detector:" <<  _subDetName << std::endl ;
 
+  streamlog_out( MESSAGE ) << " *** DDPlanarDigiProcessor::init(): creating histograms" << std::endl ;
+
+  AIDAProcessor::histogramFactory(this) ; //->createHistogram1D( "hMCPEnergy", "energy of the MCParticles", 100 ) ;
+
+  _h[ hu ] = new TH1F( "hu" , "smearing u" , 50, -5. , +5. );
+  _h[ hv ] = new TH1F( "hv" , "smearing v" , 50, -5. , +5. );
   
 }
 
@@ -171,20 +177,6 @@ void DDPlanarDigiProcessor::processRunHeader( LCRunHeader* run) {
 } 
 
 void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) { 
-
-
-
-  if( isFirstEvent() ) {
-
-    streamlog_out( MESSAGE ) << " *** DDPlanarDigiProcessor::processEvent():   creating histograms for first event ! " << std::endl ;
-
-
-    //AIDA::ICloud1D* hMCPEnergy  = 
-    AIDAProcessor::histogramFactory(this) ; //->createHistogram1D( "hMCPEnergy", "energy of the MCParticles", 100 ) ;
-
-    _h[ hu ] = new TH1F( "hu" , "smearing u" , 50, -5. , +5. );
-    _h[ hv ] = new TH1F( "hv" , "smearing v" , 50, -5. , +5. );
-  }
 
   gsl_rng_set( _rng, Global::EVENTSEEDER->getSeed(this) ) ;   
   streamlog_out( DEBUG4 ) << "seed set to " << Global::EVENTSEEDER->getSeed(this) << std::endl;
