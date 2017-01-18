@@ -104,6 +104,11 @@ DDPlanarDigiProcessor::DDPlanarDigiProcessor() : Processor("DDPlanarDigiProcesso
                               _forceHitsOntoSurface ,
                               bool(false) );
 
+  registerProcessorParameter( "MinimumEnergyPerHit" ,
+                              "Minimum Energy (in GeV!) to accept hits, other hits are ignored",
+                              _minEnergy,
+                              double(0.0) );
+
   
   // setup the list of supported detectors
   
@@ -113,6 +118,7 @@ DDPlanarDigiProcessor::DDPlanarDigiProcessor() : Processor("DDPlanarDigiProcesso
 enum {
   hu = 0,
   hv,
+  hitE,
   hSize 
 } ;
 
@@ -168,6 +174,7 @@ void DDPlanarDigiProcessor::init() {
 
   _h[ hu ] = new TH1F( "hu" , "smearing u" , 50, -5. , +5. );
   _h[ hv ] = new TH1F( "hv" , "smearing v" , 50, -5. , +5. );
+  _h[ hitE ] = new TH1F( "hitE" , "hitEnergy in keV" , 1000, 0 , 200 );
   
 }
 
@@ -221,6 +228,13 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
 
 
       SimTrackerHit* simTHit = dynamic_cast<SimTrackerHit*>( STHcol->getElementAt( i ) ) ;
+
+      _h[hitE]->Fill( simTHit->getEDep() * 1e6 );
+
+      if( simTHit->getEDep() < _minEnergy ) {
+        streamlog_out( DEBUG ) << "Hit with insufficient energy " << simTHit->getEDep()*1e6 << " keV" << std::endl;
+        continue;
+      }
       
       const int cellID0 = simTHit->getCellID0() ;
   
