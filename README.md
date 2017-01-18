@@ -25,6 +25,14 @@ You should have received a copy of the GNU General Public License long with this
 
 ## Changelog - Release Notes 
 
+
+###  v02-05
+
+- DDPlanarDigitiser: Use pre-filled map of neighboring surfaces to speed up extrapolation of tracks (R. Simoniello)
+- DDPlanarDigitiser: Add parameter MinimumEnergyPerHit to set a threshold for accepting hits (A. Sailer)
+- TruthTrackFinder: Fix duplicate trackstate problem from truthTrackFinder (A. Sailer)
+- cellID encoding string from singleton in DDKalTest (momentarily added depedence on DDKalTest)
+
 ###  v02-04-01 
 
 - FPCCDSiliconTracking_MarlinTrk.cc:
