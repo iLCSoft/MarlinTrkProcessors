@@ -23,6 +23,20 @@ FIND_PACKAGE( ILCUTIL REQUIRED COMPONENTS ILCSOFT_CMAKE_MODULES )
 # load default settings from ILCSOFT_CMAKE_MODULES
 INCLUDE( ilcsoft_default_settings )
 
+SET( COMPILER_FLAGS "-Wno-effc++" )
+MESSAGE( STATUS "FLAGS ${COMPILER_FLAGS}" )
+FOREACH( FLAG ${COMPILER_FLAGS} )
+  CHECK_CXX_COMPILER_FLAG( "${FLAG}" CXX_FLAG_WORKS_${FLAG} )
+  IF( ${CXX_FLAG_WORKS_${FLAG}} )
+    MESSAGE ( STATUS "Adding ${FLAG} to CXX_FLAGS" )
+    ### We append the flag, so they overwrite things from somewhere else
+    SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${FLAG} ")
+  ELSE()
+    MESSAGE ( STATUS "NOT Adding ${FLAG} to CXX_FLAGS" )
+  ENDIF()
+ENDFOREACH()
+
+
 FIND_PACKAGE( Marlin 1.0 REQUIRED ) # minimum required Marlin version
 INCLUDE_DIRECTORIES( SYSTEM ${Marlin_INCLUDE_DIRS} )
 LINK_LIBRARIES( ${Marlin_LIBRARIES} )
