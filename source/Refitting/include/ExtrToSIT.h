@@ -142,6 +142,7 @@ protected:
   /** pointer to the IMarlinTrkSystem instance 
    */
   MarlinTrk::IMarlinTrkSystem* _trksystem ;
+  std::string _trkSystemName ;
   
   std::string _mcParticleCollectionName ;
 
