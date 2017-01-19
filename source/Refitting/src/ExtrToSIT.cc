@@ -113,6 +113,11 @@ ExtrToSIT::ExtrToSIT() : Processor("ExtrToSIT") {
                              _SmoothOn,
                              bool(false));
 
+  registerProcessorParameter( "TrackSystemName",
+                              "Name of the track fitting system to be used (KalTest, DDKalTest, aidaTT, ... )",
+                              _trkSystemName,
+                              std::string("DDKalTest") );
+
   registerProcessorParameter("DirInsideOut",
                              "direction for the extrapolation. if true it means we extrapolate from VXD, otherwise from TPC",
                              _dirInsideOut,
@@ -191,9 +196,8 @@ void ExtrToSIT::init() {
   // usually a good idea to
   printParameters() ;
   
-  // set up the geometery needed by KalTest
-  //FIXME: for now do KalTest only - make this a steering parameter to use other fitters
-  _trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( "KalTest" , marlin::Global::GEAR , "" ) ;
+  // set up the geometery needed by DDKalTest
+  _trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( _trkSystemName , marlin::Global::GEAR , "" ) ;
   
   if( _trksystem == 0 ){
     
