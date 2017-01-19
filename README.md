@@ -32,6 +32,7 @@ You should have received a copy of the GNU General Public License long with this
 - DDPlanarDigitiser: Add parameter MinimumEnergyPerHit to set a threshold for accepting hits (A. Sailer)
 - TruthTrackFinder: Fix duplicate trackstate problem from truthTrackFinder (A. Sailer)
 - cellID encoding string from singleton in DDKalTest (momentarily added depedence on DDKalTest)
+- add TrkSystemName parameter to ExtrToSIT processor
 
 ###  v02-04-01 
 
