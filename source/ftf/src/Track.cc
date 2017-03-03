@@ -1397,7 +1397,7 @@ void Track::fillPrimary (  double &xc, double &yc, double &rc,
 //
 //****************************************************************************
 void Track::fillSecondary ( double &xc, double &yc,
-						   double xPar, double yPar )
+			    double /*xPar*/, double /*yPar*/ )
 {
 	/*--------------------------------------------------------------------------
 	Get angles for initial and final points
@@ -1548,6 +1548,7 @@ int Track::followHitSelection ( Hit* baseHit, Hit* candidateHit ){
 	//
 	double lszChi2 = 0 ;
 	double lchi2 ;
+	//FIXME: slocal might be used uninitialised, what is a reasonable default value?
 	double slocal, deta, dphi ;
 	double dx, dy, dxy, dsz, temp ;
 	//

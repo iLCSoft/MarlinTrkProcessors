@@ -295,7 +295,7 @@ void TrackFinderFTF::init() {
   
 }
 
-void TrackFinderFTF::processRunHeader( LCRunHeader* run) { 
+void TrackFinderFTF::processRunHeader( LCRunHeader* ) {
   
   ++_n_run ;
 } 
@@ -512,11 +512,6 @@ void TrackFinderFTF::processEvent( LCEvent * evt ) {
   
   _trackFinder->nHits = counter ;
   
-  int   lastNTracks ;
-  double sectorTime ;
-  //
-  //
-  
   for ( int h = 0 ; h < _trackFinder->nHits ; h++ ) {
     _trackFinder->hit[h].track = 0 ;
   }
@@ -525,11 +520,9 @@ void TrackFinderFTF::processEvent( LCEvent * evt ) {
   _trackFinder->para.eventReset = 1 ;
   _trackFinder->nTracks         = 0 ;
   
-  sectorTime = _trackFinder->process ( ) ;
-  
-  lastNTracks = _trackFinder->nTracks ;
-  
-  
+  // double sectorTime =
+  _trackFinder->process ( ) ;
+
   // print input and output for this event
   _trackFinder->para.print();
   //
@@ -661,7 +654,7 @@ void TrackFinderFTF::processEvent( LCEvent * evt ) {
 
 
 
-void TrackFinderFTF::check( LCEvent * evt ) { 
+void TrackFinderFTF::check( LCEvent* ) {
   // nothing to check here - could be used to fill checkplots in reconstruction processor
 }
 
@@ -685,11 +678,8 @@ LCCollection* TrackFinderFTF::GetCollection( LCEvent * evt, std::string colName 
   
   LCCollection* col = NULL;
   
-  int nElements = 0;
-  
   try{
     col = evt->getCollection( colName.c_str() ) ;
-    nElements = col->getNumberOfElements()  ;
     streamlog_out( DEBUG4 ) << " --> " << colName.c_str() << " track collection found in event = " << col << " number of elements " << col->getNumberOfElements() << std::endl;
   }
   catch(DataNotAvailableException &e){
