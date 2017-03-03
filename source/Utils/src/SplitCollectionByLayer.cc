@@ -90,7 +90,7 @@ void SplitCollectionByLayer::init() {
 }
 
 
-void SplitCollectionByLayer::processRunHeader( LCRunHeader* run) { 
+void SplitCollectionByLayer::processRunHeader( LCRunHeader* ) {
   
   _nRun++ ;
 } 
@@ -153,9 +153,9 @@ void SplitCollectionByLayer::processEvent( LCEvent * evt ) {
 
   int nHit = col->getNumberOfElements()  ;
   
-  for(int i=0; i< nHit ; i++){
+  for(int iHit=0; iHit< nHit ; iHit++){
       
-    lcio::LCObject* h =  col->getElementAt( i ) ;
+    lcio::LCObject* h =  col->getElementAt( iHit ) ;
 
     long id = -1 ;
 
@@ -183,7 +183,7 @@ void SplitCollectionByLayer::processEvent( LCEvent * evt ) {
 
 
     // check if we have an output collection for this layer
-    for(unsigned i=0, N= _outCols.size() ; i<N ; ++i){
+    for(int i=0, N=_outCols.size() ; i<N ; ++i){
       
       if( ( _outCols[i].layer0 <= layerID )  && ( layerID <= _outCols[i].layer1 ) ){
 
@@ -222,7 +222,7 @@ void SplitCollectionByLayer::processEvent( LCEvent * evt ) {
 
 
 
-void SplitCollectionByLayer::check( LCEvent * evt ) { 
+void SplitCollectionByLayer::check( LCEvent* ) {
   // nothing to check here - could be used to fill checkplots in reconstruction processor
 }
 
