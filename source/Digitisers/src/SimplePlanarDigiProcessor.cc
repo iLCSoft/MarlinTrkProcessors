@@ -141,7 +141,7 @@ void SimplePlanarDigiProcessor::init() {
   
 }
 
-void SimplePlanarDigiProcessor::processRunHeader( LCRunHeader* run) { 
+void SimplePlanarDigiProcessor::processRunHeader( LCRunHeader* ) {
   ++_nRun ;
 } 
 
@@ -522,7 +522,7 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
 
 
 
-void SimplePlanarDigiProcessor::check( LCEvent * evt ) { 
+void SimplePlanarDigiProcessor::check( LCEvent* ) {
   // nothing to check here - could be used to fill checkplots in reconstruction processor
 }
 

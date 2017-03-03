@@ -112,7 +112,7 @@ void SimpleCylinderDigiProcessor::init() {
   
 }
 
-void SimpleCylinderDigiProcessor::processRunHeader( LCRunHeader* run) { 
+void SimpleCylinderDigiProcessor::processRunHeader( LCRunHeader* ) {
   ++_nRun ;
 } 
 
@@ -275,7 +275,7 @@ void SimpleCylinderDigiProcessor::processEvent( LCEvent * evt ) {
 
 
 
-void SimpleCylinderDigiProcessor::check( LCEvent * evt ) { 
+void SimpleCylinderDigiProcessor::check( LCEvent* ) {
   // nothing to check here - could be used to fill checkplots in reconstruction processor
 }
 

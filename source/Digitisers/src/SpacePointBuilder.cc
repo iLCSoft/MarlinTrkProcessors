@@ -137,7 +137,7 @@ void SpacePointBuilder::init() {
 }
 
 
-void SpacePointBuilder::processRunHeader( LCRunHeader* run) { 
+void SpacePointBuilder::processRunHeader( LCRunHeader* ) {
 
   _nRun++ ;
 } 
@@ -405,7 +405,7 @@ void SpacePointBuilder::processEvent( LCEvent * evt ) {
 
 
 
-void SpacePointBuilder::check( LCEvent * evt ) {}
+void SpacePointBuilder::check( LCEvent* ) {}
 
 
 void SpacePointBuilder::end(){
@@ -579,7 +579,7 @@ TrackerHitImpl* SpacePointBuilder::createSpacePoint( TrackerHitPlane* a , Tracke
   
   if( fabs(du_a - du_b) > 1.0e-06 ){
     streamlog_out( ERROR ) << "\tThe measurement errors of the two 1D hits must be equal \n\n";    
-    assert( fabs(du_a - du_b) > 1.0e-06 == false );
+    assert( (fabs(du_a - du_b) > 1.0e-06) == false );
     return NULL; //measurement errors are not equal don't create a spacepoint
   }
  
