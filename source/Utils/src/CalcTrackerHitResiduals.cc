@@ -130,7 +130,7 @@ void CalcTrackerHitResiduals::init() {
   
 }
 
-void CalcTrackerHitResiduals::processRunHeader( LCRunHeader* run) { 
+void CalcTrackerHitResiduals::processRunHeader( LCRunHeader* ) {
   
   ++_n_run ;
 } 
@@ -369,7 +369,7 @@ void CalcTrackerHitResiduals::processEvent( LCEvent * evt ) {
 
 
 
-void CalcTrackerHitResiduals::check( LCEvent * evt ) { 
+void CalcTrackerHitResiduals::check( LCEvent* ) {
   // nothing to check here - could be used to fill checkplots in reconstruction processor
 }
 
@@ -448,11 +448,8 @@ LCCollection* CalcTrackerHitResiduals::GetCollection(  LCEvent * evt, std::strin
   
   LCCollection* col = NULL;
   
-  int nElements = 0;
-  
   try {
     col = evt->getCollection( colName.c_str() ) ;
-    nElements = col->getNumberOfElements()  ;
     streamlog_out( DEBUG4 ) << " --> " << colName.c_str() << " collection found, number of elements = " << col->getNumberOfElements() << std::endl;
   }
   catch(DataNotAvailableException &e) {

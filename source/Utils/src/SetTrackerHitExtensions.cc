@@ -101,7 +101,7 @@ void SetTrackerHitExtensions::init() {
     
 }
 
-void SetTrackerHitExtensions::processRunHeader( LCRunHeader* run) { 
+void SetTrackerHitExtensions::processRunHeader( LCRunHeader* ) {
   
   ++_n_run ;
 } 
@@ -226,7 +226,7 @@ void SetTrackerHitExtensions::processEvent( LCEvent * evt ) {
 
 
 
-void SetTrackerHitExtensions::check( LCEvent * evt ) { 
+void SetTrackerHitExtensions::check( LCEvent* ) {
   // nothing to check here - could be used to fill checkplots in reconstruction processor
 }
 
@@ -282,11 +282,8 @@ LCCollection* SetTrackerHitExtensions::GetCollection(  LCEvent * evt, std::strin
   
   LCCollection* col = NULL;
   
-  int nElements = 0;
-  
   try {
     col = evt->getCollection( colName.c_str() ) ;
-    nElements = col->getNumberOfElements()  ;
     streamlog_out( DEBUG4 ) << " --> " << colName.c_str() << " collection found, number of elements = " << col->getNumberOfElements() << std::endl;
   }
   catch(DataNotAvailableException &e) {
