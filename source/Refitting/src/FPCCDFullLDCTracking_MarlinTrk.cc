@@ -1625,13 +1625,13 @@ void FPCCDFullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
       trackExt->setD0(tpcTrack->getD0());
       trackExt->setZ0(tpcTrack->getZ0());
       float cov[15];
-      float param[5];
       //      float reso[4];
-      param[0] = tpcTrack->getOmega();
-      param[1] = tpcTrack->getTanLambda();
-      param[2] = tpcTrack->getPhi();
-      param[3] = tpcTrack->getD0();
-      param[4] = tpcTrack->getZ0();
+      // float param[5];
+      // param[0] = tpcTrack->getOmega();
+      // param[1] = tpcTrack->getTanLambda();
+      // param[2] = tpcTrack->getPhi();
+      // param[3] = tpcTrack->getD0();
+      // param[4] = tpcTrack->getZ0();
       
       
       const FloatVec Cov = tpcTrack->getCovMatrix();
@@ -1697,13 +1697,12 @@ void FPCCDFullLDCTracking_MarlinTrk::prepareVectors(LCEvent * event ) {
       trackExt->setD0(siTrack->getD0());
       trackExt->setZ0(siTrack->getZ0());
       float cov[15];
-      float param[5];
-      
-      param[0] = siTrack->getOmega();
-      param[1] = siTrack->getTanLambda();
-      param[2] = siTrack->getPhi();
-      param[3] = siTrack->getD0();
-      param[4] = siTrack->getZ0();      
+      // float param[5];
+      // param[0] = siTrack->getOmega();
+      // param[1] = siTrack->getTanLambda();
+      // param[2] = siTrack->getPhi();
+      // param[3] = siTrack->getD0();
+      // param[4] = siTrack->getZ0();
       
       
       
@@ -3199,10 +3198,10 @@ void FPCCDFullLDCTracking_MarlinTrk::CheckTracks() {
         
         HelixClass helix;
         helix.Initialize_Canonical(phi,d0,z0,omega,tanL,_bField);
-        float mom[3];
-        mom[0]  = helix.getMomentum()[0];
-        mom[1]  = helix.getMomentum()[1];
-        mom[2]  = helix.getMomentum()[2];
+        // float mom[3];
+        // mom[0]  = helix.getMomentum()[0];
+        // mom[1]  = helix.getMomentum()[1];
+        // mom[2]  = helix.getMomentum()[2];
         // float p = sqrt(mom[0]*mom[0]+mom[1]*mom[1]+mom[2]*mom[2]);
         // float chi2Sig =  (combinedTrack->getChi2() - combinedTrack->getNDF());
         // chi2Sig = chi2Sig/sqrt(combinedTrack->getNDF()*2);
@@ -3253,7 +3252,7 @@ void FPCCDFullLDCTracking_MarlinTrk::CheckTracks() {
 
 
 float FPCCDFullLDCTracking_MarlinTrk::CompareTrkII(TrackExtended * first, TrackExtended * second, 
-                                              float d0Cut, float z0Cut,int iopt,float & Angle) {
+						   float d0Cut, float z0Cut,int /*iopt*/,float & Angle) {
   
   
   float result = 1.0e+20;
@@ -3310,7 +3309,7 @@ float FPCCDFullLDCTracking_MarlinTrk::CompareTrkII(TrackExtended * first, TrackE
  */
 
 float FPCCDFullLDCTracking_MarlinTrk::CompareTrkIII(TrackExtended * first, TrackExtended * second, 
-                                               float d0Cut, float z0Cut,int iopt, float & AngleSignificance) {
+						    float d0Cut, float z0Cut,int /*iopt*/, float & AngleSignificance) {
   
   
   float result = 1.0e+20;
@@ -4245,10 +4244,10 @@ void FPCCDFullLDCTracking_MarlinTrk::AssignOuterHitsToTracks(TrackerHitExtendedV
           }
           
           const gear::Vector3D point(0.,0.,0.); // nominal IP
-          int return_code = 0;
           
           TrackStateImpl trkState ;
-          return_code = marlin_trk->propagate(point, trkState, chi2_D, ndf ) ;
+          // int return_code =
+          marlin_trk->propagate(point, trkState, chi2_D, ndf ) ;
           
           delete marlin_trk ;
           
@@ -4785,10 +4784,10 @@ void FPCCDFullLDCTracking_MarlinTrk::AssignSiHitsToTracks(TrackerHitExtendedVec 
         }
                 
         const gear::Vector3D point(0.,0.,0.); // nominal IP
-        int return_code = 0;
         
         TrackStateImpl trkState ;
-        return_code = marlin_trk->propagate(point, trkState, chi2_D, ndf ) ;
+        // int return_code =
+        marlin_trk->propagate(point, trkState, chi2_D, ndf ) ;
         
         delete marlin_trk ;
         
@@ -5415,7 +5414,7 @@ bool FPCCDFullLDCTracking_MarlinTrk::VetoMerge(TrackExtended* firstTrackExt, Tra
 }
 
 
-void FPCCDFullLDCTracking_MarlinTrk::check(LCEvent * evt) { }
+void FPCCDFullLDCTracking_MarlinTrk::check(LCEvent* ) { }
 
 void FPCCDFullLDCTracking_MarlinTrk::end() { 
   
@@ -5661,11 +5660,8 @@ LCCollection* FPCCDFullLDCTracking_MarlinTrk::GetCollection(  LCEvent * evt, std
 
   LCCollection* col = NULL;
 
-  int nElements = 0;
-
   try {
     col = evt->getCollection( colName.c_str() ) ;
-    nElements = col->getNumberOfElements()  ;
     streamlog_out( DEBUG4 ) << " --> " << colName.c_str() << " collection found, number of elements = " << col->getNumberOfElements() << std::endl;
   }
   catch(DataNotAvailableException &e) {

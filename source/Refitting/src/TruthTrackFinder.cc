@@ -186,7 +186,7 @@ void TruthTrackFinder::init() {
 }
 
 
-void TruthTrackFinder::processRunHeader( LCRunHeader* run) {
+void TruthTrackFinder::processRunHeader( LCRunHeader* ) {
 	m_runNumber++ ;
 }
 
@@ -270,7 +270,7 @@ void TruthTrackFinder::processEvent( LCEvent* evt ) {
   for(int itP=0;itP<nParticles;itP++){
 		
     // Get the particle
-    MCParticle* mcParticle = dynamic_cast<MCParticle*>( particleCollection->getElementAt(itP) ) ;
+    MCParticle* mcParticle = static_cast<MCParticle*>( particleCollection->getElementAt(itP) ) ;
     
     // Get the vector of hits from the container
     if(particleHits.count(mcParticle) == 0) continue;
@@ -357,7 +357,7 @@ void TruthTrackFinder::processEvent( LCEvent* evt ) {
         std::sort(trackfitHits.begin(),trackfitHits.end(),sort_by_z);        
 
         // If fit with hits ordered by radius has failed, the track is probably a 'spiral' track. 
-        // Fitting 'backward' is very difficult for spiral track, so the default directiin here is set as 'forward'
+        // Fitting 'backward' is very difficult for spiral track, so the default direction here is set as 'forward'
         fitError = MarlinTrk::createFinalisedLCIOTrack(marlinTrackZSort, trackfitHits, track,  MarlinTrk::IMarlinTrack::forward, trkState, m_magneticField, m_maxChi2perHit);
       }
 
@@ -445,7 +445,7 @@ void TruthTrackFinder::processEvent( LCEvent* evt ) {
 	
 }
 
-void TruthTrackFinder::check( LCEvent * evt ) {
+void TruthTrackFinder::check( LCEvent* ) {
 	// nothing to check here - could be used to fill checkplots in reconstruction processor
 }
 

@@ -317,7 +317,7 @@ void CellsAutomatonMV::init() {
 }
 
 
-void CellsAutomatonMV::processRunHeader( LCRunHeader* run) { 
+void CellsAutomatonMV::processRunHeader( LCRunHeader* ) {
     
 } 
 
@@ -649,7 +649,7 @@ void CellsAutomatonMV::processEvent( LCEvent * evt ) {
   TrackCompatibilityShare1_MV comp;
 
   // Various ways to define the quality of a track. They are defined in  the header file
-  TrackQISpecial_MV  testQty;
+  // TrackQISpecial_MV  testQty;
   MaxHits TheMoreTheMerrier ;
 
   streamlog_out(DEBUG4) << " best subset finder = " << _bestSubsetFinder << " no of tracks fed to the nnets " << trackCandidates.size() << std::endl ;
@@ -714,7 +714,7 @@ void CellsAutomatonMV::processEvent( LCEvent * evt ) {
       
       std::vector< IMiniVector* > MVTrkHits =   myTrack->getMVs();
 
-      for (int mv = 0 ; mv <  MVTrkHits.size() ; mv++ ){
+      for (unsigned int mv = 0 ; mv <  MVTrkHits.size() ; mv++ ){
 	
 	MiniVector *testMV = MVTrkHits[mv]->getMiniVector() ;
 	TrackerHitVec spchits = testMV->getTrackerHitVec() ;
@@ -808,7 +808,7 @@ void CellsAutomatonMV::processEvent( LCEvent * evt ) {
 }
 
 
-void CellsAutomatonMV::check( LCEvent * evt ) { 
+void CellsAutomatonMV::check( LCEvent* ) {
   // nothing to check here - could be used to fill checkplots in reconstruction processor
 }
 
@@ -1014,16 +1014,16 @@ void CellsAutomatonMV::InitialiseVTX( LCEvent * evt, EVENT::TrackerHitVec HitsTe
 
 void CellsAutomatonMV::CreateMiniVectors( int sector ) {
 
-  int iTheta = sector/(_nLayers*_nDivisionsInPhi) ;
-  int iPhi = ((sector - (iTheta*_nLayers*_nDivisionsInPhi)) / _nLayers) ;
-  int layer = sector - (iTheta*_nLayers*_nDivisionsInPhi) - (iPhi*_nLayers) ; 
+  int thisTheta = sector/(_nLayers*_nDivisionsInPhi) ;
+  int thisPhi = ((sector - (thisTheta*_nLayers*_nDivisionsInPhi)) / _nLayers) ;
+  int layer = sector - (thisTheta*_nLayers*_nDivisionsInPhi) - (thisPhi*_nLayers) ;
 
-  streamlog_out(DEBUG4) << " Taking sector " << sector << " of layer " << layer << " Phi sector " << iPhi << " Theta sector " << iTheta << std::endl ;
+  streamlog_out(DEBUG4) << " Taking sector " << sector << " of layer " << layer << " Phi sector " << thisPhi << " Theta sector " << thisTheta << std::endl ;
 
-  int iPhi_Up    = iPhi + 2;
-  int iPhi_Low   = iPhi - 2;
-  int iTheta_Up  = iTheta + 2; 
-  int iTheta_Low = iTheta - 2;
+  int iPhi_Up    = thisPhi + 2;
+  int iPhi_Low   = thisPhi - 2;
+  int iTheta_Up  = thisTheta + 2;
+  int iTheta_Low = thisTheta - 2;
   if (iTheta_Low < 0) iTheta_Low = 0;
   if (iTheta_Up  >= _nDivisionsInTheta) iTheta_Up = _nDivisionsInTheta-1;
 
@@ -1058,8 +1058,8 @@ void CellsAutomatonMV::CreateMiniVectors( int sector ) {
 	  // construct mini-vectors applying a delta theta cut
 	  //***************************************************************************
 	  
-	  int iTheta_Up_mod  = iTheta + 2; 
-	  int iTheta_Low_mod = iTheta - 2;
+	  int iTheta_Up_mod  = thisTheta + 2;
+	  int iTheta_Low_mod = thisTheta - 2;
 	  if (iTheta_Low_mod < 0) iTheta_Low_mod = 0;
 	  if (iTheta_Up_mod  >= _nDivisionsInTheta) iTheta_Up_mod = _nDivisionsInTheta-1;
 	  
@@ -1112,13 +1112,13 @@ void CellsAutomatonMV::CreateMiniVectors( int sector ) {
       
 	if ( layer==10 || layer==8) {
 	  
-	  int iPhi_Up_Mod    = iPhi + 8;
-	  int iPhi_Low_Mod   = iPhi - 8;
+	  int iPhi_Up_Mod    = thisPhi + 8;
+	  int iPhi_Low_Mod   = thisPhi - 8;
 	  
 	  for (int iPhi = iPhi_Low_Mod ; iPhi < iPhi_Up_Mod ; iPhi++){
 	    
-	    int iTheta_Up_mod  = iTheta + 8; 
-	    int iTheta_Low_mod = iTheta - 8;
+	    int iTheta_Up_mod  = thisTheta + 8;
+	    int iTheta_Low_mod = thisTheta - 8;
 	    if (iTheta_Low_mod < 0) iTheta_Low_mod = 0;
 	    if (iTheta_Up_mod  >= _nDivisionsInTheta) iTheta_Up_mod = _nDivisionsInTheta-1;
 	    
@@ -1395,7 +1395,7 @@ bool CellsAutomatonMV::thetaAgreementImproved( EVENT::TrackerHit *toHit, EVENT::
   bool agreement = false ;
 
   //double resolution = 0.004 ; // just temporarily here
-  double MPS_factor = 0.0 ;  // just for test, and only for vertical muons of 4GeV
+  //double MPS_factor = 0.0 ;  // just for test, and only for vertical muons of 4GeV
 
   double  pos_outer[3];
   double  pos_inner[3];

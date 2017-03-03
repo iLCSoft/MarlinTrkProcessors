@@ -57,9 +57,9 @@ class GetPurityUtil{
          LCObject* trk = dynamic_cast<LCObject*>(tvec[i]);
          const LCObjectVec* lcoVec = NULL;
          int navsize = navec.size();
-         for(int i = 0; i < navsize; i++){
-            if(navec[i] != NULL){
-               lcoVec = &navec[i]->getRelatedToObjects(trk);//見つからない場合はNULLを返すわけじゃないので、sizeが0かどうかで判定する。
+         for(int j = 0; i < navsize; j++){
+            if(navec[j] != NULL){
+               lcoVec = &navec[j]->getRelatedToObjects(trk);//見つからない場合はNULLを返すわけじゃないので、sizeが0かどうかで判定する。
                if(lcoVec->size() != 0){
                   break;
                }
