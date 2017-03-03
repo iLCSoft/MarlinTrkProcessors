@@ -84,59 +84,59 @@ void TrackFindingParameters::read ( char* inputFile )
 			continue ;
 		}
 		if ( !strncmp(name,"detaMerge    ",   8) ) {
-			fscanf ( dataFile, "%e", &detaMerge     ) ;
+			fscanf ( dataFile, "%le", &detaMerge     ) ;
 			continue ;
 		}
 		if ( !strncmp(name,"deta         ",   4) ) {
-			fscanf ( dataFile, "%e", &deta          ) ;
+			fscanf ( dataFile, "%le", &deta          ) ;
 			continue ;
 		}  
 		if ( !strncmp(name,"dphiMerge    ",   8) ) {
-			fscanf ( dataFile, "%e", &dphiMerge     ) ;
+			fscanf ( dataFile, "%le", &dphiMerge     ) ;
 			continue ;
 		}
 		if ( !strncmp(name,"dphi         ",   4) ) {
-			fscanf ( dataFile, "%e", &dphi          ) ;
+			fscanf ( dataFile, "%le", &dphi          ) ;
 			continue ;
 		}  
 		if ( !strncmp(name,"etaMinTrack  ",   8) ) {
-			fscanf ( dataFile, "%e", &etaMinTrack   ) ;
+			fscanf ( dataFile, "%le", &etaMinTrack   ) ;
 			continue ;
 		}
 		if ( !strncmp(name,"etaMin",   6) ) {
-			fscanf ( dataFile, "%e", &etaMin        ) ;
+			fscanf ( dataFile, "%le", &etaMin        ) ;
 			continue ;
 		}  
 		if ( !strncmp(name,"etaMaxTrack  ",   8) ) {
-			fscanf ( dataFile, "%e", &etaMaxTrack   ) ;
+			fscanf ( dataFile, "%le", &etaMaxTrack   ) ;
 			continue ;
 		}
 		if ( !strncmp(name,"etaMax       ",   6) ) {
-			fscanf ( dataFile, "%e", &etaMax        ) ;
+			fscanf ( dataFile, "%le", &etaMax        ) ;
 			continue ;
 		}  
 		if ( !strncmp(name,"phiMinTrack  ",   8) ) {
-			fscanf ( dataFile, "%e", &phiMinTrack   ) ;
+			fscanf ( dataFile, "%le", &phiMinTrack   ) ;
 			continue ;
 		}
 		if ( !strncmp(name,"phiMin       ",   6) ) {
-			fscanf ( dataFile, "%e", &phiMin        ) ;
+			fscanf ( dataFile, "%le", &phiMin        ) ;
 			continue ;
 		}  
 		if ( !strncmp(name,"phiMaxTrack  ",   8) ) {
-			fscanf ( dataFile, "%e", &phiMaxTrack   ) ;
+			fscanf ( dataFile, "%le", &phiMaxTrack   ) ;
 			continue ;
 		}
 		if ( !strncmp(name,"phiMax       ",   6) ) {
-			fscanf ( dataFile, "%e", &phiMax        ) ;
+			fscanf ( dataFile, "%le", &phiMax        ) ;
 			continue ;
 		}  
 		if ( !strncmp(name,"phiShift     ",   8) ) {
-			fscanf ( dataFile, "%e", &phiShift      ) ;
+			fscanf ( dataFile, "%le", &phiShift      ) ;
 			continue ;
 		}  
 		if ( !strncmp(name,"distanceMerge",   8) ) {
-			fscanf ( dataFile, "%e", &distanceMerge ) ;
+			fscanf ( dataFile, "%le", &distanceMerge ) ;
 			continue ;
 		}  
 		if ( !strncmp(name,"nPrimaryPasses",  8) ) {
@@ -176,79 +176,79 @@ void TrackFindingParameters::read ( char* inputFile )
 			continue ;
 		}  
 		if ( !strncmp(name,"bField",       6) ) {
-			fscanf ( dataFile, "%e", &bField ) ;
+			fscanf ( dataFile, "%le", &bField ) ;
 			continue ;
 		}  
 		if ( !strncmp(name,"maxChi2Primary",       12) ) {
-			fscanf ( dataFile, "%e", &maxChi2Primary ) ;
+			fscanf ( dataFile, "%le", &maxChi2Primary ) ;
 			continue ;
 		}  
 		if ( !strncmp(name,"hitChi2Cut",           8) ) {
-			fscanf ( dataFile, "%e", &hitChi2Cut ) ;
+			fscanf ( dataFile, "%le", &hitChi2Cut ) ;
 			continue ;
 		}  
 		if ( !strncmp(name,"goodHitChi2",           8) ) {
-			fscanf ( dataFile, "%e", &goodHitChi2 ) ;
+			fscanf ( dataFile, "%le", &goodHitChi2 ) ;
 			continue ;
 		}  
 		if ( !strncmp(name,"trackChi2Cut",           8) ) {
-			fscanf ( dataFile, "%e", &trackChi2Cut ) ;
+			fscanf ( dataFile, "%le", &trackChi2Cut ) ;
 			continue ;
 		} 
 		if ( !strncmp(name,"goodDistance",           8) ) {
-			fscanf ( dataFile, "%e", &goodDistance ) ;
+			fscanf ( dataFile, "%le", &goodDistance ) ;
 			continue ;
 		} 
 		if ( !strncmp(name,"ptMinHelixFit",           8) ) {
-			fscanf ( dataFile, "%e", &ptMinHelixFit ) ;
+			fscanf ( dataFile, "%le", &ptMinHelixFit ) ;
 			continue ;
 		} 
 		if ( !strncmp(name,"maxDistanceSegment",   15) ) {
-			fscanf ( dataFile, "%e", &maxDistanceSegment ) ;
+			fscanf ( dataFile, "%le", &maxDistanceSegment ) ;
 			continue ;
 		} 
 		if ( !strncmp(name,"xyErrorScale",   10) ) {
-			fscanf ( dataFile, "%e", &xyErrorScale ) ;
+			fscanf ( dataFile, "%le", &xyErrorScale ) ;
 			continue ;
 		} 
 		if ( !strncmp(name,"szErrorScale",   10) ) {
-			fscanf ( dataFile, "%e", &szErrorScale ) ;
+			fscanf ( dataFile, "%le", &szErrorScale ) ;
 			continue ;
 		} 
 		if ( !strncmp(name,"xVertex",   7) ) {
-			fscanf ( dataFile, "%e", &xVertex ) ;
+			fscanf ( dataFile, "%le", &xVertex ) ;
 			continue ;
 		} 
 		if ( !strncmp(name,"yVertex",   7) ) {
-			fscanf ( dataFile, "%e", &yVertex ) ;
+			fscanf ( dataFile, "%le", &yVertex ) ;
 			continue ;
 		} 
 		if ( !strncmp(name,"zVertex",   7) ) {
-			fscanf ( dataFile, "%e", &zVertex ) ;
+			fscanf ( dataFile, "%le", &zVertex ) ;
 			continue ;
 		} 
 		if ( !strncmp(name,"dxVertex",   8) ) {
-			fscanf ( dataFile, "%e", &dxVertex ) ;
+			fscanf ( dataFile, "%le", &dxVertex ) ;
 			continue ;
 		} 
 		if ( !strncmp(name,"dyVertex",   8) ) {
-			fscanf ( dataFile, "%e", &dyVertex ) ;
+			fscanf ( dataFile, "%le", &dyVertex ) ;
 			continue ;
 		} 
 		if ( !strncmp(name,"xyWeightVertex",   8) ) {
-			fscanf ( dataFile, "%e", &xyWeightVertex ) ;
+			fscanf ( dataFile, "%le", &xyWeightVertex ) ;
 			continue ;
 		} 
 		if ( !strncmp(name,"phiVertex",   8) ) {
-			fscanf ( dataFile, "%e", &phiVertex ) ;
+			fscanf ( dataFile, "%le", &phiVertex ) ;
 			continue ;
 		} 
 		if ( !strncmp(name,"rVertex",   7) ) {
-			fscanf ( dataFile, "%e", &rVertex ) ;
+			fscanf ( dataFile, "%le", &rVertex ) ;
 			continue ;
 		} 
 		if ( !strncmp(name,"maxTime",   7) ) {
-			fscanf ( dataFile, "%e", &maxTime ) ;
+			fscanf ( dataFile, "%le", &maxTime ) ;
 			continue ;
 		} 
 		printf ( "TrackFindingParameters::read: parameter %s not found \n", name ) ;
