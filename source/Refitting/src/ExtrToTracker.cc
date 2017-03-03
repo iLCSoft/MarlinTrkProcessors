@@ -200,7 +200,7 @@ void ExtrToTracker::init() {
 }
 
 
-void ExtrToTracker::processRunHeader( LCRunHeader* run) { 
+void ExtrToTracker::processRunHeader( LCRunHeader* ) {
   
   ++_n_run ;
 } 
@@ -591,7 +591,7 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 
 
 
-void ExtrToTracker::check( LCEvent * evt ) { 
+void ExtrToTracker::check( LCEvent* ) {
   // nothing to check here - could be used to fill checkplots in reconstruction processor
 }
 
@@ -620,12 +620,9 @@ void ExtrToTracker::end(){
 LCCollection* ExtrToTracker::GetCollection( LCEvent * evt, std::string colName ){
   
   LCCollection* col = NULL;
-  
-  // int nElements = 0;
-  
+
   try{
     col = evt->getCollection( colName.c_str() ) ;
-    //int nElements = col->getNumberOfElements()  ;
     streamlog_out( DEBUG3 ) << " --> " << colName.c_str() << " track collection found in event = " << col << " number of elements " << col->getNumberOfElements() << std::endl;
   }
   catch(DataNotAvailableException &e){

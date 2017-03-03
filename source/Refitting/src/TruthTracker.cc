@@ -311,7 +311,7 @@ void TruthTracker::init() {
   
 }
 
-void TruthTracker::processRunHeader( LCRunHeader* run) { 
+void TruthTracker::processRunHeader( LCRunHeader* ) {
   
   ++_n_run ;
 } 
@@ -601,7 +601,7 @@ void TruthTracker::processEvent( LCEvent * evt ) {
 
 
 
-void TruthTracker::check( LCEvent * evt ) { 
+void TruthTracker::check( LCEvent* ) {
   // nothing to check here - could be used to fill checkplots in reconstruction processor
 }
 
@@ -919,7 +919,7 @@ void TruthTracker::createTrack_iterative( MCParticle* mcp, UTIL::BitField64& cel
   int layer  = 9 ;
   int size   = 3 ;
   int marker = 1 ;
-  int ml     = 0 ;
+  //int ml     = 0 ;
   float helix_max_r = 0;
   float helix_max_z = 0;
   int color = 0;
@@ -2062,11 +2062,8 @@ LCCollection* TruthTracker::GetCollection(  LCEvent * evt, std::string colName )
   
   LCCollection* col = NULL;
   
-  int nElements = 0;
-  
   try {
     col = evt->getCollection( colName.c_str() ) ;
-    nElements = col->getNumberOfElements()  ;
     streamlog_out( DEBUG4 ) << " --> " << colName.c_str() << " collection found, number of elements = " << col->getNumberOfElements() << std::endl;
   }
   catch(DataNotAvailableException &e) {

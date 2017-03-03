@@ -173,7 +173,7 @@ void RefitProcessor::init() {
   
 }
 
-void RefitProcessor::processRunHeader( LCRunHeader* run) { 
+void RefitProcessor::processRunHeader( LCRunHeader* ) {
   
   ++_n_run ;
 } 
@@ -422,7 +422,7 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
 
 
 
-void RefitProcessor::check( LCEvent * evt ) { 
+void RefitProcessor::check( LCEvent * ) {
   // nothing to check here - could be used to fill checkplots in reconstruction processor
 }
 
@@ -439,11 +439,9 @@ LCCollection* RefitProcessor::GetCollection( LCEvent * evt, std::string colName 
   
   LCCollection* col = NULL;
   
-  int nElements = 0;
   
   try{
     col = evt->getCollection( colName.c_str() ) ;
-    nElements = col->getNumberOfElements()  ;
     streamlog_out( DEBUG4 ) << " --> " << colName.c_str() << " track collection found in event = " << col << " number of elements " << col->getNumberOfElements() << std::endl;
   }
   catch(DataNotAvailableException &e){

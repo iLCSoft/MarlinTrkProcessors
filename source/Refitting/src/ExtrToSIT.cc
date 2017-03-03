@@ -222,7 +222,7 @@ void ExtrToSIT::init() {
   
 }
 
-void ExtrToSIT::processRunHeader( LCRunHeader* run) { 
+void ExtrToSIT::processRunHeader( LCRunHeader* ) {
   
   ++_n_run ;
 } 
@@ -273,12 +273,12 @@ void ExtrToSIT::processEvent( LCEvent * evt ) {
     std::vector< IMPL::TrackImpl* > trackCandidates ;
 
     // loop over the input tracks and refit using KalTest    
-    for(int i=0; i< nTracks ; ++i) {
+    for(int iTrack=0; iTrack< nTracks ; ++iTrack) {
 
       int SITHitsPerTrk = 0 ;
       
       //Track* track = dynamic_cast<Track*>( input_track_col->getElementAt( i ) ) ;
-      Track* track = dynamic_cast<Track*>( inputTrackVec->getElementAt( i ) ) ;
+      Track* track = static_cast<Track*>( inputTrackVec->getElementAt( iTrack ) ) ;
       
       MarlinTrk::IMarlinTrack* marlin_trk = _trksystem->createTrack();
       
@@ -301,9 +301,7 @@ void ExtrToSIT::processEvent( LCEvent * evt ) {
 	// sort the hits in R, so here we are assuming that the track came from the IP and that we want to fit out to in. 
 	sort(trkHits.begin(), trkHits.end(), ExtrToSIT::compare_r() );
 	
-	EVENT::TrackerHitVec::iterator it = trkHits.begin();
-	
-	for( it = trkHits.begin() ; it != trkHits.end() ; ++it ){
+	for(EVENT::TrackerHitVec::iterator it = trkHits.begin() ; it != trkHits.end() ; ++it ){
 	  marlin_trk->addHit(*it);
 	}
 	
@@ -362,7 +360,6 @@ void ExtrToSIT::processEvent( LCEvent * evt ) {
 	    
 	    double chi2 = 0 ;
 	    int ndf = 0 ;
-	    TrackStateImpl trkState;	
 	    
 	    gear::Vector3D xing_point ; 
 	    
@@ -382,7 +379,7 @@ void ExtrToSIT::processEvent( LCEvent * evt ) {
 
 	    //for loop to all SIT layers
 	    
-	    for (int iL=0;iL<nSITR;iL++){
+	    for (unsigned int iL=0;iL<nSITR;iL++){
 	      
 	      if ( sitHitsCol != 0 ){
 		
@@ -400,7 +397,8 @@ void ExtrToSIT::processEvent( LCEvent * evt ) {
 
 		layerID = encoder.lowWord() ;  
 	      
-		  
+		TrackStateImpl trkState;
+
 		if ( marlin_trk->propagateToLayer( layerID, trkState, chi2, ndf, elementID, IMarlinTrack::modeClosest) == MarlinTrk::IMarlinTrack::success) {
 		    
 		  const FloatVec& covLCIO = trkState.getCovMatrix();
@@ -442,9 +440,9 @@ void ExtrToSIT::processEvent( LCEvent * evt ) {
 		    
 		    double chi2_increment = 0;
 		    
-		    for (int i=0;i<sitHits;i++){
+		    for (int iSit=0;iSit<sitHits;iSit++){
 		      
-		      TrackerHit* hit = dynamic_cast<TrackerHit*>( sitHitsCol->getElementAt( i ) ) ;
+		      TrackerHit* hit = dynamic_cast<TrackerHit*>( sitHitsCol->getElementAt( iSit ) ) ;
 		      
 		      streamlog_out(DEBUG2) << " type = " << hit->getType() << std::endl;
 		      
@@ -467,16 +465,16 @@ void ExtrToSIT::processEvent( LCEvent * evt ) {
 		      
 		      // Just to check the element matching between the hit (coming from the digitiser) and the track extrapolation element (coming from Mokka)
 		      
-		      int mokkaLayerNumber = 0 ;
-		      int mokkaLadderNumber = 0 ;
-		      int mokkaSideTest = 0 ;
-		      int mokkaSensorNumber = 0 ;
+		      // int mokkaLayerNumber = 0 ;
+		      // int mokkaLadderNumber = 0 ;
+		      // int mokkaSideTest = 0 ;
+		      // int mokkaSensorNumber = 0 ;
 		      
 		      encoder.setValue(elementID) ;
-		      mokkaLayerNumber  = encoder[lcio::LCTrackerCellID::layer()] ;
-		      mokkaLadderNumber = encoder[lcio::LCTrackerCellID::module()] ;
-		      mokkaSideTest = encoder[lcio::LCTrackerCellID::side()] ;
-		      mokkaSensorNumber = encoder[lcio::LCTrackerCellID::sensor()] ;
+		      // mokkaLayerNumber  = encoder[lcio::LCTrackerCellID::layer()] ;
+		      // mokkaLadderNumber = encoder[lcio::LCTrackerCellID::module()] ;
+		      // mokkaSideTest = encoder[lcio::LCTrackerCellID::side()] ;
+		      // mokkaSensorNumber = encoder[lcio::LCTrackerCellID::sensor()] ;
 		      encoder.reset() ;
 		      
 		      streamlog_out(DEBUG2) << " checking hit : type = " << hit->getType() << " cell ID = " << celId << " side = " << sideTest << " layer = " << layerNumber << " ladder = " << ladderNumber << " sensor = " << sensorNumber << std::endl ;
@@ -633,14 +631,15 @@ void ExtrToSIT::processEvent( LCEvent * evt ) {
 	      }
 	      
 	      
-	      bool fit_backwards = IMarlinTrack::backward;
+	      // bool fit_backwards = IMarlinTrack::backward;
 	      bool fit_forwards = IMarlinTrack::forward;
 	      MarlinTrk::IMarlinTrack* marlinTrk = _trksystem->createTrack();		
-	      int error = 0;
+	      // int error = 0;
 	      
 	      try {
 		
-		error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, trkHits, refittedTrack, fit_forwards, covMatrix, _bField, _maxChi2PerHit);                              
+		// int error =
+		MarlinTrk::createFinalisedLCIOTrack(marlinTrk, trkHits, refittedTrack, fit_forwards, covMatrix, _bField, _maxChi2PerHit);
 		
 	      } catch (...) {
 		
@@ -755,7 +754,7 @@ void ExtrToSIT::processEvent( LCEvent * evt ) {
 
 
 
-void ExtrToSIT::check( LCEvent * evt ) { 
+void ExtrToSIT::check( LCEvent* ) {
   // nothing to check here - could be used to fill checkplots in reconstruction processor
 }
 
@@ -772,7 +771,7 @@ void ExtrToSIT::end(){
 
 
 
-void ExtrToSIT::SelectBestCandidateLimited(EVENT::TrackerHitVec &HitsInLayer, const float* &pivot, EVENT::TrackerHit* &BestHit, const FloatVec& covLCIO, double& radius, bool &BestHitFound, double &sigma, int &pointer, int &PossibleHits, float &dU, float &dV, double &DimDist, TrackerHitVec &usedSiHits)
+void ExtrToSIT::SelectBestCandidateLimited(EVENT::TrackerHitVec &HitsInLayer, const float* &pivot, EVENT::TrackerHit* &BestHit, const FloatVec& covLCIO, double& radius, bool &BestHitFound, double &sigma, int &pointer, int &PossibleHits, float &dU, float &dV, double &DimDist, TrackerHitVec& /*usedSiHits*/)
 {
 
   BestHitFound = false ;
@@ -825,11 +824,8 @@ LCCollection* ExtrToSIT::GetCollection( LCEvent * evt, std::string colName ){
   
   LCCollection* col = NULL;
   
-  int nElements = 0;
-  
   try{
     col = evt->getCollection( colName.c_str() ) ;
-    nElements = col->getNumberOfElements()  ;
     streamlog_out( DEBUG3 ) << " --> " << colName.c_str() << " track collection found in event = " << col << " number of elements " << col->getNumberOfElements() << std::endl;
   }
   catch(DataNotAvailableException &e){

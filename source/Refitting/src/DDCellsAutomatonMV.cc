@@ -316,7 +316,7 @@ void DDCellsAutomatonMV::init() {
 }
 
 
-void DDCellsAutomatonMV::processRunHeader( LCRunHeader* run) { 
+void DDCellsAutomatonMV::processRunHeader( LCRunHeader* ) {
     
 } 
 
@@ -658,8 +658,8 @@ void DDCellsAutomatonMV::processEvent( LCEvent * evt ) {
   // Various ways to define the quality of a track. They are defined in  the header file
   //TrackQIChi2Prob_MV whatever;
   //TrackQISpecial_MV JustDoIt ;
-  TrackQI trackQI;
-  MaxHits MaxLength;
+  //TrackQI trackQI;
+  //MaxHits MaxLength;
   Test test;
 
 
@@ -779,7 +779,7 @@ void DDCellsAutomatonMV::processEvent( LCEvent * evt ) {
 }
 
 
-void DDCellsAutomatonMV::check( LCEvent * evt ) { 
+void DDCellsAutomatonMV::check( LCEvent* ) {
   // nothing to check here - could be used to fill checkplots in reconstruction processor
 }
 
@@ -1043,16 +1043,16 @@ void DDCellsAutomatonMV::InitialiseVTX( LCEvent * evt, EVENT::TrackerHitVec Hits
 
 void DDCellsAutomatonMV::CreateMiniVectors( int sector ) {
 
-  int iTheta = sector/(_nLayers*_nDivisionsInPhi) ;
-  int iPhi = ((sector - (iTheta*_nLayers*_nDivisionsInPhi)) / _nLayers) ;
-  int layer = sector - (iTheta*_nLayers*_nDivisionsInPhi) - (iPhi*_nLayers) ; 
+  int thisTheta = sector/(_nLayers*_nDivisionsInPhi) ;
+  int thisPhi = ((sector - (thisTheta*_nLayers*_nDivisionsInPhi)) / _nLayers) ;
+  int layer = sector - (thisTheta*_nLayers*_nDivisionsInPhi) - (thisPhi*_nLayers) ;
 
-  streamlog_out(DEBUG4) << " Taking sector " << sector << " of layer " << layer << " Phi sector " << iPhi << " Theta sector " << iTheta << std::endl ;
+  streamlog_out(DEBUG4) << " Taking sector " << sector << " of layer " << layer << " Phi sector " << thisPhi << " Theta sector " << thisTheta << std::endl ;
 
-  int iPhi_Up    = iPhi + 2;
-  int iPhi_Low   = iPhi - 2;
-  int iTheta_Up  = iTheta + 2; 
-  int iTheta_Low = iTheta - 2;
+  int iPhi_Up    = thisPhi + 2;
+  int iPhi_Low   = thisPhi - 2;
+  int iTheta_Up  = thisTheta + 2;
+  int iTheta_Low = thisTheta - 2;
   if (iTheta_Low < 0) iTheta_Low = 0;
   if (iTheta_Up  >= _nDivisionsInTheta) iTheta_Up = _nDivisionsInTheta-1;
 
@@ -1087,8 +1087,8 @@ void DDCellsAutomatonMV::CreateMiniVectors( int sector ) {
 	  // construct mini-vectors applying a delta theta cut
 	  //***************************************************************************
 	  
-	  int iTheta_Up_mod  = iTheta + 2; 
-	  int iTheta_Low_mod = iTheta - 2;
+	  int iTheta_Up_mod  = thisTheta + 2;
+	  int iTheta_Low_mod = thisTheta - 2;
 	  if (iTheta_Low_mod < 0) iTheta_Low_mod = 0;
 	  if (iTheta_Up_mod  >= _nDivisionsInTheta) iTheta_Up_mod = _nDivisionsInTheta-1;
 	  
@@ -1148,8 +1148,8 @@ void DDCellsAutomatonMV::CreateMiniVectors( int sector ) {
 	  
 	  for (int iPhi = iPhi_Low ; iPhi < iPhi_Up ; iPhi++){
 	    
-	    int iTheta_Up_mod  = iTheta + 10; 
-	    int iTheta_Low_mod = iTheta - 10;
+	    int iTheta_Up_mod  = thisTheta + 10;
+	    int iTheta_Low_mod = thisTheta - 10;
 	    if (iTheta_Low_mod < 0) iTheta_Low_mod = 0;
 	    if (iTheta_Up_mod  >= _nDivisionsInTheta) iTheta_Up_mod = _nDivisionsInTheta-1;
 	    
@@ -1419,7 +1419,7 @@ bool DDCellsAutomatonMV::thetaAgreementImproved( EVENT::TrackerHit *toHit, EVENT
   bool agreement = false ;
 
   //double resolution = 0.004 ; // just temporarily here
-  double MPS_factor = 0.0 ;  // just for test, and only for vertical muons of 4GeV
+  //double MPS_factor = 0.0 ;  // just for test, and only for vertical muons of 4GeV
 
   double  pos_outer[3];
   double  pos_inner[3];

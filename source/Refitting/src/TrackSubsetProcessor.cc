@@ -173,7 +173,7 @@ void TrackSubsetProcessor::init() {
 }
 
 
-void TrackSubsetProcessor::processRunHeader( LCRunHeader* run) { 
+void TrackSubsetProcessor::processRunHeader( LCRunHeader* ) {
 
     _nRun++ ;
 } 
@@ -541,7 +541,7 @@ void TrackSubsetProcessor::removeShortTracks( std::vector< EVENT::Track*>& track
 }
 
 
-void TrackSubsetProcessor::check( LCEvent * evt ) { 
+void TrackSubsetProcessor::check( LCEvent* ) {
     // nothing to check here - could be used to fill checkplots in reconstruction processor
 }
 

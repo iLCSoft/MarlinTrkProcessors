@@ -650,7 +650,7 @@ void FPCCDSiliconTracking_MarlinTrk::init() {
 }
 
 
-void FPCCDSiliconTracking_MarlinTrk::processRunHeader( LCRunHeader* run) { 
+void FPCCDSiliconTracking_MarlinTrk::processRunHeader( LCRunHeader* ) {
 
   _nRun++ ;
   _nEvt = 0;
@@ -1335,7 +1335,7 @@ int FPCCDSiliconTracking_MarlinTrk::InitialiseVTX(LCEvent * evt) {
 
 }
 
-void FPCCDSiliconTracking_MarlinTrk::check(LCEvent * evt) { 
+void FPCCDSiliconTracking_MarlinTrk::check(LCEvent* ) {
 
 }
 
@@ -1750,9 +1750,9 @@ TrackExtended * FPCCDSiliconTracking_MarlinTrk::TestTriplet(TrackerHitExtended *
 
 
 
-int FPCCDSiliconTracking_MarlinTrk::BuildTrack_KalFit(TrackerHitExtended * outerHit, 
-    TrackerHitExtended * middleHit,
-    TrackerHitExtended * innerHit,
+int FPCCDSiliconTracking_MarlinTrk::BuildTrack_KalFit(TrackerHitExtended * /*outerHit*/,
+						      TrackerHitExtended * /*middleHit*/,
+						      TrackerHitExtended * /*innerHit*/,
     HelixClass_double & helix,
     int innerLayer,
     TrackExtended * trackAR) {
@@ -2270,7 +2270,7 @@ void FPCCDSiliconTracking_MarlinTrk::CreateTrack(TrackExtended * trackAR ) {
       float * ph = new float[nTotHits];
       float par[5];
       float epar[15];
-      float refPoint[3] = {0.,0.,0.};
+      //float refPoint[3] = {0.,0.,0.};
       for (int ih=0;ih<nHits;++ih) {
         TrackerHit * trkHit = hitVec[ih]->getTrackerHit();
         float rR = hitVec[ih]->getResolutionRPhi();
@@ -2317,15 +2317,15 @@ void FPCCDSiliconTracking_MarlinTrk::CreateTrack(TrackExtended * trackAR ) {
       for (int iparam=0;iparam<15;++iparam)
         eparmin[iparam] = epar[iparam];      
 
-      float refPointMin[3];
-      for (int ipp=0;ipp<3;++ipp)
-        refPointMin[ipp] = refPoint[ipp];
+      // float refPointMin[3];
+      // for (int ipp=0;ipp<3;++ipp)
+      //   refPointMin[ipp] = refPoint[ipp];
 
       float chi2Min = chi2RPhi*_chi2WRPhiSeptet+chi2Z*_chi2WZSeptet;
       chi2Min = chi2Min/float(ndf);
 
-      float chi2MinRPhi = chi2RPhi;
-      float chi2MinZ = chi2Z;
+      //float chi2MinRPhi = chi2RPhi;
+      //float chi2MinZ = chi2Z;
 
 
       int iBad = -1;
@@ -2361,8 +2361,8 @@ void FPCCDSiliconTracking_MarlinTrk::CreateTrack(TrackExtended * trackAR ) {
           if (chi2Cur < chi2Min && std::isnormal(chi2Min) == 1 && chi2Min > 0) {
             //Mori added new requirement that chi2Min be normal value on September 1, 2013.
             chi2Min = chi2Cur;
-            chi2MinRPhi = chi2RPhi;
-            chi2MinZ = chi2Z;
+            //chi2MinRPhi = chi2RPhi;
+            //chi2MinZ = chi2Z;
             omega = par[0];
             tanlambda = par[1];
             phi0 = par[2];
@@ -2370,8 +2370,8 @@ void FPCCDSiliconTracking_MarlinTrk::CreateTrack(TrackExtended * trackAR ) {
             z0 = par[4];
             for (int iparam=0;iparam<15;++iparam)
               eparmin[iparam] = epar[iparam];
-            for (int ipp=0;ipp<3;++ipp)
-              refPointMin[ipp] = refPoint[ipp];
+            // for (int ipp=0;ipp<3;++ipp)
+            //   refPointMin[ipp] = refPoint[ipp];
             iBad = i;
           }
         }
@@ -3290,7 +3290,7 @@ int FPCCDSiliconTracking_MarlinTrk::AttachHitToTrack(TrackExtended * trackAR, Tr
 
 }
 
-void FPCCDSiliconTracking_MarlinTrk::FinalRefit(LCCollectionVec* trk_col, LCCollectionVec* rel_col) {
+void FPCCDSiliconTracking_MarlinTrk::FinalRefit(LCCollectionVec* trk_col, LCCollectionVec* /*rel_col*/) {
 
   int nTracks = int(_trackImplVec.size());
 
@@ -3387,15 +3387,19 @@ void FPCCDSiliconTracking_MarlinTrk::FinalRefit(LCCollectionVec* trk_col, LCColl
 
               if (det == lcio::ILDDetID::FTD) {
 
-                double time = helix->getPointInZ(xP[2],Pos,Point);
-                time = helix->getPointInZ(xPS[2],Pos,PointS);
+                // double time =
+		 helix->getPointInZ(xP[2],Pos,Point);
+                // double time =
+		 helix->getPointInZ(xPS[2],Pos,PointS);
 
               } else {
 
                 double RAD = sqrt(xP[0]*xP[0]+xP[1]*xP[1]);
                 double RADS = sqrt(xPS[0]*xPS[0]+xPS[1]*xPS[1]);
-                double time = helix->getPointOnCircle(RAD,Pos,Point);
-                time = helix->getPointOnCircle(RADS,Pos,PointS);
+                // double time =
+		 helix->getPointOnCircle(RAD,Pos,Point);
+                // double time =
+		 helix->getPointOnCircle(RADS,Pos,PointS);
 
               }
 
@@ -3795,11 +3799,9 @@ LCCollection* FPCCDSiliconTracking_MarlinTrk::GetCollection(  LCEvent * evt, std
 
   LCCollection* col = NULL;
 
-  int nElements = 0;
 
   try {
     col = evt->getCollection( colName.c_str() ) ;
-    nElements = col->getNumberOfElements()  ;
     streamlog_out( DEBUG4 ) << " --> " << colName.c_str() << " collection found, number of elements = " << col->getNumberOfElements() << std::endl;
   }
   catch(DataNotAvailableException &e) {
@@ -4136,7 +4138,7 @@ void FPCCDSiliconTracking_MarlinTrk::calcTrackParameterOfMCP(MCParticle* pmcp, d
 }
 
 
-int FPCCDSiliconTracking_MarlinTrk::CheckTiltOf2Clusters(TrackerHit* A, TrackerHit* B, int level){
+int FPCCDSiliconTracking_MarlinTrk::CheckTiltOf2Clusters(TrackerHit* A, TrackerHit* B, int /*level*/){
   //level is set for the future where users choose the level of requirement hardness.
   //For now, this level is not alive.
 
