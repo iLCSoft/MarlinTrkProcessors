@@ -180,7 +180,7 @@ void DDPlanarDigiProcessor::init() {
 }
 
 
-void DDPlanarDigiProcessor::processRunHeader( LCRunHeader* run) { 
+void DDPlanarDigiProcessor::processRunHeader( LCRunHeader* ) {
   ++_nRun ;
 } 
 
@@ -468,7 +468,7 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
 
 
 
-void DDPlanarDigiProcessor::check( LCEvent * evt ) { 
+void DDPlanarDigiProcessor::check( LCEvent* ) {
   // nothing to check here - could be used to fill checkplots in reconstruction processor
 }
 

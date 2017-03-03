@@ -164,7 +164,7 @@ void SimpleDiscDigiProcessor::init() {
   
 }
 
-void SimpleDiscDigiProcessor::processRunHeader( LCRunHeader* run) { 
+void SimpleDiscDigiProcessor::processRunHeader( LCRunHeader* ) {
   _nRun++ ;
 } 
 
@@ -592,7 +592,7 @@ void SimpleDiscDigiProcessor::processEvent( LCEvent * evt ) {
 
 
 
-void SimpleDiscDigiProcessor::check( LCEvent * evt ) { 
+void SimpleDiscDigiProcessor::check( LCEvent*  ) {
   // nothing to check here - could be used to fill checkplots in reconstruction processor
 }
 
@@ -666,7 +666,7 @@ bool SimpleDiscDigiProcessor::hasCorrectZPos ( SimTrackerHit* hit ){
 
 
 
-int SimpleDiscDigiProcessor::getPetalNumber ( int layer , double x , double y ){
+int SimpleDiscDigiProcessor::getPetalNumber ( int /*layer*/, double x , double y ){
   
   
   
@@ -692,12 +692,12 @@ int SimpleDiscDigiProcessor::getSensorNumber ( int layer , double x , double y )
   
   //find out the sensor
   
-  double r = sqrt ( x*x + y*y ); //radius in xy plane
+  double radius = sqrt ( x*x + y*y ); //radius in xy plane
   
   // The relative radial position: from 0 to 1. 
   // 0.0 means at the inner radius of the petal.
   // 1.0 means at the outer radius of the petal.
-  double posRel = (r - _diskInnerRadius[layer]) / ( _diskOuterRadius[layer] - _diskInnerRadius[layer] ); 
+  double posRel = (radius - _diskInnerRadius[layer]) / ( _diskOuterRadius[layer] - _diskInnerRadius[layer] );
   
   
   int sensor = int ( posRel * _sensorsPerPetal ); //the number of the sensor
