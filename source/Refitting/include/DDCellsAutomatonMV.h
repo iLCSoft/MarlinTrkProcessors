@@ -16,7 +16,7 @@
 #include <IMPL/TrackImpl.h>
 #include <IMPL/TrackerHitPlaneImpl.h>
 #include <UTIL/BitField64.h>
-/* #include <UTIL/ILDConf.h> */
+#include <UTIL/ILDConf.h>
 
 // KiTrack tools
 #include "KiTrack/SubsetHopfieldNN.h"
