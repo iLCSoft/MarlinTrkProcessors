@@ -392,13 +392,13 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 
 	  IMPL::TrackImpl* lcio_trk = new IMPL::TrackImpl();
 
-	  IMarlinTrack* marlinTrk = 0 ;
+	  IMarlinTrack* marlinTrk0 = 0 ;
 
 	  if( ! _performFinalRefit ) {
 
 	    //fg: ------ here we just create a final LCIO track from the extrapolation :
 	    
-	    marlinTrk = marlin_trk ;
+	    marlinTrk0 = marlin_trk ;
 	    
 	    bool fit_direction = IMarlinTrack::forward ;
 	    int return_code =  finaliseLCIOTrack( marlin_trk, lcio_trk, trkHits,  fit_direction ) ;
@@ -428,6 +428,10 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 
 	    bool fit_backwards = IMarlinTrack::backward;
 	    //bool fit_forwards = IMarlinTrack::forward;
+
+	    //APS: is this really supposed to create a new pointer, or use the
+	    //pointer marlinTrk0 from before, or overwrite marlinTrk0 if this
+	    //was successful?
 	    MarlinTrk::IMarlinTrack* marlinTrk = _trksystem->createTrack();		
 
 
@@ -492,16 +496,16 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 	  
 	  // remember the hits are ordered in the order in which they were fitted
 	  
-	  marlinTrk->getHitsInFit(hits_in_fit);
+	  marlinTrk0->getHitsInFit(hits_in_fit);
 	  
 	  if( hits_in_fit.size() < 3 ) {
 	    streamlog_out(DEBUG3) << "RefitProcessor: Less than 3 hits in fit: Track Discarded. Number of hits =  " << trkHits.size() << std::endl;
-	    delete marlinTrk ;
+	    delete marlinTrk0 ;
 	    delete lcio_trk;
 	    continue ; 
 	  }
 	    
-	  marlinTrk->getOutliers(outliers);
+	  marlinTrk0->getOutliers(outliers);
 	  
 	  std::vector<TrackerHit*> all_hits;
 	  all_hits.reserve( hits_in_fit.size() + outliers.size() );
@@ -535,7 +539,7 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 	  trackVec->addElement( lcio_trk );
 	    
 
-	  if( _performFinalRefit ) delete marlinTrk ;
+	  if( _performFinalRefit ) delete marlinTrk0 ;
 
 	}  // good fit status
       } // good initialisation status
