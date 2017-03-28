@@ -898,8 +898,8 @@ void DDCellsAutomatonMV::InitialiseVTX( LCEvent * evt, EVENT::TrackerHitVec Hits
       TrackerHitPlane*     trkhit_P = 0;
       TrackerHitZCylinder* trkhit_C = 0;
       
-      double drphi(NAN);
-      double dz(NAN);
+      //double drphi(NAN);
+      //double dz(NAN);
       
       for (int ielem=0; ielem<nelem; ++ielem) {
 	
@@ -943,8 +943,8 @@ void DDCellsAutomatonMV::InitialiseVTX( LCEvent * evt, EVENT::TrackerHitVec Hits
 
 	  streamlog_out(DEBUG1) << " We deal with composite spacepoints " << std::endl ;
 	  
-	  drphi =  2 * sqrt(trkhit->getCovMatrix()[0] + trkhit->getCovMatrix()[2]);         
-	  dz    =      sqrt(trkhit->getCovMatrix()[5]);         
+	  //drphi =  2 * sqrt(trkhit->getCovMatrix()[0] + trkhit->getCovMatrix()[2]);
+	  //dz    =      sqrt(trkhit->getCovMatrix()[5]);
 	  
 	} 
 	// or a PIXEL based SIT, using 2D TrackerHitPlane like the VXD above
@@ -969,22 +969,22 @@ void DDCellsAutomatonMV::InitialiseVTX( LCEvent * evt, EVENT::TrackerHitVec Hits
 	    exit(1);
 	  }
 	  
-	  drphi = trkhit_P->getdU();
-	  dz    = trkhit_P->getdV();                                                 
+	  //drphi = trkhit_P->getdU();
+	  //dz    = trkhit_P->getdV();
 	  
 	} 
 	// or a simple cylindrical design, as used in the LOI      
 	else if ( ( trkhit_C = dynamic_cast<TrackerHitZCylinder*>( hitCollection->getElementAt( ielem ) ) ) ) {
 	  
-	  drphi = trkhit_C->getdRPhi();
-	  dz    = trkhit_C->getdZ();
+	  //drphi = trkhit_C->getdRPhi();
+	  //dz    = trkhit_C->getdZ();
 	  
 	} 
 	// this would be very unlikely, but who knows ... just an ordinary TrackerHit, which is not a COMPOSITE_SPACEPOINT
 	else {
 	  
-	  drphi =  2 * sqrt(trkhit->getCovMatrix()[0] + trkhit->getCovMatrix()[2]);         
-	  dz =     sqrt(trkhit->getCovMatrix()[5]);             
+	  //drphi =  2 * sqrt(trkhit->getCovMatrix()[0] + trkhit->getCovMatrix()[2]);
+	  //dz =     sqrt(trkhit->getCovMatrix()[5]);
 	  
 	}
 	
