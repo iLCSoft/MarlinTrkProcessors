@@ -179,7 +179,7 @@ void SplitCollectionByLayer::processEvent( LCEvent * evt ) {
 
     encoder.setValue( id ) ;
 
-    int layerID = encoder[ layerIndex ] ;
+    unsigned int layerID = encoder[ layerIndex ] ;
 
 
     // check if we have an output collection for this layer
