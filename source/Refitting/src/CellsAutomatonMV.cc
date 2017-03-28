@@ -734,8 +734,9 @@ void CellsAutomatonMV::processEvent( LCEvent * evt ) {
       
       
       TrackImpl* trackImpl = new TrackImpl( *(myTrack->getLcioTrack()) );   // possible leak
-      const EVENT::TrackState * init_ts = trackImpl->getTrackState(lcio::TrackState::AtIP) ;
-      const EVENT::FloatVec covMatrixTest = trackImpl->getCovMatrix() ;
+      // const EVENT::TrackState * init_ts = trackImpl->getTrackState(lcio::TrackState::AtIP) ;
+      // const EVENT::FloatVec covMatrixTest = trackImpl->getCovMatrix() ;
+
       //--------------------------------------------------------------------------------------------------------------------------------------------------------------------
       // Create a new vector of hits, where we keep the 2D hits coming from 2D hits mini-vectors, but the 1D hits mini-vectors are turned back to the initial spacepoints
       // The reason for doing so is to be compatible with the trackerhit extended classes, that maps the @D hits and composite spacepoints to extended hits
