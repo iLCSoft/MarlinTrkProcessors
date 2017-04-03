@@ -789,9 +789,6 @@ void ExtrToSIT::SelectBestCandidateLimited(EVENT::TrackerHitVec &HitsInLayer, co
     EVENT::TrackerHit *CandidateHit = HitsInLayer.at(i);
 
     streamlog_out(DEBUG1) << " Checking candidate hit " <<  CandidateHit << std::endl ;
-
-    //FIXME: is this intentional???? This means the pointer reference will never be changed!
-    int pointer = 0;
     
     double distZ = 0 ;   double distRphi = 0 ;
     
