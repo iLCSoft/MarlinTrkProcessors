@@ -13,6 +13,7 @@
 #include <UTIL/LCRelationNavigator.h>
 
 #include <UTIL/BitField64.h>
+#include "UTIL/LCTrackerConf.h"
 #include <UTIL/ILDConf.h>
 #include <UTIL/Operators.h>
 
@@ -230,7 +231,7 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
       trkHits.clear();
       trkHits.reserve(r2_values.size());
       
-      UTIL::BitField64 cellID_encoder( lcio::ILDCellID0::encoder_string ) ;
+      UTIL::BitField64 cellID_encoder( lcio::LCTrackerCellID::encoding_string() ) ;
 
       for (std::vector< std::pair<float, EVENT::TrackerHit*> >::iterator it=r2_values.begin(); it!=r2_values.end(); ++it) {
 
@@ -351,7 +352,7 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
         all_hits.push_back(hits_in_fit[ihit].first);
       }
       
-      //      UTIL::BitField64 cellID_encoder( lcio::ILDCellID0::encoder_string ) ;
+      //      UTIL::BitField64 cellID_encoder( lcio::LCTrackerCellID::encoding_string() ) ;
       
       MarlinTrk::addHitNumbersToTrack(refittedTrack, all_hits, true, cellID_encoder);
       

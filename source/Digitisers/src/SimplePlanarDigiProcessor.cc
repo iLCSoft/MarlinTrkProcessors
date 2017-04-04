@@ -11,7 +11,6 @@
 #include <IMPL/TrackerHitPlaneImpl.h>
 #include <EVENT/MCParticle.h>
 #include <UTIL/CellIDEncoder.h>
-#include <UTIL/ILDConf.h>
 #include <UTIL/BitSet32.h>
 
 // STUFF needed for GEAR
@@ -33,7 +32,8 @@
 #include <gsl/gsl_randist.h>
 #include "marlin/ProcessorEventSeeder.h"
 
-#include "UTIL/ILDConf.h"
+#include "UTIL/LCTrackerConf.h"
+#include <UTIL/ILDConf.h>
 
 #include "CLHEP/Vector/TwoVector.h"
 
@@ -173,7 +173,7 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
     relCol->setFlag( lcFlag.getFlag()  ) ;
 
     
-    CellIDEncoder<TrackerHitPlaneImpl> cellid_encoder( lcio::ILDCellID0::encoder_string , trkhitVec ) ;
+    CellIDEncoder<TrackerHitPlaneImpl> cellid_encoder( lcio::LCTrackerCellID::encoding_string() , trkhitVec ) ;
     
     int nSimHits = STHcol->getNumberOfElements()  ;
       
@@ -182,13 +182,13 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
     const gear::ZPlanarParameters* gearDet = NULL ;
     
     int det_id = 0 ;
-    UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ;
+    UTIL::BitField64 encoder( lcio::LCTrackerCellID::encoding_string() ) ;
     
     if ( nSimHits>0 ) {
       SimTrackerHit* SimTHit = dynamic_cast<SimTrackerHit*>( STHcol->getElementAt( 0 ) ) ;
       if (_ladder_Number_encoded_in_cellID) {
         encoder.setValue(SimTHit->getCellID0()) ;
-        det_id  = encoder[lcio::ILDCellID0::subdet] ;
+        det_id  = encoder[lcio::LCTrackerCellID::subdet()] ;
       }
       else {
         det_id = _sub_det_id;
@@ -247,10 +247,10 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
         streamlog_out( DEBUG3 ) << "Get Layer Number using Standard ILD Encoding from ILDConf.h : celId = " << celId << std::endl ;
       
         encoder.setValue(celId) ;
-        layerNumber  = encoder[lcio::ILDCellID0::layer] ;
-        ladderNumber = encoder[lcio::ILDCellID0::module] ;
-        side = encoder[lcio::ILDCellID0::side] ;
-        sensor = encoder[lcio::ILDCellID0::sensor] ;
+        layerNumber  = encoder[lcio::LCTrackerCellID::layer()] ;
+        ladderNumber = encoder[lcio::LCTrackerCellID::module()] ;
+        side = encoder[lcio::LCTrackerCellID::side()] ;
+        sensor = encoder[lcio::LCTrackerCellID::sensor()] ;
         
       }
       else{
@@ -261,11 +261,11 @@ void SimplePlanarDigiProcessor::processEvent( LCEvent * evt ) {
         sensor = 0 ; // cannot be discerned unless set alla ILDConf.h
       }
       
-      cellid_encoder[ lcio::ILDCellID0::subdet ] = det_id ;
-      cellid_encoder[ lcio::ILDCellID0::side   ] = side ;
-      cellid_encoder[ lcio::ILDCellID0::layer  ] = layerNumber ;
-      cellid_encoder[ lcio::ILDCellID0::module ] = ladderNumber ;
-      cellid_encoder[ lcio::ILDCellID0::sensor ] = sensor ;
+      cellid_encoder[ lcio::LCTrackerCellID::subdet() ] = det_id ;
+      cellid_encoder[ lcio::LCTrackerCellID::side()   ] = side ;
+      cellid_encoder[ lcio::LCTrackerCellID::layer()  ] = layerNumber ;
+      cellid_encoder[ lcio::LCTrackerCellID::module() ] = ladderNumber ;
+      cellid_encoder[ lcio::LCTrackerCellID::sensor() ] = sensor ;
 
       streamlog_out( DEBUG3 ) << "det_id = " <<  det_id << std::endl ;
 //      streamlog_out( DEBUG3 ) << "layerNumber = " <<  layerNumber << std::endl ;

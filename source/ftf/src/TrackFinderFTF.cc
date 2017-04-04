@@ -14,7 +14,7 @@
 #include <UTIL/LCRelationNavigator.h>
 
 #include <UTIL/BitField64.h>
-#include <UTIL/ILDConf.h>
+#include "UTIL/LCTrackerConf.h"
 
 #include <cmath>
 
@@ -58,7 +58,7 @@ TrackFinderFTF::TrackFinderFTF() : Processor("TrackFinderFTF") {
   // modify processor description
   _description = "TrackFinderFTF uses FTF to find tracks" ;
   
-  _encoder = new UTIL::BitField64(lcio::ILDCellID0::encoder_string);
+  _encoder = new UTIL::BitField64(lcio::LCTrackerCellID::encoding_string());
   
   // register steering parameters: name, description, class-variable, default value
   

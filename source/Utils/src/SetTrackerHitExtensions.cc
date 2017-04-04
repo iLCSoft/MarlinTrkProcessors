@@ -11,8 +11,10 @@
 #include <EVENT/TrackerHitPlane.h>
 #include <EVENT/SimTrackerHit.h>
 
+#include <UTIL/ILDConf.h>
 #include <IMPL/LCRelationImpl.h>
 #include <UTIL/LCRelationNavigator.h>
+#include <UTIL/ILDConf.h>
 
 // ----- include for verbosity dependend logging ---------
 #include "marlin/VerbosityLevels.h"
@@ -42,7 +44,7 @@ SetTrackerHitExtensions::SetTrackerHitExtensions() : Processor("SetTrackerHitExt
   // modify processor description
   _description = "Creates Track Collection from MC Truth. Can handle composite spacepoints as long as they consist of two TrackerHits" ;
   
-  _encoder = new UTIL::BitField64(lcio::ILDCellID0::encoder_string);
+  _encoder = new UTIL::BitField64(lcio::LCTrackerCellID::encoding_string());
   
   // register steering parameters: name, description, class-variable, default value
   
@@ -124,7 +126,7 @@ void SetTrackerHitExtensions::processEvent( LCEvent * evt ) {
   this->SetupInputCollections(evt) ;
       
   // create the encoder to decode cellID0
-  UTIL::BitField64 cellID_encoder( ILDCellID0::encoder_string ) ;
+  UTIL::BitField64 cellID_encoder( LCTrackerCellID::encoding_string() ) ;
   
   
   

@@ -1,7 +1,7 @@
 #include "ExtrToSIT.h"
 
 #include <IMPL/TrackerHitPlaneImpl.h>
-
+#include <UTIL/ILDConf.h>
 
 
 using namespace lcio ;
@@ -366,7 +366,7 @@ void ExtrToSIT::processEvent( LCEvent * evt ) {
 	    
 	    gear::Vector3D xing_point ; 
 	    
-	    UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ; 
+	    UTIL::BitField64 encoder( lcio::LCTrackerCellID::encoding_string() ) ; 
 	    
 	    encoder.reset() ;  // reset to 0
 	    
@@ -391,12 +391,12 @@ void ExtrToSIT::processEvent( LCEvent * evt ) {
 		streamlog_out(DEBUG4) << "LOOP" << iL << " begins "<< std::endl;
 		
 
-		encoder[lcio::ILDCellID0::subdet] = ILDDetID::SIT ;
+		encoder[lcio::LCTrackerCellID::subdet()] = ILDDetID::SIT ;
 
 		if ( _dirInsideOut )
-		  encoder[lcio::ILDCellID0::layer]  = iL ;   // in case we propagate outwards from VXD
+		  encoder[lcio::LCTrackerCellID::layer()]  = iL ;   // in case we propagate outwards from VXD
 		else
-		  encoder[lcio::ILDCellID0::layer]  = 3 - iL ;  //  in case we propagate inwards from TPC
+		  encoder[lcio::LCTrackerCellID::layer()]  = 3 - iL ;  //  in case we propagate inwards from TPC
 
 		layerID = encoder.lowWord() ;  
 	      
@@ -457,12 +457,12 @@ void ExtrToSIT::processEvent( LCEvent * evt ) {
 		      int sideTest = 0 ;
 		      int sensorNumber = 0 ;
 		      
-		      //UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ; 
+		      //UTIL::BitField64 encoder( lcio::LCTrackerCellID::encoding_string() ) ; 
 		      encoder.setValue(celId) ;
-		      layerNumber  = encoder[lcio::ILDCellID0::layer] ;
-		      ladderNumber = encoder[lcio::ILDCellID0::module] ;
-		      sideTest = encoder[lcio::ILDCellID0::side] ;
-		      sensorNumber = encoder[lcio::ILDCellID0::sensor] ;
+		      layerNumber  = encoder[lcio::LCTrackerCellID::layer()] ;
+		      ladderNumber = encoder[lcio::LCTrackerCellID::module()] ;
+		      sideTest = encoder[lcio::LCTrackerCellID::side()] ;
+		      sensorNumber = encoder[lcio::LCTrackerCellID::sensor()] ;
 		      encoder.reset() ;
 		      
 		      // Just to check the element matching between the hit (coming from the digitiser) and the track extrapolation element (coming from Mokka)
@@ -473,10 +473,10 @@ void ExtrToSIT::processEvent( LCEvent * evt ) {
 		      int mokkaSensorNumber = 0 ;
 		      
 		      encoder.setValue(elementID) ;
-		      mokkaLayerNumber  = encoder[lcio::ILDCellID0::layer] ;
-		      mokkaLadderNumber = encoder[lcio::ILDCellID0::module] ;
-		      mokkaSideTest = encoder[lcio::ILDCellID0::side] ;
-		      mokkaSensorNumber = encoder[lcio::ILDCellID0::sensor] ;
+		      mokkaLayerNumber  = encoder[lcio::LCTrackerCellID::layer()] ;
+		      mokkaLadderNumber = encoder[lcio::LCTrackerCellID::module()] ;
+		      mokkaSideTest = encoder[lcio::LCTrackerCellID::side()] ;
+		      mokkaSensorNumber = encoder[lcio::LCTrackerCellID::sensor()] ;
 		      encoder.reset() ;
 		      
 		      streamlog_out(DEBUG2) << " checking hit : type = " << hit->getType() << " cell ID = " << celId << " side = " << sideTest << " layer = " << layerNumber << " ladder = " << ladderNumber << " sensor = " << sensorNumber << std::endl ;
@@ -678,7 +678,7 @@ void ExtrToSIT::processEvent( LCEvent * evt ) {
 		  all_hits.push_back(hits_in_fit[ihit].first);
 	      }
 	      
-	      UTIL::BitField64 cellID_encoder( lcio::ILDCellID0::encoder_string ) ;
+	      UTIL::BitField64 cellID_encoder( lcio::LCTrackerCellID::encoding_string() ) ;
 	      
 	      MarlinTrk::addHitNumbersToTrack(refittedTrack, all_hits, true, cellID_encoder);
 		

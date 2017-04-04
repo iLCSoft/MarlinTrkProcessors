@@ -9,6 +9,7 @@
 #include <EVENT/MCParticle.h>
 
 #include <UTIL/CellIDEncoder.h>
+#include "UTIL/LCTrackerConf.h"
 #include <UTIL/ILDConf.h>
 #include <UTIL/BitSet32.h>
 
@@ -208,7 +209,7 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
     
     LCCollectionVec* trkhitVec = new LCCollectionVec( LCIO::TRACKERHITPLANE )  ;
     
-    CellIDEncoder<TrackerHitPlaneImpl> cellid_encoder( lcio::ILDCellID0::encoder_string , trkhitVec ) ;
+    CellIDEncoder<TrackerHitPlaneImpl> cellid_encoder( lcio::LCTrackerCellID::encoding_string() , trkhitVec ) ;
 
     LCCollectionVec* relCol = new LCCollectionVec(LCIO::LCRELATION);
     // to store the weights

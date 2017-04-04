@@ -14,7 +14,7 @@
 
 #include <UTIL/LCRelationNavigator.h>
 #include <UTIL/BitField64.h>
-#include <UTIL/ILDConf.h>
+#include "UTIL/LCTrackerConf.h"
 #include <UTIL/BitSet32.h>
 
 #include <EVENT/TrackerHit.h>

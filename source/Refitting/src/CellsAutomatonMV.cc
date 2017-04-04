@@ -8,6 +8,7 @@
 #include <climits>
 
 #include <UTIL/BitField64.h>
+#include "UTIL/LCTrackerConf.h"
 #include <UTIL/ILDConf.h>
 
 #include "MarlinTrk/Factory.h"
@@ -884,9 +885,9 @@ void CellsAutomatonMV::InitialiseVTX( LCEvent * evt, EVENT::TrackerHitVec HitsTe
 
       int celId = hit->getCellID0() ;
 
-      UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ; 
+      UTIL::BitField64 encoder( lcio::LCTrackerCellID::encoding_string() ) ; 
       encoder.setValue(celId) ;
-      int layer  = encoder[lcio::ILDCellID0::layer] + 1 ;  // +1 cause IP is considered layer 0
+      int layer  = encoder[lcio::LCTrackerCellID::layer()] + 1 ;  // +1 cause IP is considered layer 0
 
       int iPhi = int(Phi/_dPhi);
       int iTheta = int ((cosTheta + double(1.0))/_dTheta);
@@ -953,9 +954,9 @@ void CellsAutomatonMV::InitialiseVTX( LCEvent * evt, EVENT::TrackerHitVec HitsTe
 
 	    int celId_SIT = planarhit->getCellID0() ;
 	
-	    UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ; 
+	    UTIL::BitField64 encoder( lcio::LCTrackerCellID::encoding_string() ) ; 
 	    encoder.setValue(celId_SIT) ;
-	    int layer  = encoder[lcio::ILDCellID0::layer] + 1 ;  // + 1 cause IP is considered layer 0
+	    int layer  = encoder[lcio::LCTrackerCellID::layer()] + 1 ;  // + 1 cause IP is considered layer 0
         
 	    // VXD and SIT are treated as one system so SIT layers start from _nLayersVTX
 	    layer = layer + _nLayersVTX;
@@ -1038,13 +1039,13 @@ void CellsAutomatonMV::CreateMiniVectors( int sector ) {
     int detID = 0 ;
     //int layerID = 0 ;
     
-    UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ; 
+    UTIL::BitField64 encoder( lcio::LCTrackerCellID::encoding_string() ) ; 
     encoder.reset() ;  // reset to 0
     encoder.setValue(celID) ;
 
-    detID = encoder[lcio::ILDCellID0::subdet] ; 
+    detID = encoder[lcio::LCTrackerCellID::subdet()] ; 
     
-    layer = encoder[lcio::ILDCellID0::layer] + 1 ;  // + 1 if we consider the IP hit
+    layer = encoder[lcio::LCTrackerCellID::layer()] + 1 ;  // + 1 if we consider the IP hit
     
     if (detID==lcio::ILDDetID::VXD ){
 
@@ -1338,9 +1339,9 @@ void CellsAutomatonMV::finaliseTrack( TrackImpl* newTrackImpl,   LCCollectionVec
   std::vector< TrackerHit* > trackerHits = newTrackImpl->getTrackerHits();
   for( unsigned j=0; j < trackerHits.size(); j++ ){
      
-    UTIL::BitField64 encoder( ILDCellID0::encoder_string );
+    UTIL::BitField64 encoder( LCTrackerCellID::encoding_string() );
     encoder.setValue( trackerHits[j]->getCellID0() );
-    int subdet =  encoder[lcio::ILDCellID0::subdet];
+    int subdet =  encoder[lcio::LCTrackerCellID::subdet()];
      
      
     ++hitNumbers[ subdet ];

@@ -27,7 +27,7 @@
 #include <IMPL/LCFlagImpl.h>
 
 #include <UTIL/CellIDEncoder.h>
-#include <UTIL/ILDConf.h>
+#include "UTIL/LCTrackerConf.h"
 #include <UTIL/BitSet32.h>
 #include <UTIL/LCRelationNavigator.h>
 
@@ -411,7 +411,7 @@ void TruthTrackFinder::processEvent( LCEvent* evt ) {
 
 
     ///Fill hits associated to the track by pattern recognition and hits in fit
-    UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ; 
+    UTIL::BitField64 encoder( lcio::LCTrackerCellID::encoding_string() ) ; 
     encoder.reset() ;  // reset to 0
     MarlinTrk::addHitNumbersToTrack(track, trackHits, false, encoder);
     MarlinTrk::addHitNumbersToTrack(track, hits_in_fit, true, encoder);
