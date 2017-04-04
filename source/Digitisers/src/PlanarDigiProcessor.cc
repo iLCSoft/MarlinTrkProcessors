@@ -9,6 +9,7 @@
 #include <IMPL/TrackerHitPlaneImpl.h>
 
 #include <UTIL/CellIDEncoder.h>
+#include "UTIL/LCTrackerConf.h"
 #include <UTIL/ILDConf.h>
 #include <UTIL/Operators.h>
 
@@ -29,7 +30,7 @@
 #include <gsl/gsl_randist.h>
 #include "marlin/ProcessorEventSeeder.h"
 
-#include "UTIL/ILDConf.h"
+
 #include "UTIL/BitSet32.h"
 
 #include "CLHEP/Vector/TwoVector.h"
@@ -177,17 +178,17 @@ void PlanarDigiProcessor::processEvent( LCEvent * evt ) {
     relCol->setFlag( lcFlag.getFlag()  ) ;
 
     
-    CellIDEncoder<TrackerHitPlaneImpl> cellid_encoder( lcio::ILDCellID0::encoder_string , trkhitVec ) ;
+    CellIDEncoder<TrackerHitPlaneImpl> cellid_encoder( lcio::LCTrackerCellID::encoding_string() , trkhitVec ) ;
     
     
     int det_id = 0 ;
-    UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ;
+    UTIL::BitField64 encoder( lcio::LCTrackerCellID::encoding_string() ) ;
     
     if ( nSimHits>0 ) {
       
       SimTrackerHit* SimTHit = dynamic_cast<SimTrackerHit*>( STHcol->getElementAt( 0 ) ) ;
       encoder.setValue(SimTHit->getCellID0()) ;
-      det_id  = encoder[lcio::ILDCellID0::subdet] ;
+      det_id  = encoder[lcio::LCTrackerCellID::subdet()] ;
       
     }
     
@@ -216,10 +217,10 @@ void PlanarDigiProcessor::processEvent( LCEvent * evt ) {
       
      
       encoder.setValue(celId) ;
-      int side   = encoder[lcio::ILDCellID0::side];
-      int layer  = encoder[lcio::ILDCellID0::layer];
-      int module = encoder[lcio::ILDCellID0::module];
-      int sensor = encoder[lcio::ILDCellID0::sensor];
+      int side   = encoder[lcio::LCTrackerCellID::side()];
+      int layer  = encoder[lcio::LCTrackerCellID::layer()];
+      int module = encoder[lcio::LCTrackerCellID::module()];
+      int sensor = encoder[lcio::LCTrackerCellID::sensor()];
       
       streamlog_out( DEBUG3 ) << "Hit = "<< i << " has celId " << encoder.valueString() << std::endl;
 

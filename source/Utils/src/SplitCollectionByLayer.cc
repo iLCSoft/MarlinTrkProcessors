@@ -9,7 +9,7 @@
 #include <EVENT/CalorimeterHit.h>
 
 #include <UTIL/BitField64.h>
-// #include <UTIL/ILDConf.h>
+// #include "UTIL/LCTrackerConf.h"
 // #include <UTIL/LCTOOLS.h>
 
 

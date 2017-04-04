@@ -42,6 +42,7 @@
 #include "MarlinTrk/MarlinTrkUtils.h"
 
 #include <UTIL/BitField64.h>
+#include "UTIL/LCTrackerConf.h"
 #include <UTIL/ILDConf.h>
 #include <UTIL/BitSet32.h>
 
@@ -62,7 +63,7 @@ TruthTracker::TruthTracker() : Processor("TruthTracker") {
   // modify processor description
   _description = "Creates Track Collection from MC Truth. Can handle composite spacepoints as long as they consist of two TrackerHits" ;
   
-  _encoder = new UTIL::BitField64(lcio::ILDCellID0::encoder_string);
+  _encoder = new UTIL::BitField64(lcio::LCTrackerCellID::encoding_string());
   
   // register steering parameters: name, description, class-variable, default value
   
@@ -360,7 +361,7 @@ void TruthTracker::processEvent( LCEvent * evt ) {
 
   
   // create the encoder to decode cellID0
-  UTIL::BitField64 cellID_encoder( ILDCellID0::encoder_string ) ;
+  UTIL::BitField64 cellID_encoder( LCTrackerCellID::encoding_string() ) ;
   
   
   
@@ -1948,22 +1949,22 @@ void TruthTracker::createTrack_old( MCParticle* mcp, UTIL::BitField64& cellID_en
     
     TrackStateImpl* trkStateCalo = new TrackStateImpl;
     
-    UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ; 
+    UTIL::BitField64 encoder( lcio::LCTrackerCellID::encoding_string() ) ; 
     encoder.reset() ;  // reset to 0
     
-    encoder[lcio::ILDCellID0::subdet] = lcio::ILDDetID::ECAL ;
-    encoder[lcio::ILDCellID0::side] = lcio::ILDDetID::barrel;
-    encoder[lcio::ILDCellID0::layer]  = 0 ;
+    encoder[lcio::LCTrackerCellID::subdet()] = lcio::ILDDetID::ECAL ;
+    encoder[lcio::LCTrackerCellID::side()] = lcio::ILDDetID::barrel;
+    encoder[lcio::LCTrackerCellID::layer()]  = 0 ;
     
     int detElementID = 0;
     return_code = marlin_trk->propagateToLayer(encoder.lowWord(), last_trkhit, *trkStateCalo, chi2, ndf, detElementID, IMarlinTrack::modeForward ) ;
     
     if (return_code == MarlinTrk::IMarlinTrack::no_intersection ) { // try forward or backward
       if (trkStateIP->getTanLambda()>0) {
-        encoder[lcio::ILDCellID0::side] = lcio::ILDDetID::fwd;
+        encoder[lcio::LCTrackerCellID::side()] = lcio::ILDDetID::fwd;
       }
       else{
-        encoder[lcio::ILDCellID0::side] = lcio::ILDDetID::bwd;
+        encoder[lcio::LCTrackerCellID::side()] = lcio::ILDDetID::bwd;
       }
       return_code = marlin_trk->propagateToLayer(encoder.lowWord(), last_trkhit, *trkStateCalo, chi2, ndf, detElementID, IMarlinTrack::modeForward ) ;
     }
@@ -2024,7 +2025,7 @@ void TruthTracker::createTrack_old( MCParticle* mcp, UTIL::BitField64& cellID_en
     Track->addHit(added_hits.at(j)) ;
     
     cellID_encoder.setValue(added_hits.at(j)->getCellID0()) ;
-    int detID = cellID_encoder[ILDCellID0::subdet];
+    int detID = cellID_encoder[LCTrackerCellID::subdet()];
     ++hitNumbers[detID];
     //    streamlog_out( DEBUG1 ) << "Hit from Detector " << detID << std::endl;     
   }

@@ -9,13 +9,13 @@
 #include "IMPL/TrackerHitPlaneImpl.h"
 #include "IMPL/LCFlagImpl.h"
 #include "IMPL/LCRelationImpl.h"
-#include "UTIL/ILDConf.h"
 #include "UTIL/LCRelationNavigator.h"
 
 
 #include "marlin/VerbosityLevels.h"
 #include "marlin/Global.h"
-#include "UTIL/ILDConf.h"
+#include "UTIL/LCTrackerConf.h"
+#include <UTIL/ILDConf.h>
 
 #include "DDRec/DetectorData.h"
 
@@ -223,7 +223,7 @@ void DDSpacePointBuilder::processEvent( LCEvent * evt ) {
       }
     }
 
-    UTIL::BitField64  cellID( ILDCellID0::encoder_string );
+    UTIL::BitField64  cellID( LCTrackerCellID::encoding_string() );
     
     // now loop over all CellID0s
     for( it= map_cellID0_hits.begin(); it!= map_cellID0_hits.end(); it++ ){
@@ -295,7 +295,7 @@ void DDSpacePointBuilder::processEvent( LCEvent * evt ) {
             
             cellID.setValue( cellID0 );
             
-            //int subdet = cellID[ ILDCellID0::subdet ] ;
+            //int subdet = cellID[ LCTrackerCellID::subdet() ] ;
 
             double strip_length_mm = 0;
 	    strip_length_mm = _striplength ;
@@ -333,7 +333,7 @@ void DDSpacePointBuilder::processEvent( LCEvent * evt ) {
 
             if ( spacePoint != NULL ) { 
 
-              CellIDEncoder<TrackerHitImpl> cellid_encoder( ILDCellID0::encoder_string , spCol );
+              CellIDEncoder<TrackerHitImpl> cellid_encoder( LCTrackerCellID::encoding_string() , spCol );
               cellid_encoder.setValue( cellID0 ); //give the new hit, the CellID0 of the front hit
               cellid_encoder.setCellID( spacePoint ) ;
               
@@ -926,19 +926,19 @@ std::vector< int > DDSpacePointBuilder::getCellID0sAtBack( int cellID0 ){
   // const gear::ZPlanarLayerLayout& sitLayout = Global::GEAR->getSITParameters().getZPlanarLayerLayout();
   
   //find out detector, layer
-  UTIL::BitField64  cellID( ILDCellID0::encoder_string );
+  UTIL::BitField64  cellID( LCTrackerCellID::encoding_string() );
   cellID.setValue( cellID0 );
   
 
-  int subdet = cellID[ ILDCellID0::subdet ] ;
-  int layer  = cellID[ ILDCellID0::layer ];
+  int subdet = cellID[ LCTrackerCellID::subdet() ] ;
+  int layer  = cellID[ LCTrackerCellID::layer() ];
   
   if (subdet != ILDDetID::FTD)  {
     
     //check if sensor is in front
     if( layer%2 == 0 ){ // even layers are front sensors
       
-      cellID[ ILDCellID0::layer ] = layer + 1; 
+      cellID[ LCTrackerCellID::layer() ] = layer + 1; 
       // it is assumed that the even layers are the front layers
       // and the following odd ones the back layers
       
@@ -953,7 +953,7 @@ std::vector< int > DDSpacePointBuilder::getCellID0sAtBack( int cellID0 ){
     DD4hep::Geometry::DetElement ftdDE = lcdd2.detector( _subDetName);
     DD4hep::DDRec::ZDiskPetalsData* ft = ftdDE.extension<DD4hep::DDRec::ZDiskPetalsData>();
 
-    int sensor = cellID[ ILDCellID0::sensor ];
+    int sensor = cellID[ LCTrackerCellID::sensor() ];
     //int Nsensors = ft->layers.at(layer).petalNumber ; 
     int Nsensors = ft->layers.at(layer).sensorsPerPetal ;
 
@@ -966,7 +966,7 @@ std::vector< int > DDSpacePointBuilder::getCellID0sAtBack( int cellID0 ){
     //if(( Sensors.at(layer).DoubleSided ) && ( sensor <= Nsensors / 2 ) ){
     if (sensor <= Nsensors / 2 ) {
       
-      cellID[ ILDCellID0::sensor ] = sensor + Nsensors / 2; 
+      cellID[ LCTrackerCellID::sensor() ] = sensor + Nsensors / 2; 
       // it is assumed (according to current gear and mokka), that sensors 1 until n/2 will be on front
       // and sensor n/2 + 1 until n are at the back
       // so the sensor x, will have sensor x+n/2 at the back
@@ -990,10 +990,10 @@ std::vector< int > DDSpacePointBuilder::getCellID0sAtBack( int cellID0 ){
   
   std::vector< int > back;
   
-  UTIL::BitField64  cellID( ILDCellID0::encoder_string );
+  UTIL::BitField64  cellID( LCTrackerCellID::encoding_string() );
   cellID.setValue( cellID0 );
   
-  int subdet = cellID[ ILDCellID0::subdet ] ;
+  int subdet = cellID[ LCTrackerCellID::subdet() ] ;
   
   if( subdet == ILDDetID::FTD ) return getCellID0sAtBackOfFTD( cellID0 );
   if( subdet == ILDDetID::SIT ) return getCellID0sAtBackOfSIT( cellID0 );
@@ -1012,19 +1012,19 @@ std::vector< int > DDSpacePointBuilder::getCellID0sAtBackOfFTD( int cellID0 ){
 
   
   //find out layer, module, sensor
-  UTIL::BitField64  cellID( ILDCellID0::encoder_string );
+  UTIL::BitField64  cellID( LCTrackerCellID::encoding_string() );
   cellID.setValue( cellID0 );
   
-//   int side   = cellID[ ILDCellID0::side ];
-//   int module = cellID[ ILDCellID0::module ];
-  int sensor = cellID[ ILDCellID0::sensor ];
-  int layer  = cellID[ ILDCellID0::layer ];
+//   int side   = cellID[ LCTrackerCellID::side() ];
+//   int module = cellID[ LCTrackerCellID::module() ];
+  int sensor = cellID[ LCTrackerCellID::sensor() ];
+  int layer  = cellID[ LCTrackerCellID::layer() ];
   
   
   //check if sensor is in front
   if(( ftdLayers.isDoubleSided( layer ) ) && ( sensor <= ftdLayers.getNSensors( layer ) / 2 ) ){
    
-    cellID[ ILDCellID0::sensor ] = sensor + ftdLayers.getNSensors( layer ) / 2; 
+    cellID[ LCTrackerCellID::sensor() ] = sensor + ftdLayers.getNSensors( layer ) / 2; 
     // it is assumed (according to current gear and mokka), that sensors 1 until n/2 will be on front
     // and sensor n/2 + 1 until n are at the back
     // so the sensor x, will have sensor x+n/2 at the back
@@ -1046,19 +1046,19 @@ std::vector< int > DDSpacePointBuilder::getCellID0sAtBackOfSIT( int cellID0 ){
   
   
   //find out layer, module, sensor
-  UTIL::BitField64  cellID( ILDCellID0::encoder_string );
+  UTIL::BitField64  cellID( LCTrackerCellID::encoding_string() );
   cellID.setValue( cellID0 );
   
-//   int side   = cellID[ ILDCellID0::side ];
-//   int module = cellID[ ILDCellID0::module ];
-//   int sensor = cellID[ ILDCellID0::sensor ];
-  int layer  = cellID[ ILDCellID0::layer ];
+//   int side   = cellID[ LCTrackerCellID::side() ];
+//   int module = cellID[ LCTrackerCellID::module() ];
+//   int sensor = cellID[ LCTrackerCellID::sensor() ];
+  int layer  = cellID[ LCTrackerCellID::layer() ];
   
   
   //check if sensor is in front
   if( layer%2 == 0 ){ // even layers are front sensors
     
-    cellID[ ILDCellID0::layer ] = layer + 1; 
+    cellID[ LCTrackerCellID::layer() ] = layer + 1; 
     // it is assumed that the even layers are the front layers
     // and the following odd ones the back layers
     
@@ -1079,19 +1079,19 @@ std::vector< int > DDSpacePointBuilder::getCellID0sAtBackOfSET( int cellID0 ){
   
   
   //find out layer, module, sensor
-  UTIL::BitField64  cellID( ILDCellID0::encoder_string );
+  UTIL::BitField64  cellID( LCTrackerCellID::encoding_string() );
   cellID.setValue( cellID0 );
   
-  //   int side   = cellID[ ILDCellID0::side ];
-  //   int module = cellID[ ILDCellID0::module ];
-  //   int sensor = cellID[ ILDCellID0::sensor ];
-  int layer  = cellID[ ILDCellID0::layer ];
+  //   int side   = cellID[ LCTrackerCellID::side() ];
+  //   int module = cellID[ LCTrackerCellID::module() ];
+  //   int sensor = cellID[ LCTrackerCellID::sensor() ];
+  int layer  = cellID[ LCTrackerCellID::layer() ];
   
   
   //check if sensor is in front
   if( layer%2 == 0 ){ // even layers are front sensors
     
-    cellID[ ILDCellID0::layer ] = layer + 1; 
+    cellID[ LCTrackerCellID::layer() ] = layer + 1; 
     // it is assumed that the even layers are the front layers
     // and the following odd ones the back layers
     
@@ -1114,14 +1114,14 @@ std::string DDSpacePointBuilder::getCellID0Info( int cellID0 ){
   std::stringstream s;
   
   //find out layer, module, sensor
-  UTIL::BitField64  cellID( ILDCellID0::encoder_string );
+  UTIL::BitField64  cellID( LCTrackerCellID::encoding_string() );
   cellID.setValue( cellID0 );
 
-  int subdet = cellID[ ILDCellID0::subdet ] ;
-  int side   = cellID[ ILDCellID0::side ];
-  int module = cellID[ ILDCellID0::module ];
-  int sensor = cellID[ ILDCellID0::sensor ];
-  int layer  = cellID[ ILDCellID0::layer ];
+  int subdet = cellID[ LCTrackerCellID::subdet() ] ;
+  int side   = cellID[ LCTrackerCellID::side() ];
+  int module = cellID[ LCTrackerCellID::module() ];
+  int sensor = cellID[ LCTrackerCellID::sensor() ];
+  int layer  = cellID[ LCTrackerCellID::layer() ];
   
   s << "(su" << subdet << ",si" << side << ",la" << layer << ",mo" << module << ",se" << sensor << ")";
   

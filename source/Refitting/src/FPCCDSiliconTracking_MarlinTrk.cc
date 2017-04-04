@@ -38,6 +38,7 @@
 #include <gear/BField.h>
 
 #include <UTIL/BitField64.h>
+#include "UTIL/LCTrackerConf.h"
 #include <UTIL/ILDConf.h>
 
 #include "MarlinTrk/MarlinTrkUtils.h"
@@ -88,7 +89,7 @@ FPCCDSiliconTracking_MarlinTrk::FPCCDSiliconTracking_MarlinTrk() : Processor("FP
 
   _fastfitter = new MarlinTrk::HelixFit();
 
-  _encoder = new UTIL::BitField64(lcio::ILDCellID0::encoder_string);
+  _encoder = new UTIL::BitField64(lcio::LCTrackerCellID::encoding_string());
 
   _moriUtil = new moriUTIL();
   _purityUtil = new GetPurityUtil();
@@ -3521,7 +3522,7 @@ void FPCCDSiliconTracking_MarlinTrk::FinalRefit(LCCollectionVec* trk_col, LCColl
         all_hits.push_back(hits_in_fit[ihit].first);
       }
 
-      UTIL::BitField64 cellID_encoder( lcio::ILDCellID0::encoder_string ) ; 
+      UTIL::BitField64 cellID_encoder( lcio::LCTrackerCellID::encoding_string() ) ; 
 
       MarlinTrk::addHitNumbersToTrack(Track, all_hits, true, cellID_encoder);
 

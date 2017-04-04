@@ -8,6 +8,7 @@
 #include <EVENT/TrackerHit.h>
 #include <EVENT/LCRelation.h>
 #include <UTIL/LCRelationNavigator.h>
+#include "UTIL/LCTrackerConf.h"
 
 #include <iostream>
 #include <algorithm>
@@ -21,7 +22,7 @@
 #include <gear/BField.h>
 
 #include <UTIL/BitField64.h>
-#include <UTIL/ILDConf.h>
+#include "UTIL/LCTrackerConf.h"
 
 
 using namespace lcio ;

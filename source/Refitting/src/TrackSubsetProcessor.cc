@@ -8,7 +8,7 @@
 #include "IMPL/LCFlagImpl.h"
 #include "IMPL/TrackImpl.h"
 
-#include <UTIL/ILDConf.h>
+#include "UTIL/LCTrackerConf.h"
 #include <UTIL/Operators.h>
 
 #include <gear/BField.h>
@@ -410,7 +410,7 @@ void TrackSubsetProcessor::processEvent( LCEvent * evt ) {
       all_hits.push_back(hits_in_fit[ihit].first);
     }
     
-    UTIL::BitField64 cellID_encoder( lcio::ILDCellID0::encoder_string ) ;
+    UTIL::BitField64 cellID_encoder( lcio::LCTrackerCellID::encoding_string() ) ;
     
     MarlinTrk::addHitNumbersToTrack(trackImpl, all_hits, true, cellID_encoder);
     

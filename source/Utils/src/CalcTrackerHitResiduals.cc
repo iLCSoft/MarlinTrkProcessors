@@ -13,6 +13,7 @@
 
 #include <IMPL/LCRelationImpl.h>
 #include <UTIL/LCRelationNavigator.h>
+#include <UTIL/ILDConf.h>
 
 // ----- include for verbosity dependend logging ---------
 #include "marlin/VerbosityLevels.h"
@@ -49,7 +50,7 @@ CalcTrackerHitResiduals::CalcTrackerHitResiduals() : Processor("CalcTrackerHitRe
   // modify processor description
   _description = "Creates Track Collection from MC Truth. Can handle composite spacepoints as long as they consist of two TrackerHits" ;
   
-  _encoder = new UTIL::BitField64(lcio::ILDCellID0::encoder_string);
+  _encoder = new UTIL::BitField64(lcio::LCTrackerCellID::encoding_string());
   
   // register steering parameters: name, description, class-variable, default value
   
@@ -153,7 +154,7 @@ void CalcTrackerHitResiduals::processEvent( LCEvent * evt ) {
   this->SetupInputCollections(evt) ;
       
   // create the encoder to decode cellID0
-  UTIL::BitField64 cellID_encoder( ILDCellID0::encoder_string ) ;
+  UTIL::BitField64 cellID_encoder( LCTrackerCellID::encoding_string() ) ;
   
   
   
@@ -204,13 +205,13 @@ void CalcTrackerHitResiduals::processEvent( LCEvent * evt ) {
       
       const int celId = trkhit->getCellID0() ;
       
-      UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ;
+      UTIL::BitField64 encoder( lcio::LCTrackerCellID::encoding_string() ) ;
       
       encoder.setValue(celId) ;
-      int side   = encoder[lcio::ILDCellID0::side];
-      int layer  = encoder[lcio::ILDCellID0::layer];
-      int module = encoder[lcio::ILDCellID0::module];
-      int sensor = encoder[lcio::ILDCellID0::sensor];
+      int side   = encoder[lcio::LCTrackerCellID::side()];
+      int layer  = encoder[lcio::LCTrackerCellID::layer()];
+      int module = encoder[lcio::LCTrackerCellID::module()];
+      int sensor = encoder[lcio::LCTrackerCellID::sensor()];
       
       streamlog_out( DEBUG3 ) << "Hit = "<< j << " has celId " << celId << std::endl;
       streamlog_out( DEBUG3 ) << "side = " << side << std::endl;
@@ -227,7 +228,7 @@ void CalcTrackerHitResiduals::processEvent( LCEvent * evt ) {
       CLHEP::Hep3Vector localPointRec= ms->getCoordinateSystem()->getLocalPoint(globalPointRec);
 
 
-      if( BitSet32( trkhit->getType() )[ UTIL::ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT ]   ){ 
+      if( UTIL::BitSet32( trkhit->getType() )[ UTIL::ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT ]   ){
       
         /**********************************************************************************************/
         /*                Treat Composite Spacepoints                                                 */

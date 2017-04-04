@@ -16,7 +16,7 @@
 #include "MarlinTrk/IMarlinTrack.h"
 
 #include <UTIL/BitField64.h>
-#include <UTIL/ILDConf.h>
+#include "UTIL/LCTrackerConf.h"
 
 namespace DiagnosticsHistograms {
   class Histograms ;
@@ -421,11 +421,11 @@ protected:
   //  int _createMap;
   
   UTIL::BitField64* _encoder;
-  int getDetectorID(TrackerHit* hit) { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::ILDCellID0::subdet]; }
-  int getSideID(TrackerHit* hit)     { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::ILDCellID0::side]; };
-  int getLayerID(TrackerHit* hit)    { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::ILDCellID0::layer]; };
-  int getModuleID(TrackerHit* hit)   { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::ILDCellID0::module]; };
-  int getSensorID(TrackerHit* hit)   { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::ILDCellID0::sensor]; };
+  int getDetectorID(TrackerHit* hit) { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::subdet()]; }
+  int getSideID(TrackerHit* hit)     { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::side()]; };
+  int getLayerID(TrackerHit* hit)    { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::layer()]; };
+  int getModuleID(TrackerHit* hit)   { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::module()]; };
+  int getSensorID(TrackerHit* hit)   { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::sensor()]; };
   
   void setupGearGeom( const gear::GearMgr* gearMgr ) ;
   

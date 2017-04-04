@@ -14,8 +14,8 @@
 
 #include <UTIL/BitField64.h>
 #include <UTIL/BitSet32.h>
+#include "UTIL/LCTrackerConf.h"
 #include <UTIL/ILDConf.h>
-#include "DDKalTest/DDKalTestConf.h"
 
 #include <algorithm>
 
@@ -303,7 +303,7 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 	  TrackStateImpl trkState0;	
 	    
 	    
-	  UTIL::BitField64 encoder(  lcio::ILDCellID0::encoder_string ) ; 
+	  UTIL::BitField64 encoder(  lcio::LCTrackerCellID::encoding_string() ) ; 
 	    
 	  encoder.reset() ;  // reset to 0
 	    
@@ -328,7 +328,7 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 	      for (int iL=0; iL<_vecSubdetNLayers.at(idet); iL++){
 		streamlog_out(DEBUG4) << "LOOP - layer = " << iL << " begins "<< std::endl;
 	 	
-		encoder[DDKalTest::CellIDEncoding::instance().subdet()] = _vecSubdetID.at(idet);
+		encoder[UTIL::LCTrackerCellID::subdet()] = _vecSubdetID.at(idet);
 
 		int side = 0;
 		if ( _vecSubdetIsBarrel.at(idet) ) side = 0; //lcio::ILDDetID::barrel;
@@ -338,12 +338,12 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 		  if ( z_last_hit > 0. ) side = 1; 
 		  else  side = -1;
 		}
-		encoder[DDKalTest::CellIDEncoding::instance().side()] = side;
+		encoder[UTIL::LCTrackerCellID::side()] = side;
 
 		int layer = 0;
 		if ( _extrapolateForward ) layer = iL;
 		else layer = _vecSubdetNLayers.at(idet) - (iL +1);
-		encoder[DDKalTest::CellIDEncoding::instance().layer()] = layer;  
+		encoder[UTIL::LCTrackerCellID::layer()] = layer;  
 		
 		layerID = encoder.lowWord();  
 		streamlog_out(DEBUG4) << "layerID = " << layerID << std::endl;
@@ -515,7 +515,7 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 	  }
 	     
 
-	  UTIL::BitField64 encoder2(  lcio::ILDCellID0::encoder_string );
+	  UTIL::BitField64 encoder2(  lcio::LCTrackerCellID::encoding_string() );
 	  encoder2.reset() ;  // reset to 0
 	  MarlinTrk::addHitNumbersToTrack(lcio_trk, all_hits, false, encoder2);
 	  MarlinTrk::addHitNumbersToTrack(lcio_trk, hits_in_fit, true, encoder2);
@@ -562,7 +562,7 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
     /////////////////////////////////////////////////////////////////
 
     LCCollectionVec* notUsedHitsVec = new LCCollectionVec( LCIO::TRACKERHITPLANE );    
-    CellIDEncoder<TrackerHitPlaneImpl> cellid_encoder( lcio::ILDCellID0::encoder_string, notUsedHitsVec ) ;  //do not change it, code will not work with a different encoder
+    CellIDEncoder<TrackerHitPlaneImpl> cellid_encoder( lcio::LCTrackerCellID::encoding_string(), notUsedHitsVec ) ;  //do not change it, code will not work with a different encoder
     notUsedHitsVec->setSubset(true);
 
     for(size_t iDet=0; iDet<_vecMapsElHits.size(); iDet++){
@@ -718,11 +718,11 @@ void ExtrToTracker::getCellID0AndPositionInfo(LCCollection*& col ){
     DD4hep::long64 id = trackerHit->getCellID0() ;
     cellid_decoder.setValue( id ) ;
 
-    int subdet = cellid_decoder[DDKalTest::CellIDEncoding::instance().subdet()];
-    int side = cellid_decoder[DDKalTest::CellIDEncoding::instance().side()];
-    int layer = cellid_decoder[DDKalTest::CellIDEncoding::instance().layer()];
-    int module = cellid_decoder[DDKalTest::CellIDEncoding::instance().module()];
-    int sensor = cellid_decoder[DDKalTest::CellIDEncoding::instance().sensor()];
+    int subdet = cellid_decoder[UTIL::LCTrackerCellID::subdet()];
+    int side = cellid_decoder[UTIL::LCTrackerCellID::side()];
+    int layer = cellid_decoder[UTIL::LCTrackerCellID::layer()];
+    int module = cellid_decoder[UTIL::LCTrackerCellID::module()];
+    int sensor = cellid_decoder[UTIL::LCTrackerCellID::sensor()];
 
 
     streamlog_out(DEBUG2) << " hit" << i
@@ -900,7 +900,7 @@ void ExtrToTracker::fillMapElHits(std::vector<LCCollection* >& vecHitCol, std::v
 	vecHelper.push_back(hit);
   
 	int cellID0 = hit->getCellID0();
-	UTIL::BitField64 encoder0(  lcio::ILDCellID0::encoder_string );  //do not change it, code will not work with a different encoder	    
+	UTIL::BitField64 encoder0(  lcio::LCTrackerCellID::encoding_string() );  //do not change it, code will not work with a different encoder	    
 	encoder0.reset();  // reset to 0
 	encoder0.setValue(cellID0);
 	int hitElID = encoder0.lowWord();  

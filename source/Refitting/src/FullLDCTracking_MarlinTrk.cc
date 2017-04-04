@@ -46,6 +46,7 @@
 #endif
 
 #include <UTIL/BitField64.h>
+#include "UTIL/LCTrackerConf.h"
 #include <UTIL/ILDConf.h>
 
 #include <climits>
@@ -99,7 +100,7 @@ std::string toString( int iTrk, Track * tpcTrack, float bField=3.5 ) {
 FullLDCTracking_MarlinTrk::FullLDCTracking_MarlinTrk() : Processor("FullLDCTracking_MarlinTrk") {  
   _description = "Performs full tracking in ILD detector" ;  
   
-  _encoder = new UTIL::BitField64(lcio::ILDCellID0::encoder_string);
+  _encoder = new UTIL::BitField64(lcio::LCTrackerCellID::encoding_string());
   
   // Input tracker hit collections
   
@@ -799,7 +800,7 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent * evt, TrackExtendedVec
       all_hits.push_back(hits_in_fit[ihit].first);
     }
     
-    UTIL::BitField64 cellID_encoder( lcio::ILDCellID0::encoder_string ) ; 
+    UTIL::BitField64 cellID_encoder( lcio::LCTrackerCellID::encoding_string() ) ; 
     
     MarlinTrk::addHitNumbersToTrack(Track, all_hits, true, cellID_encoder);
     

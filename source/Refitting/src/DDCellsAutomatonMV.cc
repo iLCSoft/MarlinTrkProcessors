@@ -8,7 +8,8 @@
 #include <climits>
 
 #include <UTIL/BitField64.h>
-// #include <UTIL/ILDConf.h>
+// #include "UTIL/LCTrackerConf.h"
+#include <UTIL/ILDConf.h>
 
 // #include "MarlinTrk/Factory.h"
 #include "MarlinTrk/IMarlinTrack.h"
@@ -855,9 +856,9 @@ void DDCellsAutomatonMV::InitialiseVTX( LCEvent * evt, EVENT::TrackerHitVec Hits
 
       int celId = hit->getCellID0() ;
 
-      UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ; 
+      UTIL::BitField64 encoder( lcio::LCTrackerCellID::encoding_string() ) ; 
       encoder.setValue(celId) ;
-      int layer  = encoder[lcio::ILDCellID0::layer] + 1 ;  // +1 cause IP is considered layer 0
+      int layer  = encoder[lcio::LCTrackerCellID::layer()] + 1 ;  // +1 cause IP is considered layer 0
 
       int iPhi = int(Phi/_dPhi);
       int iTheta = int ((cosTheta + double(1.0))/_dTheta);
@@ -918,9 +919,9 @@ void DDCellsAutomatonMV::InitialiseVTX( LCEvent * evt, EVENT::TrackerHitVec Hits
 	
 	int celId_SIT = trkhit->getCellID0() ;
 	
-	UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ; 
+	UTIL::BitField64 encoder( lcio::LCTrackerCellID::encoding_string() ) ; 
 	encoder.setValue(celId_SIT) ;
-	int layer  = encoder[lcio::ILDCellID0::layer] + 1 ;  // + 1 cause IP is considered layer 0
+	int layer  = encoder[lcio::LCTrackerCellID::layer()] + 1 ;  // + 1 cause IP is considered layer 0
         
 	// VXD and SIT are treated as one system so SIT layers start from _nLayersVTX
 	layer = layer + _nLayersVTX;
@@ -1067,13 +1068,13 @@ void DDCellsAutomatonMV::CreateMiniVectors( int sector ) {
     int detID = 0 ;
     //int layerID = 0 ;
     
-    UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ; 
+    UTIL::BitField64 encoder( lcio::LCTrackerCellID::encoding_string() ) ; 
     encoder.reset() ;  // reset to 0
     encoder.setValue(celID) ;
 
-    detID = encoder[lcio::ILDCellID0::subdet] ; 
+    detID = encoder[lcio::LCTrackerCellID::subdet()] ; 
     
-    layer = encoder[lcio::ILDCellID0::layer] + 1 ;  // + 1 if we consider the IP hit
+    layer = encoder[lcio::LCTrackerCellID::layer()] + 1 ;  // + 1 if we consider the IP hit
     
     if (detID==lcio::ILDDetID::VXD ){
 
@@ -1364,9 +1365,9 @@ void DDCellsAutomatonMV::finaliseTrack( TrackImpl* trackImpl ){
 
    for( unsigned j=0; j < trackerHits.size(); j++ ){
       
-      UTIL::BitField64 encoder( ILDCellID0::encoder_string );
+      UTIL::BitField64 encoder( LCTrackerCellID::encoding_string() );
       encoder.setValue( trackerHits[j]->getCellID0() );
-      int subdet =  encoder[lcio::ILDCellID0::subdet];
+      int subdet =  encoder[lcio::LCTrackerCellID::subdet()];
      
       streamlog_out( DEBUG0 ) << "DDCellsAutomatonMV: finaliseTrack - subdet = " << subdet <<"\n";
       
@@ -1457,9 +1458,9 @@ bool DDCellsAutomatonMV::thetaAgreementImproved( EVENT::TrackerHit *toHit, EVENT
 
   /*  
   int celId_inner = toHit->getCellID0() ;
-  UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ; 
+  UTIL::BitField64 encoder( lcio::LCTrackerCellID::encoding_string() ) ; 
   encoder.setValue(celId_inner) ;
-  int inner_layer  = encoder[lcio::ILDCellID0::layer] ;
+  int inner_layer  = encoder[lcio::LCTrackerCellID::layer()] ;
   
   double resolution = _resU[inner_layer] ;
 

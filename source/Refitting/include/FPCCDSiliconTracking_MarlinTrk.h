@@ -21,7 +21,7 @@
 #include "MarlinTrk/IMarlinTrack.h"
 
 #include <UTIL/BitField64.h>
-#include <UTIL/ILDConf.h>
+#include "UTIL/LCTrackerConf.h"
 
 #include "TTree.h"
 #include "TNtupleD.h"
@@ -465,17 +465,17 @@ protected:
   //  int _createMap;
   
   UTIL::BitField64* _encoder;
-  int getDetectorID(TrackerHit* hit) { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::ILDCellID0::subdet]; }
-  int getSideID(TrackerHit* hit)     { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::ILDCellID0::side]; };
-  int getLayerID(TrackerHit* hit)    { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::ILDCellID0::layer]; };
-  int getModuleID(TrackerHit* hit)   { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::ILDCellID0::module]; };
-  int getSensorID(TrackerHit* hit)   { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::ILDCellID0::sensor]; };
+  int getDetectorID(TrackerHit* hit) { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::subdet()]; }
+  int getSideID(TrackerHit* hit)     { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::side()]; };
+  int getLayerID(TrackerHit* hit)    { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::layer()]; };
+  int getModuleID(TrackerHit* hit)   { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::module()]; };
+  int getSensorID(TrackerHit* hit)   { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::sensor()]; };
 
-  int getDetectorID(SimTrackerHit* hit) { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::ILDCellID0::subdet]; }
-  int getSideID(SimTrackerHit* hit)     { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::ILDCellID0::side]; };
-  int getLayerID(SimTrackerHit* hit)    { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::ILDCellID0::layer]; };
-  int getModuleID(SimTrackerHit* hit)   { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::ILDCellID0::module]; };
-  int getSensorID(SimTrackerHit* hit)   { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::ILDCellID0::sensor]; };
+  int getDetectorID(SimTrackerHit* hit) { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::subdet()]; }
+  int getSideID(SimTrackerHit* hit)     { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::side()]; };
+  int getLayerID(SimTrackerHit* hit)    { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::layer()]; };
+  int getModuleID(SimTrackerHit* hit)   { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::module()]; };
+  int getSensorID(SimTrackerHit* hit)   { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::sensor()]; };
   
   void setupGearGeom( const gear::GearMgr* gearMgr ) ;
   
@@ -565,10 +565,10 @@ protected:
         tilt = ( cellid1 >> 28) & 0x00000003;
         quality = ( cellid1 >> 30) & 0x00000003;
         const int cellId_trk = hit->getCellID0();
-        UTIL::BitField64 encoder_trk( lcio::ILDCellID0::encoder_string ) ; 
+        UTIL::BitField64 encoder_trk( lcio::LCTrackerCellID::encoding_string() ) ; 
         encoder_trk.setValue(cellId_trk) ;
-        layer    = encoder_trk[lcio::ILDCellID0::layer] ;
-        ladder    = encoder_trk[lcio::ILDCellID0::module] ;
+        layer    = encoder_trk[lcio::LCTrackerCellID::layer()] ;
+        ladder    = encoder_trk[lcio::LCTrackerCellID::module()] ;
      }
      ClusterStatus(){;}
   };
