@@ -58,7 +58,6 @@ TrackFinderFTF::TrackFinderFTF() : Processor("TrackFinderFTF") {
   // modify processor description
   _description = "TrackFinderFTF uses FTF to find tracks" ;
   
-  _encoder = new UTIL::BitField64(lcio::LCTrackerCellID::encoding_string());
   
   // register steering parameters: name, description, class-variable, default value
   
@@ -199,7 +198,9 @@ void TrackFinderFTF::init() {
   
   streamlog_out(DEBUG) << "   init called  " 
   << std::endl ;
-  
+   
+  _encoder = new UTIL::BitField64(lcio::LCTrackerCellID::encoding_string());
+
   // usually a good idea to
   printParameters() ;
 

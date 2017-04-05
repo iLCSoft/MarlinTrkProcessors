@@ -50,7 +50,6 @@ CalcTrackerHitResiduals::CalcTrackerHitResiduals() : Processor("CalcTrackerHitRe
   // modify processor description
   _description = "Creates Track Collection from MC Truth. Can handle composite spacepoints as long as they consist of two TrackerHits" ;
   
-  _encoder = new UTIL::BitField64(lcio::LCTrackerCellID::encoding_string());
   
   // register steering parameters: name, description, class-variable, default value
   
@@ -102,7 +101,9 @@ void CalcTrackerHitResiduals::init() {
   
   streamlog_out(DEBUG) << "   init called  " 
   << std::endl ;
-  
+
+  _encoder = new UTIL::BitField64(lcio::LCTrackerCellID::encoding_string());
+
   // usually a good idea to
   printParameters() ;
   
