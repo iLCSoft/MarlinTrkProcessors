@@ -100,7 +100,6 @@ std::string toString( int iTrk, Track * tpcTrack, float bField=3.5 ) {
 FullLDCTracking_MarlinTrk::FullLDCTracking_MarlinTrk() : Processor("FullLDCTracking_MarlinTrk") {  
   _description = "Performs full tracking in ILD detector" ;  
   
-  _encoder = new UTIL::BitField64(lcio::LCTrackerCellID::encoding_string());
   
   // Input tracker hit collections
   
@@ -516,6 +515,8 @@ void FullLDCTracking_MarlinTrk::init() {
   PIOVER2 = 0.5*PI;
   TWOPI = 2*PI;
   
+  _encoder = new UTIL::BitField64(lcio::LCTrackerCellID::encoding_string());
+
   // set upt the geometry
     _trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( _trkSystemName , marlin::Global::GEAR , "" ) ;
   

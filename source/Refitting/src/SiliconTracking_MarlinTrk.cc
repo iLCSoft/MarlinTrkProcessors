@@ -169,7 +169,6 @@ SiliconTracking_MarlinTrk::SiliconTracking_MarlinTrk() : Processor("SiliconTrack
   
   _fastfitter = new MarlinTrk::HelixFit();
   
-  _encoder = new UTIL::BitField64(lcio::LCTrackerCellID::encoding_string());
   
   _petalBasedFTDWithOverlaps = false;
   
@@ -573,6 +572,9 @@ void SiliconTracking_MarlinTrk::init() {
   
   _nRun = -1 ;
   _nEvt = 0 ;
+
+  _encoder = new UTIL::BitField64(lcio::LCTrackerCellID::encoding_string());
+
   printParameters() ;
   
   // this creates a directory for this processor ....

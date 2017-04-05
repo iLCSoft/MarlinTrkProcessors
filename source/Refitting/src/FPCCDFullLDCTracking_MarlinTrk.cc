@@ -102,7 +102,6 @@ namespace FPCCDUtil{
 FPCCDFullLDCTracking_MarlinTrk::FPCCDFullLDCTracking_MarlinTrk() : Processor("FPCCDFullLDCTracking_MarlinTrk") {  
   _description = "Performs full tracking in ILD detector" ;  
   
-  _encoder = new UTIL::BitField64(lcio::LCTrackerCellID::encoding_string());
 
   _moriUtil = new moriUTIL();
   _purityUtil = new GetPurityUtil();
@@ -612,6 +611,9 @@ void FPCCDFullLDCTracking_MarlinTrk::init() {
   PI = acos(-1.);
   PIOVER2 = 0.5*PI;
   TWOPI = 2*PI;
+
+  _encoder = new UTIL::BitField64(lcio::LCTrackerCellID::encoding_string());
+
   
   // set up the geometery needed by KalTest
   //FIXME: for now do KalTest only - make this a steering parameter to use other fitters
