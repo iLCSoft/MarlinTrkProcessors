@@ -258,6 +258,10 @@ void TruthTrackFinder::processEvent( LCEvent* evt ) {
 	    // Take the first hit only (this should be changed? Yes - loop over all related simHits and add an entry for each mcparticle so that this hit is in each fit)
 	    SimTrackerHit* simHit = dynamic_cast<SimTrackerHit*>(simHitVector.at(0));
 
+	    // If the hit was produced by a secondary which was not saved to the MCParticle collection
+	    if(simHit->isProducedBySecondary())
+	      continue;
+
 	    // Get the particle belonging to that hit
 	    MCParticle* particle = simHit->getMCParticle();
 
