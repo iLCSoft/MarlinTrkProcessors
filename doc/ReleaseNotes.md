@@ -1,3 +1,14 @@
+# v02-06
+
+* 2017-04-06 Emilia Leogrande ([PR#9](https://github.com/iLCSoft/MarlinTrkProcessors/pull/9))
+  - Replaced ILDCellID0 with LCTrackerCellID
+  - Replaced DDKalTestConf with LCTrackerConf
+
+* 2017-04-07 Andre Sailer ([PR#8](https://github.com/iLCSoft/MarlinTrkProcessors/pull/8))
+  - Fix many warnings for gcc
+  - ExtrToSIT::SelectBestCandidateLimited: remove variable shadowing pointer parameter
+  - ExtrToTracker: Fix bug when using performFinalRefit where the refitted track was not used after refit
+
 #  v02-05
 
 - DDPlanarDigitiser: Use pre-filled map of neighboring surfaces to speed up extrapolation of tracks (R. Simoniello)
