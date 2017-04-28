@@ -141,9 +141,11 @@ bool sort_by_radius(EVENT::TrackerHit* hit1, EVENT::TrackerHit* hit2){
 }
 
 bool sort_by_z(EVENT::TrackerHit* hit1, EVENT::TrackerHit* hit2){
-	double z1 = hit1->getPosition()[2];
-	double z2 = hit2->getPosition()[2];
-  //return (z1 < z2);
+  // sorting by absolute value of Z so the hits are always sorted from close to
+  // the IP outward. This works as long as all hits are either in positive or
+  // negative side
+  const double z1 = fabs(hit1->getPosition()[2]);
+  const double z2 = fabs(hit2->getPosition()[2]);
   return CxxUtils::fpcompare::less(z1 , z2);
 }
 
