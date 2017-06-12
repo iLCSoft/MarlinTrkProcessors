@@ -295,13 +295,9 @@ void DDCellsAutomatonMV::init() {
   
     // set upt the geometry
 
-  // _trkSystem =  MarlinTrk::Factory::createMarlinTrkSystem( "DDKalTest" , marlin::Global::GEAR , "" ) ;
   _trkSystem =  MarlinTrk::Factory::createMarlinTrkSystem( "DDKalTest" , 0, "" ) ;
-  // std::vector<int> _sub_det_ids;
-  // _sub_det_ids.push_back(1); //Vertex id
-  // _sub_det_ids.push_back(2); //SiTracker //FIXME: THIS SHOULD BE A PROPERTY
 
-
+  
   if( _trkSystem == 0 ) throw EVENT::Exception( std::string("  Cannot initialize MarlinTrkSystem of Type: ") + std::string("KalTest" )  ) ;
   
   
