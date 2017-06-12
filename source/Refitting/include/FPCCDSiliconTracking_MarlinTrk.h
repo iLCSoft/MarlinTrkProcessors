@@ -42,9 +42,6 @@ namespace DiagnosticsHistograms2D {
 using namespace lcio ;
 using namespace marlin ;
 
-namespace  gear{
-  class GearMgr ;
-}
 
 namespace MarlinTrk {
   class HelixFit;
@@ -53,6 +50,13 @@ namespace MarlinTrk {
 
 namespace UTIL{
   class LCRelationNavigator ;
+}
+
+
+namespace DD4hep{
+  namespace Geometry{
+    class LCDD ;
+  }
 }
 
 
@@ -477,7 +481,7 @@ protected:
   int getModuleID(SimTrackerHit* hit)   { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::module()]; };
   int getSensorID(SimTrackerHit* hit)   { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::sensor()]; };
   
-  void setupGearGeom( const gear::GearMgr* gearMgr ) ;
+  void setupGeom(const DD4hep::Geometry::LCDD& lcdd) ;
   
   
   unsigned int _nLayersVTX;
@@ -534,8 +538,8 @@ protected:
      std::vector<GeoData_t> geodata;
   }_vxd,_sit;
 
-  void InitVXDGeometry();
-  void InitSITGeometry();
+  void InitVXDGeometry(const DD4hep::Geometry::LCDD& lcdd);
+  void InitSITGeometry(const DD4hep::Geometry::LCDD& lcdd);
   FloatVec _pixelSizeVec;
   float _pixelheight;
   TVector3 LocalToGlobal(TVector3 local,int layer,int ladder);

@@ -25,17 +25,6 @@
 #include <marlin/Global.h>
 #include <marlin/Exceptions.h>
 
-#include <gear/GEAR.h>
-#include <gear/GearParameters.h>
-#include <gear/VXDLayerLayout.h>
-#include <gear/VXDParameters.h>
-#include "gear/FTDLayerLayout.h"
-#include "gear/FTDParameters.h"
-
-#include <gear/ZPlanarParameters.h>
-#include <gear/ZPlanarLayerLayout.h>
-
-#include <gear/BField.h>
 
 #include <UTIL/BitField64.h>
 #include "UTIL/LCTrackerConf.h"
@@ -47,6 +36,9 @@
 #include "MarlinTrk/IMarlinTrack.h"
 #include "MarlinTrk/Factory.h"
 
+#include "DD4hep/LCDD.h"
+#include "DD4hep/DD4hepUnits.h"
+#include "DDRec/DetectorData.h"
 
 
 #include "marlin/AIDAProcessor.h"
@@ -586,7 +578,9 @@ void FPCCDSiliconTracking_MarlinTrk::init() {
   _trksystem->init() ;  
 
 
-  this->setupGearGeom(Global::GEAR);
+  DD4hep::Geometry::LCDD& lcdd = DD4hep::Geometry::LCDD::getInstance();
+  
+  this->setupGeom( lcdd );
 
   if (_useSIT == 0)
     _nLayers = _nLayersVTX;
@@ -606,8 +600,8 @@ void FPCCDSiliconTracking_MarlinTrk::init() {
   cutOnR_FTD = 1000.*cutOnR_FTD;
   _cutOnOmegaFTD = 1/cutOnR_FTD;
 
-  InitVXDGeometry();
-  if(_useSIT == 1) InitSITGeometry();
+  InitVXDGeometry( lcdd );
+  if(_useSIT == 1) InitSITGeometry( lcdd );
 
   _output_track_col_quality = 0;
 
@@ -901,9 +895,9 @@ int FPCCDSiliconTracking_MarlinTrk::InitialiseFTD(LCEvent * evt) {
 
       TrackerHitExtended * hitExt = new TrackerHitExtended( hit );
 
-      gear::Vector3D U(1.0,hit->getU()[1],hit->getU()[0],gear::Vector3D::spherical);
-      gear::Vector3D V(1.0,hit->getV()[1],hit->getV()[0],gear::Vector3D::spherical);
-      gear::Vector3D Z(0.0,0.0,1.0);
+      Vector3D U(1.0,hit->getU()[1],hit->getU()[0],Vector3D::spherical);
+      Vector3D V(1.0,hit->getV()[1],hit->getV()[0],Vector3D::spherical);
+      Vector3D Z(0.0,0.0,1.0);
 
       const float eps = 1.0e-07;
       // V must be the global z axis 
@@ -1115,9 +1109,9 @@ int FPCCDSiliconTracking_MarlinTrk::InitialiseVTX(LCEvent * evt) {
 
       TrackerHitPlane * hit = dynamic_cast<TrackerHitPlane*>(hitCollection->getElementAt(ielem));
 
-      gear::Vector3D U(1.0,hit->getU()[1],hit->getU()[0],gear::Vector3D::spherical);
-      gear::Vector3D V(1.0,hit->getV()[1],hit->getV()[0],gear::Vector3D::spherical);
-      gear::Vector3D Z(0.0,0.0,1.0);
+      Vector3D U(1.0,hit->getU()[1],hit->getU()[0],Vector3D::spherical);
+      Vector3D V(1.0,hit->getV()[1],hit->getV()[0],Vector3D::spherical);
+      Vector3D Z(0.0,0.0,1.0);
 
       const float eps = 1.0e-07;
       // V must be the global z axis 
@@ -1248,9 +1242,9 @@ int FPCCDSiliconTracking_MarlinTrk::InitialiseVTX(LCEvent * evt) {
         else if ( ( trkhit_P = dynamic_cast<TrackerHitPlane*>( hitCollection->getElementAt( ielem ) ) ) )  {
 
           // first we need to check if the measurement vectors are aligned with the global coordinates 
-          gear::Vector3D U(1.0,trkhit_P->getU()[1],trkhit_P->getU()[0],gear::Vector3D::spherical);
-          gear::Vector3D V(1.0,trkhit_P->getV()[1],trkhit_P->getV()[0],gear::Vector3D::spherical);
-          gear::Vector3D Z(0.0,0.0,1.0);
+          Vector3D U(1.0,trkhit_P->getU()[1],trkhit_P->getU()[0],Vector3D::spherical);
+          Vector3D V(1.0,trkhit_P->getV()[1],trkhit_P->getV()[0],Vector3D::spherical);
+          Vector3D Z(0.0,0.0,1.0);
 
           const float eps = 1.0e-07;
           // V must be the global z axis 
@@ -3636,81 +3630,48 @@ void FPCCDSiliconTracking_MarlinTrk::FinalRefit(LCCollectionVec* trk_col, LCColl
 }
 
 
-void FPCCDSiliconTracking_MarlinTrk::setupGearGeom( const gear::GearMgr* gearMgr ){
+void FPCCDSiliconTracking_MarlinTrk::setupGeom( const DD4hep::Geometry::LCDD& lcdd ){
 
-  _bField = gearMgr->getBField().at( gear::Vector3D( 0.,0.,0.)  ).z() ;
-
+  double bFieldVec[3]; 
+  lcdd.field().magneticField({0,0,0},bFieldVec); // get the magnetic field vector from DD4hep
+  _bField = bFieldVec[2]/dd4hep::tesla; // z component at (0,0,0)
+  
+  
   //-- VXD Parameters--
   _nLayersVTX = 0 ;
-  const gear::VXDParameters* pVXDDetMain = 0;
-  const gear::VXDLayerLayout* pVXDLayerLayout = 0;
-
+  
   try{
-
-    streamlog_out( DEBUG9 ) << " filling VXD parameters from gear::SITParameters " << std::endl ;
-
-    pVXDDetMain = &Global::GEAR->getVXDParameters();
-    pVXDLayerLayout = &(pVXDDetMain->getVXDLayerLayout());
-    _nLayersVTX = pVXDLayerLayout->getNLayers();
+    
+    streamlog_out( DEBUG9 ) << " filling VXD parameters  " << std::endl ;
+    
+    DD4hep::Geometry::DetElement vtxDE = lcdd.detector("VXD");
+    DD4hep::DDRec::ZPlanarData* vtx = vtxDE.extension<DD4hep::DDRec::ZPlanarData>(); 
+    _nLayersVTX=vtx->layers.size(); 
+    
   }
   catch( gear::UnknownParameterException& e){
-
-    streamlog_out( DEBUG9 ) << " ### gear::VXDParameters Not Present in GEAR FILE" << std::endl ;
-
+    
+    streamlog_out( DEBUG9 ) << " ### VXD detector Not Present in LCDD" << std::endl ;
   }
-
-
+  
+  
 
   //-- SIT Parameters--
   _nLayersSIT = 0 ;
-  const gear::ZPlanarParameters* pSITDetMain = 0;
-  const gear::ZPlanarLayerLayout* pSITLayerLayout = 0;
 
   try{
 
-    streamlog_out( DEBUG9 ) << " filling SIT parameters from gear::SITParameters " << std::endl ;
+    streamlog_out( DEBUG9 ) << " filling SIT parameters  " << std::endl ;
 
-    pSITDetMain = &Global::GEAR->getSITParameters();
-    pSITLayerLayout = &(pSITDetMain->getZPlanarLayerLayout());
-    _nLayersSIT = pSITLayerLayout->getNLayers();
-
+    DD4hep::Geometry::DetElement sitDE = lcdd.detector("SIT");
+    DD4hep::DDRec::ZPlanarData* sit = sitDE.extension<DD4hep::DDRec::ZPlanarData>(); 
+    _nLayersSIT=sit->layers.size(); 
   }
   catch( gear::UnknownParameterException& e){
 
-    streamlog_out( DEBUG9 ) << " ### gear::SITParameters Not Present in GEAR FILE" << std::endl ;
+    streamlog_out( DEBUG9 ) << " ###  SIT detector Not Present in LCDD " << std::endl ;
 
   }
-
-  if( _nLayersSIT == 0 ){
-    // try the old LOI style key value pairs as defined in the SSit03 Mokka drive
-    try{
-
-      streamlog_out( MESSAGE ) << "  FPCCDSiliconTracking_MarlinTrk - Simple Cylinder Based SIT using parameters defined by SSit03 Mokka driver " << std::endl ;
-
-      // SIT
-
-      const gear::GearParameters& pSIT = gearMgr->getGearParameters("SIT");
-
-      const EVENT::DoubleVec& SIT_r   =  pSIT.getDoubleVals("SITLayerRadius" )  ;
-      const EVENT::DoubleVec& SIT_hl  =  pSIT.getDoubleVals("SITSupportLayerHalfLength" )  ;
-
-      _nLayersSIT = SIT_r.size() ; 
-
-      if (_nLayersSIT != SIT_r.size() || _nLayersSIT != SIT_hl.size()) {
-
-        streamlog_out( ERROR ) << "ILDSITCylinderKalDetector miss-match between DoubleVec and nlayers exit(1) called from file " << __FILE__ << " line " << __LINE__  << std::endl ;
-        exit(1);
-
-      }
-    }
-    catch( gear::UnknownParameterException& e){
-
-      streamlog_out( DEBUG9 ) << " ### gear::SIT Parameters from as defined in SSit03 Not Present in GEAR FILE" << std::endl ;
-
-    } 
-
-  }
-
 
 
   //-- FTD Parameters--
@@ -3721,19 +3682,16 @@ void FPCCDSiliconTracking_MarlinTrk::setupGearGeom( const gear::GearMgr* gearMgr
 
     streamlog_out( DEBUG9 ) << " filling FTD parameters from gear::FTDParameters " << std::endl ;
 
-    const gear::FTDParameters&   pFTD      = Global::GEAR->getFTDParameters();
-    const gear::FTDLayerLayout&  ftdlayers = pFTD.getFTDLayerLayout() ;
+    DD4hep::Geometry::DetElement ftdDE = lcdd.detector("FTD");
+    DD4hep::DDRec::ZDiskPetalsData* ftd = ftdDE.extension<DD4hep::DDRec::ZDiskPetalsData>(); 
 
-    _nlayersFTD = ftdlayers.getNLayers() ;
+    _nlayersFTD = ftd->layers.size();
 
     for (unsigned int disk=0; disk < _nlayersFTD; ++disk) {
 
-      _zLayerFTD.push_back( ftdlayers.getSensitiveZposition(disk, 0, 1) ); // front petal even numbered
-
-      if ( ftdlayers.getNPetals(disk) > 0) {
-        _zLayerFTD.push_back( ftdlayers.getSensitiveZposition(disk, 1, 1) );  // front petal odd numbered
-        _petalBasedFTDWithOverlaps = true;
-      }
+      _zLayerFTD.push_back(  ftd->layers[ disk ].zPosition +  ftd->layers[ disk ].zOffsetSensitive ) ;
+      _zLayerFTD.push_back(  ftd->layers[ disk ].zPosition -  ftd->layers[ disk ].zOffsetSensitive ) ;
+      _petalBasedFTDWithOverlaps = true;
 
     }
 
@@ -3747,33 +3705,6 @@ void FPCCDSiliconTracking_MarlinTrk::setupGearGeom( const gear::GearMgr* gearMgr
 
   } 
 
-  if( _nlayersFTD == 0 ){
-
-    // FTD
-    try{
-
-      streamlog_out( MESSAGE ) << "  FPCCDSiliconTracking_MarlinTrk - Simple Disc Based FTD using parameters defined by SFtd05 Mokka driver " << std::endl ;
-
-      const gear::GearParameters& pFTD = gearMgr->getGearParameters("FTD");
-
-      const EVENT::DoubleVec* pFTD_z   = NULL;
-
-      streamlog_out( MESSAGE ) << " For FTD using parameters defined by SFtd05 Mokka driver " << std::endl ;
-
-      pFTD_z = &pFTD.getDoubleVals("FTDZCoordinate" )  ;
-
-      _nlayersFTD = pFTD_z->size();
-
-      for (unsigned int i = 0; i<_nlayersFTD; ++i) {
-        _zLayerFTD.push_back((*pFTD_z)[i]);
-      }
-    }
-    catch( gear::UnknownParameterException& e){
-
-      streamlog_out( DEBUG9 ) << " ### gear::FTD Parameters as defined in SFtd05 Not Present in GEAR FILE" << std::endl ;
-
-    } 
-  }
 
 }
 
@@ -3833,37 +3764,39 @@ LCRelationNavigator* FPCCDSiliconTracking_MarlinTrk::GetRelations(LCEvent * evt 
 
 
 
-void FPCCDSiliconTracking_MarlinTrk::InitVXDGeometry(){
+void FPCCDSiliconTracking_MarlinTrk::InitVXDGeometry(const DD4hep::Geometry::LCDD& lcdd){
   // Save frequently used parameters.
 
-  const gear::ZPlanarParameters& gearVXD = Global::GEAR->getVXDParameters();
-  const gear::ZPlanarLayerLayout& layerVXD = gearVXD.getVXDLayerLayout();
+  DD4hep::Geometry::DetElement vtxDE = lcdd.detector("VXD");
+  DD4hep::DDRec::ZPlanarData* vtx = vtxDE.extension<DD4hep::DDRec::ZPlanarData>(); 
+  
+  _vxd.nLayer = vtx->layers.size(); 
 
-  _vxd.nLayer = layerVXD.getNLayers() ;
   _vxd.geodata.resize(_vxd.nLayer);
   _vxd.maxLadder = 0;
 
   for(int ly=0;ly < _vxd.nLayer; ly++){
-    _vxd.geodata[ly].nladder = layerVXD.getNLadders(ly);     // Number of ladders in this layer
+
+    const DD4hep::DDRec::ZPlanarData::LayerLayout layerVXD = vtx->layers[ly] ;
+
+    _vxd.geodata[ly].nladder = layerVXD.ladderNumber ;     // Number of ladders in this layer
     if( _vxd.maxLadder < _vxd.geodata[ly].nladder ) { _vxd.maxLadder = _vxd.geodata[ly].nladder; }
-    _vxd.geodata[ly].rmin = layerVXD.getSensitiveDistance(ly); // Distance of sensitive area from IP
+    _vxd.geodata[ly].rmin = layerVXD.distanceSensitive; // Distance of sensitive area from IP
     _vxd.geodata[ly].dphi = (2*M_PI)/(double)_vxd.geodata[ly].nladder;
-    _vxd.geodata[ly].phi0 = layerVXD.getPhi0(ly);  // phi offset.
-    _vxd.geodata[ly].sthick = layerVXD.getSensitiveThickness(ly);
-    _vxd.geodata[ly].sximin = -layerVXD.getSensitiveOffset(ly)
-      -layerVXD.getSensitiveWidth(ly)/2.0;
-    _vxd.geodata[ly].sximax = -layerVXD.getSensitiveOffset(ly)
-      +layerVXD.getSensitiveWidth(ly)/2.0;
+    _vxd.geodata[ly].phi0 = layerVXD.phi0;  // phi offset.
+    _vxd.geodata[ly].sthick = layerVXD.thicknessSensitive;
+    _vxd.geodata[ly].sximin = -layerVXD.offsetSensitive - layerVXD.widthSensitive/2.0;
+    _vxd.geodata[ly].sximax = -layerVXD.offsetSensitive + layerVXD.widthSensitive/2.0;
     //CAUTION: plus direction of xi-axis in ld = 0, ly = 0 is equal to minus direction of global x-axis and longer than minus direction of xi-axis.
-    _vxd.geodata[ly].hlength = layerVXD.getSensitiveLength(ly);
+    _vxd.geodata[ly].hlength = layerVXD.zHalfSensitive ; 
     _vxd.geodata[ly].cosphi.resize( _vxd.geodata[ly].nladder ) ;
     _vxd.geodata[ly].sinphi.resize( _vxd.geodata[ly].nladder ) ;
     _vxd.geodata[ly].phi.resize( _vxd.geodata[ly].nladder ) ;
     _vxd.geodata[ly].phiAtXiMin.resize( _vxd.geodata[ly].nladder ) ;
     _vxd.geodata[ly].phiAtXiMax.resize( _vxd.geodata[ly].nladder ) ;
     _vxd.geodata[ly].ladder_incline.resize( _vxd.geodata[ly].nladder ) ;
-    _vxd.geodata[ly].num_xi_pixel = (int)(layerVXD.getSensitiveWidth(ly)/_pixelSizeVec[ly]);
-    _vxd.geodata[ly].num_zeta_pixel = (int)(2*layerVXD.getSensitiveLength(ly)/_pixelSizeVec[ly]);
+    _vxd.geodata[ly].num_xi_pixel = (int)(layerVXD.widthSensitive/_pixelSizeVec[ly]);
+    _vxd.geodata[ly].num_zeta_pixel = (int)(2*layerVXD.zHalfSensitive/_pixelSizeVec[ly]);
 
     if(ly % 2 == 0){ _vxd.geodata[ly].rmes = _vxd.geodata[ly].rmin + _vxd.geodata[ly].sthick*(15.0/50.0)*0.5; }
     else{ _vxd.geodata[ly].rmes = _vxd.geodata[ly].rmin + _vxd.geodata[ly].sthick*(1.0 - (15.0/50.0)*0.5); }
@@ -3888,21 +3821,27 @@ void FPCCDSiliconTracking_MarlinTrk::InitVXDGeometry(){
   }
 } 
 
-void FPCCDSiliconTracking_MarlinTrk::InitSITGeometry(){
+void FPCCDSiliconTracking_MarlinTrk::InitSITGeometry(const DD4hep::Geometry::LCDD& lcdd){
   // Save frequently used parameters.
 
-  const gear::ZPlanarParameters& gearSIT = Global::GEAR->getSITParameters();
-  const gear::ZPlanarLayerLayout& layerSIT = gearSIT.getZPlanarLayerLayout();
-  _sit.nLayer = layerSIT.getNLayers() ;
+  DD4hep::Geometry::DetElement sitDE = lcdd.detector("SIT");
+  DD4hep::DDRec::ZPlanarData* sit = sitDE.extension<DD4hep::DDRec::ZPlanarData>(); 
+  
+
+  _sit.nLayer = sit->layers.size(); 
+
   _sit.geodata.resize(_sit.nLayer);
   _sit.maxLadder = 0;
 
   for(int ly=0;ly < _sit.nLayer; ly++){
-    _sit.geodata[ly].nladder = layerSIT.getNLadders(ly);     // Number of ladders in this layer
+
+    const DD4hep::DDRec::ZPlanarData::LayerLayout layerSIT = sit->layers[ly] ;
+
+   _sit.geodata[ly].nladder = layerSIT.ladderNumber;     // Number of ladders in this layer
     if( _sit.maxLadder < _sit.geodata[ly].nladder ) { _sit.maxLadder = _sit.geodata[ly].nladder; }
-    _sit.geodata[ly].rmin = layerSIT.getSensitiveDistance(ly); // Distance of sensitive area from IP
-    _sit.geodata[ly].phi0 = layerSIT.getPhi0(ly);  // phi offset.
-    _sit.geodata[ly].hlength = layerSIT.getSensitiveLength(ly);
+    _sit.geodata[ly].rmin = layerSIT.distanceSensitive; // Distance of sensitive area from IP
+    _sit.geodata[ly].phi0 = layerSIT.phi0;  // phi offset.
+    _sit.geodata[ly].hlength = layerSIT.zHalfSensitive;
     _sit.geodata[ly].cosphi.resize( _sit.geodata[ly].nladder ) ;
     _sit.geodata[ly].sinphi.resize( _sit.geodata[ly].nladder ) ;
     _sit.geodata[ly].phi.resize( _sit.geodata[ly].nladder ) ;
@@ -4100,7 +4039,8 @@ TVector3 FPCCDSiliconTracking_MarlinTrk::LocalToGlobal(TVector3 local,int layer,
 
 void FPCCDSiliconTracking_MarlinTrk::calcTrackParameterOfMCP(MCParticle* pmcp, double* par){
 
-  double bz = Global::GEAR->getBField().at( gear::Vector3D( 0.,0.,0.)  ).z() ;
+  double bz = Global::GEAR->getBField().at( Vector3D( 0.,0.,0.)  ).z() ;
+
   HelixTrack helixMC( pmcp->getVertex(), pmcp->getMomentum(), pmcp->getCharge(), bz ) ;
   double oldphi0 = double(helixMC.getPhi0());
   double omega = double(helixMC.getOmega());
