@@ -40,8 +40,8 @@ using namespace marlin ;
  *  
  * The TrackerHitPlanars as created by the Digitisers of FTD, SET or SIT. 
  * This could of course be used for other detectors as well, but as information about the detector
- * is acquired from gear, and as different detectors (at the moment) are stored differently
- * in gear, used detectors have to be taken care of in the code.
+ * is acquired from DDRec, and as different detectors (at the moment) are stored differently
+ * in DDRec, used detectors have to be taken care of in the code.
  *
  *  <h4>Output</h4> 
  *  
