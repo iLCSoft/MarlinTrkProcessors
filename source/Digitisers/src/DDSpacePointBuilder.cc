@@ -118,8 +118,6 @@ void DDSpacePointBuilder::init() {
 
   _nominal_vertex.set(_nominal_vertex_x, _nominal_vertex_y, _nominal_vertex_z);
   
-  //MarlinTrk::IMarlinTrkSystem* trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( "KalTest" , marlin::Global::GEAR , "" ) ;
-  // moving from gear/kaltest to dd4hep based reconstruction
   MarlinTrk::IMarlinTrkSystem* trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( "DDKalTest" , 0, "" ) ;
   
   
@@ -300,31 +298,6 @@ void DDSpacePointBuilder::processEvent( LCEvent * evt ) {
             double strip_length_mm = 0;
 	    strip_length_mm = _striplength ;
 
-	    // make strip length a processor parameter
-	    /*
-            if (subdet == ILDDetID::SIT) {
-              
-              strip_length_mm = Global::GEAR->getSITParameters().getDoubleVal("strip_length_mm");
-
-            } else if (subdet == ILDDetID::SET) {
-
-              strip_length_mm = Global::GEAR->getSETParameters().getDoubleVal("strip_length_mm");
-
-            } else if (subdet == ILDDetID::FTD) {
-
-              strip_length_mm = Global::GEAR->getFTDParameters().getDoubleVal("strip_length_mm");
-
-            } else {
-              
-              std::stringstream errorMsg;
-              errorMsg << "DDSpacePointBuilder::processEvent: unsupported detector ID = " << subdet << ": file " << __FILE__ << " line " << __LINE__ ;
-              throw Exception( errorMsg.str() );  
-
-            }
-	    */
-
-
-
             // add tolerence 
             strip_length_mm = strip_length_mm * (1.0 + _striplength_tolerance);
             
@@ -448,13 +421,6 @@ TrackerHitImpl* DDSpacePointBuilder::createSpacePoint( TrackerHitPlane* a , Trac
   DDSurfaces::Vector3D ddPA( xa * dd4hep::mm, ya * dd4hep::mm, za * dd4hep::mm );
   double du_a = a->getdU();  
   
-  // Replacing gear with DDReco
-  //gear::MeasurementSurface const* msA = Global::GEAR->getMeasurementSurfaceStore().GetMeasurementSurface( a->getCellID0() );
-  //gear::CartesianCoordinateSystem* ccsA = dynamic_cast< gear::CartesianCoordinateSystem* >( msA->getCoordinateSystem() );
-  //CLHEP::Hep3Vector WA = ccsA->getLocalZAxis(); // the vector W of the local coordinate system the measurement surface has
-  //CLHEP::Hep3Vector VA = ccsA->getLocalYAxis(); // the vector V of the local coordinate system the measurement surface has
-  //CLHEP::Hep3Vector UA = ccsA->getLocalXAxis(); // the vector U of the local coordinate system the measurement surface has
-
   //const DDSurfaces::ISurface* msA = surfMap[a->getCellID0()];
   const DDSurfaces::ISurface* msA = surfMap->find(a->getCellID0())->second;
   streamlog_out (DEBUG2) << " do i find a surface " << *msA << std::endl ;
@@ -473,12 +439,6 @@ TrackerHitImpl* DDSpacePointBuilder::createSpacePoint( TrackerHitPlane* a , Trac
   DDSurfaces::Vector3D ddPB( xb * dd4hep::mm,yb * dd4hep::mm,zb * dd4hep::mm );  
   double du_b = b->getdU();  
   
-  //gear::MeasurementSurface const* msB = Global::GEAR->getMeasurementSurfaceStore().GetMeasurementSurface( b->getCellID0() );
-  //gear::CartesianCoordinateSystem* ccsB = dynamic_cast< gear::CartesianCoordinateSystem* >( msB->getCoordinateSystem() );
-  //CLHEP::Hep3Vector WB = ccsB->getLocalZAxis(); // the vector W of the local coordinate system the measurement surface has
-  //CLHEP::Hep3Vector VB = ccsB->getLocalYAxis(); // the vector V of the local coordinate system the measurement surface has
-  //CLHEP::Hep3Vector UB = ccsB->getLocalXAxis(); // the vector U of the local coordinate system the measurement surface has
-
   const DDSurfaces::ISurface* msB = surfMap->find(b->getCellID0())->second;
   DDSurfaces::Vector3D ddWB = msB->normal();
   DDSurfaces::Vector3D ddUB = msB->u();
@@ -706,73 +666,6 @@ TrackerHitImpl* DDSpacePointBuilder::createSpacePoint( TrackerHitPlane* a , Trac
   return spacePoint;
   
 }
-/*
-TrackerHitImpl* DDSpacePointBuilder::createSpacePointOld( TrackerHitPlane* a , TrackerHitPlane* b ){
-  
-  streamlog_out( DEBUG2 ) << "\t OLD OLD OLD OLD\n";
-  
-  
-  const double* p1 = a->getPosition();
-  double x1 = p1[0];
-  double y1 = p1[1];
-  double z1 = p1[2];
-  const float* v1 = a->getV();
-  float ex1 = cos( v1[1] ) * sin( v1[0] ); 
-  float ey1 = sin( v1[1] ) * sin( v1[0] );
-  
-  const double* p2 = b->getPosition();
-  double x2 = p2[0];
-  double y2 = p2[1];
-  double z2 = p2[2];
-  const float* v2 = b->getV();
-  float ex2 = cos( v2[1] ) * sin( v2[0] ); 
-  float ey2 = sin( v2[1] ) * sin( v2[0] );
-  
-  streamlog_out( DEBUG2 ) << "\t ( " << x1 << " " << y1 << " " << z1 << " ) <--> ( " << x2 << " " << y2 << " " << z2 << " )\n";
-  
-  double x=0.;
-  double y=0.;
-  
-  if ( calculateXingPoint( x1, y1, ex1, ey1, x2, y2, ex2, ey2, x, y ) != 0 ){
-    
-    _nStripsTooParallel++;
-    streamlog_out( DEBUG2 ) << "\tStrips too parallel\n\n";
-    return NULL; //calculate the xing point and if that fails don't create a spacepoint
-  
-  }
-  
-  double z= (z1 + z2)/2.;
-  
-  streamlog_out( DEBUG2 ) << "\tPosition of space point (global) : ( " << x << " " << y << " " << z << " )\n";
-  
-  // Check if the new hit is within the boundary
-  CLHEP::Hep3Vector globalPoint(x,y,z);
-  //  gear::MeasurementSurface* ms = gear::MeasurementSurfaceStore::Instance().GetMeasurementSurface( a->getCellID0() );
-  CLHEP::Hep3Vector localPoint = ms->getCoordinateSystem()->getLocalPoint(globalPoint);
-  localPoint.setZ( 0. ); // we set w to 0 so it is in the plane ( we are only interested if u and v are in or out of range, to exclude w from the check it is set to 0)
-  if( !ms->isLocalInBoundary( localPoint ) ){
-    
-    _nOutOfBoundary++;
-    streamlog_out( DEBUG2 ) << "\tHit is out of boundary: local coordinates are ( " 
-      << localPoint.x() << " " << localPoint.y() << " " << localPoint.z() << " )\n\n";
-    
-    return NULL;
-    
-  }
-  
-  
-  //Create the new TrackerHit
-  TrackerHitImpl* spacePoint = new TrackerHitImpl();
-  
-  double pos[3] = {x,y,z};
-  spacePoint->setPosition(  pos  ) ;
-  
-  streamlog_out( DEBUG2 ) << "\tHit accepted\n\n";
-
-  return spacePoint;
-  
-}
-*/
 
 
 
@@ -923,8 +816,6 @@ std::vector< int > DDSpacePointBuilder::getCellID0sAtBack( int cellID0 ){
   
   std::vector< int > back;
   
-  // const gear::ZPlanarLayerLayout& sitLayout = Global::GEAR->getSITParameters().getZPlanarLayerLayout();
-  
   //find out detector, layer
   UTIL::BitField64  cellID( LCTrackerCellID::encoding_string() );
   cellID.setValue( cellID0 );
@@ -967,7 +858,7 @@ std::vector< int > DDSpacePointBuilder::getCellID0sAtBack( int cellID0 ){
     if (sensor <= Nsensors / 2 ) {
       
       cellID[ LCTrackerCellID::sensor() ] = sensor + Nsensors / 2; 
-      // it is assumed (according to current gear and mokka), that sensors 1 until n/2 will be on front
+      // it is assumed, that sensors 1 until n/2 will be on front
       // and sensor n/2 + 1 until n are at the back
       // so the sensor x, will have sensor x+n/2 at the back
       
@@ -982,130 +873,6 @@ std::vector< int > DDSpacePointBuilder::getCellID0sAtBack( int cellID0 ){
 
   
 }
-
-
-
-/*
-std::vector< int > DDSpacePointBuilder::getCellID0sAtBack( int cellID0 ){
-  
-  std::vector< int > back;
-  
-  UTIL::BitField64  cellID( LCTrackerCellID::encoding_string() );
-  cellID.setValue( cellID0 );
-  
-  int subdet = cellID[ LCTrackerCellID::subdet() ] ;
-  
-  if( subdet == ILDDetID::FTD ) return getCellID0sAtBackOfFTD( cellID0 );
-  if( subdet == ILDDetID::SIT ) return getCellID0sAtBackOfSIT( cellID0 );
-  if( subdet == ILDDetID::SET ) return getCellID0sAtBackOfSET( cellID0 );
-  
-  return back;
-  
-}
-
-
-std::vector< int > DDSpacePointBuilder::getCellID0sAtBackOfFTD( int cellID0 ){
-  
-  std::vector< int > back;
-  
-  const gear::FTDLayerLayout& ftdLayers = Global::GEAR->getFTDParameters().getFTDLayerLayout();
-
-  
-  //find out layer, module, sensor
-  UTIL::BitField64  cellID( LCTrackerCellID::encoding_string() );
-  cellID.setValue( cellID0 );
-  
-//   int side   = cellID[ LCTrackerCellID::side() ];
-//   int module = cellID[ LCTrackerCellID::module() ];
-  int sensor = cellID[ LCTrackerCellID::sensor() ];
-  int layer  = cellID[ LCTrackerCellID::layer() ];
-  
-  
-  //check if sensor is in front
-  if(( ftdLayers.isDoubleSided( layer ) ) && ( sensor <= ftdLayers.getNSensors( layer ) / 2 ) ){
-   
-    cellID[ LCTrackerCellID::sensor() ] = sensor + ftdLayers.getNSensors( layer ) / 2; 
-    // it is assumed (according to current gear and mokka), that sensors 1 until n/2 will be on front
-    // and sensor n/2 + 1 until n are at the back
-    // so the sensor x, will have sensor x+n/2 at the back
-    
-    back.push_back( cellID.lowWord() );
-    
-  }
-  
-  return back;
-  
-  
-}
-
-std::vector< int > DDSpacePointBuilder::getCellID0sAtBackOfSIT( int cellID0 ){
-  
-  std::vector< int > back;
-  
-//   const gear::ZPlanarLayerLayout& sitLayout = Global::GEAR->getSITParameters().getZPlanarLayerLayout();
-  
-  
-  //find out layer, module, sensor
-  UTIL::BitField64  cellID( LCTrackerCellID::encoding_string() );
-  cellID.setValue( cellID0 );
-  
-//   int side   = cellID[ LCTrackerCellID::side() ];
-//   int module = cellID[ LCTrackerCellID::module() ];
-//   int sensor = cellID[ LCTrackerCellID::sensor() ];
-  int layer  = cellID[ LCTrackerCellID::layer() ];
-  
-  
-  //check if sensor is in front
-  if( layer%2 == 0 ){ // even layers are front sensors
-    
-    cellID[ LCTrackerCellID::layer() ] = layer + 1; 
-    // it is assumed that the even layers are the front layers
-    // and the following odd ones the back layers
-    
-    back.push_back( cellID.lowWord() );
-    
-  }
-  
-  return back;
-
-  
-}
-
-std::vector< int > DDSpacePointBuilder::getCellID0sAtBackOfSET( int cellID0 ){
-  
-  std::vector< int > back;
-  
-//   const gear::ZPlanarLayerLayout& setLayout = Global::GEAR->getSETParameters().getZPlanarLayerLayout();
-  
-  
-  //find out layer, module, sensor
-  UTIL::BitField64  cellID( LCTrackerCellID::encoding_string() );
-  cellID.setValue( cellID0 );
-  
-  //   int side   = cellID[ LCTrackerCellID::side() ];
-  //   int module = cellID[ LCTrackerCellID::module() ];
-  //   int sensor = cellID[ LCTrackerCellID::sensor() ];
-  int layer  = cellID[ LCTrackerCellID::layer() ];
-  
-  
-  //check if sensor is in front
-  if( layer%2 == 0 ){ // even layers are front sensors
-    
-    cellID[ LCTrackerCellID::layer() ] = layer + 1; 
-    // it is assumed that the even layers are the front layers
-    // and the following odd ones the back layers
-    
-    back.push_back( cellID.lowWord() );
-    
-  }
-  
-  return back;
-  
-  
-}
-
-*/
-
 
 
 
