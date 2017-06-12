@@ -33,13 +33,6 @@
 #include "KiTrack/SubsetHopfieldNN.h"
 #include "KiTrack/SubsetSimple.h"
 
-//---- GEAR ----
-#include "marlin/Global.h"
-#include "gear/GEAR.h"
-#include <gear/ZPlanarParameters.h>
-#include <gear/ZPlanarLayerLayout.h>
-#include "gear/BField.h"
-
 // ----- include for verbosity dependend logging ---------
 #include "marlin/VerbosityLevels.h"
 
@@ -141,36 +134,38 @@ protected:
   
   /** pointer to the IMarlinTrkSystem instance 
    */
-  MarlinTrk::IMarlinTrkSystem* _trksystem ;
-  std::string _trkSystemName ;
+  MarlinTrk::IMarlinTrkSystem* _trksystem{} ;
+  std::string _trkSystemName{} ;
   
-  std::string _mcParticleCollectionName ;
+  std::string _mcParticleCollectionName{} ;
 
-  bool _MSOn ;
-  bool _ElossOn ;
-  bool _SmoothOn ;
-  bool _dirInsideOut ;
+  bool _MSOn{} ;
+  bool _ElossOn{} ;
+  bool _SmoothOn{} ;
+  bool _dirInsideOut{} ;
 
-  double _Max_Chi2_Incr ;
-  int _tpcHitsCut ;
-  float _chi2NDoFCut ;
-  float _DoCut ;
-  float _ZoCut ;
-  double _searchSigma ;
-  bool _isSpacePoints ;
-  int _propToLayer ;
+  double _Max_Chi2_Incr {};
+  int _tpcHitsCut{} ;
+  float _chi2NDoFCut{} ;
+  float _DoCut{} ;
+  float _ZoCut{} ;
+  double _searchSigma{} ;
+  bool _isSpacePoints{} ;
+  int _propToLayer{} ;
   
-  int _n_run ;
-  int _n_evt ;
-  int SITHitsFitted ;
-  int SITHitsNonFitted ;
-  int TotalSITHits ;
-  int _nHitsChi2 ;
+  int _n_run{} ;
+  int _n_evt{} ;
+  int SITHitsFitted{} ;
+  int SITHitsNonFitted {};
+  int TotalSITHits{} ;
+  int _nHitsChi2{} ;
 
-  float _maxChi2PerHit;
-  float _bField;
+  float _maxChi2PerHit{};
+  float _bField{};
 
-  StringVec  _colNamesTrackerHitRelations ;
+  unsigned int _nSITLayers{} ;
+
+  StringVec  _colNamesTrackerHitRelations{} ;
 
 
   

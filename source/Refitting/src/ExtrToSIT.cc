@@ -3,6 +3,10 @@
 #include <IMPL/TrackerHitPlaneImpl.h>
 #include <UTIL/ILDConf.h>
 
+#include "DD4hep/LCDD.h"
+#include "DD4hep/DD4hepUnits.h"
+#include "DDRec/DetectorData.h"
+
 
 using namespace lcio ;
 using namespace marlin ;
@@ -11,11 +15,11 @@ using namespace MarlinTrk ;
 
 //----------------------------------------------------------------
 struct Distance3D2{
-  gear::Vector3D _pos ;
-  Distance3D2( const gear::Vector3D& pos) : _pos( pos ) {}
+  Vector3D _pos ;
+  Distance3D2( const Vector3D& pos) : _pos( pos ) {}
   template <class T>
   double operator()( const T* t) { 
-    gear::Vector3D p( t->getPosition() ) ;
+    Vector3D p( t->getPosition() ) ;
     return ( p - _pos ).r2() ; 
 
   }
@@ -197,7 +201,7 @@ void ExtrToSIT::init() {
   printParameters() ;
   
   // set up the geometery needed by DDKalTest
-  _trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( _trkSystemName , marlin::Global::GEAR , "" ) ;
+  _trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( _trkSystemName , 0 , "" ) ;
   
   if( _trksystem == 0 ){
     
@@ -217,7 +221,15 @@ void ExtrToSIT::init() {
   SITHitsNonFitted = 0 ;
   TotalSITHits = 0 ;
 
-  _bField = Global::GEAR->getBField().at( gear::Vector3D(0., 0., 0.) ).z();    //The B field in z direction
+  DD4hep::Geometry::LCDD& lcdd = DD4hep::Geometry::LCDD::getInstance();
+  double bFieldVec[3] ; 
+  lcdd.field().magneticField( {0,0,0} , bFieldVec ); // get the magnetic field vector from DD4hep
+  _bField = bFieldVec[2]/dd4hep::tesla; // z component at (0,0,0)
+
+  DD4hep::Geometry::DetElement sitDE = lcdd.detector("SIT");
+  DD4hep::DDRec::ZPlanarData* sit = sitDE.extension<DD4hep::DDRec::ZPlanarData>(); 
+  _nSITLayers = sit->layers.size(); 
+  
   _maxChi2PerHit = 100;
   
 }
@@ -353,15 +365,11 @@ void ExtrToSIT::processEvent( LCEvent * evt ) {
 	      
 	    //marlin_trk->smooth(trkHits.back());	  
 	      
-	    const gear::ZPlanarParameters& gearSIT = Global::GEAR->getSITParameters() ;
-	    const gear::ZPlanarLayerLayout& layerSIT = gearSIT.getZPlanarLayerLayout(); 
-	    const unsigned int nSITR = layerSIT.getNLayers() ;
-	    
-	    
+  
 	    double chi2 = 0 ;
 	    int ndf = 0 ;
 	    
-	    gear::Vector3D xing_point ; 
+	    Vector3D xing_point ; 
 	    
 	    UTIL::BitField64 encoder( lcio::LCTrackerCellID::encoding_string() ) ; 
 	    
@@ -379,7 +387,7 @@ void ExtrToSIT::processEvent( LCEvent * evt ) {
 
 	    //for loop to all SIT layers
 	    
-	    for (unsigned int iL=0;iL<nSITR;iL++){
+	    for (unsigned int iL=0;iL<_nSITLayers;iL++){
 	      
 	      if ( sitHitsCol != 0 ){
 		
