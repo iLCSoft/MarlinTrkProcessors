@@ -223,10 +223,6 @@ void CalcTrackerHitResiduals::processEvent( LCEvent * evt ) {
       rec_pos[1] = trkhit->getPosition()[1];
       rec_pos[2] = trkhit->getPosition()[2];     
       
-      // gear::MeasurementSurface const* ms = Global::GEAR->getMeasurementSurfaceStore().GetMeasurementSurface( encoder.lowWord() );;
-      // CLHEP::Hep3Vector globalPointRec(rec_pos[0],rec_pos[1],rec_pos[2]);
-      // CLHEP::Hep3Vector localPointRec= ms->getCoordinateSystem()->getLocalPoint(globalPointRec);
-
       DD4hep::DDRec::SurfaceMap::const_iterator si = _surfMap.find( celId)  ;
       ISurface* ms = ( si != _surfMap.end()  ?  si->second  : 0 )  ;
 
@@ -253,18 +249,12 @@ void CalcTrackerHitResiduals::processEvent( LCEvent * evt ) {
           // Check if the simHits are from the same particle in order to avoid problems
           if( simhitA->getMCParticle() == simhitB->getMCParticle() ) { 
 
-//            // Calculate the average positions             
-//            sim_pos[0] = ( simhitA->getPosition()[0] + simhitB->getPosition()[0] ) / 2.0 ;
-//            sim_pos[1] = ( simhitA->getPosition()[1] + simhitB->getPosition()[1] ) / 2.0 ;
-//            sim_pos[2] = ( simhitA->getPosition()[2] + simhitB->getPosition()[2] ) / 2.0 ;
-
             sim_pos[0] = simhitA->getPosition()[0] ;
             sim_pos[1] = simhitA->getPosition()[1] ;
             sim_pos[2] = simhitA->getPosition()[2] ;
 
             
             Vector3D globalPointSim(sim_pos[0],sim_pos[1],sim_pos[2]);
-            //            Vector2D localPointSim = ms->globalToLocal(  globalPointSim);
             
             double dx = globalPointRec.x() - globalPointSim.x();
             double dy = globalPointRec.y() - globalPointSim.y();
