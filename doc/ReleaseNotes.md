@@ -6,6 +6,14 @@
 * 2017-04-28 Andre Sailer ([PR#10](https://github.com/iLCSoft/MarlinTrkProcessors/pull/10))
   - TruthTrackFinder::sort_by_z: sort by absolute z. Fixes an issue with wrongly assigned charge and angle for tracks in the backward direction if the fit with hits sorted by radius failed.
 
+# v02-07
+
+* 2017-04-28 Frank Gaede ([PR#11](https://github.com/iLCSoft/MarlinTrkProcessors/pull/11))
+  - TruthTrackFinder: Hits produced by secondaries are discarded
+
+* 2017-04-28 Andre Sailer ([PR#10](https://github.com/iLCSoft/MarlinTrkProcessors/pull/10))
+  - TruthTrackFinder::sort_by_z: sort by absolute z. Fixes an issue with wrongly assigned charge and angle for tracks in the backward direction if the fit with hits sorted by radius failed.
+
 # v02-06
 
 * 2017-04-06 Emilia Leogrande ([PR#9](https://github.com/iLCSoft/MarlinTrkProcessors/pull/9))
