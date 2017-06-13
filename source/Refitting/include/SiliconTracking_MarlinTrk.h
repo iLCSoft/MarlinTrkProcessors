@@ -29,13 +29,16 @@ namespace DiagnosticsHistograms2D {
 using namespace lcio ;
 using namespace marlin ;
 
-namespace  gear{
-  class GearMgr ;
-}
 
 namespace MarlinTrk {
   class HelixFit;
   class IMarlinTrkSystem ;
+}
+
+namespace DD4hep{
+  namespace Geometry{
+    class LCDD ;
+  }
 }
 
 namespace UTIL{
@@ -427,7 +430,7 @@ protected:
   int getModuleID(TrackerHit* hit)   { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::module()]; };
   int getSensorID(TrackerHit* hit)   { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::sensor()]; };
   
-  void setupGearGeom( const gear::GearMgr* gearMgr ) ;
+  void setupGeom(const DD4hep::Geometry::LCDD& lcdd) ;
   
   
   unsigned int _nLayersVTX;

@@ -21,14 +21,9 @@
 #include <marlin/Global.h>
 #include <marlin/Exceptions.h>
 
-#include <gear/GEAR.h>
-#include <gear/GearParameters.h>
-#include <gear/VXDLayerLayout.h>
-#include <gear/VXDParameters.h>
-#include "gear/FTDLayerLayout.h"
-#include "gear/FTDParameters.h"
-
-#include <gear/BField.h>
+#include "DD4hep/LCDD.h"
+#include "DD4hep/DD4hepUnits.h"
+#include "DDRec/DetectorData.h"
 
 #include <UTIL/BitField64.h>
 #include "UTIL/LCTrackerConf.h"
@@ -638,7 +633,7 @@ void SiliconTracking_MarlinTrk::init() {
   
   
   // set up the geometery needed by KalTest
-  _trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( _trkSystemName , marlin::Global::GEAR , "" ) ;
+  _trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( _trkSystemName , 0 , "" ) ;
   
   if( _trksystem == 0 ){
     
@@ -659,8 +654,11 @@ void SiliconTracking_MarlinTrk::init() {
   
 #endif
   
-  this->setupGearGeom(Global::GEAR);
+  DD4hep::Geometry::LCDD& lcdd = DD4hep::Geometry::LCDD::getInstance();
   
+  this->setupGeom( lcdd );
+  
+
   if (_useSIT == 0)
     _nLayers = _nLayersVTX;
   else 
@@ -918,9 +916,9 @@ int SiliconTracking_MarlinTrk::InitialiseFTD(LCEvent * evt) {
       
       TrackerHitExtended * hitExt = new TrackerHitExtended( hit );
       
-      gear::Vector3D U(1.0,hit->getU()[1],hit->getU()[0],gear::Vector3D::spherical);
-      gear::Vector3D V(1.0,hit->getV()[1],hit->getV()[0],gear::Vector3D::spherical);
-      gear::Vector3D Z(0.0,0.0,1.0);
+      Vector3D U(1.0,hit->getU()[1],hit->getU()[0],Vector3D::spherical);
+      Vector3D V(1.0,hit->getV()[1],hit->getV()[0],Vector3D::spherical);
+      Vector3D Z(0.0,0.0,1.0);
       
       const float eps = 1.0e-07;
       // V must be the global z axis 
@@ -1130,9 +1128,9 @@ int SiliconTracking_MarlinTrk::InitialiseVTX(LCEvent * evt) {
       
       TrackerHitPlane * hit = dynamic_cast<TrackerHitPlane*>(hitCollection->getElementAt(ielem));
       
-      gear::Vector3D U(1.0,hit->getU()[1],hit->getU()[0],gear::Vector3D::spherical);
-      gear::Vector3D V(1.0,hit->getV()[1],hit->getV()[0],gear::Vector3D::spherical);
-      gear::Vector3D Z(0.0,0.0,1.0);
+      Vector3D U(1.0,hit->getU()[1],hit->getU()[0],Vector3D::spherical);
+      Vector3D V(1.0,hit->getV()[1],hit->getV()[0],Vector3D::spherical);
+      Vector3D Z(0.0,0.0,1.0);
       
       const float eps = 1.0e-07;
       // V must be the global z axis 
@@ -1261,9 +1259,9 @@ int SiliconTracking_MarlinTrk::InitialiseVTX(LCEvent * evt) {
         else if ( ( trkhit_P = dynamic_cast<TrackerHitPlane*>( hitCollection->getElementAt( ielem ) ) ) )  {
           
           // first we need to check if the measurement vectors are aligned with the global coordinates 
-          gear::Vector3D U(1.0,trkhit_P->getU()[1],trkhit_P->getU()[0],gear::Vector3D::spherical);
-          gear::Vector3D V(1.0,trkhit_P->getV()[1],trkhit_P->getV()[0],gear::Vector3D::spherical);
-          gear::Vector3D Z(0.0,0.0,1.0);
+          Vector3D U(1.0,trkhit_P->getU()[1],trkhit_P->getU()[0],Vector3D::spherical);
+          Vector3D V(1.0,trkhit_P->getV()[1],trkhit_P->getV()[0],Vector3D::spherical);
+          Vector3D Z(0.0,0.0,1.0);
           
           const float eps = 1.0e-07;
           // V must be the global z axis 
@@ -1760,7 +1758,7 @@ TrackExtended * SiliconTracking_MarlinTrk::TestTriplet(TrackerHitExtended * oute
       
       MCParticle* mcp = mcp_s[imcp];
       
-      helix_max_z = fabsf(mcp->getEndpoint()[2]);
+      helix_max_z = fabs(mcp->getEndpoint()[2]);
       
       
       streamlog_out(MESSAGE) << "Draw MCParticle : " << *mcp <<std::endl;
@@ -3370,144 +3368,80 @@ void SiliconTracking_MarlinTrk::FinalRefit(LCCollectionVec* trk_col, LCCollectio
 }
 
 
-void SiliconTracking_MarlinTrk::setupGearGeom( const gear::GearMgr* gearMgr ){
+void SiliconTracking_MarlinTrk::setupGeom( const DD4hep::Geometry::LCDD& lcdd){
   
-  _bField = gearMgr->getBField().at( gear::Vector3D( 0.,0.,0.)  ).z() ;
+  double bFieldVec[3]; 
+  lcdd.field().magneticField({0,0,0},bFieldVec); // get the magnetic field vector from DD4hep
+  _bField = bFieldVec[2]/dd4hep::tesla; // z component at (0,0,0)
   
   //-- VXD Parameters--
   _nLayersVTX = 0 ;
-  const gear::VXDParameters* pVXDDetMain = 0;
-  const gear::VXDLayerLayout* pVXDLayerLayout = 0;
   
   try{
     
-    streamlog_out( DEBUG9 ) << " filling VXD parameters from gear::SITParameters " << std::endl ;
+    streamlog_out( DEBUG9 ) << " filling VXD parameters  " << std::endl ;
     
-    pVXDDetMain = &Global::GEAR->getVXDParameters();
-    pVXDLayerLayout = &(pVXDDetMain->getVXDLayerLayout());
-    _nLayersVTX = pVXDLayerLayout->getNLayers();
-  }
-  catch( gear::UnknownParameterException& e){
-    
-    streamlog_out( DEBUG9 ) << " ### gear::VXDParameters Not Present in GEAR FILE" << std::endl ;
+    DD4hep::Geometry::DetElement vtxDE = lcdd.detector("VXD");
+    DD4hep::DDRec::ZPlanarData* vtx = vtxDE.extension<DD4hep::DDRec::ZPlanarData>(); 
+    _nLayersVTX=vtx->layers.size(); 
     
   }
+  catch( std::runtime_error& e){
+    
+    streamlog_out( DEBUG9 ) << " ### VXD detector Not Present in LCDD" << std::endl ;
+  }
   
   
-  
+
   //-- SIT Parameters--
   _nLayersSIT = 0 ;
-  const gear::ZPlanarParameters* pSITDetMain = 0;
-  const gear::ZPlanarLayerLayout* pSITLayerLayout = 0;
-  
+
   try{
-    
-    streamlog_out( DEBUG9 ) << " filling SIT parameters from gear::SITParameters " << std::endl ;
-    
-    pSITDetMain = &Global::GEAR->getSITParameters();
-    pSITLayerLayout = &(pSITDetMain->getZPlanarLayerLayout());
-    _nLayersSIT = pSITLayerLayout->getNLayers();
-    
+
+    streamlog_out( DEBUG9 ) << " filling SIT parameters  " << std::endl ;
+
+    DD4hep::Geometry::DetElement sitDE = lcdd.detector("SIT");
+    DD4hep::DDRec::ZPlanarData* sit = sitDE.extension<DD4hep::DDRec::ZPlanarData>(); 
+    _nLayersSIT=sit->layers.size(); 
   }
-  catch( gear::UnknownParameterException& e){
-    
-    streamlog_out( DEBUG9 ) << " ### gear::SITParameters Not Present in GEAR FILE" << std::endl ;
-    
+  catch(  std::runtime_error& e){
+
+    streamlog_out( DEBUG9 ) << " ###  SIT detector Not Present in LCDD " << std::endl ;
+
   }
-  
-  if( _nLayersSIT == 0 ){
-    // try the old LOI style key value pairs as defined in the SSit03 Mokka drive
-    try{
-      
-      streamlog_out( MESSAGE ) << "  SiliconTracking_MarlinTrk - Simple Cylinder Based SIT using parameters defined by SSit03 Mokka driver " << std::endl ;
-      
-      // SIT
-      
-      const gear::GearParameters& pSIT = gearMgr->getGearParameters("SIT");
-      
-      const EVENT::DoubleVec& SIT_r   =  pSIT.getDoubleVals("SITLayerRadius" )  ;
-      const EVENT::DoubleVec& SIT_hl  =  pSIT.getDoubleVals("SITSupportLayerHalfLength" )  ;
-      
-      _nLayersSIT = SIT_r.size() ; 
-      
-      if (_nLayersSIT != SIT_r.size() || _nLayersSIT != SIT_hl.size()) {
-        
-        streamlog_out( ERROR ) << "ILDSITCylinderKalDetector miss-match between DoubleVec and nlayers exit(1) called from file " << __FILE__ << " line " << __LINE__  << std::endl ;
-        exit(1);
-        
-      }
-    }
-    catch( gear::UnknownParameterException& e){
-      
-      streamlog_out( DEBUG9 ) << " ### gear::SIT Parameters from as defined in SSit03 Not Present in GEAR FILE" << std::endl ;
-      
-    } 
-    
-  }
-  
-  
-  
+
+
   //-- FTD Parameters--
   _petalBasedFTDWithOverlaps = false;  
   _nlayersFTD = 0;
-  
+
   try{
-    
-    streamlog_out( DEBUG9 ) << " filling FTD parameters from gear::FTDParameters " << std::endl ;
-    
-    const gear::FTDParameters&   pFTD      = Global::GEAR->getFTDParameters();
-    const gear::FTDLayerLayout&  ftdlayers = pFTD.getFTDLayerLayout() ;
-    
-    _nlayersFTD = ftdlayers.getNLayers() ;
-    
+
+    streamlog_out( DEBUG9 ) << " filling FTD parameters  " << std::endl ;
+
+    DD4hep::Geometry::DetElement ftdDE = lcdd.detector("FTD");
+    DD4hep::DDRec::ZDiskPetalsData* ftd = ftdDE.extension<DD4hep::DDRec::ZDiskPetalsData>(); 
+
+    _nlayersFTD = ftd->layers.size();
+
     for (unsigned int disk=0; disk < _nlayersFTD; ++disk) {
-      
-      _zLayerFTD.push_back( ftdlayers.getSensitiveZposition(disk, 0, 1) ); // front petal even numbered
-      
-      if ( ftdlayers.getNPetals(disk) > 0) {
-        _zLayerFTD.push_back( ftdlayers.getSensitiveZposition(disk, 1, 1) );  // front petal odd numbered
-        _petalBasedFTDWithOverlaps = true;
-      }
-      
+
+      _zLayerFTD.push_back(  ftd->layers[ disk ].zPosition +  ftd->layers[ disk ].zOffsetSensitive ) ;
+      _zLayerFTD.push_back(  ftd->layers[ disk ].zPosition -  ftd->layers[ disk ].zOffsetSensitive ) ;
+      _petalBasedFTDWithOverlaps = true;
+
     }
-    
+
     // SJA: Here we increase the size of _nlayersFTD as we are treating the 
     _nlayersFTD =_zLayerFTD.size() ;     
-    
+
   }
-  catch( gear::UnknownParameterException& e){
-    
-    streamlog_out( DEBUG9 ) << " ### gear::FTDParameters Not Present in GEAR FILE" << std::endl ;
-    
+  catch( std::runtime_error& e){
+
+    streamlog_out( DEBUG9 ) << " ### FTD detector Not Present in LCDD" << std::endl ;
+
   } 
   
-  if( _nlayersFTD == 0 ){
-    
-    // FTD
-    try{
-      
-      streamlog_out( MESSAGE ) << "  SiliconTracking_MarlinTrk - Simple Disc Based FTD using parameters defined by SFtd05 Mokka driver " << std::endl ;
-      
-      const gear::GearParameters& pFTD = gearMgr->getGearParameters("FTD");
-      
-      const EVENT::DoubleVec* pFTD_z   = NULL;
-      
-      streamlog_out( MESSAGE ) << " For FTD using parameters defined by SFtd05 Mokka driver " << std::endl ;
-      
-      pFTD_z = &pFTD.getDoubleVals("FTDZCoordinate" )  ;
-      
-      _nlayersFTD = pFTD_z->size();
-      
-      for (unsigned int i = 0; i<_nlayersFTD; ++i) {
-        _zLayerFTD.push_back((*pFTD_z)[i]);
-      }
-    }
-    catch( gear::UnknownParameterException& e){
-      
-      streamlog_out( DEBUG9 ) << " ### gear::FTD Parameters as defined in SFtd05 Not Present in GEAR FILE" << std::endl ;
-      
-    } 
-  }
   
 }
 
@@ -3550,7 +3484,7 @@ void SiliconTracking_MarlinTrk::drawEvent(){
         
         helix_max_r = _helix_max_r;
         
-        float helix_max_z = fabsf(mcp->getEndpoint()[2]);
+        float helix_max_z = fabs(mcp->getEndpoint()[2]);
         
         MarlinCED::add_layer_description(_colNameMCParticles, layer);
         
