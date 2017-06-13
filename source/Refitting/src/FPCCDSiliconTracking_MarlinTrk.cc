@@ -564,9 +564,7 @@ void FPCCDSiliconTracking_MarlinTrk::init() {
   printParameters() ;
 
   // this creates a directory for this processor ....
-  // set up the geometery needed by KalTest
-  //FIXME: for now do KalTest only - make this a steering parameter to use other fitters
-  _trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( "KalTest" , marlin::Global::GEAR , "" ) ;
+  _trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( "DDKalTest" , 0 , "" ) ;
 
   if( _trksystem == 0 ){
     throw EVENT::Exception( std::string("  Cannot initialize MarlinTrkSystem of Type: ") + std::string("KalTest" )  ) ;
@@ -3649,7 +3647,7 @@ void FPCCDSiliconTracking_MarlinTrk::setupGeom( const DD4hep::Geometry::LCDD& lc
     _nLayersVTX=vtx->layers.size(); 
     
   }
-  catch( gear::UnknownParameterException& e){
+  catch( std::runtime_error& e){
     
     streamlog_out( DEBUG9 ) << " ### VXD detector Not Present in LCDD" << std::endl ;
   }
@@ -3667,7 +3665,7 @@ void FPCCDSiliconTracking_MarlinTrk::setupGeom( const DD4hep::Geometry::LCDD& lc
     DD4hep::DDRec::ZPlanarData* sit = sitDE.extension<DD4hep::DDRec::ZPlanarData>(); 
     _nLayersSIT=sit->layers.size(); 
   }
-  catch( gear::UnknownParameterException& e){
+  catch(  std::runtime_error& e){
 
     streamlog_out( DEBUG9 ) << " ###  SIT detector Not Present in LCDD " << std::endl ;
 
@@ -3680,7 +3678,7 @@ void FPCCDSiliconTracking_MarlinTrk::setupGeom( const DD4hep::Geometry::LCDD& lc
 
   try{
 
-    streamlog_out( DEBUG9 ) << " filling FTD parameters from gear::FTDParameters " << std::endl ;
+    streamlog_out( DEBUG9 ) << " filling FTD parameters  " << std::endl ;
 
     DD4hep::Geometry::DetElement ftdDE = lcdd.detector("FTD");
     DD4hep::DDRec::ZDiskPetalsData* ftd = ftdDE.extension<DD4hep::DDRec::ZDiskPetalsData>(); 
@@ -3699,9 +3697,9 @@ void FPCCDSiliconTracking_MarlinTrk::setupGeom( const DD4hep::Geometry::LCDD& lc
     _nlayersFTD =_zLayerFTD.size() ;     
 
   }
-  catch( gear::UnknownParameterException& e){
+  catch( std::runtime_error& e){
 
-    streamlog_out( DEBUG9 ) << " ### gear::FTDParameters Not Present in GEAR FILE" << std::endl ;
+    streamlog_out( DEBUG9 ) << " ### FTD detector Not Present in LCDD" << std::endl ;
 
   } 
 
@@ -4039,9 +4037,7 @@ TVector3 FPCCDSiliconTracking_MarlinTrk::LocalToGlobal(TVector3 local,int layer,
 
 void FPCCDSiliconTracking_MarlinTrk::calcTrackParameterOfMCP(MCParticle* pmcp, double* par){
 
-  double bz = Global::GEAR->getBField().at( Vector3D( 0.,0.,0.)  ).z() ;
-
-  HelixTrack helixMC( pmcp->getVertex(), pmcp->getMomentum(), pmcp->getCharge(), bz ) ;
+  HelixTrack helixMC( pmcp->getVertex(), pmcp->getMomentum(), pmcp->getCharge(), _bField  ) ;
   double oldphi0 = double(helixMC.getPhi0());
   double omega = double(helixMC.getOmega());
   double tanL = double(helixMC.getTanLambda());
