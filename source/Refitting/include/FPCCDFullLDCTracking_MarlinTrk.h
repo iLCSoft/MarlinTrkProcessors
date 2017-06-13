@@ -38,7 +38,6 @@
 using namespace lcio ;
 using namespace marlin ;
 
-//class gear::GearMgr ;
 
 namespace MarlinTrk {
   class HelixFit;

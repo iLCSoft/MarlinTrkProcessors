@@ -11,7 +11,6 @@
 #include "UTIL/LCTrackerConf.h"
 #include <UTIL/Operators.h>
 
-#include <gear/BField.h>
 
 #include "marlin/VerbosityLevels.h"
 #include "marlin/Global.h"
@@ -23,15 +22,13 @@
 
 #include "MarlinTrk/MarlinTrkUtils.h"
 
+#include "DD4hep/LCDD.h"
+#include "DD4hep/DD4hepUnits.h"
+
+
 using namespace lcio ;
 using namespace marlin ;
 using namespace KiTrack;
-
-
-
-
-
-
 
 
 
@@ -149,10 +146,13 @@ void TrackSubsetProcessor::init() {
   /*       Initialise the MarlinTrkSystem, needed by the tracks for fitting                     */
   /**********************************************************************************************/
   
-  _bField = Global::GEAR->getBField().at( gear::Vector3D( 0.,0.,0.)  ).z() ;
+  DD4hep::Geometry::LCDD& lcdd = DD4hep::Geometry::LCDD::getInstance();
+  double bFieldVec[3]; 
+  lcdd.field().magneticField({0,0,0},bFieldVec); // get the magnetic field vector from DD4hep
+  _bField = bFieldVec[2]/dd4hep::tesla; // z component at (0,0,0)
   
   // set upt the geometry
-    _trkSystem =  MarlinTrk::Factory::createMarlinTrkSystem( _trkSystemName , marlin::Global::GEAR , "" ) ;
+    _trkSystem =  MarlinTrk::Factory::createMarlinTrkSystem( _trkSystemName , 0 , "" ) ;
   
   
   if( _trkSystem == 0 ){

@@ -19,8 +19,6 @@
 #include <climits>
 
 
-#include <gear/BField.h>
-
 #include <UTIL/BitField64.h>
 #include "UTIL/LCTrackerConf.h"
 
