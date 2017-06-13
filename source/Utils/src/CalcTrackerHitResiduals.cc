@@ -18,18 +18,13 @@
 // ----- include for verbosity dependend logging ---------
 #include "marlin/VerbosityLevels.h"
 
-//---- GEAR ----
-#include "marlin/Global.h"
-#include "gear/GEAR.h"
-#include <gear/BField.h>
-
-#include "gear/gearsurf/MeasurementSurfaceStore.h"
-#include "gear/gearsurf/MeasurementSurface.h"
-#include "gear/gearsurf/ICoordinateSystem.h"
-#include "gear/gearsurf/CartesianCoordinateSystem.h"
-
-//FIXME:SJA: if we want the surface store to be filled we need to create an instance of MarlinTrk implemented with KalTest/KalDet
 #include "MarlinTrk/Factory.h"
+
+#include "DD4hep/LCDD.h"
+#include "DD4hep/DD4hepUnits.h"
+#include "DDRec/DetectorData.h"
+
+
 
 /// root headers
 #include <TFile.h>
@@ -40,6 +35,7 @@ using namespace lcio ;
 using namespace marlin ;
 
 using namespace MarlinTrk ;
+using namespace DDSurfaces ;
 
 
 
@@ -108,26 +104,29 @@ void CalcTrackerHitResiduals::init() {
   printParameters() ;
   
   //FIXME:SJA: if we want the surface store to be filled we need to create an instance of MarlinTrk implemented with KalTest/KalDet
-  MarlinTrk::IMarlinTrkSystem* trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( "KalTest" , marlin::Global::GEAR , "" ) ;
+  MarlinTrk::IMarlinTrkSystem* trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( "DDKalTest" , 0 , "" ) ;
 
   if( trksystem == 0 ) {
     
-    throw EVENT::Exception( std::string("  Cannot initialize MarlinTrkSystem of Type: ") + std::string("KalTest" )  ) ;
+    throw EVENT::Exception( std::string("  Cannot initialize MarlinTrkSystem of Type: ") + std::string("DDKalTest" )  ) ;
     
   }
   
   trksystem->init() ;  
   
-  //FIXME:SJA gear surface store has now been filled so we can dispose of the MarlinTrkSystem
-  //delete trksystem;
-  
-  /// Write histogram to file
+    /// Write histogram to file
   _root_file = new TFile("CalcTrackerHitResiduals.root", "RECREATE");
-  
-//  this->bookHistograms();
-  
   this->createHistogramBuffers();
-  
+
+
+  DD4hep::Geometry::LCDD& lcdd = DD4hep::Geometry::LCDD::getInstance();
+
+  streamlog_out(DEBUG9) << " get the surface manager from lcdd ... " << std::endl ;
+
+  const DD4hep::DDRec::SurfaceManager* surfMan = lcdd.extension< DD4hep::DDRec::SurfaceManager >() ;
+
+  _surfMap = *surfMan->map( "world" ) ;
+
 }
 
 void CalcTrackerHitResiduals::processRunHeader( LCRunHeader* ) {
@@ -224,13 +223,23 @@ void CalcTrackerHitResiduals::processEvent( LCEvent * evt ) {
       rec_pos[1] = trkhit->getPosition()[1];
       rec_pos[2] = trkhit->getPosition()[2];     
       
-      gear::MeasurementSurface const* ms = Global::GEAR->getMeasurementSurfaceStore().GetMeasurementSurface( encoder.lowWord() );;
-      CLHEP::Hep3Vector globalPointRec(rec_pos[0],rec_pos[1],rec_pos[2]);
-      CLHEP::Hep3Vector localPointRec= ms->getCoordinateSystem()->getLocalPoint(globalPointRec);
+      // gear::MeasurementSurface const* ms = Global::GEAR->getMeasurementSurfaceStore().GetMeasurementSurface( encoder.lowWord() );;
+      // CLHEP::Hep3Vector globalPointRec(rec_pos[0],rec_pos[1],rec_pos[2]);
+      // CLHEP::Hep3Vector localPointRec= ms->getCoordinateSystem()->getLocalPoint(globalPointRec);
 
+      DD4hep::DDRec::SurfaceMap::const_iterator si = _surfMap.find( celId)  ;
+      ISurface* ms = ( si != _surfMap.end()  ?  si->second  : 0 )  ;
+
+      if( ms == NULL ){
+        streamlog_out( DEBUG3 ) << " no surface found for hit  id: " << celId << std::endl ;
+        continue ;
+      }
+
+      Vector3D  globalPointRec(rec_pos[0],rec_pos[1],rec_pos[2]);
+      Vector2D  localPointRec = ms->globalToLocal(  globalPointRec ) ;
 
       if( UTIL::BitSet32( trkhit->getType() )[ UTIL::ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT ]   ){
-      
+
         /**********************************************************************************************/
         /*                Treat Composite Spacepoints                                                 */
         /**********************************************************************************************/
@@ -254,15 +263,15 @@ void CalcTrackerHitResiduals::processEvent( LCEvent * evt ) {
             sim_pos[2] = simhitA->getPosition()[2] ;
 
             
-            CLHEP::Hep3Vector globalPointSim(sim_pos[0],sim_pos[1],sim_pos[2]);
-            CLHEP::Hep3Vector localPointSim = ms->getCoordinateSystem()->getLocalPoint(globalPointSim);
+            Vector3D globalPointSim(sim_pos[0],sim_pos[1],sim_pos[2]);
+            //            Vector2D localPointSim = ms->globalToLocal(  globalPointSim);
             
             double dx = globalPointRec.x() - globalPointSim.x();
             double dy = globalPointRec.y() - globalPointSim.y();
             double dz = globalPointRec.z() - globalPointSim.z();
             
-            double dr    = globalPointRec.perp() - globalPointSim.perp();
-            double drphi = globalPointRec.phi()*globalPointRec.perp() - globalPointSim.phi()*globalPointSim.perp();
+            double dr    = globalPointRec.trans() - globalPointSim.trans();
+            double drphi = globalPointRec.phi()*globalPointRec.trans() - globalPointSim.phi()*globalPointSim.trans();
             
             
             streamlog_out( DEBUG1 ) << "Spacepoint Residuals dx " << dx 
@@ -299,16 +308,16 @@ void CalcTrackerHitResiduals::processEvent( LCEvent * evt ) {
           sim_pos[1] = simhit->getPosition()[1];
           sim_pos[2] = simhit->getPosition()[2];
 
-          CLHEP::Hep3Vector globalPointSim(sim_pos[0],sim_pos[1],sim_pos[2]);
-          CLHEP::Hep3Vector localPointSim = ms->getCoordinateSystem()->getLocalPoint(globalPointSim);
+          Vector3D globalPointSim(sim_pos[0],sim_pos[1],sim_pos[2]);
+          Vector2D localPointSim = ms->globalToLocal(globalPointSim);
           
           double dx = globalPointRec.x() - globalPointSim.x();
           double dy = globalPointRec.y() - globalPointSim.y();
           double dz = globalPointRec.z() - globalPointSim.z();
           
-          double du = localPointRec.x() - localPointSim.x();
-          double dv = localPointRec.y() - localPointSim.y();
-          double dw = localPointRec.z() - localPointSim.z();
+          double du = localPointRec.u() - localPointSim.u();
+          double dv = localPointRec.v() - localPointSim.v();
+          double dw = 0 ; // by construction 
 
           streamlog_out( DEBUG1 ) << "TrackerHit Residuals dx " << dx 
           << " dy " << dy 
