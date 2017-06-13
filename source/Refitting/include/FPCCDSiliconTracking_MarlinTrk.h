@@ -238,9 +238,9 @@ public:
   
   /** Event processor.
    */
-  virtual void processEvent( LCEvent * evt ) ; 
-  
-  
+  virtual void processEvent( LCEvent * evt ) ;
+
+
   virtual void check( LCEvent * evt ) ; 
   
   
