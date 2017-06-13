@@ -13,7 +13,6 @@
 #include "HelixClass_double.h"
 #include "ClusterShapes.h"
 #include "GroupTracks.h"
-//#include "../../BrahmsTracking/include/MarlinTrackFit.h"
 #include <map>
 #include <set>
 
@@ -46,6 +45,12 @@ namespace MarlinTrk {
   class IMarlinTrkSystem ;
 }
 
+
+namespace DD4hep{
+  namespace Geometry{
+    class LCDD ;
+  }
+}
 
 /** === FPCCDFullLDCTracking_MarlinTrk Processor === <br>
  *
@@ -491,7 +496,7 @@ protected:
   int getSensorID(SimTrackerHit* hit)   { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::sensor()]; };
 
   
-  void setupGearGeom( const gear::GearMgr* gearMgr ) ;
+  void setupGeom(const DD4hep::Geometry::LCDD& lcdd) ;
   
   double _tpc_inner_r;
   double _tpc_outer_r;
