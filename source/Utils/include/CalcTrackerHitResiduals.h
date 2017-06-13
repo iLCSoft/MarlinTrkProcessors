@@ -12,6 +12,9 @@
 #include <UTIL/BitField64.h>
 #include "UTIL/LCTrackerConf.h"
 
+#include "DDRec/SurfaceManager.h"
+//#include "DDRec/SurfaceHelper.h"
+
 namespace EVENT{
   class MCParticle ;
   class Track ;
@@ -142,6 +145,8 @@ protected:
   std::map<std::string, std::list<float>*> _histo_buffer_map;
   
   
+  DD4hep::DDRec::SurfaceMap _surfMap{} ;
+
 } ;
 
 #endif

@@ -19,12 +19,6 @@
 // ----- include for verbosity dependend logging ---------
 #include "marlin/VerbosityLevels.h"
 
-//---- GEAR ----
-#include "marlin/Global.h"
-#include "gear/GEAR.h"
-#include <gear/BField.h>
-
-
 #include "MarlinTrk/MarlinTrkDiagnostics.h"
 #ifdef MARLINTRK_DIAGNOSTICS_ON
 #include "MarlinTrk/DiagnosticsController.h"
