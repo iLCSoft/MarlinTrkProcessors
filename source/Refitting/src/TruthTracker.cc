@@ -22,10 +22,8 @@
 // ----- include for verbosity dependend logging ---------
 #include "marlin/VerbosityLevels.h"
 
-//---- GEAR ----
-#include "marlin/Global.h"
-#include "gear/GEAR.h"
-#include <gear/BField.h>
+#include "DD4hep/LCDD.h"
+#include "DD4hep/DD4hepUnits.h"
 
 #include "MarlinTrk/Factory.h"
 #include "MarlinTrk/IMarlinTrack.h"
@@ -285,7 +283,7 @@ void TruthTracker::init() {
 
   
   // set up the trk system
-  _trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( _trkSystemName , marlin::Global::GEAR , "" ) ;
+  _trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( _trkSystemName , 0 , "" ) ;
   
   if( _trksystem == 0 ){
     
@@ -307,7 +305,11 @@ void TruthTracker::init() {
   
 #endif
   
-  _Bz = Global::GEAR->getBField().at( gear::Vector3D(0., 0., 0.) ).z();    //The B field in z direction
+  DD4hep::Geometry::LCDD& lcdd = DD4hep::Geometry::LCDD::getInstance();
+  double bFieldVec[3]; 
+  lcdd.field().magneticField({0,0,0},bFieldVec); // get the magnetic field vector from DD4hep
+  _Bz = bFieldVec[2]/dd4hep::tesla; // z component at (0,0,0)
+  
   
 }
 
@@ -696,7 +698,7 @@ void TruthTracker::createTrack( MCParticle* mcp, UTIL::BitField64& cellID_encode
     float y = hit_list[ihit].second->getPosition()[1];
     float z = hit_list[ihit].second->getPosition()[2];
     
-    delta_phi += fabsf(hel_copy.moveRefPoint(x, y, z));      
+    delta_phi += fabs(hel_copy.moveRefPoint(x, y, z));      
     
     if ( delta_phi < M_PI ) {
       hit_list_inner_r.push_back(hit_list[ihit].second);
@@ -933,7 +935,7 @@ void TruthTracker::createTrack_iterative( MCParticle* mcp, UTIL::BitField64& cel
 //    pHandler.update(_current_event); 
     
 
-    helix_max_z = fabsf(mcp->getEndpoint()[2]);
+    helix_max_z = fabs(mcp->getEndpoint()[2]);
     
     streamlog_out(MESSAGE) << "Draw MCParticle : " << *mcp <<std::endl;  
     
@@ -1734,7 +1736,7 @@ void TruthTracker::createTrack_old( MCParticle* mcp, UTIL::BitField64& cellID_en
           
           prefit_trackState = new TrackStateImpl() ;
           
-          const gear::Vector3D point(hit_list.back()->getPosition()[0],hit_list.back()->getPosition()[1],hit_list.back()->getPosition()[2]); // position of outermost hit
+          const Vector3D point(hit_list.back()->getPosition()[0],hit_list.back()->getPosition()[1],hit_list.back()->getPosition()[2]); // position of outermost hit
           
           int return_code = prefit_trk->propagate(point, *prefit_trackState, chi2, ndf ) ;
           
@@ -1883,7 +1885,7 @@ void TruthTracker::createTrack_old( MCParticle* mcp, UTIL::BitField64& cellID_en
     }  
     
     
-    const gear::Vector3D point(0.,0.,0.); // nominal IP
+    const Vector3D point(0.,0.,0.); // nominal IP
     
     TrackStateImpl* trkStateIP = new TrackStateImpl() ;
     
@@ -2117,7 +2119,7 @@ void TruthTracker::drawEvent(){
       
       helix_max_r = _helix_max_r;
       
-      float helix_max_z = fabsf(mcp->getEndpoint()[2]);
+      float helix_max_z = fabs(mcp->getEndpoint()[2]);
             
       MarlinCED::add_layer_description(_colNameMCParticles, layer);
       

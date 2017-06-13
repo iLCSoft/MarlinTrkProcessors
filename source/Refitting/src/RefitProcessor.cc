@@ -18,13 +18,12 @@
 #include <UTIL/Operators.h>
 
 
+#include "DD4hep/LCDD.h"
+#include "DD4hep/DD4hepUnits.h"
+
 // ----- include for verbosity dependend logging ---------
 #include "marlin/VerbosityLevels.h"
 
-//---- GEAR ----
-#include "marlin/Global.h"
-#include "gear/GEAR.h"
-#include "gear/BField.h"
 
 #include "MarlinTrk/Factory.h"
 #include "MarlinTrk/IMarlinTrack.h"
@@ -148,13 +147,15 @@ void RefitProcessor::init() {
   printParameters() ;
   
   
- 
-  _bField = Global::GEAR->getBField().at( gear::Vector3D(0., 0., 0.) ).z();    //The B field in z direction
-  
+  DD4hep::Geometry::LCDD& lcdd = DD4hep::Geometry::LCDD::getInstance();
+  double bFieldVec[3]; 
+  lcdd.field().magneticField({0,0,0},bFieldVec); // get the magnetic field vector from DD4hep
+  _bField = bFieldVec[2]/dd4hep::tesla; // z component at (0,0,0)
+
   //---- 
   // set up the geometery needed for tracking
 
-  _trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( _trkSystemName , marlin::Global::GEAR , "" ) ;
+  _trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( _trkSystemName , 0 , "" ) ;
   
   
   if( _trksystem == 0 ){
