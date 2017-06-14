@@ -1930,7 +1930,7 @@ TrackExtended * FullLDCTracking_MarlinTrk::CombineTracks(TrackExtended * tpcTrac
   
   streamlog_out(DEBUG2) << "FullLDCTracking_MarlinTrk::CombineTracks: Start Fitting: AddHits: number of hits to fit " << trkHits.size() << std::endl;
   
-  std::auto_ptr<MarlinTrk::IMarlinTrack> marlin_trk_autop(_trksystem->createTrack());
+  std::unique_ptr<MarlinTrk::IMarlinTrack> marlin_trk_autop(_trksystem->createTrack());
   MarlinTrk::IMarlinTrack& marlin_trk = *marlin_trk_autop.get();
   
   IMPL::TrackStateImpl pre_fit ;
