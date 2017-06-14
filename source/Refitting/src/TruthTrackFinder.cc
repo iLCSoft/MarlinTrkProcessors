@@ -489,21 +489,21 @@ void TruthTrackFinder::getCollection(LCCollection* &collection, std::string coll
   return;
 }
 
-int TruthTrackFinder::getSubdetector(TrackerHit* hit, UTIL::BitField64 &encoder){
+int TruthTrackFinder::getSubdetector(const TrackerHit* hit, UTIL::BitField64 &encoder){
   const int celId = hit->getCellID0() ;
   encoder.setValue(celId) ;
   int subdet = encoder[lcio::LCTrackerCellID::subdet()];
   return subdet;
 }
 
-int TruthTrackFinder::getLayer(TrackerHit* hit, UTIL::BitField64 &encoder){
+int TruthTrackFinder::getLayer(const TrackerHit* hit, UTIL::BitField64 &encoder){
   const int celId = hit->getCellID0() ;
   encoder.setValue(celId);
   int layer = encoder[lcio::LCTrackerCellID::layer()];
   return layer;
 }
   
-TrackerHitVec TruthTrackFinder::removeHitsSameLayer(std::vector<TrackerHit*> trackHits, UTIL::BitField64 &encoder){
+TrackerHitVec TruthTrackFinder::removeHitsSameLayer(const std::vector<TrackerHit*> trackHits, UTIL::BitField64 &encoder){
   EVENT::TrackerHitVec trackFilteredHits;
   trackFilteredHits.push_back(trackHits[0]);
 
