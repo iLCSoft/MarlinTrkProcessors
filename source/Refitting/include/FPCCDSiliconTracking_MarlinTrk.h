@@ -760,7 +760,7 @@ protected:
        nsub.clear();
        mcp_d0 = mcp_z0 = mcp_omega = mcp_phi0 = mcp_tanL = 1e20;
      }
-     Triplet(const Triplet& obj){
+     Triplet(const Triplet& obj) : IMPL::TrackImpl(obj){
        *this = obj;
      }
   };
@@ -798,7 +798,7 @@ protected:
         purity = 1e20;
         simVecFromTrk.clear();
      }
-     BuildedTrack(const BuildedTrack& obj){
+     BuildedTrack(const BuildedTrack& obj) : IMPL::TrackImpl(obj){
        *this = obj;
      }
   };
