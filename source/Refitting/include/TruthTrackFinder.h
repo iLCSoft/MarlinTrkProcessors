@@ -15,7 +15,7 @@
 #include "MarlinTrk/IMarlinTrkSystem.h"
 #include "EVENT/TrackerHit.h"
 #include <UTIL/CellIDDecoder.h>
-
+#include "UTIL/LCTrackerConf.h"
 #include <AIDA/AIDA.h>
 
 using namespace lcio ;
@@ -48,18 +48,23 @@ class TruthTrackFinder : public Processor {
   // Call to get collections
   void getCollection(LCCollection*&, std::string, LCEvent*);
 	
-  // Get the subdetector ID from a hit
-  int getSubdetector(const TrackerHit*, UTIL::BitField64&);
-
-  // Get the layer ID from a hit
-  int getLayer(const TrackerHit*, UTIL::BitField64&);
-
-  // Remove hits in the same layer of the same subdetector
-  TrackerHitVec removeHitsSameLayer(const std::vector<TrackerHit*>, UTIL::BitField64&);
-
 	
  protected:
 	
+  // Encoder
+  UTIL::BitField64* m_encoder;
+
+  // Get the subdetector ID from a hit
+  int getSubdetector(const TrackerHit* hit){ m_encoder->setValue(hit->getCellID0()); return (*m_encoder)[lcio::LCTrackerCellID::subdet()]; } 
+
+  // Get the layer ID from a hit
+  int getLayer(const TrackerHit* hit){ m_encoder->setValue(hit->getCellID0()); return (*m_encoder)[lcio::LCTrackerCellID::layer()]; }
+
+  // Remove hits in the same layer of the same subdetector
+  void removeHitsSameLayer(const std::vector<TrackerHit*> &, std::vector<TrackerHit*> &);
+
+
+
   // Collection names for (in/out)put
   std::vector<std::string> m_inputTrackerHitCollections ;
   std::vector<std::string> m_inputTrackerHitRelationCollections ;
