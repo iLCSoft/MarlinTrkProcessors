@@ -430,7 +430,7 @@ void TruthTrackFinder::processEvent( LCEvent* evt ) {
 
 
     ///Fill hits associated to the track by pattern recognition and hits in fit
-    UTIL::BitField64 encoder( lcio::LCTrackerCellID::encoding_string() ) ; 
+    //UTIL::BitField64 encoder( lcio::LCTrackerCellID::encoding_string() ) ; 
     encoder.reset() ;  // reset to 0
     MarlinTrk::addHitNumbersToTrack(track, trackHits, false, encoder);
     MarlinTrk::addHitNumbersToTrack(track, hits_in_fit, true, encoder);
@@ -507,7 +507,7 @@ TrackerHitVec TruthTrackFinder::removeHitsSameLayer(std::vector<TrackerHit*> tra
   EVENT::TrackerHitVec trackFilteredHits;
   trackFilteredHits.push_back(trackHits[0]);
 
-  for(int itHit=1;itHit<trackHits.size();itHit++){
+  for(unsigned int itHit=1;itHit<trackHits.size();itHit++){
     int subdet = getSubdetector(trackHits.at(itHit), encoder);
     int layer = getLayer(trackHits.at(itHit), encoder);
     if( subdet != getSubdetector(trackHits.at(itHit-1), encoder) )
