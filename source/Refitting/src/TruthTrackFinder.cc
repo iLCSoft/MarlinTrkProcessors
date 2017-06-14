@@ -160,7 +160,8 @@ void TruthTrackFinder::init() {
 	m_fitFails = 0;
   
   // Set up the track fit factory
-  trackFactory =  MarlinTrk::Factory::createMarlinTrkSystem( "DDKalTest" , 0 , "" ) ;
+  const gear::GearMgr* fakeGear = 0;
+  trackFactory =  MarlinTrk::Factory::createMarlinTrkSystem( "DDKalTest" , fakeGear , "" ) ;
   trackFactory->setOption( MarlinTrk::IMarlinTrkSystem::CFG::useQMS,        true) ;
   trackFactory->setOption( MarlinTrk::IMarlinTrkSystem::CFG::usedEdx,       true) ;
   trackFactory->setOption( MarlinTrk::IMarlinTrkSystem::CFG::useSmoothing,  false) ;
@@ -184,6 +185,9 @@ void TruthTrackFinder::init() {
 	// Register this process
 	Global::EVENTSEEDER->registerProcessor(this);
 		
+  //Initialize CellID encoder
+  m_encoder = new UTIL::BitField64(lcio::LCTrackerCellID::encoding_string());
+
 }
 
 
@@ -192,9 +196,6 @@ void TruthTrackFinder::processRunHeader( LCRunHeader* ) {
 }
 
 void TruthTrackFinder::processEvent( LCEvent* evt ) {
-	
-  //Initialize CellID encoder
-  UTIL::BitField64 encoder(lcio::LCTrackerCellID::encoding_string());
 
   // Get the collection of MC particles
   LCCollection* particleCollection = 0 ;
@@ -291,7 +292,8 @@ void TruthTrackFinder::processEvent( LCEvent* evt ) {
 		std::sort(trackHits.begin(),trackHits.end(),sort_by_radius);
 
     // Remove the hits on the same layers (removing those with higher R)
-    EVENT::TrackerHitVec trackFilteredByRHits = removeHitsSameLayer(trackHits, encoder);
+    EVENT::TrackerHitVec trackFilteredByRHits;
+    removeHitsSameLayer(trackHits, trackFilteredByRHits);
     if(trackFilteredByRHits.size() < 3) continue;
 
     /*
@@ -368,7 +370,8 @@ void TruthTrackFinder::processEvent( LCEvent* evt ) {
         std::sort(trackfitHits.begin(),trackfitHits.end(),sort_by_z);     
 
         // Removing the hits on the same layers (remove those with higher z)
-        EVENT::TrackerHitVec trackFilteredByZHits = removeHitsSameLayer(trackfitHits, encoder);
+        EVENT::TrackerHitVec trackFilteredByZHits;
+        removeHitsSameLayer(trackfitHits, trackFilteredByZHits);
         if(trackFilteredByZHits.size() < 3) continue;
 
         // If fit with hits ordered by radius has failed, the track is probably a 'spiral' track. 
@@ -401,7 +404,8 @@ void TruthTrackFinder::processEvent( LCEvent* evt ) {
         std::sort(trackfitHits.begin(),trackfitHits.end(),sort_by_z); 
 
         // Removing the hits on the same layers (remove those with higher z)
-        EVENT::TrackerHitVec trackFilteredByZHits = removeHitsSameLayer(trackfitHits, encoder);
+        EVENT::TrackerHitVec trackFilteredByZHits;
+        removeHitsSameLayer(trackfitHits, trackFilteredByZHits);
         if(trackFilteredByZHits.size() < 3) continue;
 
         // If fit with hits ordered by radius has failed, the track is probably a 'spiral' track. 
@@ -430,10 +434,9 @@ void TruthTrackFinder::processEvent( LCEvent* evt ) {
 
 
     ///Fill hits associated to the track by pattern recognition and hits in fit
-    //UTIL::BitField64 encoder( lcio::LCTrackerCellID::encoding_string() ) ; 
-    encoder.reset() ;  // reset to 0
-    MarlinTrk::addHitNumbersToTrack(track, trackHits, false, encoder);
-    MarlinTrk::addHitNumbersToTrack(track, hits_in_fit, true, encoder);
+    m_encoder->reset() ;  // reset to 0
+    MarlinTrk::addHitNumbersToTrack(track, trackHits, false, *m_encoder);
+    MarlinTrk::addHitNumbersToTrack(track, hits_in_fit, true, *m_encoder);
 
     streamlog_out( DEBUG5 )<<"TruthTrackFinder: trackHits.size(): "<<trackHits.size()<<" trackfitHits.size(): "<<trackfitHits.size()<<" hits_in_fit.size(): "<<hits_in_fit.size()   << std::endl;
 
@@ -475,7 +478,7 @@ void TruthTrackFinder::end(){
 	<< " processed " << m_eventNumber << " events in " << m_runNumber << " runs "
 	<< std::endl ;
 	
-	
+	delete m_encoder;
 }
 
 void TruthTrackFinder::getCollection(LCCollection* &collection, std::string collectionName, LCEvent* evt){
@@ -488,35 +491,21 @@ void TruthTrackFinder::getCollection(LCCollection* &collection, std::string coll
   }
   return;
 }
-
-int TruthTrackFinder::getSubdetector(const TrackerHit* hit, UTIL::BitField64 &encoder){
-  const int celId = hit->getCellID0() ;
-  encoder.setValue(celId) ;
-  int subdet = encoder[lcio::LCTrackerCellID::subdet()];
-  return subdet;
-}
-
-int TruthTrackFinder::getLayer(const TrackerHit* hit, UTIL::BitField64 &encoder){
-  const int celId = hit->getCellID0() ;
-  encoder.setValue(celId);
-  int layer = encoder[lcio::LCTrackerCellID::layer()];
-  return layer;
-}
   
-TrackerHitVec TruthTrackFinder::removeHitsSameLayer(const std::vector<TrackerHit*> trackHits, UTIL::BitField64 &encoder){
-  EVENT::TrackerHitVec trackFilteredHits;
-  trackFilteredHits.push_back(trackHits[0]);
+void TruthTrackFinder::removeHitsSameLayer(const std::vector<TrackerHit*> &trackHits, std::vector<TrackerHit*> &trackFilteredHits){
+  trackFilteredHits.push_back(*(trackHits.begin()));
 
-  for(unsigned int itHit=1;itHit<trackHits.size();itHit++){
-    int subdet = getSubdetector(trackHits.at(itHit), encoder);
-    int layer = getLayer(trackHits.at(itHit), encoder);
-    if( subdet != getSubdetector(trackHits.at(itHit-1), encoder) )
-      trackFilteredHits.push_back(trackHits[itHit]);
-    else if( layer != getLayer(trackHits.at(itHit-1), encoder) )
-        trackFilteredHits.push_back(trackHits[itHit]);
+  for(std::vector<TrackerHit*>::const_iterator it = trackHits.begin()+1; it != trackHits.end(); ++it){
+    int subdet = getSubdetector(*it);
+    int layer = getLayer(*it);
+    if( subdet != getSubdetector(*(it-1)) ){
+      trackFilteredHits.push_back(*it);
+    }
+    else if( layer != getLayer(*(it-1)) ){
+      trackFilteredHits.push_back(*it);
+    }
   }
 
-  return trackFilteredHits;
 }
   
   
