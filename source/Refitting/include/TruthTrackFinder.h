@@ -49,13 +49,13 @@ class TruthTrackFinder : public Processor {
   void getCollection(LCCollection*&, std::string, LCEvent*);
 	
   // Get the subdetector ID from a hit
-  int getSubdetector(TrackerHit*, UTIL::BitField64&);
+  int getSubdetector(const TrackerHit*, UTIL::BitField64&);
 
   // Get the layer ID from a hit
-  int getLayer(TrackerHit*, UTIL::BitField64&);
+  int getLayer(const TrackerHit*, UTIL::BitField64&);
 
   // Remove hits in the same layer of the same subdetector
-  TrackerHitVec removeHitsSameLayer(std::vector<TrackerHit*>, UTIL::BitField64&);
+  TrackerHitVec removeHitsSameLayer(const std::vector<TrackerHit*>, UTIL::BitField64&);
 
 	
  protected:
