@@ -14,6 +14,7 @@
 #include <EVENT/LCCollection.h>
 #include "MarlinTrk/IMarlinTrkSystem.h"
 #include "EVENT/TrackerHit.h"
+#include <UTIL/CellIDDecoder.h>
 
 #include <AIDA/AIDA.h>
 
@@ -47,7 +48,14 @@ class TruthTrackFinder : public Processor {
   // Call to get collections
   void getCollection(LCCollection*&, std::string, LCEvent*);
 	
-  // Sort hits by radius
+  // Get the subdetector ID from a hit
+  int getSubdetector(TrackerHit*, UTIL::BitField64&);
+
+  // Get the layer ID from a hit
+  int getLayer(TrackerHit*, UTIL::BitField64&);
+
+  // Remove hits in the same layer of the same subdetector
+  TrackerHitVec removeHitsSameLayer(std::vector<TrackerHit*>, UTIL::BitField64&);
 
 	
  protected:

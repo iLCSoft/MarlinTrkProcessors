@@ -193,6 +193,9 @@ void TruthTrackFinder::processRunHeader( LCRunHeader* ) {
 
 void TruthTrackFinder::processEvent( LCEvent* evt ) {
 	
+  //Initialize CellID encoder
+  UTIL::BitField64 encoder(lcio::LCTrackerCellID::encoding_string());
+
   // Get the collection of MC particles
   LCCollection* particleCollection = 0 ;
   getCollection(particleCollection, m_inputParticleCollection, evt); if(particleCollection == 0) return;
@@ -287,6 +290,9 @@ void TruthTrackFinder::processEvent( LCEvent* evt ) {
 		// Sort the hits from smaller to larger radius
 		std::sort(trackHits.begin(),trackHits.end(),sort_by_radius);
 
+    // Remove the hits on the same layers (removing those with higher R)
+    EVENT::TrackerHitVec trackFilteredByRHits = removeHitsSameLayer(trackHits, encoder);
+    if(trackFilteredByRHits.size() < 3) continue;
 
     /*
      Fit - this gets complicated. 
@@ -304,9 +310,9 @@ void TruthTrackFinder::processEvent( LCEvent* evt ) {
 
     // Save a vector of the hits to be used (why is this not attached to the track directly?? MarlinTrkUtils to be updated?)
     EVENT::TrackerHitVec trackfitHits;
-    for(unsigned int itTrackHit=0;itTrackHit<trackHits.size();itTrackHit++){
-      trackfitHits.push_back(trackHits[itTrackHit]);
-    }
+    for(unsigned int itTrackHit=0;itTrackHit<trackFilteredByRHits.size();itTrackHit++)
+      trackfitHits.push_back(trackFilteredByRHits[itTrackHit]);
+   
 
 
 		
@@ -359,11 +365,15 @@ void TruthTrackFinder::processEvent( LCEvent* evt ) {
       if (fitError!=0) {        
         
         // Sort the hits from smaller to larger z
-        std::sort(trackfitHits.begin(),trackfitHits.end(),sort_by_z);        
+        std::sort(trackfitHits.begin(),trackfitHits.end(),sort_by_z);     
+
+        // Removing the hits on the same layers (remove those with higher z)
+        EVENT::TrackerHitVec trackFilteredByZHits = removeHitsSameLayer(trackfitHits, encoder);
+        if(trackFilteredByZHits.size() < 3) continue;
 
         // If fit with hits ordered by radius has failed, the track is probably a 'spiral' track. 
         // Fitting 'backward' is very difficult for spiral track, so the default direction here is set as 'forward'
-        fitError = MarlinTrk::createFinalisedLCIOTrack(marlinTrackZSort, trackfitHits, track,  MarlinTrk::IMarlinTrack::forward, trkState, m_magneticField, m_maxChi2perHit);
+        fitError = MarlinTrk::createFinalisedLCIOTrack(marlinTrackZSort, trackFilteredByZHits, track,  MarlinTrk::IMarlinTrack::forward, trkState, m_magneticField, m_maxChi2perHit);
       }
 
     
@@ -388,11 +398,15 @@ void TruthTrackFinder::processEvent( LCEvent* evt ) {
         track = new TrackImpl;
 
         // Sort the hits from smaller to larger z
-        std::sort(trackfitHits.begin(),trackfitHits.end(),sort_by_z);        
+        std::sort(trackfitHits.begin(),trackfitHits.end(),sort_by_z); 
+
+        // Removing the hits on the same layers (remove those with higher z)
+        EVENT::TrackerHitVec trackFilteredByZHits = removeHitsSameLayer(trackfitHits, encoder);
+        if(trackFilteredByZHits.size() < 3) continue;
 
         // If fit with hits ordered by radius has failed, the track is probably a 'spiral' track. 
         // Fitting 'backward' is very difficult for spiral track, so the default directiin here is set as 'forward'
-        fitError = MarlinTrk::createFinalisedLCIOTrack(marlinTrackZSort, trackfitHits, track,  MarlinTrk::IMarlinTrack::forward, covMatrix, m_magneticField, m_maxChi2perHit);
+        fitError = MarlinTrk::createFinalisedLCIOTrack(marlinTrackZSort, trackFilteredByZHits, track,  MarlinTrk::IMarlinTrack::forward, covMatrix, m_magneticField, m_maxChi2perHit);
 
       }
 
@@ -475,11 +489,34 @@ void TruthTrackFinder::getCollection(LCCollection* &collection, std::string coll
   return;
 }
 
+int TruthTrackFinder::getSubdetector(TrackerHit* hit, UTIL::BitField64 &encoder){
+  const int celId = hit->getCellID0() ;
+  encoder.setValue(celId) ;
+  int subdet = encoder[lcio::LCTrackerCellID::subdet()];
+  return subdet;
+}
 
+int TruthTrackFinder::getLayer(TrackerHit* hit, UTIL::BitField64 &encoder){
+  const int celId = hit->getCellID0() ;
+  encoder.setValue(celId);
+  int layer = encoder[lcio::LCTrackerCellID::layer()];
+  return layer;
+}
   
-  
-  
-  
-  
+TrackerHitVec TruthTrackFinder::removeHitsSameLayer(std::vector<TrackerHit*> trackHits, UTIL::BitField64 &encoder){
+  EVENT::TrackerHitVec trackFilteredHits;
+  trackFilteredHits.push_back(trackHits[0]);
+
+  for(int itHit=1;itHit<trackHits.size();itHit++){
+    int subdet = getSubdetector(trackHits.at(itHit), encoder);
+    int layer = getLayer(trackHits.at(itHit), encoder);
+    if( subdet != getSubdetector(trackHits.at(itHit-1), encoder) )
+      trackFilteredHits.push_back(trackHits[itHit]);
+    else if( layer != getLayer(trackHits.at(itHit-1), encoder) )
+        trackFilteredHits.push_back(trackHits[itHit]);
+  }
+
+  return trackFilteredHits;
+}
   
   
