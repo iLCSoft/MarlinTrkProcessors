@@ -59,8 +59,6 @@ namespace MarlinTrk{
   class IMarlinTrkSystem ;
 }
 
-using namespace DD4hep::DDRec;
-
 
 class ExtrToTracker : public marlin::Processor {
 
@@ -182,7 +180,7 @@ protected:
  
   bool _extrapolateForward;
 
-  const DD4hep::DDRec::SurfaceMap* _map ;
+  const dd4hep::rec::SurfaceMap* _map ;
 
   
 
@@ -200,8 +198,6 @@ protected:
 
   std::vector<std::vector<TrackerHitPlane* > > _vecvecHitsInCol;
  
-//  DD4hep::DDRec::SurfaceMap _surfMap;
-
  
 } ;
 

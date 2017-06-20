@@ -145,7 +145,7 @@ protected:
   std::map<std::string, std::list<float>*> _histo_buffer_map;
   
   
-  DD4hep::DDRec::SurfaceMap _surfMap{} ;
+  dd4hep::rec::SurfaceMap _surfMap{} ;
 
 } ;
 

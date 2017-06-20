@@ -35,7 +35,7 @@ using namespace lcio ;
 using namespace marlin ;
 
 using namespace MarlinTrk ;
-using namespace DDSurfaces ;
+using namespace dd4hep::rec ;
 
 
 

@@ -2,11 +2,6 @@
 #include "TruthTrackFinder.h"
 #include "DDRec/API/IDDecoder.h"
 
-//#include "DD4hep/LCDD.h"
-//#include "DD4hep/VolumeManager.h"
-
-
-
 #include <marlinutil/HelixClass.h>
 
 #include "MarlinTrk/MarlinTrkUtils.h"
@@ -60,7 +55,7 @@
 using namespace lcio ;
 using namespace marlin ;
 using namespace std ;
-using namespace DD4hep ;
+using namespace dd4hep ;
 using namespace AIDA ;
 
 
