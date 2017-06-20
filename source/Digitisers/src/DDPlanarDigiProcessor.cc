@@ -14,7 +14,7 @@
 #include <UTIL/BitSet32.h>
 
 
-#include "DD4hep/LCDD.h"
+#include "DD4hep/Detector.h"
 #include "DD4hep/DD4hepUnits.h"
 
 #include <gsl/gsl_rng.h>
@@ -149,14 +149,14 @@ void DDPlanarDigiProcessor::init() {
     throw EVENT::Exception( ss.str() ) ;
   }
 
-  DD4hep::Geometry::LCDD& lcdd = DD4hep::Geometry::LCDD::getInstance();
+  dd4hep::Detector& theDetector = dd4hep::Detector::getInstance();
 
 
   //===========  get the surface map from the SurfaceManager ================
 
-  DD4hep::DDRec::SurfaceManager& surfMan = *lcdd.extension<DD4hep::DDRec::SurfaceManager>() ;
+  dd4hep::rec::SurfaceManager& surfMan = *theDetector.extension<dd4hep::rec::SurfaceManager>() ;
 
-  DD4hep::Geometry::DetElement det = lcdd.detector( _subDetName ) ;
+  dd4hep::DetElement det = theDetector.detector( _subDetName ) ;
 
   _map = surfMan.map( det.name() ) ;
 
@@ -243,7 +243,7 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
       // get the measurement surface for this hit using the CellID
       //***********************************************************
       
-      DD4hep::DDRec::SurfaceMap::const_iterator sI = _map->find( cellID0 ) ;
+      dd4hep::rec::SurfaceMap::const_iterator sI = _map->find( cellID0 ) ;
 
       if( sI == _map->end() ){    
 

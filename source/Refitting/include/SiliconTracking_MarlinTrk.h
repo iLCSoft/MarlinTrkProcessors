@@ -35,10 +35,8 @@ namespace MarlinTrk {
   class IMarlinTrkSystem ;
 }
 
-namespace DD4hep{
-  namespace Geometry{
-    class LCDD ;
-  }
+namespace dd4hep{
+    class Detector ;
 }
 
 namespace UTIL{
@@ -430,7 +428,7 @@ protected:
   int getModuleID(TrackerHit* hit)   { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::module()]; };
   int getSensorID(TrackerHit* hit)   { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::sensor()]; };
   
-  void setupGeom(const DD4hep::Geometry::LCDD& lcdd) ;
+  void setupGeom(const dd4hep::Detector& theDetector);
   
   
   unsigned int _nLayersVTX;

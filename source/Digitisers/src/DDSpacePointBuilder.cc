@@ -129,14 +129,14 @@ void DDSpacePointBuilder::init() {
   
   trksystem->init() ;  
 
-  DD4hep::Geometry::LCDD& lcdd = DD4hep::Geometry::LCDD::getInstance();
-  //lcdd = DD4hep::Geometry::LCDD::getInstance();
+  dd4hep::Detector& theDetector = dd4hep::Detector::getInstance();
+  //theDetector = dd4hep::Detector::getInstance();
   
   //===========  get the surface map from the SurfaceManager ================
   
-  DD4hep::DDRec::SurfaceManager& surfMan = *lcdd.extension<DD4hep::DDRec::SurfaceManager>() ;
-  DD4hep::Geometry::DetElement det = lcdd.detector( _subDetName ) ;
-  //const DD4hep::DDRec::SurfaceMap *surfMap ;
+  dd4hep::rec::SurfaceManager& surfMan = *theDetector.extension<dd4hep::rec::SurfaceManager>() ;
+  dd4hep::DetElement det = theDetector.detector( _subDetName ) ;
+  //const dd4hep::rec::SurfaceMap *surfMap ;
   surfMap = surfMan.map( det.name() ) ;
   
  
@@ -411,7 +411,7 @@ void DDSpacePointBuilder::end(){
    
 }
 
-//TrackerHitImpl* DDSpacePointBuilder::createSpacePoint( TrackerHitPlane* a , TrackerHitPlane* b, double stripLength, const DD4hep::DDRec::SurfaceMap* surfMap ){
+//TrackerHitImpl* DDSpacePointBuilder::createSpacePoint( TrackerHitPlane* a , TrackerHitPlane* b, double stripLength, const dd4hep::rec::SurfaceMap* surfMap ){
 TrackerHitImpl* DDSpacePointBuilder::createSpacePoint( TrackerHitPlane* a , TrackerHitPlane* b, double stripLength ){  
   const double* pa = a->getPosition();
   double xa = pa[0];
@@ -840,9 +840,9 @@ std::vector< int > DDSpacePointBuilder::getCellID0sAtBack( int cellID0 ){
 
   else{
 
-    DD4hep::Geometry::LCDD & lcdd2 = DD4hep::Geometry::LCDD::getInstance();
-    DD4hep::Geometry::DetElement ftdDE = lcdd2.detector( _subDetName);
-    DD4hep::DDRec::ZDiskPetalsData* ft = ftdDE.extension<DD4hep::DDRec::ZDiskPetalsData>();
+    dd4hep::Detector & theDetector2 = dd4hep::Detector::getInstance();
+    dd4hep::DetElement ftdDE = theDetector2.detector( _subDetName);
+    dd4hep::rec::ZDiskPetalsData* ft = ftdDE.extension<dd4hep::rec::ZDiskPetalsData>();
 
     int sensor = cellID[ LCTrackerCellID::sensor() ];
     //int Nsensors = ft->layers.at(layer).petalNumber ; 
@@ -851,7 +851,7 @@ std::vector< int > DDSpacePointBuilder::getCellID0sAtBack( int cellID0 ){
     streamlog_out(DEBUG3) << " layer " << layer << " sensors " << Nsensors << std::endl; 
     streamlog_out(DEBUG3) << " so sensor " << sensor << " is connected with sensor " << sensor + Nsensors/2 << std::endl; 
 
-    std::vector<DD4hep::DDRec::ZDiskPetalsStruct::SensorType> Sensors ;
+    std::vector<dd4hep::rec::ZDiskPetalsStruct::SensorType> Sensors ;
     
     //check if sensor is in front
     //if(( Sensors.at(layer).DoubleSided ) && ( sensor <= Nsensors / 2 ) ){

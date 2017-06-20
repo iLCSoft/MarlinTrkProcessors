@@ -17,7 +17,7 @@
 #include "MarlinTrk/MarlinTrkUtils.h"
 
 
-#include "DD4hep/LCDD.h"
+#include "DD4hep/Detector.h"
 #include "DD4hep/DD4hepUnits.h"
 #include "DDRec/Surface.h"
 #include "DDRec/SurfaceManager.h"
@@ -1197,28 +1197,28 @@ void DDCellsAutomatonMV::CreateMiniVectors( int sector ) {
 
 void DDCellsAutomatonMV::setupGeom(){
 
-  DD4hep::Geometry::LCDD& lcdd = DD4hep::Geometry::LCDD::getInstance();
+  dd4hep::Detector& theDetector = dd4hep::Detector::getInstance();
   const double pos[3]={0,0,0}; 
   double bFieldVec[3]={0,0,0}; 
-  lcdd.field().magneticField(pos,bFieldVec); // get the magnetic field vector from DD4hep
+  theDetector.field().magneticField(pos,bFieldVec); // get the magnetic field vector from DD4hep
   _bField = bFieldVec[2]/dd4hep::tesla; // z component at (0,0,0)
 
   _nLayersVTX = 0; 
-  DD4hep::Geometry::DetElement vtxDE = lcdd.detector(_detElVXDName);
-  DD4hep::DDRec::ZPlanarData* vtx = vtxDE.extension<DD4hep::DDRec::ZPlanarData>(); 
+  dd4hep::DetElement vtxDE = theDetector.detector(_detElVXDName);
+  dd4hep::rec::ZPlanarData* vtx = vtxDE.extension<dd4hep::rec::ZPlanarData>();
   _nLayersVTX=vtx->layers.size(); 
 
 
   _nLayersSIT = 0;
 
   int nIT = 0;
-  DD4hep::Geometry::DetElement itDE = lcdd.detector(_detElITName);
-  DD4hep::DDRec::ZPlanarData* it = itDE.extension<DD4hep::DDRec::ZPlanarData>(); 
+  dd4hep::DetElement itDE = theDetector.detector(_detElITName);
+  dd4hep::rec::ZPlanarData* it = itDE.extension<dd4hep::rec::ZPlanarData>();
   nIT=it->layers.size();
 
   int nOT = 0;
-  DD4hep::Geometry::DetElement otDE = lcdd.detector(_detElOTName);
-  DD4hep::DDRec::ZPlanarData* ot = otDE.extension<DD4hep::DDRec::ZPlanarData>(); 
+  dd4hep::DetElement otDE = theDetector.detector(_detElOTName);
+  dd4hep::rec::ZPlanarData* ot = otDE.extension<dd4hep::rec::ZPlanarData>();
   nOT=ot->layers.size();
   
   _nLayersSIT = nIT + nOT;  

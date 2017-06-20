@@ -16,7 +16,7 @@
 #include "DDSurfaces/Vector2D.h"
 #include "DDSurfaces/Vector3D.h"
 #include "DDSurfaces/ISurface.h"
-#include "DD4hep/LCDD.h"
+#include "DD4hep/Detector.h"
 #include "DDRec/SurfaceManager.h"
 #include "DDRec/SurfaceHelper.h"
 #include "DD4hep/DD4hepUnits.h"
@@ -215,8 +215,8 @@ class DDSpacePointBuilder : public Processor {
   double _striplength ;
   std::string _subDetName ;
 
-  //DD4hep::Geometry::LCDD& lcdd;
-  const DD4hep::DDRec::SurfaceMap* surfMap ;
+  //dd4hep::Detector& lcdd;
+  const dd4hep::rec::SurfaceMap* surfMap ;
   
 } ;
 

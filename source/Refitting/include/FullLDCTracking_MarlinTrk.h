@@ -29,10 +29,8 @@ namespace MarlinTrk {
   class IMarlinTrkSystem ;
 }
 
-namespace DD4hep{
-  namespace Geometry{
-    class LCDD ;
-  }
+namespace dd4hep{
+    class Detector ;
 }
 
 /** === FullLDCTracking_MarlinTrk Processor === <br>
@@ -445,7 +443,7 @@ protected:
   int getSensorID(TrackerHit* hit)   { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::sensor()]; };
 
   
-  void setupGeom(const DD4hep::Geometry::LCDD& lcdd) ;
+  void setupGeom(const dd4hep::Detector& lcdd) ;
 
   double _tpc_inner_r;
   double _tpc_outer_r;

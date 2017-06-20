@@ -3,7 +3,7 @@
 #include <IMPL/TrackerHitPlaneImpl.h>
 #include <UTIL/ILDConf.h>
 
-#include "DD4hep/LCDD.h"
+#include "DD4hep/Detector.h"
 #include "DD4hep/DD4hepUnits.h"
 #include "DDRec/DetectorData.h"
 
@@ -221,13 +221,13 @@ void ExtrToSIT::init() {
   SITHitsNonFitted = 0 ;
   TotalSITHits = 0 ;
 
-  DD4hep::Geometry::LCDD& lcdd = DD4hep::Geometry::LCDD::getInstance();
+  dd4hep::Detector& theDetector = dd4hep::Detector::getInstance();
   double bFieldVec[3] ; 
-  lcdd.field().magneticField( {0,0,0} , bFieldVec ); // get the magnetic field vector from DD4hep
+  theDetector.field().magneticField( {0,0,0} , bFieldVec ); // get the magnetic field vector from DD4hep
   _bField = bFieldVec[2]/dd4hep::tesla; // z component at (0,0,0)
 
-  DD4hep::Geometry::DetElement sitDE = lcdd.detector("SIT");
-  DD4hep::DDRec::ZPlanarData* sit = sitDE.extension<DD4hep::DDRec::ZPlanarData>(); 
+  dd4hep::DetElement sitDE = theDetector.detector("SIT");
+  dd4hep::rec::ZPlanarData* sit = sitDE.extension<dd4hep::rec::ZPlanarData>();
   _nSITLayers = sit->layers.size(); 
   
   _maxChi2PerHit = 100;

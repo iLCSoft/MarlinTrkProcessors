@@ -18,7 +18,7 @@
 #include <UTIL/Operators.h>
 
 
-#include "DD4hep/LCDD.h"
+#include "DD4hep/Detector.h"
 #include "DD4hep/DD4hepUnits.h"
 
 // ----- include for verbosity dependend logging ---------
@@ -147,9 +147,9 @@ void RefitProcessor::init() {
   printParameters() ;
   
   
-  DD4hep::Geometry::LCDD& lcdd = DD4hep::Geometry::LCDD::getInstance();
+  dd4hep::Detector& theDetector = dd4hep::Detector::getInstance();
   double bFieldVec[3]; 
-  lcdd.field().magneticField({0,0,0},bFieldVec); // get the magnetic field vector from DD4hep
+  theDetector.field().magneticField({0,0,0},bFieldVec); // get the magnetic field vector from DD4hep
   _bField = bFieldVec[2]/dd4hep::tesla; // z component at (0,0,0)
 
   //---- 

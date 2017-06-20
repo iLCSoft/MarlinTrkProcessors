@@ -31,7 +31,7 @@
 #include <UTIL/BitSet32.h>
 #include <UTIL/LCRelationNavigator.h>
 
-#include "DD4hep/LCDD.h"
+#include "DD4hep/Detector.h"
 #include "DD4hep/DD4hepUnits.h"
 #include "DDRec/SurfaceManager.h"
 
@@ -175,7 +175,7 @@ void TruthTrackFinder::init() {
   m_maxChi2perHit = 1.e3;
   
   // Get the magnetic field
-  DD4hep::Geometry::LCDD& lcdd = DD4hep::Geometry::LCDD::getInstance();
+  dd4hep::Detector& lcdd = dd4hep::Detector::getInstance();
   const double position[3]={0,0,0}; // position to calculate magnetic field at (the origin in this case)
   double magneticFieldVector[3]={0,0,0}; // initialise object to hold magnetic field
   lcdd.field().magneticField(position,magneticFieldVector); // get the magnetic field vector from DD4hep
