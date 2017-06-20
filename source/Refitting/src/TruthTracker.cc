@@ -22,7 +22,7 @@
 // ----- include for verbosity dependend logging ---------
 #include "marlin/VerbosityLevels.h"
 
-#include "DD4hep/LCDD.h"
+#include "DD4hep/Detector.h"
 #include "DD4hep/DD4hepUnits.h"
 
 #include "MarlinTrk/Factory.h"
@@ -305,7 +305,7 @@ void TruthTracker::init() {
   
 #endif
   
-  DD4hep::Geometry::LCDD& lcdd = DD4hep::Geometry::LCDD::getInstance();
+  dd4hep::Detector& lcdd = dd4hep::Detector::getInstance();
   double bFieldVec[3]; 
   lcdd.field().magneticField({0,0,0},bFieldVec); // get the magnetic field vector from DD4hep
   _Bz = bFieldVec[2]/dd4hep::tesla; // z component at (0,0,0)

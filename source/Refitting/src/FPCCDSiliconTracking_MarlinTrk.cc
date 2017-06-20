@@ -36,7 +36,7 @@
 #include "MarlinTrk/IMarlinTrack.h"
 #include "MarlinTrk/Factory.h"
 
-#include "DD4hep/LCDD.h"
+#include "DD4hep/Detector.h"
 #include "DD4hep/DD4hepUnits.h"
 #include "DDRec/DetectorData.h"
 
@@ -576,9 +576,9 @@ void FPCCDSiliconTracking_MarlinTrk::init() {
   _trksystem->init() ;  
 
 
-  DD4hep::Geometry::LCDD& lcdd = DD4hep::Geometry::LCDD::getInstance();
+  dd4hep::Detector& theDetector = dd4hep::Detector::getInstance();
   
-  this->setupGeom( lcdd );
+  this->setupGeom( theDetector );
 
   if (_useSIT == 0)
     _nLayers = _nLayersVTX;
@@ -598,8 +598,8 @@ void FPCCDSiliconTracking_MarlinTrk::init() {
   cutOnR_FTD = 1000.*cutOnR_FTD;
   _cutOnOmegaFTD = 1/cutOnR_FTD;
 
-  InitVXDGeometry( lcdd );
-  if(_useSIT == 1) InitSITGeometry( lcdd );
+  InitVXDGeometry( theDetector );
+  if(_useSIT == 1) InitSITGeometry( theDetector );
 
   _output_track_col_quality = 0;
 
@@ -3628,10 +3628,10 @@ void FPCCDSiliconTracking_MarlinTrk::FinalRefit(LCCollectionVec* trk_col, LCColl
 }
 
 
-void FPCCDSiliconTracking_MarlinTrk::setupGeom( const DD4hep::Geometry::LCDD& lcdd ){
+void FPCCDSiliconTracking_MarlinTrk::setupGeom( const dd4hep::Detector& theDetector ){
 
   double bFieldVec[3]; 
-  lcdd.field().magneticField({0,0,0},bFieldVec); // get the magnetic field vector from DD4hep
+  theDetector.field().magneticField({0,0,0},bFieldVec); // get the magnetic field vector from DD4hep
   _bField = bFieldVec[2]/dd4hep::tesla; // z component at (0,0,0)
   
   
@@ -3642,14 +3642,14 @@ void FPCCDSiliconTracking_MarlinTrk::setupGeom( const DD4hep::Geometry::LCDD& lc
     
     streamlog_out( DEBUG9 ) << " filling VXD parameters  " << std::endl ;
     
-    DD4hep::Geometry::DetElement vtxDE = lcdd.detector("VXD");
-    DD4hep::DDRec::ZPlanarData* vtx = vtxDE.extension<DD4hep::DDRec::ZPlanarData>(); 
+    dd4hep::DetElement vtxDE = theDetector.detector("VXD");
+    dd4hep::rec::ZPlanarData* vtx = vtxDE.extension<dd4hep::rec::ZPlanarData>();
     _nLayersVTX=vtx->layers.size(); 
     
   }
   catch( std::runtime_error& e){
     
-    streamlog_out( DEBUG9 ) << " ### VXD detector Not Present in LCDD" << std::endl ;
+    streamlog_out( DEBUG9 ) << " ### VXD detector Not Present in Detector" << std::endl ;
   }
   
   
@@ -3661,13 +3661,13 @@ void FPCCDSiliconTracking_MarlinTrk::setupGeom( const DD4hep::Geometry::LCDD& lc
 
     streamlog_out( DEBUG9 ) << " filling SIT parameters  " << std::endl ;
 
-    DD4hep::Geometry::DetElement sitDE = lcdd.detector("SIT");
-    DD4hep::DDRec::ZPlanarData* sit = sitDE.extension<DD4hep::DDRec::ZPlanarData>(); 
+    dd4hep::DetElement sitDE = theDetector.detector("SIT");
+    dd4hep::rec::ZPlanarData* sit = sitDE.extension<dd4hep::rec::ZPlanarData>();
     _nLayersSIT=sit->layers.size(); 
   }
   catch(  std::runtime_error& e){
 
-    streamlog_out( DEBUG9 ) << " ###  SIT detector Not Present in LCDD " << std::endl ;
+    streamlog_out( DEBUG9 ) << " ###  SIT detector Not Present in Detector " << std::endl ;
 
   }
 
@@ -3680,8 +3680,8 @@ void FPCCDSiliconTracking_MarlinTrk::setupGeom( const DD4hep::Geometry::LCDD& lc
 
     streamlog_out( DEBUG9 ) << " filling FTD parameters  " << std::endl ;
 
-    DD4hep::Geometry::DetElement ftdDE = lcdd.detector("FTD");
-    DD4hep::DDRec::ZDiskPetalsData* ftd = ftdDE.extension<DD4hep::DDRec::ZDiskPetalsData>(); 
+    dd4hep::DetElement ftdDE = theDetector.detector("FTD");
+    dd4hep::rec::ZDiskPetalsData* ftd = ftdDE.extension<dd4hep::rec::ZDiskPetalsData>();
 
     _nlayersFTD = ftd->layers.size();
 
@@ -3699,7 +3699,7 @@ void FPCCDSiliconTracking_MarlinTrk::setupGeom( const DD4hep::Geometry::LCDD& lc
   }
   catch( std::runtime_error& e){
 
-    streamlog_out( DEBUG9 ) << " ### FTD detector Not Present in LCDD" << std::endl ;
+    streamlog_out( DEBUG9 ) << " ### FTD detector Not Present in Detector" << std::endl ;
 
   } 
 
@@ -3762,11 +3762,11 @@ LCRelationNavigator* FPCCDSiliconTracking_MarlinTrk::GetRelations(LCEvent * evt 
 
 
 
-void FPCCDSiliconTracking_MarlinTrk::InitVXDGeometry(const DD4hep::Geometry::LCDD& lcdd){
+void FPCCDSiliconTracking_MarlinTrk::InitVXDGeometry(const dd4hep::Detector& theDetector){
   // Save frequently used parameters.
 
-  DD4hep::Geometry::DetElement vtxDE = lcdd.detector("VXD");
-  DD4hep::DDRec::ZPlanarData* vtx = vtxDE.extension<DD4hep::DDRec::ZPlanarData>(); 
+  dd4hep::DetElement vtxDE = theDetector.detector("VXD");
+  dd4hep::rec::ZPlanarData* vtx = vtxDE.extension<dd4hep::rec::ZPlanarData>();
   
   _vxd.nLayer = vtx->layers.size(); 
 
@@ -3775,7 +3775,7 @@ void FPCCDSiliconTracking_MarlinTrk::InitVXDGeometry(const DD4hep::Geometry::LCD
 
   for(int ly=0;ly < _vxd.nLayer; ly++){
 
-    const DD4hep::DDRec::ZPlanarData::LayerLayout layerVXD = vtx->layers[ly] ;
+    const dd4hep::rec::ZPlanarData::LayerLayout layerVXD = vtx->layers[ly] ;
 
     _vxd.geodata[ly].nladder = layerVXD.ladderNumber ;     // Number of ladders in this layer
     if( _vxd.maxLadder < _vxd.geodata[ly].nladder ) { _vxd.maxLadder = _vxd.geodata[ly].nladder; }
@@ -3819,11 +3819,11 @@ void FPCCDSiliconTracking_MarlinTrk::InitVXDGeometry(const DD4hep::Geometry::LCD
   }
 } 
 
-void FPCCDSiliconTracking_MarlinTrk::InitSITGeometry(const DD4hep::Geometry::LCDD& lcdd){
+void FPCCDSiliconTracking_MarlinTrk::InitSITGeometry(const dd4hep::Detector& theDetector){
   // Save frequently used parameters.
 
-  DD4hep::Geometry::DetElement sitDE = lcdd.detector("SIT");
-  DD4hep::DDRec::ZPlanarData* sit = sitDE.extension<DD4hep::DDRec::ZPlanarData>(); 
+  dd4hep::DetElement sitDE = theDetector.detector("SIT");
+  dd4hep::rec::ZPlanarData* sit = sitDE.extension<dd4hep::rec::ZPlanarData>();
   
 
   _sit.nLayer = sit->layers.size(); 
@@ -3833,7 +3833,7 @@ void FPCCDSiliconTracking_MarlinTrk::InitSITGeometry(const DD4hep::Geometry::LCD
 
   for(int ly=0;ly < _sit.nLayer; ly++){
 
-    const DD4hep::DDRec::ZPlanarData::LayerLayout layerSIT = sit->layers[ly] ;
+    const dd4hep::rec::ZPlanarData::LayerLayout layerSIT = sit->layers[ly] ;
 
    _sit.geodata[ly].nladder = layerSIT.ladderNumber;     // Number of ladders in this layer
     if( _sit.maxLadder < _sit.geodata[ly].nladder ) { _sit.maxLadder = _sit.geodata[ly].nladder; }

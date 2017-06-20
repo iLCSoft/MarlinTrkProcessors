@@ -6,7 +6,7 @@
 
 #include "UTIL/Operators.h"
 
-#include "DD4hep/LCDD.h"
+#include "DD4hep/Detector.h"
 #include "DD4hep/DD4hepUnits.h"
 #include "DDRec/DetectorData.h"
 #include "DD4hep/DetType.h"
@@ -713,7 +713,7 @@ void ExtrToTracker::getCellID0AndPositionInfo(LCCollection*& col ){
   for (int i=0; i<col->getNumberOfElements(); i++){    
     TrackerHitPlane* trackerHit = dynamic_cast<TrackerHitPlane*>( col->getElementAt(i) ) ;
 
-    DD4hep::long64 id = trackerHit->getCellID0() ;
+    dd4hep::long64 id = trackerHit->getCellID0() ;
     cellid_decoder.setValue( id ) ;
 
     int subdet = cellid_decoder[UTIL::LCTrackerCellID::subdet()];
@@ -811,7 +811,7 @@ TrackerHitPlane* ExtrToTracker::getSiHit(std::vector<TrackerHitPlane* >& hitsOnD
 
 
 
-TrackerHitPlane* ExtrToTracker::getSiHit(std::vector<DD4hep::long64 >& vecElID, std::map<int , std::vector<TrackerHitPlane* > >& mapElHits, MarlinTrk::IMarlinTrack*& marlin_trk){
+TrackerHitPlane* ExtrToTracker::getSiHit(std::vector<dd4hep::long64 >& vecElID, std::map<int , std::vector<TrackerHitPlane* > >& mapElHits, MarlinTrk::IMarlinTrack*& marlin_trk){
   
   double min = 9999999.;
   double testChi2=0.;
@@ -933,10 +933,10 @@ void ExtrToTracker::getGeoInfo(){
   _vecSubdetIsBarrel.clear();
   _vecMapNeighbours.clear();
 
-  DD4hep::Geometry::LCDD & lcdd = DD4hep::Geometry::LCDD::getInstance();
+  dd4hep::Detector & mainDetector = dd4hep::Detector::getInstance();
      
   //alternative way 
-  // const std::vector< DD4hep::Geometry::DetElement>& barrelDets = DD4hep::Geometry::DetectorSelector(lcdd).detectors(  ( DD4hep::DetType::TRACKER | DD4hep::DetType::BARREL )) ;
+  // const std::vector< dd4hep::DetElement>& barrelDets = dd4hep::DetectorSelector(theDetector).detectors(  ( DD4hep::DetType::TRACKER | DD4hep::DetType::BARREL )) ;
   
   // streamlog_out( MESSAGE2 ) << " --- flag = " << (DD4hep::DetType::TRACKER | DD4hep::DetType::BARREL) <<std::endl;
   // streamlog_out( MESSAGE2 ) << " --- number of barrel detectors = " << barrelDets.size() <<std::endl;
@@ -944,7 +944,7 @@ void ExtrToTracker::getGeoInfo(){
 
   const double pos[3]={0,0,0}; 
   double bFieldVec[3]={0,0,0}; 
-  lcdd.field().magneticField(pos,bFieldVec); // get the magnetic field vector from DD4hep
+  mainDetector.field().magneticField(pos,bFieldVec); // get the magnetic field vector from DD4hep
   _bField = bFieldVec[2]/dd4hep::tesla; // z component at (0,0,0)
 
 
@@ -960,12 +960,12 @@ void ExtrToTracker::getGeoInfo(){
     
     try{
   
-      const DD4hep::Geometry::DetElement& theDetector = lcdd.detector(_vecSubdetName.at(i));
-      auto detType = DD4hep::DetType( theDetector.typeFlag() );
-      isBarrel = detType.is( DD4hep::DetType::BARREL );
+      const dd4hep::DetElement& theDetector = mainDetector.detector(_vecSubdetName.at(i));
+      auto detType = dd4hep::DetType( theDetector.typeFlag() );
+      isBarrel = detType.is( dd4hep::DetType::BARREL );
 	
       //streamlog_out( DEBUG1 ) << " is an endcap " << std::boolalpha << detType.is( DD4hep::DetType::ENDCAP ) << std::endl;
-      streamlog_out( DEBUG1 ) << " is a barrel " << std::boolalpha << detType.is( DD4hep::DetType::BARREL ) << std::endl;
+      streamlog_out( DEBUG1 ) << " is a barrel " << std::boolalpha << detType.is( dd4hep::DetType::BARREL ) << std::endl;
 
       detID = theDetector.id();
       streamlog_out( DEBUG2 ) << " --- subdet: " << _vecSubdetName.at(i) << " - id = " << detID <<std::endl;
@@ -973,8 +973,8 @@ void ExtrToTracker::getGeoInfo(){
 
       if ( isBarrel ) {
 
-	DD4hep::DDRec::ZPlanarData * theExtension = 0;
-	theExtension = theDetector.extension<DD4hep::DDRec::ZPlanarData>();
+	dd4hep::rec::ZPlanarData * theExtension = 0;
+	theExtension = theDetector.extension<dd4hep::rec::ZPlanarData>();
 
 	nlayers = theExtension->layers.size();
 
@@ -984,8 +984,8 @@ void ExtrToTracker::getGeoInfo(){
       }//end barrel type
       else {
 
-	DD4hep::DDRec::ZDiskPetalsData * theExtension = 0;  
-	theExtension = theDetector.extension<DD4hep::DDRec::ZDiskPetalsData>();
+	dd4hep::rec::ZDiskPetalsData * theExtension = 0;
+	theExtension = theDetector.extension<dd4hep::rec::ZDiskPetalsData>();
             
 	nlayers = theExtension->layers.size();
 
@@ -993,8 +993,8 @@ void ExtrToTracker::getGeoInfo(){
 
       }//end endcap type
 
-      DD4hep::DDRec::NeighbourSurfacesData *neighbourSurfaces = 0;  
-      neighbourSurfaces = theDetector.extension<DD4hep::DDRec::NeighbourSurfacesData>();
+      dd4hep::rec::NeighbourSurfacesData *neighbourSurfaces = 0;
+      neighbourSurfaces = theDetector.extension<dd4hep::rec::NeighbourSurfacesData>();
       _vecMapNeighbours.push_back(&(neighbourSurfaces->sameLayer));
 
     } catch (std::runtime_error &exception){
@@ -1030,7 +1030,7 @@ void  ExtrToTracker::FindAndAddHit(size_t& idet, int& elID, MarlinTrk::IMarlinTr
 		      
     bool isSuccessfulFit = false; 
 
-    std::vector<DD4hep::long64 > vecIDs;
+    std::vector<dd4hep::long64 > vecIDs;
     vecIDs = _vecMapNeighbours.at(idet)->find(elID)->second;
 
     vecIDs.insert( std::begin(vecIDs), elID );

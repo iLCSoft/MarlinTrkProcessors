@@ -53,10 +53,8 @@ namespace UTIL{
 }
 
 
-namespace DD4hep{
-  namespace Geometry{
-    class LCDD ;
-  }
+namespace dd4hep{
+  class Detector;
 }
 
 
@@ -481,7 +479,7 @@ protected:
   int getModuleID(SimTrackerHit* hit)   { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::module()]; };
   int getSensorID(SimTrackerHit* hit)   { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::sensor()]; };
   
-  void setupGeom(const DD4hep::Geometry::LCDD& lcdd) ;
+  void setupGeom(const dd4hep::Detector& theDetector) ;
   
   
   unsigned int _nLayersVTX;
@@ -538,8 +536,8 @@ protected:
      std::vector<GeoData_t> geodata;
   }_vxd,_sit;
 
-  void InitVXDGeometry(const DD4hep::Geometry::LCDD& lcdd);
-  void InitSITGeometry(const DD4hep::Geometry::LCDD& lcdd);
+  void InitVXDGeometry(const dd4hep::Detector& theDetector);
+  void InitSITGeometry(const dd4hep::Detector& theDetector);
   FloatVec _pixelSizeVec;
   float _pixelheight;
   TVector3 LocalToGlobal(TVector3 local,int layer,int ladder);

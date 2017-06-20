@@ -19,7 +19,7 @@
 #include <marlin/Global.h>
 #include "ClusterShapes.h"
 
-#include "DD4hep/LCDD.h"
+#include "DD4hep/Detector.h"
 #include "DD4hep/DD4hepUnits.h"
 #include "DDRec/DetectorData.h"
 
@@ -536,9 +536,9 @@ void FullLDCTracking_MarlinTrk::init() {
 #endif
   
 
-  DD4hep::Geometry::LCDD& lcdd = DD4hep::Geometry::LCDD::getInstance();
+  dd4hep::Detector& theDetector = dd4hep::Detector::getInstance();
   
-  this->setupGeom( lcdd );
+  this->setupGeom( theDetector );
   
 }
 
@@ -5206,10 +5206,10 @@ void FullLDCTracking_MarlinTrk::end() {
   
 }
 
-void FullLDCTracking_MarlinTrk::setupGeom( const DD4hep::Geometry::LCDD& lcdd){
+void FullLDCTracking_MarlinTrk::setupGeom( const dd4hep::Detector& theDetector){
   
   double bFieldVec[3]; 
-  lcdd.field().magneticField({0,0,0},bFieldVec); // get the magnetic field vector from DD4hep
+  theDetector.field().magneticField({0,0,0},bFieldVec); // get the magnetic field vector from DD4hep
   _bField = bFieldVec[2]/dd4hep::tesla; // z component at (0,0,0)
   
   //-- VXD Parameters--
@@ -5219,14 +5219,14 @@ void FullLDCTracking_MarlinTrk::setupGeom( const DD4hep::Geometry::LCDD& lcdd){
     
     streamlog_out( DEBUG9 ) << " filling VXD parameters  " << std::endl ;
     
-    DD4hep::Geometry::DetElement vtxDE = lcdd.detector("VXD");
-    DD4hep::DDRec::ZPlanarData* vtx = vtxDE.extension<DD4hep::DDRec::ZPlanarData>(); 
+    dd4hep::DetElement vtxDE = theDetector.detector("VXD");
+    dd4hep::rec::ZPlanarData* vtx = vtxDE.extension<dd4hep::rec::ZPlanarData>();
     _nLayersVTX=vtx->layers.size(); 
     
   }
   catch( std::runtime_error& e){
     
-    streamlog_out( DEBUG9 ) << " ### VXD detector Not Present in LCDD" << std::endl ;
+    streamlog_out( DEBUG9 ) << " ### VXD detector Not Present in Compact File" << std::endl ;
   }
   
   
@@ -5238,13 +5238,13 @@ void FullLDCTracking_MarlinTrk::setupGeom( const DD4hep::Geometry::LCDD& lcdd){
 
     streamlog_out( DEBUG9 ) << " filling SIT parameters  " << std::endl ;
 
-    DD4hep::Geometry::DetElement sitDE = lcdd.detector("SIT");
-    DD4hep::DDRec::ZPlanarData* sit = sitDE.extension<DD4hep::DDRec::ZPlanarData>(); 
+    dd4hep::DetElement sitDE = theDetector.detector("SIT");
+    dd4hep::rec::ZPlanarData* sit = sitDE.extension<dd4hep::rec::ZPlanarData>();
     _nLayersSIT=sit->layers.size(); 
   }
   catch(  std::runtime_error& e){
 
-    streamlog_out( DEBUG9 ) << " ###  SIT detector Not Present in LCDD " << std::endl ;
+    streamlog_out( DEBUG9 ) << " ###  SIT detector Not Present in Compact File " << std::endl ;
 
   }
 
@@ -5255,13 +5255,13 @@ void FullLDCTracking_MarlinTrk::setupGeom( const DD4hep::Geometry::LCDD& lcdd){
 
     streamlog_out( DEBUG9 ) << " filling SET parameters  " << std::endl ;
 
-    DD4hep::Geometry::DetElement setDE = lcdd.detector("SET");
-    DD4hep::DDRec::ZPlanarData* set = setDE.extension<DD4hep::DDRec::ZPlanarData>(); 
+    dd4hep::DetElement setDE = theDetector.detector("SET");
+    dd4hep::rec::ZPlanarData* set = setDE.extension<dd4hep::rec::ZPlanarData>();
     _nLayersSET=set->layers.size(); 
   }
   catch(  std::runtime_error& e){
 
-    streamlog_out( DEBUG9 ) << " ###  SET detector Not Present in LCDD " << std::endl ;
+    streamlog_out( DEBUG9 ) << " ###  SET detector Not Present in Compact File " << std::endl ;
 
   }
 
@@ -5274,8 +5274,8 @@ void FullLDCTracking_MarlinTrk::setupGeom( const DD4hep::Geometry::LCDD& lcdd){
 
     streamlog_out( DEBUG9 ) << " filling FTD parameters  " << std::endl ;
 
-    DD4hep::Geometry::DetElement ftdDE = lcdd.detector("FTD");
-    DD4hep::DDRec::ZDiskPetalsData* ftd = ftdDE.extension<DD4hep::DDRec::ZDiskPetalsData>(); 
+    dd4hep::DetElement ftdDE = theDetector.detector("FTD");
+    dd4hep::rec::ZDiskPetalsData* ftd = ftdDE.extension<dd4hep::rec::ZDiskPetalsData>();
 
     _nLayersFTD = ftd->layers.size();
 
@@ -5293,7 +5293,7 @@ void FullLDCTracking_MarlinTrk::setupGeom( const DD4hep::Geometry::LCDD& lcdd){
   }
   catch( std::runtime_error& e){
 
-    streamlog_out( DEBUG9 ) << " ### FTD detector Not Present in LCDD" << std::endl ;
+    streamlog_out( DEBUG9 ) << " ### FTD detector Not Present in Compact File" << std::endl ;
 
   } 
   

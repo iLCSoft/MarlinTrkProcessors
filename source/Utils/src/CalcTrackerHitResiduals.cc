@@ -20,7 +20,7 @@
 
 #include "MarlinTrk/Factory.h"
 
-#include "DD4hep/LCDD.h"
+#include "DD4hep/Detector.h"
 #include "DD4hep/DD4hepUnits.h"
 #include "DDRec/DetectorData.h"
 
@@ -119,11 +119,11 @@ void CalcTrackerHitResiduals::init() {
   this->createHistogramBuffers();
 
 
-  DD4hep::Geometry::LCDD& lcdd = DD4hep::Geometry::LCDD::getInstance();
+  dd4hep::Detector& theDetector = dd4hep::Detector::getInstance();
 
-  streamlog_out(DEBUG9) << " get the surface manager from lcdd ... " << std::endl ;
+  streamlog_out(DEBUG9) << " get the surface manager from theDetector ... " << std::endl ;
 
-  const DD4hep::DDRec::SurfaceManager* surfMan = lcdd.extension< DD4hep::DDRec::SurfaceManager >() ;
+  const dd4hep::rec::SurfaceManager* surfMan = theDetector.extension< dd4hep::rec::SurfaceManager >() ;
 
   _surfMap = *surfMan->map( "world" ) ;
 
@@ -223,7 +223,7 @@ void CalcTrackerHitResiduals::processEvent( LCEvent * evt ) {
       rec_pos[1] = trkhit->getPosition()[1];
       rec_pos[2] = trkhit->getPosition()[2];     
       
-      DD4hep::DDRec::SurfaceMap::const_iterator si = _surfMap.find( celId)  ;
+      dd4hep::rec::SurfaceMap::const_iterator si = _surfMap.find( celId)  ;
       ISurface* ms = ( si != _surfMap.end()  ?  si->second  : 0 )  ;
 
       if( ms == NULL ){
