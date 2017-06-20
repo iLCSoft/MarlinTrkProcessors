@@ -29,7 +29,7 @@ using namespace lcio ;
 using namespace marlin ;
 using namespace MarlinTrk ;
 
-using namespace DD4hep::DDRec;
+using namespace dd4hep::rec;
 
 //------------------------------------------------------------------------------------------
 

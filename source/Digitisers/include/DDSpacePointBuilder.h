@@ -175,9 +175,8 @@ class DDSpacePointBuilder : public Processor {
   
   
   /** @return a spacepoint (in the form of a TrackerHitImpl* ) created from two TrackerHitPlane* which stand for si-strips */
-  //TrackerHitImpl* createSpacePoint( TrackerHitPlane* a , TrackerHitPlane* b, double stripLength, const DD4hep::DDRec::SurfaceMap* surfMap );
+
   TrackerHitImpl* createSpacePoint( TrackerHitPlane* a , TrackerHitPlane* b, double stripLength );
-//   TrackerHitImpl* createSpacePointOld( TrackerHitPlane* a , TrackerHitPlane* b );
   
   /** @return the CellID0s of the sensors that are back to back to a given front sensor. If the given sensor
    * is in the back itself or has no corresponding sensor(s) on the back the vector will be empty.

@@ -39,7 +39,6 @@ using namespace lcio ;
 using namespace marlin ;
 using namespace std ;
 
-//using namespace DD4hep ;
 
 DDPlanarDigiProcessor aDDPlanarDigiProcessor ;
 
@@ -258,16 +257,16 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
 
 
 
-      const DDSurfaces::ISurface* surf = sI->second ;
+      const dd4hep::rec::ISurface* surf = sI->second ;
 
 
       int layer  = cellid_decoder( simTHit )["layer"];
 
 
 
-      DDSurfaces::Vector3D oldPos( simTHit->getPosition()[0], simTHit->getPosition()[1], simTHit->getPosition()[2] );
+      dd4hep::rec::Vector3D oldPos( simTHit->getPosition()[0], simTHit->getPosition()[1], simTHit->getPosition()[2] );
       
-      DDSurfaces::Vector3D newPos ;
+      dd4hep::rec::Vector3D newPos ;
 
      //************************************************************
       // Check if Hit is inside senstive 
@@ -287,9 +286,9 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
         
         if( _forceHitsOntoSurface ){
           
-          DDSurfaces::Vector2D lv = surf->globalToLocal( dd4hep::mm * oldPos  ) ;
+          dd4hep::rec::Vector2D lv = surf->globalToLocal( dd4hep::mm * oldPos  ) ;
           
-          DDSurfaces::Vector3D oldPosOnSurf = (1./dd4hep::mm) * surf->localToGlobal( lv ) ; 
+          dd4hep::rec::Vector3D oldPosOnSurf = (1./dd4hep::mm) * surf->localToGlobal( lv ) ; 
           
           streamlog_out( DEBUG3 ) << " moved to " << oldPosOnSurf << " distance " << (oldPosOnSurf-oldPos).r()
                                   << std::endl;        
@@ -308,12 +307,12 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
       // Try to smear the hit but ensure the hit is inside the sensitive region
       //**************************************************************************
       
-      DDSurfaces::Vector3D u = surf->u() ;
-      DDSurfaces::Vector3D v = surf->v() ;
+      dd4hep::rec::Vector3D u = surf->u() ;
+      dd4hep::rec::Vector3D v = surf->v() ;
       
 
       // get local coordinates on surface
-      DDSurfaces::Vector2D lv = surf->globalToLocal( dd4hep::mm * oldPos  ) ;
+      dd4hep::rec::Vector2D lv = surf->globalToLocal( dd4hep::mm * oldPos  ) ;
       double uL = lv[0] / dd4hep::mm ;
       double vL = lv[1] / dd4hep::mm ;
 
@@ -334,13 +333,13 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
         double vSmear  = gsl_ran_gaussian( _rng, resV ) ;
 
         
-        // DDSurfaces::Vector3D newPosTmp = oldPos +  uSmear * u ;  
+        // dd4hep::rec::Vector3D newPosTmp = oldPos +  uSmear * u ;  
         // if( ! _isStrip )  newPosTmp = newPosTmp +  vSmear * v ;  
         
         
-        DDSurfaces::Vector3D newPosTmp = 1./dd4hep::mm  * ( ! _isStrip  ? 
-                                                            surf->localToGlobal( DDSurfaces::Vector2D (  ( uL + uSmear ) * dd4hep::mm, ( vL + vSmear )  *dd4hep::mm ) )  :
-                                                            surf->localToGlobal( DDSurfaces::Vector2D (  ( uL + uSmear ) * dd4hep::mm,          0.                  ) ) 
+        dd4hep::rec::Vector3D newPosTmp = 1./dd4hep::mm  * ( ! _isStrip  ? 
+                                                            surf->localToGlobal( dd4hep::rec::Vector2D (  ( uL + uSmear ) * dd4hep::mm, ( vL + vSmear )  *dd4hep::mm ) )  :
+                                                            surf->localToGlobal( dd4hep::rec::Vector2D (  ( uL + uSmear ) * dd4hep::mm,          0.                  ) ) 
                                                             ) ;
 
         streamlog_out( DEBUG1 ) << " hit at    : " << oldPos 

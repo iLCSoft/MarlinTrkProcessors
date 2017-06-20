@@ -105,7 +105,7 @@ protected:
   
   gsl_rng* _rng ;
   
-  const DD4hep::DDRec::SurfaceMap* _map ;
+  const dd4hep::rec::SurfaceMap* _map ;
 
   bool _forceHitsOntoSurface  ;
   double _minEnergy ;
