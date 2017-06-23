@@ -23,8 +23,8 @@ void FixedPadSizeDiskLayout::cleanup()
 }
 
 FixedPadSizeDiskLayout::FixedPadSizeDiskLayout(const dd4hep::rec::FixedPadSizeTPCData* tpc) :
-  _rMin( tpc->rMin/dd4hep::mm ),
-  _rMax( tpc->rMax/dd4hep::mm ),
+  _rMin( tpc->rMinReadout/dd4hep::mm ),
+  _rMax( tpc->rMaxReadout/dd4hep::mm ),
   _phiMax( 2.*M_PI ),
   _padWidth( tpc->padWidth/dd4hep::mm ),
   _padHeight(tpc->padHeight/dd4hep::mm),
