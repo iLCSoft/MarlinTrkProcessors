@@ -79,11 +79,6 @@ FPCCDSiliconTracking_MarlinTrk::FPCCDSiliconTracking_MarlinTrk() : Processor("FP
 
   _description = "Pattern recognition in silicon trackers";
 
-  _fastfitter = new MarlinTrk::HelixFit();
-
-
-  _moriUtil = new moriUTIL();
-  _purityUtil = new GetPurityUtil();
 
   _petalBasedFTDWithOverlaps = false;
 
@@ -560,6 +555,10 @@ void FPCCDSiliconTracking_MarlinTrk::init() {
   _nEvt = 0 ;
 
   _encoder = new UTIL::BitField64(lcio::LCTrackerCellID::encoding_string());
+
+  _fastfitter = new MarlinTrk::HelixFit();
+  _moriUtil = new moriUTIL();
+  _purityUtil = new GetPurityUtil();
 
   printParameters() ;
 
@@ -1336,6 +1335,9 @@ void FPCCDSiliconTracking_MarlinTrk::end() {
   delete _fastfitter ; _fastfitter = 0;
   delete _encoder ; _encoder = 0;
  // delete _trksystem ; _trksystem = 0;
+
+  delete _moriUtil;
+  delete _purityUtil;
 
 
 }
