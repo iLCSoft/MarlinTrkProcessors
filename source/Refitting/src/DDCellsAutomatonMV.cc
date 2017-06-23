@@ -169,7 +169,7 @@ DDCellsAutomatonMV::DDCellsAutomatonMV() : Processor("DDCellsAutomatonMV"){
 			     _maxDist,
 			     double(20) );
 
-  registerProcessorParameter("MVHitsThetaDifference",
+  registerProcessorParameter("MVHitsThetaDifference_Adjacent",
 			     "The difference in polar angle (in degrees)  between two hits in adjacent layers in order to form a minivector",
 			     _hitPairThDiff,
 			     double(0.5) );
