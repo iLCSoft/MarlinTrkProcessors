@@ -802,7 +802,7 @@ void DDTPCDigiProcessor::processEvent( LCEvent * evt )
       CLHEP::Hep3Vector thisPoint(_SimTHit->getPosition()[0],_SimTHit->getPosition()[1],_SimTHit->getPosition()[2]);
       
       FixedPadSizeDiskLayout padLayout( _tpc );
-      const gear::DoubleVec & planeExt = padLayout.getPlaneExtent() ;
+      const std::vector<double>& planeExt = padLayout.getPlaneExtent() ;
       double TPCPadPlaneRMin = planeExt[0] ;
       double TPCPadPlaneRMax = planeExt[1] ;
       
