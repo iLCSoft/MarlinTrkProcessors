@@ -473,6 +473,8 @@ void DDPlanarDigiProcessor::check( LCEvent* ) {
 
 
 void DDPlanarDigiProcessor::end(){ 
+
+  gsl_rng_free( _rng );
   
   streamlog_out(MESSAGE) << " end()  " << name() 
   << " processed " << _nEvt << " events in " << _nRun << " runs "
