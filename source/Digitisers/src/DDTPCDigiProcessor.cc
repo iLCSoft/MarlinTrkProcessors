@@ -163,10 +163,6 @@ DDTPCDigiProcessor::DDTPCDigiProcessor() : Processor("DDTPCDigiProcessor")
                              _maxMerge ,
                              (int)3) ;
 
-  registerProcessorParameter( "DontEncodeSide" ,
-                              "Do not encode the side in the cellID of the TrackerHit",
-                             _dontEncodeSide ,
-                             (bool) true ) ;
 }
 
 
@@ -1136,13 +1132,7 @@ void DDTPCDigiProcessor::writeVoxelToHit( Voxel_tpc* aVoxel){
   (*_cellid_encoder)[ lcio::LCTrackerCellID::subdet() ] = lcio::ILDDetID::TPC ;
   (*_cellid_encoder)[ lcio::LCTrackerCellID::layer()  ] = seed_hit->getRowIndex() ;
   (*_cellid_encoder)[ lcio::LCTrackerCellID::module() ] = 0 ;
-  
-  
-  //fg: optionally encode the side (should become the default eventually)
-  if( ! _dontEncodeSide )
-    (*_cellid_encoder)[ lcio::LCTrackerCellID::side()   ] = ( pos[2] < 0 ?  -1 : 1 ) ;
-  else
-    (*_cellid_encoder)[ lcio::LCTrackerCellID::side()   ] = lcio::ILDDetID::barrel ;
+  (*_cellid_encoder)[ lcio::LCTrackerCellID::side()   ] = ( pos[2] < 0 ?  -1 : 1 ) ;
 
   _cellid_encoder->setCellID( trkHit ) ;
   
@@ -1303,12 +1293,7 @@ void DDTPCDigiProcessor::writeMergedVoxelsToHit( vector <Voxel_tpc*>* hitsToMerg
   (*_cellid_encoder)[ lcio::LCTrackerCellID::subdet() ] = lcio::ILDDetID::TPC ;
   (*_cellid_encoder)[ lcio::LCTrackerCellID::layer()  ] = row ;
   (*_cellid_encoder)[ lcio::LCTrackerCellID::module() ] = 0 ;
-
-  //fg: optionally encode the side (should become the default eventually)
-  if( ! _dontEncodeSide )
-    (*_cellid_encoder)[ lcio::LCTrackerCellID::side()   ] = ( pos[2] < 0 ?  -1 : 1 ) ;
-  else
-    (*_cellid_encoder)[ lcio::LCTrackerCellID::side()   ] = lcio::ILDDetID::barrel ;
+  (*_cellid_encoder)[ lcio::LCTrackerCellID::side()   ] = ( pos[2] < 0 ?  -1 : 1 ) ;
 
   _cellid_encoder->setCellID( trkHit ) ;
   
