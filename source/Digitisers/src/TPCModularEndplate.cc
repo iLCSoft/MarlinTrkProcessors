@@ -2,6 +2,7 @@
 #include "TPCModularEndplate.h"
 
 #include <DD4hep/DD4hepUnits.h>
+#include "marlin/VerbosityLevels.h"
 
 #include <math.h>
 
@@ -23,13 +24,13 @@ void TPCModularEndplate::initialize(){
 
   unsigned nRing = _moduleRings.size() ;
 
-  double deltaR = ( _tpc->rMaxReadout  - _tpc->rMinReadout ) /  nRing ;
+  double deltaR = ( _tpc->rMaxReadout/dd4hep::mm  - _tpc->rMinReadout/dd4hep::mm ) /  nRing ;
 
-  double rMin = _tpc->rMinReadout ;
+  double rMin = _tpc->rMinReadout/dd4hep::mm ;
 
   double rMax = rMin + deltaR ;
 
-  for( auto modRing : _moduleRings){
+  for( auto& modRing : _moduleRings){
 
     modRing.rMin = rMin ;
     modRing.rMax = rMax ;
@@ -51,7 +52,15 @@ double TPCModularEndplate::computeDistanceRPhi(const dd4hep::rec::Vector3D& hit)
     throw std::runtime_error("TPCModularEndplate: computeDistanceRPhi() called before initialize() ") ; 
   }
   
-  unsigned indexR = _moduleRings.size() * ( hit.r()  - _tpc->rMinReadout )  / ( _tpc->rMaxReadout  - _tpc->rMinReadout )  ;
+  unsigned indexR = std::floor( _moduleRings.size() * ( hit.rho()  - _tpc->rMinReadout/dd4hep::mm )  / ( _tpc->rMaxReadout/dd4hep::mm  - _tpc->rMinReadout/dd4hep::mm )  ) ;
+
+  if( indexR > _moduleRings.size() -1 ){
+
+    streamlog_out( WARNING ) << " wrong index  : " << indexR << " for point " << hit << std::endl ;
+
+    return 1e6 ;
+  }
+
 
   auto modRing = _moduleRings.at( indexR )  ;
 
@@ -64,7 +73,7 @@ double TPCModularEndplate::computeDistanceRPhi(const dd4hep::rec::Vector3D& hit)
     deltaPhi = modRing.deltaPhi - deltaPhi ;
   }  
 
-  return hit.r() * deltaPhi ;
+  return hit.rho() * deltaPhi ;
 
 }
   

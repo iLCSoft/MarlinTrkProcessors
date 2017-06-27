@@ -56,6 +56,7 @@ Steve Aplin 26 June 2009 (DESY)
 
 class Voxel_tpc;
 
+class TPCModularEndplate ;
 
 /** ====== DDTPCDigiProcessor ====== <br>
  *
@@ -97,6 +98,8 @@ class Voxel_tpc;
  * @authors F.Gaede, S. Aplin, DESY and A.Raspereza, MPI
  *
  * 06/2017 FG: replace Gear with DDRec
+ *         FG: remove hits that are inside the module gaps on the endplate (see parameters TPCEndPlateModulexxxx)
+ *             (set TPCEndPlateModuleGapPhi=0 to not remove any hits)
  * 
  * Changed 7/9/07 so that the const and diffusion resolution terms are taken as processor parameters rather than the gear file.
  * The parameters _pixZ and pixRP were also changed from gear parameters to processor parameters
@@ -111,6 +114,8 @@ public:
   
   
   DDTPCDigiProcessor() ;
+
+  ~DDTPCDigiProcessor() ;
   
   /** Called at the begin of the job before anything is read.
    * Use to initialize the processor, e.g. book histograms.
@@ -217,6 +222,15 @@ protected:
   const dd4hep::rec::FixedPadSizeTPCData*  _tpc{};
   double _bField{};
   
+
+  IntVec    _tpcEndPlateModuleNumbers{} ;
+  FloatVec _tpcEndPlateModulePhi0s{} ;
+  float    _tpcEndPlateModuleGapPhi{} ;
+  float    _tpcEndPlateModuleGapR{} ;
+
+  TPCModularEndplate* _tpcEP{} ;
+
+
 #ifdef DIGIPLOTS
   IAnalysisFactory * _AF{};
   ITreeFactory * _TRF{};
