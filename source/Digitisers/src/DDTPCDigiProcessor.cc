@@ -3,6 +3,7 @@
 #include "DDTPCDigiProcessor.h"
 
 #include "FixedPadSizeDiskLayout.h"
+#include "TPCModularEndplate.h"
 
 #include <iostream>
 #include <iomanip>
@@ -58,6 +59,11 @@ bool compare_z( Voxel_tpc* a, Voxel_tpc* b) {
   return ( a->getZIndex() < b->getZIndex() ) ; 
 } 
 
+
+DDTPCDigiProcessor::~DDTPCDigiProcessor(){
+
+  delete _tpcEP ;
+}
 
 DDTPCDigiProcessor::DDTPCDigiProcessor() : Processor("DDTPCDigiProcessor") 
 {
@@ -162,6 +168,36 @@ DDTPCDigiProcessor::DDTPCDigiProcessor() : Processor("DDTPCDigiProcessor")
                              "Defines the maximum number of adjacent hits which can be merged"  ,
                              _maxMerge ,
                              (int)3) ;
+
+
+
+ //fg: these are the numbers for the large ILD TPC
+  IntVec tpcEPModNumExample = { 14, 18, 23, 28, 32, 37, 42, 46  } ;
+
+  registerProcessorParameter( "TPCEndPlateModuleNumbers" ,
+                              "Number of modules in the rings of the TPC endplate"  ,
+                              _tpcEndPlateModuleNumbers ,
+                              tpcEPModNumExample  ) ;
+
+  //fg: these are just guestimates - need to get correct phi0 values for the TPC modules
+  FloatVec tpcEPModPhi0Example = { 0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07 } ; 
+
+  registerProcessorParameter( "TPCEndPlateModulePhi0s" ,
+                              "Phi0s of modules in the rings of the TPC endplate"  ,
+                              _tpcEndPlateModulePhi0s ,
+                              tpcEPModPhi0Example ) ;
+
+
+  registerProcessorParameter( "TPCEndPlateModuleGapPhi" ,
+                              "Gap size in mm of the gaps between the endplace modules in Phi"  ,
+                              _tpcEndPlateModuleGapPhi ,
+                              (float) 1. ) ;
+
+
+  registerProcessorParameter( "TPCEndPlateModuleGapR" ,
+                              "Gap size in mm of the gaps between the endplace modules in R"  ,
+                              _tpcEndPlateModuleGapR ,
+                              (float) 1. ) ;
 
 }
 
@@ -366,6 +402,24 @@ void DDTPCDigiProcessor::init()
   dd4hep::DetElement tpcDE = theDet.detector("TPC") ;
   _tpc = tpcDE.extension<dd4hep::rec::FixedPadSizeTPCData>() ;
   
+
+  // fill the data for the TPC endplate
+  _tpcEP = new TPCModularEndplate( _tpc ) ;
+
+  if( _tpcEndPlateModuleNumbers.size() != _tpcEndPlateModulePhi0s.size() ){
+
+    throw Exception(" DDTPCDigiProcessor: parameters tpcEndPlateModuleNumbers and tpcEndPlateModulePhi0s dont have the same number of elements ( module rings ) !! " ) ;
+  }
+
+  for(unsigned i=0,N=_tpcEndPlateModuleNumbers.size() ; i<N ; ++i){
+
+    _tpcEP->addModuleRing(  _tpcEndPlateModuleNumbers[i] , _tpcEndPlateModulePhi0s[i] ) ;
+  }
+  _tpcEP->initialize() ;
+
+  // -----
+
+
 
   streamlog_out( DEBUG6 ) << " initialized TPC geometry from TPCData: " <<  *_tpc << std::endl ; 
 
@@ -1109,6 +1163,26 @@ void DDTPCDigiProcessor::writeVoxelToHit( Voxel_tpc* aVoxel){
  
   CLHEP::Hep3Vector point(seed_hit->getX(),seed_hit->getY(),seed_hit->getZ());
   
+
+  //-------- fg: remove the hit if it lies within a module boundary in phi --------
+
+  dd4hep::rec::Vector3D hitPos( seed_hit->getX(),seed_hit->getY(),seed_hit->getZ());
+
+  double hitGapDist = _tpcEP->computeDistanceRPhi( hitPos ) ;
+
+  if( hitGapDist < _tpcEndPlateModuleGapPhi / 2. ){
+
+    streamlog_out( DEBUG2 ) << " removing hit in endplate module gap : " << hitPos << " - distance : " <<  hitGapDist << std::endl ;
+
+    return ;
+  }
+
+  //fg: here we could add additional effects, e.g larger smearing of hits in the
+  //    vicinity of the gaps ( need extra parameters )
+  //    or larger smearing in the pad row next to a module ring boundary in r 
+  //    ...
+  //------------------------------------------------------------------------------
+
   double unsmearedPhi = point.phi();
   
   double randrp = gsl_ran_gaussian(_random,tpcRPhiRes);
