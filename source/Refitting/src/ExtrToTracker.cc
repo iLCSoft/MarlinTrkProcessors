@@ -247,6 +247,7 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
     streamlog_out(DEBUG4) << " ######### NO OF TRACKS $$$$$$$$$$ " << nTracks << std::endl;
 
     LCCollectionVec* inputTrackVec = new LCCollectionVec( LCIO::TRACK )  ; 
+    inputTrackVec->setSubset( true );
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -553,8 +554,7 @@ void ExtrToTracker::processEvent( LCEvent * evt ) {
 
     evt->addCollection( trackVec , _output_track_col_name ) ;
 
-    //delete trackVec;
-    //delete inputTrackVec;
+    delete inputTrackVec;
 
 
 
