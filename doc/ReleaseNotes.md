@@ -1,3 +1,50 @@
+# v02-08
+
+* 2017-06-28 Frank Gaede ([PR#21](https://github.com/iLCSoft/MarlinTrkProcessors/pull/21))
+  - remove hits that are in module gaps on the TPC endplate in DDTPCDigiProcessor
+        - use the following parameters to define the endplate:
+        - TPCEndPlateModuleNumbers
+        - TPCEndPlateModulePhi0s
+        - TPCEndPlateModuleGapPhi
+  - rm obsolete parameter DontEncodeSide from DDTPCDigiProcessor
+
+* 2017-06-15 Marko Petric ([PR#14](https://github.com/iLCSoft/MarlinTrkProcessors/pull/14))
+  - Replace auto_ptr with unique_ptr
+  - explicitly call copy constructor of base class
+
+* 2017-06-15 Emilia Leogrande ([PR#13](https://github.com/iLCSoft/MarlinTrkProcessors/pull/13))
+  * TruthTrackFinder: hits in the same layer of the same subdetectors are now filtered. Those with higher radius are removed, then the fit is performed. In case the fit fails, those with higher z are removed and a new fit attempt is made.
+
+* 2017-06-14 Frank Gaede ([PR#12](https://github.com/iLCSoft/MarlinTrkProcessors/pull/12))
+  - remove some obsolete processors:
+          - PlanarDigiProcessor
+          - SpacePointBuilder
+          - SimpleCylinderDigiProcessor
+          - SimpleDiscDigiProcessor
+          - SimplePlanarDigiProcessor.h
+  - replace Gear with DD4hep/DDRec in all remaining processors
+
+* 2017-06-30 Andre Sailer ([PR#22](https://github.com/iLCSoft/MarlinTrkProcessors/pull/22))
+  - ExtrToTracker: cleanup transient collection
+
+* 2017-06-20 Frank Gaede ([PR#17](https://github.com/iLCSoft/MarlinTrkProcessors/pull/17))
+  - fix leftover namespace changes in dd4hep
+
+* 2017-06-20 Andre Sailer ([PR#16](https://github.com/iLCSoft/MarlinTrkProcessors/pull/16))
+  - Adapt to changes in namespaces and LCDD -->  Detector
+
+* 2017-06-27 Andre Sailer ([PR#20](https://github.com/iLCSoft/MarlinTrkProcessors/pull/20))
+  - FPCCDSiliconTracking_MarlinTrk: move object creation to init, add delete
+  - DDPlanarDigiProcessor: free random number generator at the end
+
+* 2017-06-24 Frank Gaede ([PR#19](https://github.com/iLCSoft/MarlinTrkProcessors/pull/19))
+  - add DDTPCDigiProcessor and helper classes
+          - adaptation of MarlinReco/TPCDigiProcessor for DD4hep
+
+* 2017-06-23 Andre Sailer ([PR#18](https://github.com/iLCSoft/MarlinTrkProcessors/pull/18))
+  - DDCellsAutomatonMV: fix duplicate parameter name 
+     * MVHitsThetaDifference --> MVHitsThetaDifference_Adjacent
+
 # v02-07
 
 * 2017-04-28 Frank Gaede ([PR#11](https://github.com/iLCSoft/MarlinTrkProcessors/pull/11))
