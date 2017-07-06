@@ -162,9 +162,6 @@ SiliconTracking_MarlinTrk::SiliconTracking_MarlinTrk() : Processor("SiliconTrack
   
   _description = "Pattern recognition in silicon trackers";
   
-  _fastfitter = new MarlinTrk::HelixFit();
-  
-  
   _petalBasedFTDWithOverlaps = false;
   
   // zero triplet counters
@@ -569,6 +566,8 @@ void SiliconTracking_MarlinTrk::init() {
   _nEvt = 0 ;
 
   _encoder = new UTIL::BitField64(lcio::LCTrackerCellID::encoding_string());
+
+  _fastfitter = new MarlinTrk::HelixFit();
 
   printParameters() ;
   
