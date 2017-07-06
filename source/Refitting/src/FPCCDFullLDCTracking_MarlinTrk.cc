@@ -96,10 +96,6 @@ namespace FPCCDUtil{
 FPCCDFullLDCTracking_MarlinTrk::FPCCDFullLDCTracking_MarlinTrk() : Processor("FPCCDFullLDCTracking_MarlinTrk") {  
   _description = "Performs full tracking in ILD detector" ;  
   
-
-  _moriUtil = new moriUTIL();
-  _purityUtil = new GetPurityUtil();
-  
   // Input tracker hit collections
   
   registerInputCollection(LCIO::TRACKERHITPLANE,
@@ -607,6 +603,9 @@ void FPCCDFullLDCTracking_MarlinTrk::init() {
   TWOPI = 2*PI;
 
   _encoder = new UTIL::BitField64(lcio::LCTrackerCellID::encoding_string());
+
+  _moriUtil = new moriUTIL();
+  _purityUtil = new GetPurityUtil();
 
   
   // set up the geometery needed by KalTest
@@ -5354,7 +5353,11 @@ bool FPCCDFullLDCTracking_MarlinTrk::VetoMerge(TrackExtended* firstTrackExt, Tra
 void FPCCDFullLDCTracking_MarlinTrk::check(LCEvent* ) { }
 
 void FPCCDFullLDCTracking_MarlinTrk::end() { 
-  
+
+
+  delete _moriUtil;
+  delete _purityUtil;
+
   delete _encoder ;
   
 }
