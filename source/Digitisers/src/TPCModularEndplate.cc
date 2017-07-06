@@ -66,7 +66,7 @@ double TPCModularEndplate::computeDistanceRPhi(const dd4hep::rec::Vector3D& hit)
 
   double phi = hit.phi() - modRing.phi0   ;
 
-  double deltaPhi  = std::fabs( std::fmod(  ( phi - modRing.phi0 ) , modRing.deltaPhi ) );
+  double deltaPhi  = std::fabs( std::fmod(  phi , modRing.deltaPhi ) );
 
   if( deltaPhi > modRing.deltaPhi/2. ) {
 
