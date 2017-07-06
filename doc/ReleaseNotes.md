@@ -1,3 +1,8 @@
+# v02-08-01
+
+* 2017-07-06 Frank Gaede ([PR#23](https://github.com/iLCSoft/MarlinTrkProcessors/pull/23))
+  - fix phi0 of module rings in TPCModularEndplate
+
 # v02-08
 
 * 2017-06-28 Frank Gaede ([PR#21](https://github.com/iLCSoft/MarlinTrkProcessors/pull/21))
