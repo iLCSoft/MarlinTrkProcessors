@@ -119,6 +119,8 @@ enum {
   hu = 0,
   hv,
   hitE,
+  diffu,
+  diffv,
   hSize 
 } ;
 
@@ -174,6 +176,10 @@ void DDPlanarDigiProcessor::init() {
 
   _h[ hu ] = new TH1F( "hu" , "smearing u" , 50, -5. , +5. );
   _h[ hv ] = new TH1F( "hv" , "smearing v" , 50, -5. , +5. );
+
+  _h[ diffu ] = new TH1F( "diffu" , "diff u" , 1000, -5. , +5. );
+  _h[ diffv ] = new TH1F( "diffv" , "diff v" , 1000, -5. , +5. );
+
   _h[ hitE ] = new TH1F( "hitE" , "hitEnergy in keV" , 1000, 0 , 200 );
   
 }
@@ -359,6 +365,8 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
           _h[hu]->Fill(  uSmear / resU ) ; 
           _h[hv]->Fill(  vSmear / resV ) ; 
 
+          _h[diffu]->Fill( uSmear );
+          _h[diffv]->Fill( vSmear );
 
           break;  
 
