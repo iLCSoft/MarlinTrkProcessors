@@ -167,7 +167,7 @@ void TruthTrackFinder::init() {
   m_initialTrackError_omega = 1.e-4;
   m_initialTrackError_z0 = 1.e6;
   m_initialTrackError_tanL = 1.e2;
-  m_maxChi2perHit = 1.e3;
+  m_maxChi2perHit = 1.e2;
   
   // Get the magnetic field
   dd4hep::Detector& lcdd = dd4hep::Detector::getInstance();
