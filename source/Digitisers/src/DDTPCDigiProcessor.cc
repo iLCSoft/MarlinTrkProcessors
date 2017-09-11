@@ -1597,12 +1597,16 @@ double DDTPCDigiProcessor::getPadTheta(CLHEP::Hep3Vector* firstPoint, CLHEP::Hep
                                            ) / 2.0 ) / theCircle.GetRadius() ) * theCircle.GetRadius()  ;
   
   
-  double pathlength2 = 2.0 * asin( ( sqrt (
-                                           (lastPointRPhi.x()-middlePointRPhi.x()) * (lastPointRPhi.x()-middlePointRPhi.x())
-                                           +
-                                           (lastPointRPhi.y()-middlePointRPhi.y()) * (lastPointRPhi.y()-middlePointRPhi.y())
-                                           ) / 2.0 ) / theCircle.GetRadius() ) * theCircle.GetRadius()  ;
-  
+  double pathlength2 = ( ( sqrt (  (lastPointRPhi.x()-middlePointRPhi.x()) * (lastPointRPhi.x()-middlePointRPhi.x())
+                                   + (lastPointRPhi.y()-middlePointRPhi.y()) * (lastPointRPhi.y()-middlePointRPhi.y())
+                                   ) / 2.0 ) / theCircle.GetRadius() >= 1.0 )  ?
+    ( 2.0 * asin( 1.0 ) * theCircle.GetRadius() )
+    :
+    ( 2.0 * asin( ( sqrt (
+                          (lastPointRPhi.x()-middlePointRPhi.x()) * (lastPointRPhi.x()-middlePointRPhi.x())
+                          +
+                          (lastPointRPhi.y()-middlePointRPhi.y()) * (lastPointRPhi.y()-middlePointRPhi.y())
+                          ) / 2.0 ) / theCircle.GetRadius() ) * theCircle.GetRadius() ) ;
   
   padTheta = atan ((fabs(pathlength1 + pathlength2)) / (fabs(lastPoint->z() - firstPoint->z())) ) ;
   
