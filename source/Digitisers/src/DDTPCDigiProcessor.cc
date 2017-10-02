@@ -1190,10 +1190,19 @@ void DDTPCDigiProcessor::writeVoxelToHit( Voxel_tpc* aVoxel){
   
   point.setPhi( point.phi() + randrp/ point.perp() );
   point.setZ( point.z() + randz );
-  
+
   // make sure the hit is not smeared beyond the TPC Max DriftLength
   if( fabs(point.z()) > _tpc->driftLength/dd4hep::mm ) point.setZ( (fabs(point.z()) / point.z() ) * _tpc->driftLength/dd4hep::mm );
-  
+
+  // make sure the hit is not smeared beyond the cathode:
+  double dzCathode = _tpc->zMinReadout/dd4hep::mm ;
+  if( point.z() > 0. && hitPos.z() < 0. ){
+    point.setZ( -dzCathode ) ;
+  }
+  if( point.z() < 0. && hitPos.z() > 0. ) {
+    point.setZ( dzCathode ) ;
+  }
+
   double pos[3] = {point.x(),point.y(),point.z()}; 
   trkHit->setPosition(pos);
   trkHit->setEDep(seed_hit->getEDep());
@@ -1352,6 +1361,15 @@ void DDTPCDigiProcessor::writeMergedVoxelsToHit( vector <Voxel_tpc*>* hitsToMerg
   
   // make sure the hit is not smeared beyond the TPC Max DriftLength
   if( fabs(point.z()) > _tpc->driftLength/dd4hep::mm ) point.setZ( (fabs(point.z()) / point.z() ) * _tpc->driftLength/dd4hep::mm );
+
+  // make sure the hit is not smeared onto the other side of the cathode:
+  double dzCathode = _tpc->zMinReadout/dd4hep::mm ;
+  if( point.z() > 0. && mergedPoint->getZ() < 0. ){
+    point.setZ( -dzCathode ) ;
+  }
+  if( point.z() < 0. && mergedPoint->getZ() > 0. ){
+    point.setZ( dzCathode ) ;
+  }
   
   double pos[3] = {point.x(),point.y(),point.z()}; 
 
