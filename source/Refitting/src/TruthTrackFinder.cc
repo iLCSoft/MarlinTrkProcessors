@@ -1,6 +1,5 @@
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 #include "TruthTrackFinder.h"
-#include "DDRec/API/IDDecoder.h"
 
 #include <marlinutil/HelixClass.h>
 
