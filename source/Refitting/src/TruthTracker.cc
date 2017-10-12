@@ -320,6 +320,11 @@ void TruthTracker::processRunHeader( LCRunHeader* ) {
 
 void TruthTracker::processEvent( LCEvent * evt ) { 
   
+  // set the correct configuration for the tracking system for this event 
+  MarlinTrk::TrkSysConfig< MarlinTrk::IMarlinTrkSystem::CFG::useQMS>       mson( _trksystem,  _MSOn ) ;
+  MarlinTrk::TrkSysConfig< MarlinTrk::IMarlinTrkSystem::CFG::usedEdx>      elosson( _trksystem,_ElossOn) ;
+  MarlinTrk::TrkSysConfig< MarlinTrk::IMarlinTrkSystem::CFG::useSmoothing> smoothon( _trksystem,_SmoothOn) ;
+
   _current_event = evt;
   
   streamlog_out(DEBUG3) << "   processing event: " << _n_evt << std::endl ;

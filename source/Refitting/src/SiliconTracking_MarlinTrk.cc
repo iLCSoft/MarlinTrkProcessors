@@ -691,6 +691,11 @@ void SiliconTracking_MarlinTrk::processRunHeader( LCRunHeader* ) {
 
 void SiliconTracking_MarlinTrk::processEvent( LCEvent * evt ) { 
   
+  // set the correct configuration for the tracking system for this event 
+  MarlinTrk::TrkSysConfig< MarlinTrk::IMarlinTrkSystem::CFG::useQMS>       mson( _trksystem,  _MSOn ) ;
+  MarlinTrk::TrkSysConfig< MarlinTrk::IMarlinTrkSystem::CFG::usedEdx>      elosson( _trksystem,_ElossOn) ;
+  MarlinTrk::TrkSysConfig< MarlinTrk::IMarlinTrkSystem::CFG::useSmoothing> smoothon( _trksystem,_SmoothOn) ;
+
   _current_event = evt;
   
   _output_track_col_quality = _output_track_col_quality_GOOD;

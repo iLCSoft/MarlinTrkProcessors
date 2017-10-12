@@ -208,6 +208,11 @@ void ExtrToTracker::processRunHeader( LCRunHeader* ) {
 void ExtrToTracker::processEvent( LCEvent * evt ) { 
 
 
+  // set the correct configuration for the tracking system for this event 
+  MarlinTrk::TrkSysConfig< MarlinTrk::IMarlinTrkSystem::CFG::useQMS>       mson( _trksystem,  _MSOn ) ;
+  MarlinTrk::TrkSysConfig< MarlinTrk::IMarlinTrkSystem::CFG::usedEdx>      elosson( _trksystem,_ElossOn) ;
+  MarlinTrk::TrkSysConfig< MarlinTrk::IMarlinTrkSystem::CFG::useSmoothing> smoothon( _trksystem,_SmoothOn) ;
+
   //printParameters();
 
 
