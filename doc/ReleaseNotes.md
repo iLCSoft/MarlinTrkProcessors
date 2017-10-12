@@ -1,3 +1,31 @@
+# v02-09
+
+* 2017-10-12 Frank Gaede ([PR#30](https://github.com/iLCSoft/MarlinTrkProcessors/pull/30))
+  - set correct MarlinTrkSystem configuration for every event with `MarlinTrk::TrkSysConfig`
+     in all tracking processors
+
+* 2017-07-07 Andre Sailer ([PR#24](https://github.com/iLCSoft/MarlinTrkProcessors/pull/24))
+  - SiliconTracking_MarlinTrk: initialise fastfitter in init function, fixes small memory leak if processor is not active
+  
+  - FPCCDFullLDCTracking_MarlinTrk: initalise helper objects in init and add cleanup in end. Fixes small memory leaks
+
+* 2017-10-09 Frank Gaede ([PR#29](https://github.com/iLCSoft/MarlinTrkProcessors/pull/29))
+  - fix DDTPCDigiProcessor
+      - ensure hits are not smeared beyond cathode
+
+* 2017-08-21 Andre Sailer ([PR#25](https://github.com/iLCSoft/MarlinTrkProcessors/pull/25))
+  - RefitFinal: new processor for refitting track collections. Does not re-sort hits (like RefitProcessor), different way to setup the initial trackstate for the fit, and different MarlinTrkUtil function being called
+  - DDPlanarDigi: add absolute values of u and v smearing histograms
+
+* 2017-08-23 Emilia Leogrande ([PR#26](https://github.com/iLCSoft/MarlinTrkProcessors/pull/26))
+  * TruthTrackFinder: m_maxChi2perHit changed from 1.e3 to 1.e2 for consistency with Conformal Tracking
+
+* 2017-09-12 Shaojun Lu ([PR#27](https://github.com/iLCSoft/MarlinTrkProcessors/pull/27))
+  - DDTPCDigiProcessor: Added one control for the input value of asin to avoid NAN.
+
+* 2017-10-06 Andre Sailer ([PR#28](https://github.com/iLCSoft/MarlinTrkProcessors/pull/28))
+  - Drop unused and no longer existing header includes AidaSoft/DD4hep#241
+
 # v02-08-01
 
 * 2017-07-06 Frank Gaede ([PR#23](https://github.com/iLCSoft/MarlinTrkProcessors/pull/23))
