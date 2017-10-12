@@ -190,6 +190,11 @@ void TruthTrackFinder::processRunHeader( LCRunHeader* ) {
 
 void TruthTrackFinder::processEvent( LCEvent* evt ) {
 
+  // set the correct configuration for the tracking system for this event 
+  MarlinTrk::TrkSysConfig< MarlinTrk::IMarlinTrkSystem::CFG::useQMS>       mson(     trackFactory, true  ) ;
+  MarlinTrk::TrkSysConfig< MarlinTrk::IMarlinTrkSystem::CFG::usedEdx>      elosson(  trackFactory, true  ) ;
+  MarlinTrk::TrkSysConfig< MarlinTrk::IMarlinTrkSystem::CFG::useSmoothing> smoothon( trackFactory, false ) ;
+
   // Get the collection of MC particles
   LCCollection* particleCollection = 0 ;
   getCollection(particleCollection, m_inputParticleCollection, evt); if(particleCollection == 0) return;

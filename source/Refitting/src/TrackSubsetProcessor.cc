@@ -183,6 +183,10 @@ void TrackSubsetProcessor::processRunHeader( LCRunHeader* ) {
 void TrackSubsetProcessor::processEvent( LCEvent * evt ) { 
 
    
+  // set the correct configuration for the tracking system for this event 
+  MarlinTrk::TrkSysConfig< MarlinTrk::IMarlinTrkSystem::CFG::useQMS>       mson( _trkSystem,  _MSOn ) ;
+  MarlinTrk::TrkSysConfig< MarlinTrk::IMarlinTrkSystem::CFG::usedEdx>      elosson( _trkSystem,_ElossOn) ;
+  MarlinTrk::TrkSysConfig< MarlinTrk::IMarlinTrkSystem::CFG::useSmoothing> smoothon( _trkSystem,_SmoothOn) ;
    
   std::vector< Track* > tracks;
   
@@ -206,7 +210,7 @@ void TrackSubsetProcessor::processEvent( LCEvent * evt ) {
     }
     catch(DataNotAvailableException &e) {
       
-      streamlog_out( ERROR ) << "Collection " << _trackInputColNames[i] <<  " is not available!\n";     
+      streamlog_out( DEBUG7 ) << "Collection " << _trackInputColNames[i] <<  " is not available!\n";
       continue;
       
     }
