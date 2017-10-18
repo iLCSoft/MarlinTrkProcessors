@@ -1194,6 +1194,7 @@ void DDTPCDigiProcessor::writeVoxelToHit( Voxel_tpc* aVoxel){
   // make sure the hit is not smeared beyond the TPC Max DriftLength
   if( fabs(point.z()) > _tpc->driftLength/dd4hep::mm ) point.setZ( (fabs(point.z()) / point.z() ) * _tpc->driftLength/dd4hep::mm );
 
+#if 0   // fg: it turns out that is more correct to allow reconstructed hits to be outside of the drift volume due to the large uncertainties
   // make sure the hit is not smeared beyond the cathode:
   double dzCathode = _tpc->zMinReadout/dd4hep::mm ;
   if( point.z() > 0. && hitPos.z() < 0. ){
@@ -1202,6 +1203,7 @@ void DDTPCDigiProcessor::writeVoxelToHit( Voxel_tpc* aVoxel){
   if( point.z() < 0. && hitPos.z() > 0. ) {
     point.setZ( dzCathode ) ;
   }
+#endif
 
   double pos[3] = {point.x(),point.y(),point.z()}; 
   trkHit->setPosition(pos);
@@ -1362,6 +1364,7 @@ void DDTPCDigiProcessor::writeMergedVoxelsToHit( vector <Voxel_tpc*>* hitsToMerg
   // make sure the hit is not smeared beyond the TPC Max DriftLength
   if( fabs(point.z()) > _tpc->driftLength/dd4hep::mm ) point.setZ( (fabs(point.z()) / point.z() ) * _tpc->driftLength/dd4hep::mm );
 
+#if 0   // fg: it turns out that is more correct to allow reconstructed hits to be outside of the drift volume due to the large uncertainties
   // make sure the hit is not smeared onto the other side of the cathode:
   double dzCathode = _tpc->zMinReadout/dd4hep::mm ;
   if( point.z() > 0. && mergedPoint->getZ() < 0. ){
@@ -1370,7 +1373,8 @@ void DDTPCDigiProcessor::writeMergedVoxelsToHit( vector <Voxel_tpc*>* hitsToMerg
   if( point.z() < 0. && mergedPoint->getZ() > 0. ){
     point.setZ( dzCathode ) ;
   }
-  
+#endif
+
   double pos[3] = {point.x(),point.y(),point.z()}; 
 
   //---------------------------------------------------------------------------------
