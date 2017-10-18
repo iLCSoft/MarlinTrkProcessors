@@ -600,7 +600,7 @@ void ExtrToSIT::processEvent( LCEvent * evt ) {
 	      
 	    } // condition for SIT digitised hits collection
 	    
-	    streamlog_out(MESSAGE) << " no of hits in the track (after adding SIT hits) " << trkHits.size() << " SIT hits added " << SITHitsPerTrk  << " event " <<  _n_evt<< std::endl;
+	    streamlog_out(DEBUG4) << " no of hits in the track (after adding SIT hits) " << trkHits.size() << " SIT hits added " << SITHitsPerTrk  << " event " <<  _n_evt<< std::endl;
 	    
 	    
 	    // refitted track collection creation
