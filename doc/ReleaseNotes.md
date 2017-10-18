@@ -1,3 +1,10 @@
+# v02-09-01
+
+* 2017-10-18 Frank Gaede ([PR#31](https://github.com/iLCSoft/MarlinTrkProcessors/pull/31))
+  - fix DDTPCDigiProcessor
+      - allow smearing beyond cathode boundaries
+  - reduce verbosity in ExtrToSIT
+
 # v02-09
 
 * 2017-10-12 Frank Gaede ([PR#30](https://github.com/iLCSoft/MarlinTrkProcessors/pull/30))
