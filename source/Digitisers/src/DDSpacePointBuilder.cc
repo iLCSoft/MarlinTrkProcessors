@@ -660,7 +660,10 @@ TrackerHitImpl* DDSpacePointBuilder::createSpacePoint( TrackerHitPlane* a , Trac
   }
   
   spacePoint->setCovMatrix(cov);
-  
+
+  const auto pointTime = std::min(a->getTime(), b->getTime());
+  spacePoint->setTime(pointTime);
+
   streamlog_out(DEBUG3) << "\tHit accepted\n\n";
   
   return spacePoint;

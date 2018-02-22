@@ -401,7 +401,7 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
       trkHit->setCellID1( cellID1 ) ;
       
       trkHit->setPosition( newPos.const_array()  ) ;
-
+      trkHit->setTime( simTHit->getTime() ) ;
       trkHit->setEDep( simTHit->getEDep() ) ;
 
       float u_direction[2] ;
