@@ -361,9 +361,7 @@ void ClonesAndSplitTracksFinder::filterClonesAndMergedTracks(std::multimap<int, 
     int track_b_id = iter.second.first;
     Track* track_final = iter.second.second;
     int countConnections = candidates.count(track_a_id);
-    bool multiConnection = false;
-    if(countConnections > 1)
-      multiConnection = true;
+    bool multiConnection = (countConnections > 1);
 
     if(!multiConnection){ // if only 1 connection
 
@@ -389,6 +387,9 @@ void ClonesAndSplitTracksFinder::filterClonesAndMergedTracks(std::multimap<int, 
 	if(toBeSaved){				
 	  savedHitVec.push_back(track_final_hits);
 	  trackVecFinal.push_back(track_final);
+	}
+	else{
+	  delete track_final;
 	}
       }
       
@@ -419,6 +420,7 @@ void ClonesAndSplitTracksFinder::filterClonesAndMergedTracks(std::multimap<int, 
       } // end of clones
 	
       else{ // mergeable tracks -- at the moment they are all stored (very rare anyways)
+	delete track_final; //not using the mergedTracks, so delete it
 
 	Track *track_a = static_cast<Track*>(inputTracks->getElementAt(track_a_id));
         Track *track_b = static_cast<Track*>(inputTracks->getElementAt(track_b_id));
@@ -426,15 +428,12 @@ void ClonesAndSplitTracksFinder::filterClonesAndMergedTracks(std::multimap<int, 
         auto trk1 = find(trackVecFinal.begin(),trackVecFinal.end(),track_a);
 	
 	if(trk1 != trackVecFinal.end()){  // if the track1 is already there
-	  auto trk2 = find(trackVecFinal.begin(),trackVecFinal.end(),track_b);
-	  if(trk2 != trackVecFinal.end()){ // if the track2 is already there, do nothing
-	    continue;
-	  }
 	  continue;
 	}
 	// otherwise store the two tracks
 	trackVecFinal.push_back(track_a);
 	trackVecFinal.push_back(track_b);
+
 	
     } // end of mergeable tracks	     
 	
