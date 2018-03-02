@@ -135,12 +135,6 @@ void ClonesAndSplitTracksFinder::init() {
   _initialTrackError_tanL = 1.e2;
   _maxChi2perHit = 1.e2;
   
-  // Get the magnetic field
-  dd4hep::Detector& lcdd = dd4hep::Detector::getInstance();
-  const double position[3]={0,0,0}; // position to calculate magnetic field at (the origin in this case)
-  double magneticFieldVector[3]={0,0,0}; // initialise object to hold magnetic field
-  lcdd.field().magneticField(position,magneticFieldVector); // get the magnetic field vector from DD4hep
-  _magneticField = magneticFieldVector[2]/dd4hep::tesla; // z component at (0,0,0)
   _n_run = 0;
   _n_evt = 0;
 }
@@ -179,7 +173,7 @@ void ClonesAndSplitTracksFinder::processEvent(LCEvent *evt) {
   // loop over the input tracks
   EVENT::TrackVec tracksWithoutClones;
 
-  std::multimap<Track*, std::pair<Track*,Track*>> candidateClones;
+  std::multimap<int, std::pair<int,Track*>> candidateClones;
   
   for(int iTrack = 0; iTrack < nTracks; ++iTrack) { // first loop over tracks
     int countClones = 0;
@@ -195,7 +189,7 @@ void ClonesAndSplitTracksFinder::processEvent(LCEvent *evt) {
 	  countClones++;
 	  Track* bestTrack;
 	  bestInClones(track_i,track_j,nOverlappingHits,bestTrack);
-	  candidateClones.insert(make_pair(track_i, make_pair(track_j,bestTrack)));
+	  candidateClones.insert(make_pair(iTrack, make_pair(jTrack,bestTrack)));
 	}
 	else{
 	  continue;
@@ -211,13 +205,13 @@ void ClonesAndSplitTracksFinder::processEvent(LCEvent *evt) {
 
   } // end first track loop
 
-  filterClonesAndMergedTracks(candidateClones, tracksWithoutClones, true);
+  filterClonesAndMergedTracks(candidateClones, input_track_col, tracksWithoutClones, true);
 
   //------------
   // SECOND STEP: MERGE TRACKS
   //------------
 
-  std::multimap<Track*, std::pair<Track*, Track*>> mergingCandidates;
+  std::multimap<int, std::pair<int, Track*>> mergingCandidates;
 
   for (UInt_t iTrack = 0; iTrack < tracksWithoutClones.size(); ++iTrack) {
     int countMergingPartners = 0;
@@ -255,7 +249,7 @@ void ClonesAndSplitTracksFinder::processEvent(LCEvent *evt) {
       if(toBeMerged){  // merging, refitting, storing in a container of mergingCandidates (multimap <*track1, pair<*track2,*trackMerged>>)
 	EVENT::Track* lcioTrkPtr;
 	mergeAndFit(track_i,track_j,lcioTrkPtr);
-	mergingCandidates.insert(make_pair(track_i, make_pair(track_j,lcioTrkPtr)));
+	mergingCandidates.insert(make_pair(iTrack, make_pair(jTrack,lcioTrkPtr)));
 	countMergingPartners++;
       } 
       else{ // no merging conditions met
@@ -276,14 +270,14 @@ void ClonesAndSplitTracksFinder::processEvent(LCEvent *evt) {
  } // end loop on iTracks
   
  EVENT::TrackVec finalTracks;
- filterClonesAndMergedTracks(mergingCandidates, finalTracks, false);
+ filterClonesAndMergedTracks(mergingCandidates, input_track_col, finalTracks, false);
 
  for(UInt_t iTrk = 0; iTrk < finalTracks.size(); iTrk++){
    TrackImpl *trackFinal = new TrackImpl;
    fromTrackToTrackImpl(finalTracks.at(iTrk),trackFinal);
    trackVec->addElement(trackFinal);
  } 
-    
+   
  evt->addCollection(trackVec.release(), _output_track_col_name);
 
 }
@@ -358,30 +352,36 @@ void ClonesAndSplitTracksFinder::fromTrackToTrackImpl(const Track* track, TrackI
 
 }
 
-void ClonesAndSplitTracksFinder::filterClonesAndMergedTracks(std::multimap<Track*,std::pair<Track*,Track*>> candidates, TrackVec& trackVecFinal, bool clones) {
+void ClonesAndSplitTracksFinder::filterClonesAndMergedTracks(std::multimap<int, std::pair<int, Track*>>& candidates, LCCollection*& inputTracks, TrackVec& trackVecFinal, bool clones){
 
   std::vector<double> chi2ndfVec;
 
-  for(std::multimap<Track*,std::pair<Track*,Track*>>::const_iterator iter = candidates.begin(); iter != candidates.end(); ++iter){
-    int countConnections = candidates.count(iter->first);
+  for(const auto&iter : candidates){
+    int track_a_id = iter.first;
+    int track_b_id = iter.second.first;
+    Track* track_final = iter.second.second;
+    int countConnections = candidates.count(track_a_id);
     bool multiConnection = false;
     if(countConnections > 1)
       multiConnection = true;
 
-    if(!multiConnection){ // if only 1 connection, same strategy for clones and mergeable tracks
+    if(!multiConnection){ // if only 1 connection
 
-      double chi2ndf =  ((iter->second.second)->getChi2())/((double)((iter->second.second)->getNdf()));
-      if(chi2ndfVec.empty()){
-	chi2ndfVec.push_back(chi2ndf);
-	trackVecFinal.push_back(iter->second.second);
+      if(clones){ // clones: compare the track pointers
+	auto it_trk = find(trackVecFinal.begin(), trackVecFinal.end(), track_final);
+	if(it_trk != trackVecFinal.end()){ // if the track is already there, do nothing
+	  continue;
+	}
+	trackVecFinal.push_back(track_final);
       }
-      std::vector<double>::const_iterator it_chi2 = find(chi2ndfVec.begin(), chi2ndfVec.end(), chi2ndf );
-      if(it_chi2 !=  chi2ndfVec.end()){ // if the track is already there (i.e. if an equal chi2 is already stored) do nothing
-	continue;
-      }
-      else{ // otherwise store the chi2 and push the track in the output vec
+      else{ // mergeable tracks: compare the chi2/ndf
+	double chi2ndf = track_final->getChi2()/(double)track_final->getNdf();
+	auto it_chi2 = find(chi2ndfVec.begin(), chi2ndfVec.end(), chi2ndf);
+	if(it_chi2 != chi2ndfVec.end()){
+	  continue;
+	}
 	chi2ndfVec.push_back(chi2ndf);
-	trackVecFinal.push_back(iter->second.second);
+	trackVecFinal.push_back(track_final);
       }
       
     }
@@ -390,26 +390,19 @@ void ClonesAndSplitTracksFinder::filterClonesAndMergedTracks(std::multimap<Track
       if(clones){ // clones
 
 	//look at the elements with equal range. If their bestTrack is the same, store it (if not already in). If their bestTrack is different, don't store it
-	std::pair<std::multimap<Track*,std::pair<Track*,Track*>>::iterator, std::multimap<Track*,std::pair<Track*,Track*>>::iterator> ret;
-	ret = candidates.equal_range(iter->first);
+	auto ret = candidates.equal_range(track_a_id);  //a std::pair of iterators on the multimap [ std::pair<std::multimap<Track*,std::pair<Track*,Track*>>::iterator, std::multimap<Track*,std::pair<Track*,Track*>>::iterator> ]
 	TrackVec bestTracksMultiConnections;
-	for(std::multimap<Track*,std::pair<Track*,Track*>>::iterator it=ret.first; it!=ret.second; ++it){
-	  bestTracksMultiConnections.push_back(it->second.second);
+	for(std::multimap<int,std::pair<int,Track*>>::iterator it=ret.first; it!=ret.second; ++it){
+	  Track* track_best = it->second.second;
+	  bestTracksMultiConnections.push_back(track_best);
 	}
 	if(std::adjacent_find( bestTracksMultiConnections.begin(), bestTracksMultiConnections.end(), std::not_equal_to<Track*>() ) == bestTracksMultiConnections.end() ){ //one best track with the same track key
-	  double chi2ndf =  ((bestTracksMultiConnections.at(0))->getChi2())/((float)((bestTracksMultiConnections.at(0))->getNdf()));
-	  if(chi2ndfVec.empty()){
-	    chi2ndfVec.push_back(chi2ndf);
-	    trackVecFinal.push_back(bestTracksMultiConnections.at(0));
-	  } 
-	  std::vector<double>::const_iterator it_chi2 = find(chi2ndfVec.begin(), chi2ndfVec.end(), chi2ndf );
-	  if(it_chi2 !=  chi2ndfVec.end()){ // if the track is already there (i.e. if an equal chi2 is already stored) do nothing
+	  auto it_trk = find(trackVecFinal.begin(),trackVecFinal.end(),bestTracksMultiConnections.at(0));
+	  if(it_trk != trackVecFinal.end()){ // if the track is already there, do nothing
 	    continue;
 	  }
-	  else{ // otherwise store the chi2 and push the track in the output vec
-	    chi2ndfVec.push_back(chi2ndf);
-	    trackVecFinal.push_back(bestTracksMultiConnections.at(0));
-	  }
+	  trackVecFinal.push_back(bestTracksMultiConnections.at(0));
+	
 	}
 	else{ //multiple best tracks with the same track key
 	  continue;
@@ -419,37 +412,26 @@ void ClonesAndSplitTracksFinder::filterClonesAndMergedTracks(std::multimap<Track
 	
       else{ // mergeable tracks -- at the moment they are all stored (very rare anyways)
 
-	double chi2ndf_trk1 = ((iter->first)->getChi2())/((double)((iter->first)->getNdf()));
-	double chi2ndf_trk2 = ((iter->second.first)->getChi2())/((double)((iter->second.first)->getNdf()));
-	if(chi2ndfVec.empty()){
-	  chi2ndfVec.push_back(chi2ndf_trk1);
-	  chi2ndfVec.push_back(chi2ndf_trk2);
-	}
-	std::vector<double>::const_iterator it_chi2_trk1 = find(chi2ndfVec.begin(), chi2ndfVec.end(), chi2ndf_trk1 );
-	std::vector<double>::const_iterator it_chi2_trk2 = find(chi2ndfVec.begin(), chi2ndfVec.end(), chi2ndf_trk2 );
-	if(it_chi2_trk1 !=  chi2ndfVec.end()){ // if the track1 is already there (i.e. if an equal chi2 is already stored)
-	  it_chi2_trk2 = find(chi2ndfVec.begin(), chi2ndfVec.end(), chi2ndf_trk2);
-	  if(it_chi2_trk2 != chi2ndfVec.end()){ // if the track2 is already there (i.e. if an equal chi2 is already stored)
+	Track *track_a = static_cast<Track*>(inputTracks->getElementAt(track_a_id));
+        Track *track_b = static_cast<Track*>(inputTracks->getElementAt(track_b_id));
+
+        auto trk1 = find(trackVecFinal.begin(),trackVecFinal.end(),track_a);
+	
+	if(trk1 != trackVecFinal.end()){  // if the track1 is already there
+	  auto trk2 = find(trackVecFinal.begin(),trackVecFinal.end(),track_b);
+	  if(trk2 != trackVecFinal.end()){ // if the track2 is already there, do nothing
 	    continue;
-	  }
-	  else{
-	    chi2ndfVec.push_back(chi2ndf_trk2);
 	  }
 	  continue;
 	}
-	else{ // otherwise store the two tracks
-	  chi2ndfVec.push_back(chi2ndf_trk1);
-	  chi2ndfVec.push_back(chi2ndf_trk2);
-	  //trk1 = iter->first;
-	  //trk2 = iter->second.first;
-	  trackVecFinal.push_back(iter->first);
-	  trackVecFinal.push_back(iter->second.first);
-	}
-
-      } // end of mergeable tracks	     
-
-    }
+	// otherwise store the two tracks
+	trackVecFinal.push_back(track_a);
+	trackVecFinal.push_back(track_b);
+	
+    } // end of mergeable tracks	     
+	
   }
+}
 
 }
 
@@ -540,6 +522,9 @@ void ClonesAndSplitTracksFinder::mergeAndFit(Track* track_i, Track* track_j, Tra
 
 void ClonesAndSplitTracksFinder::bestInClones(Track* track_a, Track* track_b, int nOverlappingHits, Track*& bestTrack) {
 
+  // This function compares two tracks which have a certain number of overlapping hits and returns the best track
+  // The best track is chosen based on length (in terms of number of hits) and chi2/ndf requirements
+  // In general, the longest track is preferred, if its chi2/ndf does not exceed twice the chi2/ndf of the shortest track
 
   TrackerHitVec trackerHit_a = track_a->getTrackerHits();
   TrackerHitVec trackerHit_b = track_b->getTrackerHits();

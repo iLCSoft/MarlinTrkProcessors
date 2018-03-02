@@ -54,7 +54,7 @@ protected:
   void mergeAndFit(Track*, Track*, Track*&);
 
   // Removes doubles (from clone treatments and track merging) and filters multiple connections (clones and mergeable tracks treated differently)
-  void filterClonesAndMergedTracks(std::multimap<Track*,std::pair<Track*,Track*>>, TrackVec&, bool);
+  void filterClonesAndMergedTracks(std::multimap<int,std::pair<int,Track*>>&, LCCollection*&, TrackVec&, bool);
 
   lcio::LCCollection *GetCollection(lcio::LCEvent *evt, std::string colName);
 
