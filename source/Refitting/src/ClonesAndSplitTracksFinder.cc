@@ -247,8 +247,11 @@ void ClonesAndSplitTracksFinder::processEvent(LCEvent *evt) {
       toBeMerged = isCloseInTheta && isCloseInPhi && isCloseInPt;
 
       if(toBeMerged){  // merging, refitting, storing in a container of mergingCandidates (multimap <*track1, pair<*track2,*trackMerged>>)
-	EVENT::Track* lcioTrkPtr;
+	EVENT::Track* lcioTrkPtr=nullptr;
 	mergeAndFit(track_i,track_j,lcioTrkPtr);
+	if(not lcioTrkPtr) {
+	  continue;
+	}
 	mergingCandidates.insert(make_pair(iTrack, make_pair(jTrack,lcioTrkPtr)));
 	countMergingPartners++;
       } 
@@ -456,7 +459,7 @@ void ClonesAndSplitTracksFinder::mergeAndFit(Track* track_i, Track* track_j, Tra
   }
   std::sort(trkHits.begin(),trkHits.end(),sort_by_r);
 
-  IMPL::TrackImpl *mergedTrack = new IMPL::TrackImpl;
+  auto mergedTrack = std::unique_ptr<TrackImpl>(new TrackImpl);
 
   auto marlin_trk = std::unique_ptr<MarlinTrk::IMarlinTrack>(_trksystem->createTrack());
 
@@ -472,7 +475,7 @@ void ClonesAndSplitTracksFinder::mergeAndFit(Track* track_i, Track* track_j, Tra
                              ? MarlinTrk::IMarlinTrack::forward
                              : MarlinTrk::IMarlinTrack::backward;
 
-  int fit_status = MarlinTrk::createFinalisedLCIOTrack(marlin_trk.get(), trkHits, mergedTrack, direction, covMatrix, _magneticField, _maxChi2perHit);
+  int fit_status = MarlinTrk::createFinalisedLCIOTrack(marlin_trk.get(), trkHits, mergedTrack.get(), direction, covMatrix, _magneticField, _maxChi2perHit);
 
   if(fit_status != 0){
     streamlog_out(DEBUG4) << "Fit failed with error status " << fit_status << std::endl;
@@ -506,8 +509,8 @@ void ClonesAndSplitTracksFinder::mergeAndFit(Track* track_i, Track* track_j, Tra
 
   UTIL::BitField64 encoder2(lcio::LCTrackerCellID::encoding_string());
   encoder2.reset(); // reset to 0
-  MarlinTrk::addHitNumbersToTrack(mergedTrack, all_hits, false, encoder2);
-  MarlinTrk::addHitNumbersToTrack(mergedTrack, hits_in_fit, true, encoder2);
+  MarlinTrk::addHitNumbersToTrack(mergedTrack.get(), all_hits, false, encoder2);
+  MarlinTrk::addHitNumbersToTrack(mergedTrack.get(), hits_in_fit, true, encoder2);
 
   streamlog_out(DEBUG4) << "processEvent: Hit numbers for track "
 			<< mergedTrack->id() << ":  " << std::endl;
@@ -524,7 +527,7 @@ void ClonesAndSplitTracksFinder::mergeAndFit(Track* track_i, Track* track_j, Tra
       mergedTrack->setTypeBit(detID);
   }
 
-  lcioTrkPtr = mergedTrack;
+  lcioTrkPtr = mergedTrack.release();
 }
 
 void ClonesAndSplitTracksFinder::bestInClones(Track* track_a, Track* track_b, int nOverlappingHits, Track*& bestTrack) {
