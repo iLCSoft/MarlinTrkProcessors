@@ -354,7 +354,7 @@ void ClonesAndSplitTracksFinder::fromTrackToTrackImpl(const Track* track, TrackI
 
 void ClonesAndSplitTracksFinder::filterClonesAndMergedTracks(std::multimap<int, std::pair<int, Track*>>& candidates, LCCollection*& inputTracks, TrackVec& trackVecFinal, bool clones){
 
-  std::vector<double> chi2ndfVec;
+  std::vector<TrackerHitVec> savedHitVec;
 
   for(const auto&iter : candidates){
     int track_a_id = iter.first;
@@ -374,14 +374,22 @@ void ClonesAndSplitTracksFinder::filterClonesAndMergedTracks(std::multimap<int, 
 	}
 	trackVecFinal.push_back(track_final);
       }
-      else{ // mergeable tracks: compare the chi2/ndf
-	double chi2ndf = track_final->getChi2()/(double)track_final->getNdf();
-	auto it_chi2 = find(chi2ndfVec.begin(), chi2ndfVec.end(), chi2ndf);
-	if(it_chi2 != chi2ndfVec.end()){
-	  continue;
+      else{ // mergeable tracks: compare the sets of tracker hits
+
+	TrackerHitVec track_final_hits = track_final->getTrackerHits();
+	bool toBeSaved = true;
+
+	for(const auto &hitsVec : savedHitVec){
+	  if( equal(hitsVec.begin(), hitsVec.end(), track_final_hits.begin()) ){
+	    toBeSaved = false;
+	    break;
+	  }
 	}
-	chi2ndfVec.push_back(chi2ndf);
-	trackVecFinal.push_back(track_final);
+
+	if(toBeSaved){				
+	  savedHitVec.push_back(track_final_hits);
+	  trackVecFinal.push_back(track_final);
+	}
       }
       
     }
