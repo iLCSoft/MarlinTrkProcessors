@@ -142,11 +142,11 @@ void DDSpacePointBuilder::init() {
  
   /*
   // alternative way to create a map of instances
-  const DDSurfaces::IGeometry& geom = DDSurfaces::IGeometry::instance() ;
-  const std::vector<const DDSurfaces::ISurface*>& surfaces = geom.getSurfaces() ;
+  const dd4hep::rec::IGeometry& geom = dd4hep::rec::IGeometry::instance() ;
+  const std::vector<const dd4hep::rec::ISurface*>& surfaces = geom.getSurfaces() ;
   // create map of surfaces
-  std::map< long, const DDSurfaces::ISurface* > surfMap ;
-    for(std::vector<const DDSurfaces::ISurface*>::const_iterator surf = surfaces.begin() ; surf != surfaces.end() ; ++surf){
+  std::map< long, const dd4hep::rec::ISurface* > surfMap ;
+    for(std::vector<const dd4hep::rec::ISurface*>::const_iterator surf = surfaces.begin() ; surf != surfaces.end() ; ++surf){
     surfMap[(*surf)->id() ] = (*surf) ;
   }
   */
@@ -418,15 +418,15 @@ TrackerHitImpl* DDSpacePointBuilder::createSpacePoint( TrackerHitPlane* a , Trac
   double ya = pa[1];
   double za = pa[2];
   CLHEP::Hep3Vector PA( xa,ya,za );
-  DDSurfaces::Vector3D ddPA( xa * dd4hep::mm, ya * dd4hep::mm, za * dd4hep::mm );
+  dd4hep::rec::Vector3D ddPA( xa * dd4hep::mm, ya * dd4hep::mm, za * dd4hep::mm );
   double du_a = a->getdU();  
   
-  //const DDSurfaces::ISurface* msA = surfMap[a->getCellID0()];
-  const DDSurfaces::ISurface* msA = surfMap->find(a->getCellID0())->second;
+  //const dd4hep::rec::ISurface* msA = surfMap[a->getCellID0()];
+  const dd4hep::rec::ISurface* msA = surfMap->find(a->getCellID0())->second;
   streamlog_out (DEBUG2) << " do i find a surface " << *msA << std::endl ;
-  DDSurfaces::Vector3D ddWA = msA->normal();
-  DDSurfaces::Vector3D ddUA = msA->u();
-  DDSurfaces::Vector3D ddVA = msA->v();
+  dd4hep::rec::Vector3D ddWA = msA->normal();
+  dd4hep::rec::Vector3D ddUA = msA->u();
+  dd4hep::rec::Vector3D ddVA = msA->v();
   CLHEP::Hep3Vector UA(ddUA.x() / dd4hep::mm, ddUA.y() / dd4hep::mm, ddUA.z() / dd4hep::mm);
   CLHEP::Hep3Vector VA(ddVA.x() / dd4hep::mm, ddVA.y() / dd4hep::mm, ddVA.z() / dd4hep::mm);
   CLHEP::Hep3Vector WA(ddWA.x() / dd4hep::mm, ddWA.y() / dd4hep::mm, ddWA.z() / dd4hep::mm); 
@@ -436,13 +436,13 @@ TrackerHitImpl* DDSpacePointBuilder::createSpacePoint( TrackerHitPlane* a , Trac
   double yb = pb[1];
   double zb = pb[2];
   CLHEP::Hep3Vector PB( xb,yb,zb );
-  DDSurfaces::Vector3D ddPB( xb * dd4hep::mm,yb * dd4hep::mm,zb * dd4hep::mm );  
+  dd4hep::rec::Vector3D ddPB( xb * dd4hep::mm,yb * dd4hep::mm,zb * dd4hep::mm );
   double du_b = b->getdU();  
   
-  const DDSurfaces::ISurface* msB = surfMap->find(b->getCellID0())->second;
-  DDSurfaces::Vector3D ddWB = msB->normal();
-  DDSurfaces::Vector3D ddUB = msB->u();
-  DDSurfaces::Vector3D ddVB = msB->v();
+  const dd4hep::rec::ISurface* msB = surfMap->find(b->getCellID0())->second;
+  dd4hep::rec::Vector3D ddWB = msB->normal();
+  dd4hep::rec::Vector3D ddUB = msB->u();
+  dd4hep::rec::Vector3D ddVB = msB->v();
 
   CLHEP::Hep3Vector UB(ddUB.x() / dd4hep::mm, ddUB.y() / dd4hep::mm, ddUB.z() / dd4hep::mm);
   CLHEP::Hep3Vector VB(ddVB.x() / dd4hep::mm, ddVB.y() / dd4hep::mm, ddVB.z() / dd4hep::mm);
@@ -500,8 +500,8 @@ TrackerHitImpl* DDSpacePointBuilder::createSpacePoint( TrackerHitPlane* a , Trac
 //  streamlog_out( DEBUG2 ) << "\tStandard: Position of space point (global) : ( " << point.x() << " " << point.y() << " " << point.z() << " )\n";
 
   CLHEP::Hep3Vector vertex(0.,0.,0.);
-  DDSurfaces::Vector2D L1 = msA->globalToLocal(ddPA);
-  DDSurfaces::Vector2D L2 = msB->globalToLocal(ddPB);
+  dd4hep::rec::Vector2D L1 = msA->globalToLocal(ddPA);
+  dd4hep::rec::Vector2D L2 = msB->globalToLocal(ddPB);
   //CLHEP::Hep3Vector L1 = ccsA->getLocalPoint(PA);
   //CLHEP::Hep3Vector L2 = ccsB->getLocalPoint(PB);
 
@@ -511,10 +511,10 @@ TrackerHitImpl* DDSpacePointBuilder::createSpacePoint( TrackerHitPlane* a , Trac
   //streamlog_out(DEBUG3) << " L1 = " << L1 << std::endl;
   //streamlog_out(DEBUG3) << " L2 = " << L2 << std::endl;
 
-  DDSurfaces::Vector2D ddSL1( L1.u(),(-stripLength * dd4hep::mm)/2.0 );
-  DDSurfaces::Vector2D ddEL1( L1.u(),(stripLength * dd4hep::mm)/2.0 );
-  DDSurfaces::Vector2D ddSL2( L2.u(),(-stripLength * dd4hep::mm)/2.0 );
-  DDSurfaces::Vector2D ddEL2( L2.u(),(stripLength * dd4hep::mm)/2.0 );      
+  dd4hep::rec::Vector2D ddSL1( L1.u(),(-stripLength * dd4hep::mm)/2.0 );
+  dd4hep::rec::Vector2D ddEL1( L1.u(),(stripLength * dd4hep::mm)/2.0 );
+  dd4hep::rec::Vector2D ddSL2( L2.u(),(-stripLength * dd4hep::mm)/2.0 );
+  dd4hep::rec::Vector2D ddEL2( L2.u(),(stripLength * dd4hep::mm)/2.0 );
   //L1.setY(-stripLength/2.0);
   //CLHEP::Hep3Vector SL1 = L1;
   //L1.setY( stripLength/2.0);
@@ -526,10 +526,10 @@ TrackerHitImpl* DDSpacePointBuilder::createSpacePoint( TrackerHitPlane* a , Trac
   
   
 
-  DDSurfaces::Vector3D ddS1 = msA->localToGlobal(ddSL1);
-  DDSurfaces::Vector3D ddE1 = msA->localToGlobal(ddEL1);
-  DDSurfaces::Vector3D ddS2 = msB->localToGlobal(ddSL2);
-  DDSurfaces::Vector3D ddE2 = msB->localToGlobal(ddEL2);
+  dd4hep::rec::Vector3D ddS1 = msA->localToGlobal(ddSL1);
+  dd4hep::rec::Vector3D ddE1 = msA->localToGlobal(ddEL1);
+  dd4hep::rec::Vector3D ddS2 = msB->localToGlobal(ddSL2);
+  dd4hep::rec::Vector3D ddE2 = msB->localToGlobal(ddEL2);
   CLHEP::Hep3Vector S1 (ddS1.x() / dd4hep::mm, ddS1.y() / dd4hep::mm, ddS1.z() / dd4hep::mm);
   CLHEP::Hep3Vector E1 (ddE1.x() / dd4hep::mm, ddE1.y() / dd4hep::mm, ddE1.z() / dd4hep::mm);
   CLHEP::Hep3Vector S2 (ddS2.x() / dd4hep::mm, ddS2.y() / dd4hep::mm, ddS2.z() / dd4hep::mm);
@@ -561,7 +561,7 @@ TrackerHitImpl* DDSpacePointBuilder::createSpacePoint( TrackerHitPlane* a , Trac
   
 
   // using dd4hep to check if hit within boundaries
-  DDSurfaces::Vector3D DDpoint( point.x() * dd4hep::mm, point.y() * dd4hep::mm, point.z() * dd4hep::mm );
+  dd4hep::rec::Vector3D DDpoint( point.x() * dd4hep::mm, point.y() * dd4hep::mm, point.z() * dd4hep::mm );
 
   if ( !msA->insideBounds(DDpoint)){
 

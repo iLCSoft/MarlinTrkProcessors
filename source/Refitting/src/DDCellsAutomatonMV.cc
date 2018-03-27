@@ -820,9 +820,9 @@ void DDCellsAutomatonMV::InitialiseVTX( LCEvent * evt, EVENT::TrackerHitVec Hits
       
       TrackerHitPlane * hit = dynamic_cast<TrackerHitPlane*>(hitCollection->getElementAt(ielem));
 
-      DDSurfaces::Vector3D U(1.0,hit->getU()[1],hit->getU()[0],DDSurfaces::Vector3D::spherical);
-      DDSurfaces::Vector3D V(1.0,hit->getV()[1],hit->getV()[0],DDSurfaces::Vector3D::spherical);
-      DDSurfaces::Vector3D Z(0.0,0.0,1.0);
+      dd4hep::rec::Vector3D U(1.0,hit->getU()[1],hit->getU()[0],dd4hep::rec::Vector3D::spherical);
+      dd4hep::rec::Vector3D V(1.0,hit->getV()[1],hit->getV()[0],dd4hep::rec::Vector3D::spherical);
+      dd4hep::rec::Vector3D Z(0.0,0.0,1.0);
       
       const float eps = 1.0e-07;
       // V must be the global z axis 
@@ -952,9 +952,9 @@ void DDCellsAutomatonMV::InitialiseVTX( LCEvent * evt, EVENT::TrackerHitVec Hits
 	else if ( ( trkhit_P = dynamic_cast<TrackerHitPlane*>( hitCollection->getElementAt( ielem ) ) ) )  {
 	  
 	  // first we need to check if the measurement vectors are aligned with the global coordinates 
-	  DDSurfaces::Vector3D U(1.0,trkhit_P->getU()[1],trkhit_P->getU()[0],DDSurfaces::Vector3D::spherical);
-	  DDSurfaces::Vector3D V(1.0,trkhit_P->getV()[1],trkhit_P->getV()[0],DDSurfaces::Vector3D::spherical);
-	  DDSurfaces::Vector3D Z(0.0,0.0,1.0);
+	  dd4hep::rec::Vector3D U(1.0,trkhit_P->getU()[1],trkhit_P->getU()[0],dd4hep::rec::Vector3D::spherical);
+	  dd4hep::rec::Vector3D V(1.0,trkhit_P->getV()[1],trkhit_P->getV()[0],dd4hep::rec::Vector3D::spherical);
+	  dd4hep::rec::Vector3D Z(0.0,0.0,1.0);
 
 
 	  const float eps = 1.0e-07;
