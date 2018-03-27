@@ -13,9 +13,9 @@
 #include "CLHEP/Vector/Rotation.h"
 
 // DD4HEP classes
-#include "DDSurfaces/Vector2D.h"
-#include "DDSurfaces/Vector3D.h"
-#include "DDSurfaces/ISurface.h"
+#include "DDRec/Vector2D.h"
+#include "DDRec/Vector3D.h"
+#include "DDRec/ISurface.h"
 #include "DD4hep/Detector.h"
 #include "DDRec/SurfaceManager.h"
 #include "DDRec/SurfaceHelper.h"
