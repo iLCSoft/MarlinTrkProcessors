@@ -1,3 +1,20 @@
+# v02-10
+
+* 2018-03-02 Emilia Leogrande ([PR#34](https://github.com/iLCSoft/MarlinTrkProcessors/pull/34))
+  - New Processor: ClonesAndSplitTracksFinder for running after ConformalTracking
+    - This processor has a track collection as input, removes all possible clones (tracks sharing at least 2 hits), looks for split tracks (tracks in a certain space region with similar track parameters) and merges them. If more than two tracks happen to fulfil the requirements, no merging is applied at the moment.
+
+* 2018-02-25 Ete Remi ([PR#33](https://github.com/iLCSoft/MarlinTrkProcessors/pull/33))
+  - DDPlanarDigiProcessor
+      - Added time information to tracker hit 
+  - DDSpacePointBuilder
+      - Added time information to space point as the earliest time of the two tracker hits
+
+* 2018-03-28 Marko Petric ([PR#36](https://github.com/iLCSoft/MarlinTrkProcessors/pull/36))
+  - Fix for the removal of DDSurfaces which have been merged into DDRec 
+    -  includes from `DDSurfaces` -> `DDRec`
+    - namespace `DDSurfaces` -> `dd4hep::rec`
+
 # v02-09-01
 
 * 2017-10-18 Frank Gaede ([PR#31](https://github.com/iLCSoft/MarlinTrkProcessors/pull/31))
