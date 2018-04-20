@@ -56,6 +56,12 @@ protected:
   // Removes doubles (from clone treatments and track merging) and filters multiple connections (clones and mergeable tracks treated differently)
   void filterClonesAndMergedTracks(std::multimap<int,std::pair<int,Track*>>&, LCCollection*&, TrackVec&, bool);
 
+  // Contains the whole merging procedure (calls filterClonesAndMergedTracks(bool false) and mergeAndFit)
+  void mergeSplitTracks(std::unique_ptr<LCCollectionVec>&, LCCollection*&, EVENT::TrackVec&);
+
+  // Contains the whole clone skimming procedure (calls bestInClones and filterClonesAndMergedTracks(bool true))
+  void removeClones(EVENT::TrackVec&, LCCollection*&);
+
   lcio::LCCollection *GetCollection(lcio::LCEvent *evt, std::string colName);
 
   std::string _input_track_col_name;
@@ -74,7 +80,7 @@ protected:
 
   double _maxDeltaTheta = 0.0, _maxDeltaPhi = 0.0, _maxDeltaPt = 0.0;
 
-  bool _clonesOnly = true;
+  bool _mergeSplitTracks = false;
 
   // Track fit parameters
   double _initialTrackError_d0;
