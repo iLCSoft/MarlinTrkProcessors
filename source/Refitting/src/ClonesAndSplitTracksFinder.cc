@@ -94,6 +94,11 @@ ClonesAndSplitTracksFinder::ClonesAndSplitTracksFinder() : Processor("ClonesAndS
 			     _maxDeltaPt,
 			     double(0.69));
 
+  registerProcessorParameter("clonesOnly",
+			     "if true, only the clones treatment is performed",
+			     _clonesOnly,
+			     bool(true));
+
 }
 
 bool sort_by_r(EVENT::TrackerHit* hit1, EVENT::TrackerHit* hit2){
@@ -169,7 +174,7 @@ void ClonesAndSplitTracksFinder::processEvent(LCEvent *evt) {
   //------------
 
   const int nTracks = input_track_col->getNumberOfElements();
-  
+
   // loop over the input tracks
   EVENT::TrackVec tracksWithoutClones;
 
@@ -207,81 +212,95 @@ void ClonesAndSplitTracksFinder::processEvent(LCEvent *evt) {
 
   filterClonesAndMergedTracks(candidateClones, input_track_col, tracksWithoutClones, true);
 
-  //------------
-  // SECOND STEP: MERGE TRACKS
-  //------------
+  if(!_clonesOnly){
 
-  std::multimap<int, std::pair<int, Track*>> mergingCandidates;
+    //------------
+    // SECOND STEP: MERGE TRACKS
+    //------------
 
-  for (UInt_t iTrack = 0; iTrack < tracksWithoutClones.size(); ++iTrack) {
-    int countMergingPartners = 0;
-    bool toBeMerged = false;
-    Track *track_i = static_cast<Track *>(tracksWithoutClones.at(iTrack));
+    std::multimap<int, std::pair<int, Track*>> mergingCandidates;
 
-    for(UInt_t jTrack = 0; jTrack < tracksWithoutClones.size(); ++jTrack) {
+    for (UInt_t iTrack = 0; iTrack < tracksWithoutClones.size(); ++iTrack) {
+      int countMergingPartners = 0;
+      bool toBeMerged = false;
+      Track *track_i = static_cast<Track *>(tracksWithoutClones.at(iTrack));
 
-      Track *track_j = static_cast<Track *>(tracksWithoutClones.at(jTrack));
-      bool isCloseInTheta = false, isCloseInPhi = false, isCloseInPt = false;
+      for(UInt_t jTrack = 0; jTrack < tracksWithoutClones.size(); ++jTrack) {
+
+	Track *track_j = static_cast<Track *>(tracksWithoutClones.at(jTrack));
+	bool isCloseInTheta = false, isCloseInPhi = false, isCloseInPt = false;
     
-      if(track_j != track_i){
+	if(track_j != track_i){
 
-	double pt_i = 0.3 * _magneticField/ (fabs(track_i->getOmega())*1000.);
-	double pt_j = 0.3 * _magneticField / (fabs(track_j->getOmega()*1000.));
-	double theta_i = ( M_PI/2 - atan(track_i->getTanLambda()) ) * 180./M_PI;
-	double theta_j = ( M_PI/2 - atan(track_j->getTanLambda()) ) * 180./M_PI;
-	double phi_i = track_i->getPhi() * 180./M_PI;
-	double phi_j = track_j->getPhi() * 180./M_PI;
+	  double pt_i = 0.3 * _magneticField/ (fabs(track_i->getOmega())*1000.);
+	  double pt_j = 0.3 * _magneticField / (fabs(track_j->getOmega()*1000.));
+	  double theta_i = ( M_PI/2 - atan(track_i->getTanLambda()) ) * 180./M_PI;
+	  double theta_j = ( M_PI/2 - atan(track_j->getTanLambda()) ) * 180./M_PI;
+	  double phi_i = track_i->getPhi() * 180./M_PI;
+	  double phi_j = track_j->getPhi() * 180./M_PI;
 
-	if(fabs(theta_i - theta_j) < _maxDeltaTheta){
-	  isCloseInTheta = true;
+	  if(fabs(theta_i - theta_j) < _maxDeltaTheta){
+	    isCloseInTheta = true;
+	  }
+	  if(fabs(phi_i - phi_j) < _maxDeltaPhi){
+	    isCloseInPhi = true;
+	  }
+	  if(fabs(pt_i - pt_j) < _maxDeltaPt){
+	    isCloseInPt = true;
+	  }
+
 	}
-	if(fabs(phi_i - phi_j) < _maxDeltaPhi){
-	  isCloseInPhi = true;
-	}
-	if(fabs(pt_i - pt_j) < _maxDeltaPt){
-	  isCloseInPt = true;
-	}
 
-      }
+	toBeMerged = isCloseInTheta && isCloseInPhi && isCloseInPt;
 
-      toBeMerged = isCloseInTheta && isCloseInPhi && isCloseInPt;
-
-      if(toBeMerged){  // merging, refitting, storing in a container of mergingCandidates (multimap <*track1, pair<*track2,*trackMerged>>)
-	EVENT::Track* lcioTrkPtr=nullptr;
-	mergeAndFit(track_i,track_j,lcioTrkPtr);
-	if(not lcioTrkPtr) {
+	if(toBeMerged){  // merging, refitting, storing in a container of mergingCandidates (multimap <*track1, pair<*track2,*trackMerged>>)
+	  EVENT::Track* lcioTrkPtr=nullptr;
+	  mergeAndFit(track_i,track_j,lcioTrkPtr);
+	  if(not lcioTrkPtr) {
+	    continue;
+	  }
+	  mergingCandidates.insert(make_pair(iTrack, make_pair(jTrack,lcioTrkPtr)));
+	  countMergingPartners++;
+	} 
+	else{ // no merging conditions met
 	  continue;
 	}
-	mergingCandidates.insert(make_pair(iTrack, make_pair(jTrack,lcioTrkPtr)));
-	countMergingPartners++;
-      } 
-      else{ // no merging conditions met
-	continue;
-      }
       
 
-  } // end loop on jTracks
+      } // end loop on jTracks
 
-  if(countMergingPartners == 0){  // if track_i has no merging partner, store it in the output vec
+      if(countMergingPartners == 0){  // if track_i has no merging partner, store it in the output vec
 
-    TrackImpl *trackFinal = new TrackImpl;
-    fromTrackToTrackImpl(track_i,trackFinal);
-    trackVec->addElement(trackFinal);
+	TrackImpl *trackFinal = new TrackImpl;
+	fromTrackToTrackImpl(track_i,trackFinal);
+	trackVec->addElement(trackFinal);
 
+      }
+
+    } // end loop on iTracks
+  
+    EVENT::TrackVec finalTracks;
+    filterClonesAndMergedTracks(mergingCandidates, input_track_col, finalTracks, false);
+
+    for(UInt_t iTrk = 0; iTrk < finalTracks.size(); iTrk++){
+      TrackImpl *trackFinal = new TrackImpl;
+      fromTrackToTrackImpl(finalTracks.at(iTrk),trackFinal);
+      trackVec->addElement(trackFinal);
+    } 
+   
   }
 
- } // end loop on iTracks
-  
- EVENT::TrackVec finalTracks;
- filterClonesAndMergedTracks(mergingCandidates, input_track_col, finalTracks, false);
-
- for(UInt_t iTrk = 0; iTrk < finalTracks.size(); iTrk++){
-   TrackImpl *trackFinal = new TrackImpl;
-   fromTrackToTrackImpl(finalTracks.at(iTrk),trackFinal);
-   trackVec->addElement(trackFinal);
- } 
+  else{
+    
+    for(UInt_t iTrk = 0; iTrk < tracksWithoutClones.size(); iTrk++){
+      TrackImpl *trackFinal = new TrackImpl;
+      fromTrackToTrackImpl(tracksWithoutClones.at(iTrk),trackFinal);
+      trackVec->addElement(trackFinal);
+    } 
    
- evt->addCollection(trackVec.release(), _output_track_col_name);
+  }
+
+  evt->addCollection(trackVec.release(), _output_track_col_name);
 
 }
 

@@ -74,6 +74,8 @@ protected:
 
   double _maxDeltaTheta = 0.0, _maxDeltaPhi = 0.0, _maxDeltaPt = 0.0;
 
+  bool _clonesOnly = true;
+
   // Track fit parameters
   double _initialTrackError_d0;
   double _initialTrackError_phi0;
