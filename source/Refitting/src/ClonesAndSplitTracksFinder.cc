@@ -340,23 +340,23 @@ void ClonesAndSplitTracksFinder::mergeSplitTracks(std::unique_ptr<LCCollectionVe
 	    isCloseInPt = true;
 	  }
 
-	}
+	  toBeMerged = isCloseInTheta && isCloseInPhi && isCloseInPt;
 
-	toBeMerged = isCloseInTheta && isCloseInPhi && isCloseInPt;
-
-	if(toBeMerged){  // merging, refitting, storing in a container of mergingCandidates (multimap <*track1, pair<*track2,*trackMerged>>)
-	  EVENT::Track* lcioTrkPtr=nullptr;
-	  mergeAndFit(track_i,track_j,lcioTrkPtr);
-	  if(not lcioTrkPtr) {
+	  if(toBeMerged){  // merging, refitting, storing in a container of mergingCandidates (multimap <*track1, pair<*track2,*trackMerged>>)
+	    EVENT::Track* lcioTrkPtr=nullptr;
+	    mergeAndFit(track_i,track_j,lcioTrkPtr);
+	    if(not lcioTrkPtr) {
+	      continue;
+	    }
+	    mergingCandidates.insert(make_pair(iTrack, make_pair(jTrack,lcioTrkPtr)));
+	    countMergingPartners++;
+	  } 
+	  else{ // no merging conditions met
 	    continue;
 	  }
-	  mergingCandidates.insert(make_pair(iTrack, make_pair(jTrack,lcioTrkPtr)));
-	  countMergingPartners++;
-	} 
-	else{ // no merging conditions met
-	  continue;
-	}
       
+
+	}
 
       } // end loop on jTracks
 
