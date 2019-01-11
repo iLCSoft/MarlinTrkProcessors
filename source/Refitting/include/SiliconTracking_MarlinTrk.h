@@ -232,7 +232,13 @@ protected:
   std::string _MarlinTrkDiagnosticsName;
   
   bool _MSOn, _ElossOn, _SmoothOn ;
-  
+
+  /** switches: False for backward compatible (default).
+                True to apply new methods.
+   */
+  bool _useSimpleUpdatedCoreBin;
+  bool _useSimpleAttachHitToTrack;
+
   float _initialTrackError_d0;
   float _initialTrackError_phi0;
   float _initialTrackError_omega;

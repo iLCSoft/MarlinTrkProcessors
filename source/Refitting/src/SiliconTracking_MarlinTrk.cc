@@ -544,6 +544,17 @@ SiliconTracking_MarlinTrk::SiliconTracking_MarlinTrk() : Processor("SiliconTrack
 			      _trkSystemName,
 			      std::string("KalTest") );
 
+
+  registerProcessorParameter("AplySimpleUpdatedCoreBin",
+                             "Use simple updated triplets searching core bin. (default is false for backward compatible)",
+                             _useSimpleUpdatedCoreBin,
+                             bool(false));
+
+
+  registerProcessorParameter("UseSimpleAttachHitToTrack",
+                             "Use simple AttachHitToTrack for merging split track segments. (default is false for backward compatible)",
+                             _useSimpleAttachHitToTrack,
+                             bool(false));
   
 #ifdef MARLINTRK_DIAGNOSTICS_ON
   
@@ -1443,41 +1454,51 @@ void SiliconTracking_MarlinTrk::ProcessOneSector(int iPhi, int iTheta) {
           int iThetaLowInner = iTheta_Low;
           int iThetaUpInner = iTheta_Up;        
           
-          // test to see if this is the core bin of the current search
-          // if so, look into the neigboring bins in the inner layer
-          if (ipMiddle == iPhi && itMiddle==iTheta) { 
-            iPhiLowInner = iPhi_Low;
-            iPhiUpInner  = iPhi_Up;
-            iThetaLowInner = iTheta_Low;
-            iThetaUpInner = iTheta_Up;
-          }
-          else { 
-            int difP = abs(ipMiddle-iPhi); //  number of phi bins from core: can only be 1 or 0 due to hard coded 1 above
-            int difT = abs(itMiddle-iTheta);// number of theta bins from core: can only be 1 or 0 due to hard coded 1 above
-            int minP = min(ipMiddle,iPhi);   // min phi: core bin or current phi bin middle
-            int minT = min(itMiddle,iTheta); // min theta: core bin or current theta bin middle
-            int maxP = max(ipMiddle,iPhi);   // max phi: core bin or current phi bin middle
-            int maxT = max(itMiddle,iTheta); // max theta: core bin or current theta bin middle
+          if (_useSimpleUpdatedCoreBin){ // improvement for the lower momentum
+
+	    iPhiLowInner = ipMiddle - 1;
+	    iPhiUpInner  = ipMiddle + 1;
+	    iThetaLowInner = itMiddle - 1;
+	    iThetaUpInner  = itMiddle + 1;
+
+	  } else { // backward compatible
+
+	    // test to see if this is the core bin of the current search
+	    // if so, look into the neigboring bins in the inner layer
+	    if (ipMiddle == iPhi && itMiddle==iTheta) {
+	      iPhiLowInner = iPhi_Low;
+	      iPhiUpInner  = iPhi_Up;
+	      iThetaLowInner = iTheta_Low;
+	      iThetaUpInner = iTheta_Up;
+	    }
+	    else {
+	      int difP = abs(ipMiddle-iPhi); //  number of phi bins from core: can only be 1 or 0 due to hard coded 1 above
+	      int difT = abs(itMiddle-iTheta);// number of theta bins from core: can only be 1 or 0 due to hard coded 1 above
+	      int minP = min(ipMiddle,iPhi);   // min phi: core bin or current phi bin middle
+	      int minT = min(itMiddle,iTheta); // min theta: core bin or current theta bin middle
+	      int maxP = max(ipMiddle,iPhi);   // max phi: core bin or current phi bin middle
+	      int maxT = max(itMiddle,iTheta); // max theta: core bin or current theta bin middle
             
-            if (difP==1 && difT==1) { // if the diffence is a single bin in both phi and theta : only look in the bin adjacent to the core bin  
-              iPhiLowInner = minP;
-              iPhiUpInner = maxP;
-              iThetaLowInner = minT;
-              iThetaUpInner = maxT;
-            }
-            if (difP==0) { // must be +/-1 theta : only look in bins adjacent to the middle bin
-              iPhiLowInner = iPhi_Low;
-              iPhiUpInner  = iPhi_Up;
-              iThetaLowInner = minT;
-              iThetaUpInner = maxT;
-            }
-            if (difT==0) { // must be +/-1 phi : only look in bins adjacent to the middle bin
-              iPhiLowInner = minP;
-              iPhiUpInner  = maxP;
-              iThetaLowInner = iTheta_Low;
-              iThetaUpInner = iTheta_Up;            
-            }
-          }               
+	      if (difP==1 && difT==1) { // if the diffence is a single bin in both phi and theta : only look in the bin adjacent to the core bin
+		iPhiLowInner = minP;
+		iPhiUpInner = maxP;
+		iThetaLowInner = minT;
+		iThetaUpInner = maxT;
+	      }
+	      if (difP==0) { // must be +/-1 theta : only look in bins adjacent to the middle bin
+		iPhiLowInner = iPhi_Low;
+		iPhiUpInner  = iPhi_Up;
+		iThetaLowInner = minT;
+		iThetaUpInner = maxT;
+	      }
+	      if (difT==0) { // must be +/-1 phi : only look in bins adjacent to the middle bin
+		iPhiLowInner = minP;
+		iPhiUpInner  = maxP;
+		iThetaLowInner = iTheta_Low;
+		iThetaUpInner = iTheta_Up;
+	      }
+	    }
+	  }
           if (nHitsMiddle > 0) { // look into inner bins
             
             for (int ipInner=iPhiLowInner; ipInner<iPhiUpInner+1;ipInner++) { // loop over phi in the Inner
@@ -2271,28 +2292,40 @@ void SiliconTracking_MarlinTrk::CreateTrack(TrackExtended * trackAR ) {
       // Attach hits belonging to the current track segment to  
       // the track already created
       if (found == 1) {
-        trackOld->ClearTrackerHitExtendedVec();
-        for (int i=0;i<nHits;++i) {
-          TrackerHitExtended * trkHit = hitVec[i];
-          trkHit->clearTrackVec();
-          if (i == iBad) {          
-          }
-          else {
-            trackOld->addTrackerHitExtended(trkHit);
-            trkHit->addTrackExtended( trackOld );
-          }
-        }  
-        for (int i=0;i<nHitsOld;++i) {
-          int icur = i+nHits;
-          TrackerHitExtended * trkHit = hitVecOld[i];
-          trkHit->clearTrackVec();
-          if (icur == iBad) {
-          }
-          else {
-            trackOld->addTrackerHitExtended(trkHit);
-            trkHit->addTrackExtended( trackOld );
-          }
-        }
+	if(_useSimpleAttachHitToTrack) { // improvement for the fitting
+
+	  trackAR->ClearTrackerHitExtendedVec();
+	  for (int i=0;i<nHits;++i) {
+	    int iopt = 2;
+	    TrackerHitExtended * trkHit = hitVec[i];
+	    AttachHitToTrack(trackOld, trkHit, iopt );
+	  }
+
+	} else { // backward compatible
+
+	  trackOld->ClearTrackerHitExtendedVec();
+	  for (int i=0;i<nHits;++i) {
+	    TrackerHitExtended * trkHit = hitVec[i];
+	    trkHit->clearTrackVec();
+	    if (i == iBad) {
+	    }
+	    else {
+	      trackOld->addTrackerHitExtended(trkHit);
+	      trkHit->addTrackExtended( trackOld );
+	    }
+	  }
+	  for (int i=0;i<nHitsOld;++i) {
+	    int icur = i+nHits;
+	    TrackerHitExtended * trkHit = hitVecOld[i];
+	    trkHit->clearTrackVec();
+	    if (icur == iBad) {
+	    }
+	    else {
+	      trackOld->addTrackerHitExtended(trkHit);
+	      trkHit->addTrackExtended( trackOld );
+	    }
+	  }
+	}
         trackOld->setOmega(omega);
         trackOld->setTanLambda(tanlambda);
         trackOld->setPhi(phi0);
