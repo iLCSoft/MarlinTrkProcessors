@@ -763,8 +763,10 @@ void DDTPCDigiProcessor::processEvent( LCEvent * evt )
       
       padheight = _tpc->padHeight/dd4hep::mm ; 
       
-      double bReso = ( (_diffRPhi * _diffRPhi) / _nEff ) * sin(padTheta) * ( 6.0 / (padheight) )  * ( 4.0 / _bField  ) ;
-      
+      //double bReso = ( (_diffRPhi * _diffRPhi) / _nEff ) * sin(padTheta) * ( 6.0 / (padheight) )  * ( 4.0 / _bField  ) ;
+      // formula with new quadratic B-field correction term
+      double bReso = ( (_diffRPhi * _diffRPhi) / _nEff ) * sin(padTheta) * ( 6.0 / (padheight) ) * ( (4.0 * 4.0) / (_bField * _bField) ) ;
+
       double tpcRPhiRes = sqrt( aReso + bReso * (driftLength / 10.0) ); // driftLength in cm
       
       double tpcZRes  = sqrt(( _pointResoZ0 * _pointResoZ0 ) 
