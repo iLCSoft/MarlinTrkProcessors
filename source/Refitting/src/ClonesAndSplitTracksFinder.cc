@@ -572,12 +572,7 @@ void ClonesAndSplitTracksFinder::bestInClones(Track* track_a, Track* track_b, in
   double a_chi2 = track_a->getChi2()/track_a->getNdf();
 
   if(nOverlappingHits == trackerHit_a_size){ // if the second track is the first track + segment, make sure the increase in chi2 is not too much
-    if(b_chi2 <= 2*a_chi2){ 
-      bestTrack = track_b;
-    }
-    else{ 
-      bestTrack = track_a;
-    }
+     bestTrack = track_b;
   }
   else if(nOverlappingHits == trackerHit_b_size){ // if the second track is a subtrack of the first track
     bestTrack = track_a; 
