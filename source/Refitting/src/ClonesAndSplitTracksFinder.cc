@@ -572,7 +572,7 @@ void ClonesAndSplitTracksFinder::bestInClones(Track* track_a, Track* track_b, in
   double a_chi2 = track_a->getChi2()/track_a->getNdf();
 
   if(nOverlappingHits == trackerHit_a_size){ // if the second track is the first track + segment, make sure the increase in chi2 is not too much
-    if(b_chi2 < 2*a_chi2){ 
+    if(b_chi2 <= 2*a_chi2){ 
       bestTrack = track_b;
     }
     else{ 
@@ -580,15 +580,10 @@ void ClonesAndSplitTracksFinder::bestInClones(Track* track_a, Track* track_b, in
     }
   }
   else if(nOverlappingHits == trackerHit_b_size){ // if the second track is a subtrack of the first track
-    if(a_chi2 < 2*b_chi2){ 
-      bestTrack = track_a;
-    }
-    else{ 
-      bestTrack = track_b;
-    }    
+    bestTrack = track_a; 
   }
   else if(trackerHit_b_size == trackerHit_a_size){ // if the two tracks have the same length
-    if(b_chi2 < a_chi2){
+    if(b_chi2 <= a_chi2){
       bestTrack = track_b;
     }
     else{
@@ -596,20 +591,10 @@ void ClonesAndSplitTracksFinder::bestInClones(Track* track_a, Track* track_b, in
     }
   }
   else if(trackerHit_b_size > trackerHit_a_size){ // if the second track is longer, make sure the increase in chi2 is not too much
-    if(b_chi2 < 2*a_chi2){
-      bestTrack = track_b;
-    }
-    else{
-      bestTrack = track_a;
-    }
+    bestTrack = track_b; 
   }
   else if(trackerHit_b_size < trackerHit_a_size){ // if the second track is shorter, make sure the increase in chi2 is not too much
-    if(a_chi2 < 2*b_chi2){
-      bestTrack = track_a;
-    }
-    else{
-      bestTrack = track_b;
-    }
+    bestTrack = track_a;
   }
 
 }
