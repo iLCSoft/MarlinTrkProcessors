@@ -560,7 +560,7 @@ void ClonesAndSplitTracksFinder::bestInClones(Track* track_a, Track* track_b, in
 
   // This function compares two tracks which have a certain number of overlapping hits and returns the best track
   // The best track is chosen based on length (in terms of number of hits) and chi2/ndf requirements
-  // In general, the longest track is preferred, if its chi2/ndf does not exceed twice the chi2/ndf of the shortest track
+  // In general, the longest track is preferred. When clones have same length, the one with best chi2/ndf is chosen
 
   TrackerHitVec trackerHit_a = track_a->getTrackerHits();
   TrackerHitVec trackerHit_b = track_b->getTrackerHits();
