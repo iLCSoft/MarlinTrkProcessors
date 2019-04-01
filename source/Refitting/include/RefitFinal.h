@@ -80,6 +80,7 @@ protected:
   float _bField = 0.0;
 
   bool _extrapolateForward = true;
+  int _minClustersOnTrackAfterFit = 0;
 
   std::shared_ptr<UTIL::BitField64> _encoder{};
 };

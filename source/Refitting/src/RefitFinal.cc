@@ -77,6 +77,10 @@ RefitFinal::RefitFinal() : Processor("RefitFinal") {
                              "if true extrapolation in the forward direction "
                              "(in-out), otherwise backward (out-in)",
                              _extrapolateForward, _extrapolateForward);
+
+  registerProcessorParameter("MinClustersOnTrackAfterFit", "Final minimum number of track clusters",
+                             _minClustersOnTrackAfterFit, int(4));
+
 }
 
 void RefitFinal::init() {
@@ -205,8 +209,8 @@ void RefitFinal::processEvent(LCEvent *evt) {
 
     marlin_trk->getHitsInFit(hits_in_fit);
 
-    if (hits_in_fit.size() < 3) {
-      streamlog_out(DEBUG3) << "Less than 3 hits in fit: Track "
+    if (int(hits_in_fit.size()) < _minClustersOnTrackAfterFit) {
+      streamlog_out(DEBUG3) << "Less than " << _minClustersOnTrackAfterFit << " hits in fit: Track "
                                "Discarded. Number of hits =  "
                             << trkHits.size() << std::endl;
       continue;
