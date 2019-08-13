@@ -309,13 +309,10 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
 
         if( error != IMarlinTrack::success || refittedTrack->getNdf() < 0 ) {
 
-          streamlog_out(MESSAGE) << "::createTrack: EVENT: << " << evt->getEventNumber() 
-				 << " >> Track fit returns error code " << error << " NDF = " << refittedTrack->getNdf() 
-				 <<  ". Number of hits = "<< trkHits.size() << std::endl;
+          streamlog_out(DEBUG6) << "in event << " << evt->getEventNumber()
+				 << " >> track refit returns error code " << error << "; NDF = " << refittedTrack->getNdf()
+				 <<  ". Number of hits = "<< trkHits.size() << std::endl ;
 
-	  //fg: to write out also incomplete tracks comment this out 
-	  delete refittedTrack;
-	  continue ;
         }
         
         
@@ -343,10 +340,7 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
       marlinTrk->getHitsInFit(hits_in_fit);
       
       if( hits_in_fit.size() < 3 ) {
-        streamlog_out(DEBUG3) << "RefitProcessor: Less than 3 hits in fit: Track Discarded. Number of hits =  " << trkHits.size() << std::endl;
-        delete marlinTrk ;
-        delete refittedTrack;
-        continue ; 
+        streamlog_out(DEBUG6) << "RefitProcessor: Less than 3 hits in fit: number of hits =  " << trkHits.size() << std::endl;
       }
       
     
