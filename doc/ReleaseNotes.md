@@ -1,3 +1,42 @@
+# v02-11
+
+* 2019-08-21 Frank Gaede ([PR#43](https://github.com/iLCSoft/MarlinTrkProcessors/pull/43))
+  - fix RefitProcessor:
+         - do not drop tracks in RefitProcessor, even if the refit failed
+         - ensures that the output collection has the same number of entries
+            in the same order as the input collection
+         - needed to identify and compare refitted tracks
+
+* 2019-04-01 Emilia Leogrande ([PR#42](https://github.com/iLCSoft/MarlinTrkProcessors/pull/42))
+  - RefitFinal: added processor parameter `MinClustersOnTrackAfterFit`
+    - defines the minimum number of hits on track after the fit for the track to be accepted 
+    - previously hard-coded = 3, but tracks with 3 hits are ~100% fakes
+    - now implemented as in ConformalTracking ilcsoft/ConformalTracking#52
+
+* 2019-03-20 Emilia Leogrande ([PR#41](https://github.com/iLCSoft/MarlinTrkProcessors/pull/41))
+  ClonesAndSplitTracksFinder:
+    - The clone treatment has been uniformized with the updated clone treatment in the seeding (conformal tracking)
+    - In few cases it is just a matter of including the equal sign in the comparison
+    - In few other cases, the combined length-chi2 check is replaced with a length check only: longer tracks always preferred
+
+* 2019-02-18 Shaojun Lu ([PR#39](https://github.com/iLCSoft/MarlinTrkProcessors/pull/39))
+  - Improved SiliconTracking_MarlinTrk - added two options:
+       - to use simple updated triplets searching core bin,
+       - to use simple "AttachHitToTrack" for merging split track segments.
+
+* 2019-01-18 Frank Gaede ([PR#40](https://github.com/iLCSoft/MarlinTrkProcessors/pull/40))
+  - fixed DDTPCDigiProcessor
+      - fix B-field correction for the r-phi resolution
+      - now use (4./B)^2 rather than 4./B
+
+* 2018-04-23 Emilia Leogrande ([PR#38](https://github.com/iLCSoft/MarlinTrkProcessors/pull/38))
+  - ClonesAndSplitTracksFinder: the check for toBeMerged was in the wrong place. Fixed.
+
+* 2018-04-20 Emilia Leogrande ([PR#37](https://github.com/iLCSoft/MarlinTrkProcessors/pull/37))
+  - ClonesAndSplitTracksFinder: added mergeSplitTracks parameter, that allows one to decide whether to run only the clones skimming or also the merging of split tracks
+    - mergeSplitTracks = false by default
+    - mergeSplitTracks = true would enable the treatment of split tracks, which is still work in progress
+
 # v02-10
 
 * 2018-03-02 Emilia Leogrande ([PR#34](https://github.com/iLCSoft/MarlinTrkProcessors/pull/34))
