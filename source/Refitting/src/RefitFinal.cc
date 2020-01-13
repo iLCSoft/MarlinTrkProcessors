@@ -162,7 +162,7 @@ void RefitFinal::processEvent(LCEvent *evt) {
         std::unique_ptr<MarlinTrk::IMarlinTrack>(_trksystem->createTrack());
     EVENT::TrackerHitVec trkHits = track->getTrackerHits();
 
-    streamlog_out(DEBUG5) << "---- tracks n = " << iTrack
+    streamlog_out(DEBUG5) << "---- track n = " << iTrack
                           << "  n hits = " << trkHits.size() << std::endl;
 
     const int nHitsTrack = trkHits.size();
@@ -196,6 +196,11 @@ void RefitFinal::processEvent(LCEvent *evt) {
     const bool fit_direction = MarlinTrk::IMarlinTrack::forward;
     int return_code = finaliseLCIOTrack(marlin_trk.get(), lcio_trk.get(),
                                         trkHits, fit_direction);
+
+    if ( return_code != MarlinTrk::IMarlinTrack::success ) {
+      streamlog_out(DEBUG3) << "finaliseLCIOTrack failed" << std::endl;
+      continue;
+    }
 
     streamlog_out(DEBUG5) << " *** created finalized LCIO track - return code "
                           << return_code << std::endl
