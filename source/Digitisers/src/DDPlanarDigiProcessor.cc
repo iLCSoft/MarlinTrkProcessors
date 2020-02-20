@@ -191,7 +191,7 @@ void DDPlanarDigiProcessor::init() {
 
   _h[ diffu ] = new TH1F( "diffu" , "diff u" , 1000, -5. , +5. );
   _h[ diffv ] = new TH1F( "diffv" , "diff v" , 1000, -5. , +5. );
-  _h[ diffT ] = new TH1F( "diffT" , "diff time" , 1000, -500. , +500. );
+  _h[ diffT ] = new TH1F( "diffT" , "diff time" , 1000, -5. , +5. );
 
   _h[ hitE ] = new TH1F( "hitE" , "hitEnergy in keV" , 1000, 0 , 200 );
   
