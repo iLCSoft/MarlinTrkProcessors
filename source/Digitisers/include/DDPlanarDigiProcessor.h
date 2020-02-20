@@ -100,6 +100,7 @@ protected:
   
   FloatVec _resU ;
   FloatVec _resV ;
+  FloatVec _resT ;
   
   bool _isStrip;
   
