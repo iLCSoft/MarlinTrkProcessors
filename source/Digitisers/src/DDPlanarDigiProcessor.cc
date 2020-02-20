@@ -46,8 +46,8 @@ DDPlanarDigiProcessor aDDPlanarDigiProcessor ;
 DDPlanarDigiProcessor::DDPlanarDigiProcessor() : Processor("DDPlanarDigiProcessor") {
   
   // modify processor description
-  _description = "DDPlanarDigiProcessor creates TrackerHits from SimTrackerHits, smearing them according to the input parameters."
-    "The geoemtry of the surface is taken from the DDRec::Surface asscociated to the hit via the cellID" ;
+  _description = "DDPlanarDigiProcessor creates TrackerHits from SimTrackerHits, smearing their position and time according to the input parameters."
+    "The geoemtry of the surface is taken from the DDRec::Surface associated to the hit via the cellID" ;
   
   
   // register steering parameters: name, description, class-variable, default value
@@ -65,8 +65,16 @@ DDPlanarDigiProcessor::DDPlanarDigiProcessor() : Processor("DDPlanarDigiProcesso
 
   registerProcessorParameter( "ResolutionV" , 
                               "resolution in direction of v - either one per layer or one for all layers " ,
-                             _resV ,
+                              _resV ,
                               resVEx );
+
+  FloatVec resTEx ;
+  resTEx.push_back( 0.0 ) ;
+
+  registerProcessorParameter( "ResolutionT" , 
+                              "resolution of time - either one per layer or one for all layers " ,
+                              _resT ,
+                              resTEx );
 
   registerProcessorParameter( "IsStrip",
                               "whether hits are 1D strip hits",
@@ -119,9 +127,11 @@ DDPlanarDigiProcessor::DDPlanarDigiProcessor() : Processor("DDPlanarDigiProcesso
 enum {
   hu = 0,
   hv,
+  hT,
   hitE,
   diffu,
   diffv,
+  diffT,
   hSize 
 } ;
 
@@ -177,9 +187,11 @@ void DDPlanarDigiProcessor::init() {
 
   _h[ hu ] = new TH1F( "hu" , "smearing u" , 50, -5. , +5. );
   _h[ hv ] = new TH1F( "hv" , "smearing v" , 50, -5. , +5. );
+  _h[ hT ] = new TH1F( "hT" , "smearing time" , 50, -5. , +5. );
 
   _h[ diffu ] = new TH1F( "diffu" , "diff u" , 1000, -5. , +5. );
   _h[ diffv ] = new TH1F( "diffv" , "diff v" , 1000, -5. , +5. );
+  _h[ diffT ] = new TH1F( "diffT" , "diff time" , 1000, -500. , +500. );
 
   _h[ hitE ] = new TH1F( "hitE" , "hitEnergy in keV" , 1000, 0 , 200 );
   
@@ -234,10 +246,10 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
 
       SimTrackerHit* simTHit = dynamic_cast<SimTrackerHit*>( STHcol->getElementAt( i ) ) ;
 
-      _h[hitE]->Fill( simTHit->getEDep() * 1e6 );
+      _h[hitE]->Fill( simTHit->getEDep() * (dd4hep::GeV / dd4hep::keV) );
 
       if( simTHit->getEDep() < _minEnergy ) {
-        streamlog_out( DEBUG ) << "Hit with insufficient energy " << simTHit->getEDep()*1e6 << " keV" << std::endl;
+        streamlog_out( DEBUG ) << "Hit with insufficient energy " << simTHit->getEDep() * (dd4hep::GeV / dd4hep::keV) << " keV" << std::endl;
         continue;
       }
       
@@ -328,6 +340,7 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
       
       float resU = ( _resU.size() > 1 ?   _resU.at(  layer )     : _resU.at(0)   )  ;
       float resV = ( _resV.size() > 1 ?   _resV.at(  layer )     : _resV.at(0)   )  ; 
+      float resT = ( _resT.size() > 1 ?   _resT.at(  layer )     : _resT.at(0)   )  ; 
 
 
       while( tries < MaxTries ) {
@@ -379,14 +392,18 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
         }
         
         ++tries;
-       }
-      
+      }
       
       if( accept_hit == false ) {
         streamlog_out(DEBUG4) << "hit could not be smeared within ladder after " << MaxTries << "  tries: hit dropped"  << std::endl;
         ++nDismissedHits;
         continue; 
       } 
+
+      // Smearing time of the hit
+      double tSmear  = resT == 0.0 ? 0.0 : gsl_ran_gaussian( _rng, resT ) ;
+      _h[hT]->Fill( resT == 0.0 ? 0.0 : tSmear / resT );
+      _h[diffT]->Fill( tSmear );
       
       //**************************************************************************
       // Store hit variables to TrackerHitPlaneImpl
@@ -400,7 +417,7 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
       trkHit->setCellID1( cellID1 ) ;
       
       trkHit->setPosition( newPos.const_array()  ) ;
-      trkHit->setTime( simTHit->getTime() ) ;
+      trkHit->setTime( simTHit->getTime() + tSmear ) ;
       trkHit->setEDep( simTHit->getEDep() ) ;
 
       float u_direction[2] ;
