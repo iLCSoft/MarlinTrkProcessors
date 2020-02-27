@@ -17,6 +17,8 @@
 #include "DD4hep/Detector.h"
 #include "DD4hep/DD4hepUnits.h"
 
+#include <TMath.h>
+
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
 
@@ -117,6 +119,30 @@ DDPlanarDigiProcessor::DDPlanarDigiProcessor() : Processor("DDPlanarDigiProcesso
                               _minEnergy,
                               double(0.0) );
 
+  registerProcessorParameter( "UseTimeWindow" , 
+                              "Only accept hits with time (after smearing) within the specified time window (default: false)" ,
+                              _useTimeWindow ,
+                              bool(false) );
+
+  registerProcessorParameter( "CorrectTimesForPropagation" , 
+                              "In the time window correct hit time for the propagation: radial distance/c (default: false)" ,
+                              _correctTimesForPropagation ,
+                              bool(false) );
+
+FloatVec timeWindow_min;
+  timeWindow_min.push_back( -1e9 );
+  registerProcessorParameter( "TimeWindowMin" ,
+                              "Minimum time a hit must have after smearing to be accepted [ns] - either one per layer or one for all layers",
+                              _timeWindow_min,
+                              timeWindow_min );
+
+FloatVec timeWindow_max;
+  timeWindow_max.push_back( 1e9 );
+  registerProcessorParameter( "TimeWindowMax" ,
+                              "Maximum time a hit must have after smearing to be accepted [ns] - either one per layer or one for all layers",
+                              _timeWindow_max,
+                              timeWindow_max );
+
   
   // setup the list of supported detectors
   
@@ -128,6 +154,7 @@ enum {
   hv,
   hT,
   hitE,
+  hitsAccepted,
   diffu,
   diffv,
   diffT,
@@ -193,6 +220,7 @@ void DDPlanarDigiProcessor::init() {
   _h[ diffT ] = new TH1F( "diffT" , "diff time" , 1000, -5. , +5. );
 
   _h[ hitE ] = new TH1F( "hitE" , "hitEnergy in keV" , 1000, 0 , 200 );
+  _h[ hitsAccepted ] = new TH1F( "hitsAccepted" , "Fraction of accepted hits [%]" , 201, 0 , 100.5 );
   
 }
 
@@ -287,7 +315,7 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
       dd4hep::rec::Vector3D newPos ;
 
      //************************************************************
-      // Check if Hit is inside senstive 
+      // Check if Hit is inside sensitive 
       //************************************************************
       
       if ( ! surf->insideBounds( dd4hep::mm * oldPos ) ) {
@@ -320,10 +348,39 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
           continue; 
         }
       }
+
+      //***************************************************************
+      // Smear time of the hit and apply the time window cut if needed
+      //***************************************************************
       
-      //**************************************************************************
-      // Try to smear the hit but ensure the hit is inside the sensitive region
-      //**************************************************************************
+      // Smearing time of the hit
+      float resT = _resT.size() > 1 ? _resT.at(layer) : _resT.at(0); 
+      double tSmear  = resT == 0.0 ? 0.0 : gsl_ran_gaussian( _rng, resT );
+      _h[hT]->Fill( resT == 0.0 ? 0.0 : tSmear / resT );
+      _h[diffT]->Fill( tSmear );
+
+      // Skipping the hit if its time is outside the acceptance time window
+      double hitT = simTHit->getTime() + tSmear;
+      
+      float timeWindow_min = _timeWindow_min.size() > 1 ? _timeWindow_min.at(layer) : _timeWindow_min.at(0);
+      float timeWindow_max = _timeWindow_max.size() > 1 ? _timeWindow_max.at(layer) : _timeWindow_max.at(0);
+
+      // Calculating the propagation time in ns
+      float dt(0.0);
+      if (_correctTimesForPropagation) {
+        dt = ( dd4hep::mm * oldPos.r() ) / ( TMath::C() / 1e6 );
+      }
+      
+      if (_useTimeWindow && ( hitT+dt < timeWindow_min || hitT+dt > timeWindow_max) ) {
+        streamlog_out(DEBUG4) << "hit at T: " << simTHit->getTime()+dt << " smeared to: " << hitT+dt << " is outside the time window: hit dropped"  << std::endl;
+        ++nDismissedHits;
+        continue; 
+      }
+
+
+      //*********************************************************************************
+      // Try to smear the hit position but ensure the hit is inside the sensitive region
+      //*********************************************************************************
       
       dd4hep::rec::Vector3D u = surf->u() ;
       dd4hep::rec::Vector3D v = surf->v() ;
@@ -334,14 +391,12 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
       double uL = lv[0] / dd4hep::mm ;
       double vL = lv[1] / dd4hep::mm ;
 
-
       bool accept_hit = false ;
       unsigned  tries   =  0 ;              
       static const unsigned MaxTries = 10 ; 
       
       float resU = ( _resU.size() > 1 ?   _resU.at(  layer )     : _resU.at(0)   )  ;
       float resV = ( _resV.size() > 1 ?   _resV.at(  layer )     : _resV.at(0)   )  ; 
-      float resT = ( _resT.size() > 1 ?   _resT.at(  layer )     : _resT.at(0)   )  ; 
 
 
       while( tries < MaxTries ) {
@@ -400,11 +455,6 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
         ++nDismissedHits;
         continue; 
       } 
-
-      // Smearing time of the hit
-      double tSmear  = resT == 0.0 ? 0.0 : gsl_ran_gaussian( _rng, resT ) ;
-      _h[hT]->Fill( resT == 0.0 ? 0.0 : tSmear / resT );
-      _h[diffT]->Fill( tSmear );
       
       //**************************************************************************
       // Store hit variables to TrackerHitPlaneImpl
@@ -418,7 +468,7 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
       trkHit->setCellID1( cellID1 ) ;
       
       trkHit->setPosition( newPos.const_array()  ) ;
-      trkHit->setTime( simTHit->getTime() + tSmear ) ;
+      trkHit->setTime( hitT ) ;
       trkHit->setEDep( simTHit->getEDep() ) ;
 
       float u_direction[2] ;
@@ -476,6 +526,9 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
       
     }      
     
+    // Filling the fraction of accepted hits in the event
+    float accFraction = nSimHits > 0 ? float(nCreatedHits) / float(nSimHits) * 100.0 : 0.0;
+    _h[hitsAccepted]->Fill( accFraction );
     
     //**************************************************************************
     // Add collection to event
