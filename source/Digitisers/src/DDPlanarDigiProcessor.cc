@@ -367,11 +367,11 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
       // Calculating the propagation time in ns
       float dt(0.0);
       if (_correctTimesForPropagation) {
-        dt = ( dd4hep::mm * oldPos.r() ) / ( TMath::C() / 1e6 );
+        dt = oldPos.r() / ( TMath::C() / 1e6 );
       }
       
-      if (_useTimeWindow && ( hitT+dt < timeWindow_min || hitT+dt > timeWindow_max) ) {
-        streamlog_out(DEBUG4) << "hit at T: " << simTHit->getTime()+dt << " smeared to: " << hitT+dt << " is outside the time window: hit dropped"  << std::endl;
+      if (_useTimeWindow && ( hitT-dt < timeWindow_min || hitT-dt > timeWindow_max) ) {
+        streamlog_out(DEBUG4) << "hit at T: " << simTHit->getTime()-dt << " smeared to: " << hitT-dt << " is outside the time window: hit dropped"  << std::endl;
         ++nDismissedHits;
         continue; 
       }
