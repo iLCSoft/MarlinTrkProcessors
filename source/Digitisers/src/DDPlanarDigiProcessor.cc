@@ -119,14 +119,14 @@ DDPlanarDigiProcessor::DDPlanarDigiProcessor() : Processor("DDPlanarDigiProcesso
                               _minEnergy,
                               double(0.0) );
 
+  registerProcessorParameter( "CorrectTimesForPropagation" , 
+                              "Correct hit time for the propagation: radial distance/c (default: false)" ,
+                              _correctTimesForPropagation ,
+                              bool(false) );
+
   registerProcessorParameter( "UseTimeWindow" , 
                               "Only accept hits with time (after smearing) within the specified time window (default: false)" ,
                               _useTimeWindow ,
-                              bool(false) );
-
-  registerProcessorParameter( "CorrectTimesForPropagation" , 
-                              "In the time window correct hit time for the propagation: radial distance/c (default: false)" ,
-                              _correctTimesForPropagation ,
                               bool(false) );
 
 FloatVec timeWindow_min;
@@ -361,18 +361,20 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
 
       // Skipping the hit if its time is outside the acceptance time window
       double hitT = simTHit->getTime() + tSmear;
+      streamlog_out(DEBUG3) << "smeared hit at T: " << simTHit->getTime() << " ns to T: " << hitT << " ns according to resolution: " << resT << " ns" << std::endl;
       
       float timeWindow_min = _timeWindow_min.size() > 1 ? _timeWindow_min.at(layer) : _timeWindow_min.at(0);
       float timeWindow_max = _timeWindow_max.size() > 1 ? _timeWindow_max.at(layer) : _timeWindow_max.at(0);
 
-      // Calculating the propagation time in ns
-      float dt(0.0);
+      // Correcting for the propagation time
       if (_correctTimesForPropagation) {
-        dt = oldPos.r() / ( TMath::C() / 1e6 );
+        double dt = oldPos.r() / ( TMath::C() / 1e6 );
+        hitT -= dt;
+        streamlog_out(DEBUG3) << "corrected hit at R: " << oldPos.r() << " mm by propagation time: " << dt << " ns to T: " << hitT << " ns" << std::endl;
       }
       
-      if (_useTimeWindow && ( hitT-dt < timeWindow_min || hitT-dt > timeWindow_max) ) {
-        streamlog_out(DEBUG4) << "hit at T: " << simTHit->getTime()-dt << " smeared to: " << hitT-dt << " is outside the time window: hit dropped"  << std::endl;
+      if (_useTimeWindow && ( hitT < timeWindow_min || hitT > timeWindow_max) ) {
+        streamlog_out(DEBUG4) << "hit at T: " << hitT << " smeared to: " << hitT << " is outside the time window: hit dropped"  << std::endl;
         ++nDismissedHits;
         continue; 
       }
@@ -537,7 +539,7 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
     evt->addCollection( trkhitVec , _outColName ) ;
     evt->addCollection( relCol , _outRelColName ) ;
     
-    streamlog_out(DEBUG4) << "Created " << nCreatedHits << " hits, " << nDismissedHits << " hits  dismissed as not on sensitive element\n";
+    streamlog_out(DEBUG4) << "Created " << nCreatedHits << " hits, " << nDismissedHits << " hits  dismissed\n";
     
   }
   _nEvt ++ ;
