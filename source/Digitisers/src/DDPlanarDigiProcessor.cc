@@ -17,6 +17,8 @@
 #include "DD4hep/Detector.h"
 #include "DD4hep/DD4hepUnits.h"
 
+#include <TMath.h>
+
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
 
@@ -45,8 +47,8 @@ DDPlanarDigiProcessor aDDPlanarDigiProcessor ;
 DDPlanarDigiProcessor::DDPlanarDigiProcessor() : Processor("DDPlanarDigiProcessor") {
   
   // modify processor description
-  _description = "DDPlanarDigiProcessor creates TrackerHits from SimTrackerHits, smearing them according to the input parameters."
-    "The geoemtry of the surface is taken from the DDRec::Surface asscociated to the hit via the cellID" ;
+  _description = "DDPlanarDigiProcessor creates TrackerHits from SimTrackerHits, smearing their position and time according to the input parameters."
+    "The geoemtry of the surface is taken from the DDRec::Surface associated to the hit via the cellID" ;
   
   
   // register steering parameters: name, description, class-variable, default value
@@ -64,8 +66,16 @@ DDPlanarDigiProcessor::DDPlanarDigiProcessor() : Processor("DDPlanarDigiProcesso
 
   registerProcessorParameter( "ResolutionV" , 
                               "resolution in direction of v - either one per layer or one for all layers " ,
-                             _resV ,
+                              _resV ,
                               resVEx );
+
+  FloatVec resTEx ;
+  resTEx.push_back( 0.0 ) ;
+
+  registerProcessorParameter( "ResolutionT" , 
+                              "resolution of time - either one per layer or one for all layers " ,
+                              _resT ,
+                              resTEx );
 
   registerProcessorParameter( "IsStrip",
                               "whether hits are 1D strip hits",
@@ -109,6 +119,30 @@ DDPlanarDigiProcessor::DDPlanarDigiProcessor() : Processor("DDPlanarDigiProcesso
                               _minEnergy,
                               double(0.0) );
 
+  registerProcessorParameter( "CorrectTimesForPropagation" , 
+                              "Correct hit time for the propagation: radial distance/c (default: false)" ,
+                              _correctTimesForPropagation ,
+                              bool(false) );
+
+  registerProcessorParameter( "UseTimeWindow" , 
+                              "Only accept hits with time (after smearing) within the specified time window (default: false)" ,
+                              _useTimeWindow ,
+                              bool(false) );
+
+FloatVec timeWindow_min;
+  timeWindow_min.push_back( -1e9 );
+  registerProcessorParameter( "TimeWindowMin" ,
+                              "Minimum time a hit must have after smearing to be accepted [ns] - either one per layer or one for all layers",
+                              _timeWindow_min,
+                              timeWindow_min );
+
+FloatVec timeWindow_max;
+  timeWindow_max.push_back( 1e9 );
+  registerProcessorParameter( "TimeWindowMax" ,
+                              "Maximum time a hit must have after smearing to be accepted [ns] - either one per layer or one for all layers",
+                              _timeWindow_max,
+                              timeWindow_max );
+
   
   // setup the list of supported detectors
   
@@ -118,9 +152,12 @@ DDPlanarDigiProcessor::DDPlanarDigiProcessor() : Processor("DDPlanarDigiProcesso
 enum {
   hu = 0,
   hv,
+  hT,
   hitE,
+  hitsAccepted,
   diffu,
   diffv,
+  diffT,
   hSize 
 } ;
 
@@ -176,11 +213,14 @@ void DDPlanarDigiProcessor::init() {
 
   _h[ hu ] = new TH1F( "hu" , "smearing u" , 50, -5. , +5. );
   _h[ hv ] = new TH1F( "hv" , "smearing v" , 50, -5. , +5. );
+  _h[ hT ] = new TH1F( "hT" , "smearing time" , 50, -5. , +5. );
 
   _h[ diffu ] = new TH1F( "diffu" , "diff u" , 1000, -5. , +5. );
   _h[ diffv ] = new TH1F( "diffv" , "diff v" , 1000, -5. , +5. );
+  _h[ diffT ] = new TH1F( "diffT" , "diff time" , 1000, -5. , +5. );
 
   _h[ hitE ] = new TH1F( "hitE" , "hitEnergy in keV" , 1000, 0 , 200 );
+  _h[ hitsAccepted ] = new TH1F( "hitsAccepted" , "Fraction of accepted hits [%]" , 201, 0 , 100.5 );
   
 }
 
@@ -235,10 +275,10 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
 
       SimTrackerHit* simTHit = dynamic_cast<SimTrackerHit*>( STHcol->getElementAt( i ) ) ;
 
-      _h[hitE]->Fill( simTHit->getEDep() * 1e6 );
+      _h[hitE]->Fill( simTHit->getEDep() * (dd4hep::GeV / dd4hep::keV) );
 
       if( simTHit->getEDep() < _minEnergy ) {
-        streamlog_out( DEBUG ) << "Hit with insufficient energy " << simTHit->getEDep()*1e6 << " keV" << std::endl;
+        streamlog_out( DEBUG ) << "Hit with insufficient energy " << simTHit->getEDep() * (dd4hep::GeV / dd4hep::keV) << " keV" << std::endl;
         continue;
       }
       
@@ -275,7 +315,7 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
       dd4hep::rec::Vector3D newPos ;
 
      //************************************************************
-      // Check if Hit is inside senstive 
+      // Check if Hit is inside sensitive 
       //************************************************************
       
       if ( ! surf->insideBounds( dd4hep::mm * oldPos ) ) {
@@ -308,10 +348,41 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
           continue; 
         }
       }
+
+      //***************************************************************
+      // Smear time of the hit and apply the time window cut if needed
+      //***************************************************************
       
-      //**************************************************************************
-      // Try to smear the hit but ensure the hit is inside the sensitive region
-      //**************************************************************************
+      // Smearing time of the hit
+      float resT = _resT.size() > 1 ? _resT.at(layer) : _resT.at(0); 
+      double tSmear  = resT == 0.0 ? 0.0 : gsl_ran_gaussian( _rng, resT );
+      _h[hT]->Fill( resT == 0.0 ? 0.0 : tSmear / resT );
+      _h[diffT]->Fill( tSmear );
+
+      // Skipping the hit if its time is outside the acceptance time window
+      double hitT = simTHit->getTime() + tSmear;
+      streamlog_out(DEBUG3) << "smeared hit at T: " << simTHit->getTime() << " ns to T: " << hitT << " ns according to resolution: " << resT << " ns" << std::endl;
+      
+      float timeWindow_min = _timeWindow_min.size() > 1 ? _timeWindow_min.at(layer) : _timeWindow_min.at(0);
+      float timeWindow_max = _timeWindow_max.size() > 1 ? _timeWindow_max.at(layer) : _timeWindow_max.at(0);
+
+      // Correcting for the propagation time
+      if (_correctTimesForPropagation) {
+        double dt = oldPos.r() / ( TMath::C() / 1e6 );
+        hitT -= dt;
+        streamlog_out(DEBUG3) << "corrected hit at R: " << oldPos.r() << " mm by propagation time: " << dt << " ns to T: " << hitT << " ns" << std::endl;
+      }
+      
+      if (_useTimeWindow && ( hitT < timeWindow_min || hitT > timeWindow_max) ) {
+        streamlog_out(DEBUG4) << "hit at T: " << hitT << " smeared to: " << hitT << " is outside the time window: hit dropped"  << std::endl;
+        ++nDismissedHits;
+        continue; 
+      }
+
+
+      //*********************************************************************************
+      // Try to smear the hit position but ensure the hit is inside the sensitive region
+      //*********************************************************************************
       
       dd4hep::rec::Vector3D u = surf->u() ;
       dd4hep::rec::Vector3D v = surf->v() ;
@@ -321,7 +392,6 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
       dd4hep::rec::Vector2D lv = surf->globalToLocal( dd4hep::mm * oldPos  ) ;
       double uL = lv[0] / dd4hep::mm ;
       double vL = lv[1] / dd4hep::mm ;
-
 
       bool accept_hit = false ;
       unsigned  tries   =  0 ;              
@@ -380,8 +450,7 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
         }
         
         ++tries;
-       }
-      
+      }
       
       if( accept_hit == false ) {
         streamlog_out(DEBUG4) << "hit could not be smeared within ladder after " << MaxTries << "  tries: hit dropped"  << std::endl;
@@ -401,7 +470,7 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
       trkHit->setCellID1( cellID1 ) ;
       
       trkHit->setPosition( newPos.const_array()  ) ;
-      trkHit->setTime( simTHit->getTime() ) ;
+      trkHit->setTime( hitT ) ;
       trkHit->setEDep( simTHit->getEDep() ) ;
 
       float u_direction[2] ;
@@ -459,6 +528,9 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
       
     }      
     
+    // Filling the fraction of accepted hits in the event
+    float accFraction = nSimHits > 0 ? float(nCreatedHits) / float(nSimHits) * 100.0 : 0.0;
+    _h[hitsAccepted]->Fill( accFraction );
     
     //**************************************************************************
     // Add collection to event
@@ -467,7 +539,7 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
     evt->addCollection( trkhitVec , _outColName ) ;
     evt->addCollection( relCol , _outRelColName ) ;
     
-    streamlog_out(DEBUG4) << "Created " << nCreatedHits << " hits, " << nDismissedHits << " hits  dismissed as not on sensitive element\n";
+    streamlog_out(DEBUG4) << "Created " << nCreatedHits << " hits, " << nDismissedHits << " hits  dismissed\n";
     
   }
   _nEvt ++ ;
