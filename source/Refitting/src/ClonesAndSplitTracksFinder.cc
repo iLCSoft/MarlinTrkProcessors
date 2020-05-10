@@ -26,6 +26,7 @@
 #include "DD4hep/Detector.h"
 #include "DD4hep/DD4hepUnits.h"
 #include "DDRec/SurfaceManager.h"
+#include "TruthTrackFinder.h"
 
 #include <algorithm>
 
@@ -79,6 +80,11 @@ ClonesAndSplitTracksFinder::ClonesAndSplitTracksFinder() : Processor("ClonesAndS
                              _extrapolateForward, 
 			     bool(true));
 
+  registerProcessorParameter("minTrackPt",
+			     "minimum track pt for merging (in GeV/c)",
+			     _minPt,
+			     double(1.0));
+
   registerProcessorParameter("maxDeltaTheta",
 			     "maximum theta separation for merging (in deg)",
 			     _maxDeltaTheta,
@@ -102,11 +108,20 @@ ClonesAndSplitTracksFinder::ClonesAndSplitTracksFinder() : Processor("ClonesAndS
 }
 
 bool sort_by_r(EVENT::TrackerHit* hit1, EVENT::TrackerHit* hit2){
-	double radius1 = sqrt((hit1->getPosition()[0])*(hit1->getPosition()[0]) + (hit1->getPosition()[1])*(hit1->getPosition()[1]));
-	double radius2 = sqrt((hit2->getPosition()[0])*(hit2->getPosition()[0]) + (hit2->getPosition()[1])*(hit2->getPosition()[1]));
+  double radius1 = sqrt((hit1->getPosition()[0])*(hit1->getPosition()[0]) + (hit1->getPosition()[1])*(hit1->getPosition()[1]));
+  double radius2 = sqrt((hit2->getPosition()[0])*(hit2->getPosition()[0]) + (hit2->getPosition()[1])*(hit2->getPosition()[1]));
   //return (radius1 < radius2);
-  return CxxUtils::fpcompare::less(radius1 , radius2);
+  return CxxUtils::fpcompare::less(radius1, radius2);
 }
+
+//bool sort_by_z(EVENT::TrackerHit* hit1, EVENT::TrackerHit* hit2){
+//  // sorting by absolute value of Z so the hits are always sorted from close to
+//  // the IP outward. This works as long as all hits are either in positive or
+//  // negative side
+//  const double z1 = fabs(hit1->getPosition()[2]);
+//  const double z2 = fabs(hit2->getPosition()[2]);
+//  return CxxUtils::fpcompare::less(z1 , z2);
+//}
 
 void ClonesAndSplitTracksFinder::init() {
 
@@ -160,6 +175,8 @@ void ClonesAndSplitTracksFinder::processEvent(LCEvent *evt) {
   if (not input_track_col) {
     return;
   }
+  const int nTracks = input_track_col->getNumberOfElements();
+  streamlog_out(DEBUG5) << " >> ClonesAndSplitTracksFinder starts with " << nTracks << " tracks." << std::endl; 
 
   // establish the track collection that will be created
   auto trackVec = std::unique_ptr<LCCollectionVec>(new LCCollectionVec(LCIO::TRACK));
@@ -176,7 +193,8 @@ void ClonesAndSplitTracksFinder::processEvent(LCEvent *evt) {
   EVENT::TrackVec tracksWithoutClones;
   removeClones(tracksWithoutClones, input_track_col);
 
-  if(_mergeSplitTracks){
+  if(_mergeSplitTracks && nTracks > 1){
+    streamlog_out(DEBUG5) << " Try to merge tracks ..." << std::endl; 
 
     //------------
     // SECOND STEP: MERGE TRACKS
@@ -185,6 +203,7 @@ void ClonesAndSplitTracksFinder::processEvent(LCEvent *evt) {
     mergeSplitTracks(trackVec, input_track_col, tracksWithoutClones);
   }
   else{
+    streamlog_out(DEBUG5) << " Not even try to merge tracks ..." << std::endl; 
     for(UInt_t iTrk = 0; iTrk < tracksWithoutClones.size(); iTrk++){
       TrackImpl *trackFinal = new TrackImpl;
       fromTrackToTrackImpl(tracksWithoutClones.at(iTrk),trackFinal);
@@ -273,7 +292,7 @@ void ClonesAndSplitTracksFinder::removeClones(EVENT::TrackVec& tracksWithoutClon
   // loop over the input tracks
 
   std::multimap<int, std::pair<int,Track*>> candidateClones;
-  
+ 
   for(int iTrack = 0; iTrack < nTracks; ++iTrack) { // first loop over tracks
     int countClones = 0;
     Track *track_i = static_cast<Track*>(input_track_col->getElementAt(iTrack));
@@ -309,36 +328,63 @@ void ClonesAndSplitTracksFinder::removeClones(EVENT::TrackVec& tracksWithoutClon
 
 void ClonesAndSplitTracksFinder::mergeSplitTracks(std::unique_ptr<LCCollectionVec>& trackVec, LCCollection*& input_track_col, EVENT::TrackVec& tracksWithoutClones){
 
+    streamlog_out( DEBUG8 ) << "ClonesAndSplitTracksFinder::mergeSplitTracks " << std::endl;
+
     std::multimap<int, std::pair<int, Track*>> mergingCandidates;
+    std::set<int> iter_duplicates;
 
     for (UInt_t iTrack = 0; iTrack < tracksWithoutClones.size(); ++iTrack) {
       int countMergingPartners = 0;
       bool toBeMerged = false;
       Track *track_i = static_cast<Track *>(tracksWithoutClones.at(iTrack));
 
-      for(UInt_t jTrack = 0; jTrack < tracksWithoutClones.size(); ++jTrack) {
+      double pt_i = 0.3 * _magneticField/ (fabs(track_i->getOmega())*1000.);
+      double theta_i = ( M_PI/2 - atan(track_i->getTanLambda()) ) * 180./M_PI;
+      double phi_i = track_i->getPhi() * 180./M_PI;
+
+      //Merge only tracks with min pt 
+      //Try to avoid merging loopers for now
+      if(pt_i < _minPt){
+        streamlog_out( DEBUG5 ) << " Track #" << iTrack << " does not fulfil min pt requirement. Skip. " << std::endl;
+        continue;
+      }
+
+      for(UInt_t jTrack = iTrack+1; jTrack < tracksWithoutClones.size(); ++jTrack) {
 
 	Track *track_j = static_cast<Track *>(tracksWithoutClones.at(jTrack));
 	bool isCloseInTheta = false, isCloseInPhi = false, isCloseInPt = false;
     
 	if(track_j != track_i){
 
-	  double pt_i = 0.3 * _magneticField/ (fabs(track_i->getOmega())*1000.);
 	  double pt_j = 0.3 * _magneticField / (fabs(track_j->getOmega()*1000.));
-	  double theta_i = ( M_PI/2 - atan(track_i->getTanLambda()) ) * 180./M_PI;
 	  double theta_j = ( M_PI/2 - atan(track_j->getTanLambda()) ) * 180./M_PI;
-	  double phi_i = track_i->getPhi() * 180./M_PI;
 	  double phi_j = track_j->getPhi() * 180./M_PI;
+          streamlog_out( DEBUG5 ) << " Track #" << iTrack << ": pt = " << pt_i << ", theta = " << theta_i << ", phi = " << phi_i << std::endl;
+          streamlog_out( DEBUG5 ) << " Track #" << jTrack << ": pt = " << pt_j << ", theta = " << theta_j << ", phi = " << phi_j << std::endl;
+          if(pt_j < _minPt){
+            streamlog_out( DEBUG5 ) << " Track #" << jTrack << " does not fulfil min pt requirement. Skip. " << std::endl;
+            continue;
+          }
 
 	  if(fabs(theta_i - theta_j) < _maxDeltaTheta){
 	    isCloseInTheta = true;
+            streamlog_out( DEBUG5 ) << " Tracks are close in theta " << std::endl;
 	  }
 	  if(fabs(phi_i - phi_j) < _maxDeltaPhi){
 	    isCloseInPhi = true;
+            streamlog_out( DEBUG5 ) << " Tracks are close in phi " << std::endl;
 	  }
 	  if(fabs(pt_i - pt_j) < _maxDeltaPt){
 	    isCloseInPt = true;
+            streamlog_out( DEBUG5 ) << " Tracks are close in pt  " << std::endl;
 	  }
+
+          // Print out the hits for track i
+          // ERICA::FIX: Do it only if debug is on, therwise you just loose time!
+          streamlog_out( DEBUG5 ) << " Track #" << iTrack << ": " << std::endl; 
+          printHits(track_i);
+          streamlog_out( DEBUG5 ) << " Track #" << jTrack << ": " << std::endl; 
+          printHits(track_j);
 
 	  toBeMerged = isCloseInTheta && isCloseInPhi && isCloseInPt;
 
@@ -350,6 +396,8 @@ void ClonesAndSplitTracksFinder::mergeSplitTracks(std::unique_ptr<LCCollectionVe
 	    }
 	    mergingCandidates.insert(make_pair(iTrack, make_pair(jTrack,lcioTrkPtr)));
 	    countMergingPartners++;
+            iter_duplicates.insert(iTrack);
+            iter_duplicates.insert(jTrack);
 	  } 
 	  else{ // no merging conditions met
 	    continue;
@@ -360,13 +408,26 @@ void ClonesAndSplitTracksFinder::mergeSplitTracks(std::unique_ptr<LCCollectionVe
 
       } // end loop on jTracks
 
-      if(countMergingPartners == 0){  // if track_i has no merging partner, store it in the output vec
+      streamlog_out( DEBUG5 ) << " Track merged have iter: [" << std::endl;
+      for(auto dupl : iter_duplicates){
+        streamlog_out( DEBUG5 ) << dupl << ", ";
+      }
+      streamlog_out( DEBUG5 ) << "]" << std::endl;
+
+      // Track was already found as duplicate
+      const bool is_in = iter_duplicates.find(iTrack) != iter_duplicates.end();
+
+      if(countMergingPartners == 0 && !is_in){  // if track_i has no merging partner, store it in the output vec
+        streamlog_out( DEBUG5 ) << " TRACK STORED" << std::endl;
 
 	TrackImpl *trackFinal = new TrackImpl;
 	fromTrackToTrackImpl(track_i,trackFinal);
 	trackVec->addElement(trackFinal);
 
+      } else {
+        streamlog_out( DEBUG5 ) << " TRACK NOT STORED" << std::endl;
       }
+      streamlog_out( DEBUG5 ) << " possible merging partners for track #" << iTrack << " are = " << countMergingPartners << std::endl;
 
     } // end loop on iTracks
   
@@ -374,6 +435,7 @@ void ClonesAndSplitTracksFinder::mergeSplitTracks(std::unique_ptr<LCCollectionVe
     filterClonesAndMergedTracks(mergingCandidates, input_track_col, finalTracks, false);
 
     for(UInt_t iTrk = 0; iTrk < finalTracks.size(); iTrk++){
+      streamlog_out( DEBUG5 ) << " TRACK STORED" << std::endl;
       TrackImpl *trackFinal = new TrackImpl;
       fromTrackToTrackImpl(finalTracks.at(iTrk),trackFinal);
       trackVec->addElement(trackFinal);
@@ -473,6 +535,7 @@ void ClonesAndSplitTracksFinder::filterClonesAndMergedTracks(std::multimap<int, 
 
 void ClonesAndSplitTracksFinder::mergeAndFit(Track* track_i, Track* track_j, Track*& lcioTrkPtr) {
   
+  streamlog_out( DEBUG8 ) << "ClonesAndSplitTracksFinder::mergeAndFit " << std::endl;
   EVENT::TrackerHitVec trkHits_i = track_i->getTrackerHits();
   EVENT::TrackerHitVec trkHits_j = track_j->getTrackerHits();
 
@@ -483,9 +546,14 @@ void ClonesAndSplitTracksFinder::mergeAndFit(Track* track_i, Track* track_j, Tra
   for(UInt_t jHits=0; jHits<trkHits_j.size();jHits++){
     trkHits.push_back(trkHits_j.at(jHits));
   }
-  std::sort(trkHits.begin(),trkHits.end(),sort_by_r);
+  //ERICA:FIXME: sorting functions are defined in TruthTrackFinder, maybe better moving them to a common place?
+  std::sort(trkHits.begin(),trkHits.end(),sort_by_z);
 
   auto mergedTrack = std::unique_ptr<TrackImpl>(new TrackImpl);
+  // Print out the hits for track i
+  // ERICA::FIX: Do it only if debug is on, therwise you just loose time!
+  //streamlog_out( DEBUG5 ) << " To be merged track : " << std::endl; 
+  printHits(trkHits);
 
   auto marlin_trk = std::unique_ptr<MarlinTrk::IMarlinTrack>(_trksystem->createTrack());
 
@@ -507,6 +575,7 @@ void ClonesAndSplitTracksFinder::mergeAndFit(Track* track_i, Track* track_j, Tra
     streamlog_out(DEBUG4) << "Fit failed with error status " << fit_status << std::endl;
     return;
   }
+  streamlog_out( DEBUG8 ) << " >> Fit not failed ! " << std::endl;
   
   // fit finished - get hits in the fit
   std::vector<std::pair<EVENT::TrackerHit *, double>> hits_in_fit;
@@ -540,6 +609,16 @@ void ClonesAndSplitTracksFinder::mergeAndFit(Track* track_i, Track* track_j, Tra
 
   streamlog_out(DEBUG4) << "processEvent: Hit numbers for track "
 			<< mergedTrack->id() << ":  " << std::endl;
+  // Get the hits
+  const TrackerHitVec& hitVector = mergedTrack->getTrackerHits();
+  int nHits = hitVector.size();
+  for(int itHit=0;itHit<nHits;itHit++){
+    // Get the tracker hit
+    TrackerHitPlane* hit = static_cast<TrackerHitPlane*>(hitVector.at(itHit));
+    streamlog_out( DEBUG8 ) << "  Hit #" << itHit 
+                            << ", (x,y,z) = (" << hit->getPosition()[0] << "," << hit->getPosition()[1] << "," << hit->getPosition()[2] << ")" << std::endl;
+  }
+/*
   int detID = 0;
   for (size_t ip = 0; ip < mergedTrack->subdetectorHitNumbers().size();
        ip = ip + 2) {
@@ -552,7 +631,7 @@ void ClonesAndSplitTracksFinder::mergeAndFit(Track* track_i, Track* track_j, Tra
     if (mergedTrack->subdetectorHitNumbers()[ip] > 0)
       mergedTrack->setTypeBit(detID);
   }
-
+*/
   lcioTrkPtr = mergedTrack.release();
 }
 
@@ -594,4 +673,21 @@ void ClonesAndSplitTracksFinder::bestInClones(Track* track_a, Track* track_b, in
 
 }
 
+void ClonesAndSplitTracksFinder::printHits(const Track* track){
+  // Print out the hits
+  const TrackerHitVec& hitVector = track->getTrackerHits();
+  printHits(hitVector);
+}
 
+void ClonesAndSplitTracksFinder::printHits(const TrackerHitVec& hitVector){
+  // Print out the hits
+  int nHits = hitVector.size();
+  for(int itHit=0;itHit<nHits;itHit++){
+    // Get the tracker hit and print global coordinates of the hit
+    TrackerHitPlane* hit = static_cast<TrackerHitPlane*>(hitVector.at(itHit));
+    streamlog_out( DEBUG5 ) << " Hit #" << itHit 
+                            << ", (x,y,z) = (" << hit->getPosition()[0] << "," << hit->getPosition()[1] 
+                            << "," << hit->getPosition()[2] << ")" << std::endl;
+  }
+
+}
