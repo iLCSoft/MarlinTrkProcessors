@@ -62,6 +62,9 @@ protected:
   // Contains the whole clone skimming procedure (calls bestInClones and filterClonesAndMergedTracks(bool true))
   void removeClones(EVENT::TrackVec&, LCCollection*&);
 
+  void printHits(const Track*);
+  void printHits(const TrackerHitVec&);
+
   lcio::LCCollection *GetCollection(lcio::LCEvent *evt, std::string colName);
 
   std::string _input_track_col_name;
@@ -78,6 +81,7 @@ protected:
   double _magneticField = 0.0;
   bool _extrapolateForward = true;
 
+  double _minPt = 1.0;
   double _maxDeltaTheta = 0.0, _maxDeltaPhi = 0.0, _maxDeltaPt = 0.0;
 
   bool _mergeSplitTracks = false;
@@ -95,5 +99,6 @@ protected:
 };
 
 bool sort_by_r(EVENT::TrackerHit*, EVENT::TrackerHit*);
+//bool sort_by_z(EVENT::TrackerHit*, EVENT::TrackerHit*);
 
 #endif
