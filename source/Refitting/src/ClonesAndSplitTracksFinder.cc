@@ -26,7 +26,6 @@
 #include "DD4hep/Detector.h"
 #include "DD4hep/DD4hepUnits.h"
 #include "DDRec/SurfaceManager.h"
-#include "TruthTrackFinder.h"
 
 #include <algorithm>
 
@@ -192,8 +191,10 @@ void ClonesAndSplitTracksFinder::processEvent(LCEvent *evt) {
 
   EVENT::TrackVec tracksWithoutClones;
   removeClones(tracksWithoutClones, input_track_col);
+  const int ntracksWithoutClones = tracksWithoutClones.size();
+  streamlog_out(DEBUG5) << " >> ClonesAndSplitTracksFinder found " << ntracksWithoutClones << " tracks without clones." << std::endl; 
 
-  if(_mergeSplitTracks && nTracks > 1){
+  if(_mergeSplitTracks && ntracksWithoutClones > 1){
     streamlog_out(DEBUG5) << " Try to merge tracks ..." << std::endl; 
 
     //------------
@@ -287,6 +288,7 @@ void ClonesAndSplitTracksFinder::fromTrackToTrackImpl(const Track* track, TrackI
 
 void ClonesAndSplitTracksFinder::removeClones(EVENT::TrackVec& tracksWithoutClones, LCCollection*& input_track_col){
 
+  streamlog_out( DEBUG8 ) << "ClonesAndSplitTracksFinder::removeClones " << std::endl;
   const int nTracks = input_track_col->getNumberOfElements();
 
   // loop over the input tracks
@@ -345,7 +347,12 @@ void ClonesAndSplitTracksFinder::mergeSplitTracks(std::unique_ptr<LCCollectionVe
       //Merge only tracks with min pt 
       //Try to avoid merging loopers for now
       if(pt_i < _minPt){
-        streamlog_out( DEBUG5 ) << " Track #" << iTrack << " does not fulfil min pt requirement. Skip. " << std::endl;
+        streamlog_out( DEBUG5 ) << " Track #" << iTrack << " does not fulfil min pt requirement." << std::endl;
+        streamlog_out( DEBUG5 ) << " TRACK STORED" << std::endl;
+
+	TrackImpl *trackFinal = new TrackImpl;
+	fromTrackToTrackImpl(track_i,trackFinal);
+	trackVec->addElement(trackFinal);
         continue;
       }
 
@@ -540,20 +547,24 @@ void ClonesAndSplitTracksFinder::mergeAndFit(Track* track_i, Track* track_j, Tra
   EVENT::TrackerHitVec trkHits_j = track_j->getTrackerHits();
 
   EVENT::TrackerHitVec trkHits;
+
   for(UInt_t iHits=0; iHits<trkHits_i.size();iHits++){
     trkHits.push_back(trkHits_i.at(iHits));
   }
   for(UInt_t jHits=0; jHits<trkHits_j.size();jHits++){
-    trkHits.push_back(trkHits_j.at(jHits));
+    if(std::find(trkHits.begin(), trkHits.end(), trkHits_j.at(jHits)) != trkHits.end() ){
+      streamlog_out( DEBUG8 ) << " This hit is already in the track" << std::endl;
+    } else {
+      trkHits.push_back(trkHits_j.at(jHits));
+    }
   }
   //ERICA:FIXME: sorting functions are defined in TruthTrackFinder, maybe better moving them to a common place?
-  std::sort(trkHits.begin(),trkHits.end(),sort_by_z);
+  std::sort(trkHits.begin(),trkHits.end(),sort_by_r);
+  // ERICA::FIX: Do it only if debug is on, therwise you just loose time!
+  streamlog_out( DEBUG8 ) << " Hits in track to be merged: " << std::endl;
+  printHits(trkHits);
 
   auto mergedTrack = std::unique_ptr<TrackImpl>(new TrackImpl);
-  // Print out the hits for track i
-  // ERICA::FIX: Do it only if debug is on, therwise you just loose time!
-  //streamlog_out( DEBUG5 ) << " To be merged track : " << std::endl; 
-  printHits(trkHits);
 
   auto marlin_trk = std::unique_ptr<MarlinTrk::IMarlinTrack>(_trksystem->createTrack());
 
