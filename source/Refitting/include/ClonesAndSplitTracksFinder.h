@@ -60,6 +60,12 @@ protected:
   // Contains the whole merging procedure (calls filterClonesAndMergedTracks(bool false) and mergeAndFit)
   void mergeSplitTracks(std::unique_ptr<LCCollectionVec>&, LCCollection*&, EVENT::TrackVec&);
 
+  // Calculate significance in pt for two candidate clones
+  double calculateSignificancePt(Track *, Track *);
+
+  // Calculate significance in phi for two candidate clones
+  double calculateSignificancePhi(Track *, Track *);
+
   // Contains the whole clone skimming procedure (calls bestInClones and filterClonesAndMergedTracks(bool true))
   void removeClones(EVENT::TrackVec&, LCCollection*&);
 
