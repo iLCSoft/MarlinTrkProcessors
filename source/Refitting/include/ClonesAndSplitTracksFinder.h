@@ -66,6 +66,12 @@ protected:
   // Calculate significance in phi for two candidate clones
   double calculateSignificancePhi(Track *, Track *);
 
+  // Calculate significance in tanLambda for two candidate clones
+  double calculateSignificanceTanLambda(Track *, Track *);
+
+  // Calculate significance for two candidate clones
+  double calculateSignificance(const double firstPar, const double secondPar, const double firstPar_sigma, const double secondPar_sigma );
+
   // Contains the whole clone skimming procedure (calls bestInClones and filterClonesAndMergedTracks(bool true))
   void removeClones(EVENT::TrackVec&, LCCollection*&);
 
@@ -89,7 +95,7 @@ protected:
   bool _extrapolateForward = true;
 
   double _minPt = 1.0;
-  double _maxDeltaTheta = 0.0, _maxDeltaPhi = 0.0, _maxDeltaPt = 0.0;
+  double _maxSignificanceTheta = 0.0, _maxSignificancePhi = 0.0, _maxSignificancePt = 0.0;
 
   bool _mergeSplitTracks = false;
 
