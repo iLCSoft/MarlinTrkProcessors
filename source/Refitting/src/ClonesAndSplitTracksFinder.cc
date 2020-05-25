@@ -85,17 +85,17 @@ ClonesAndSplitTracksFinder::ClonesAndSplitTracksFinder() : Processor("ClonesAndS
 			     double(1.0));
 
   registerProcessorParameter("maxSignificanceTheta",
-			     "maximum theta separation for merging (in deg)",
+			     "maximum significance separation in tanLambda",
 			     _maxSignificanceTheta,
 			     double(0.59));
 
   registerProcessorParameter("maxSignificancePhi",
-			     "maximum phi separation for merging (in deg)",
+			     "maximum significance separation in phi",
 			     _maxSignificancePhi,
 			     double(0.99));
 
   registerProcessorParameter("maxSignificancePt",
-			     "maximum pt separation for merging (in GeV/c)",
+			     "maximum significance separation in pt",
 			     _maxSignificancePt,
 			     double(0.69));
 
@@ -379,20 +379,20 @@ void ClonesAndSplitTracksFinder::mergeSplitTracks(std::unique_ptr<LCCollectionVe
           double significancePhi = calculateSignificancePhi(track_i, track_j);
           double significancePt = calculateSignificancePt(track_i, track_j);
 
-	  streamlog_out( DEBUG5 ) << " -> tanLambda significance = " << significanceTanLambda << " with cut at " << _maxSignificanceTheta << std::endl;
+	  streamlog_out( DEBUG2 ) << " -> tanLambda significance = " << significanceTanLambda << " with cut at " << _maxSignificanceTheta << std::endl;
 	  if(significanceTanLambda < _maxSignificanceTheta){
 	    isCloseInTheta = true;
             streamlog_out( DEBUG5 ) << " Tracks are close in theta " << std::endl;
 	  }
 
-	  streamlog_out( DEBUG5 ) << " -> phi significance = " << significancePhi << " with cut at " << _maxSignificancePhi << std::endl;
+	  streamlog_out( DEBUG2 ) << " -> phi significance = " << significancePhi << " with cut at " << _maxSignificancePhi << std::endl;
 	  //Has to be fixed at some point as it doesn't work at phi ~ +- pi
 	  if(significancePhi < _maxSignificancePhi){
 	    isCloseInPhi = true;
             streamlog_out( DEBUG5 ) << " Tracks are close in phi " << std::endl;
 	  }
 
-	  streamlog_out( DEBUG5 ) << " -> pt significance = " << significancePt << " with cut at " << _maxSignificancePt << std::endl;
+	  streamlog_out( DEBUG2 ) << " -> pt significance = " << significancePt << " with cut at " << _maxSignificancePt << std::endl;
 	  if(significancePt < _maxSignificancePt){
 	    isCloseInPt = true;
             streamlog_out( DEBUG5 ) << " Tracks are close in pt  " << std::endl;
@@ -427,17 +427,9 @@ void ClonesAndSplitTracksFinder::mergeSplitTracks(std::unique_ptr<LCCollectionVe
 
       } // end loop on jTracks
 
-      streamlog_out( DEBUG5 ) << " Track merged have iter: [" << std::endl;
-      for(auto dupl : iter_duplicates){
-        streamlog_out( DEBUG5 ) << dupl << ", ";
-      }
-      streamlog_out( DEBUG5 ) << "]" << std::endl;
-
       // Track was already found as duplicate
       const bool is_in = iter_duplicates.find(iTrack) != iter_duplicates.end();
-
       if(countMergingPartners == 0 && !is_in){  // if track_i has no merging partner, store it in the output vec
-        streamlog_out( DEBUG5 ) << " Track #" << iTrack << ": pt = " << pt_i << ", theta = " << theta_i << ", phi = " << phi_i << std::endl;
         streamlog_out( DEBUG5 ) << " Track #" << iTrack << " has no merging partners, so TRACK STORED." << std::endl;
 
 	TrackImpl *trackFinal = new TrackImpl;
@@ -472,19 +464,12 @@ double ClonesAndSplitTracksFinder::calculateSignificancePt(Track * first, Track 
   double ptFirst = 0.3 * _magneticField / (fabs(first->getOmega()*1000.));
   double ptSecond = 0.3 * _magneticField / (fabs(second->getOmega()*1000.));
 
-  streamlog_out( DEBUG5 ) << " - First track  : pt    = " << ptFirst << std::endl;
-  streamlog_out( DEBUG5 ) << " - Second track : pt    = " << ptSecond << std::endl;
-
   const float sigmaPOverPFirst  = sqrt(first->getCovMatrix()[5])/fabs(omegaFirst);
   const float sigmaPOverPSecond = sqrt(second->getCovMatrix()[5])/fabs(omegaSecond);
   const float sigmaPtFirst = ptFirst*sigmaPOverPFirst;
   const float sigmaPtSecond = ptSecond*sigmaPOverPSecond;
 
-  streamlog_out( DEBUG5 ) << " - First track  :  sigmaPtFirst  = " << sigmaPtFirst << std::endl;
-  streamlog_out( DEBUG5 ) << " - Second track :  sigmaPtSecond = " << sigmaPtSecond << std::endl;
-
   significance = calculateSignificance(ptFirst, ptSecond, sigmaPtFirst, sigmaPtSecond);
-  streamlog_out( DEBUG5 ) << " >> significance on pt = " << significance << std::endl;
 
   return significance;
 
@@ -496,16 +481,10 @@ double ClonesAndSplitTracksFinder::calculateSignificancePhi(Track * first, Track
   float phiFirst = first->getPhi();
   float phiSecond = second->getPhi();
 
-  streamlog_out( DEBUG5 ) << " - First track  : phi   = " << phiFirst << std::endl;
-  streamlog_out( DEBUG5 ) << " - Second track : phi   = " << phiSecond << std::endl;
-
   const float sigmaPhiFirst = sqrt(first->getCovMatrix()[2]);
   const float sigmaPhiSecond = sqrt(second->getCovMatrix()[2]);
-  streamlog_out( DEBUG5 ) << " - First track  :  sigmaPhi      = " << sigmaPhiFirst << std::endl;
-  streamlog_out( DEBUG5 ) << " - Second track :  sigmaPhi      = " << sigmaPhiSecond << std::endl;
 
   significance = calculateSignificance(phiFirst, phiSecond, sigmaPhiFirst, sigmaPhiSecond);
-  streamlog_out( DEBUG5 ) << " >> significance on phi = " << significance << std::endl;
 
   return significance;
 
@@ -517,16 +496,10 @@ double ClonesAndSplitTracksFinder::calculateSignificanceTanLambda(Track * first,
   float tanLambdaFirst = first->getTanLambda();
   float tanLambdaSecond = second->getTanLambda();
 
-  streamlog_out( DEBUG5 ) << " - First track  : tanLambda   = " << tanLambdaFirst << std::endl;
-  streamlog_out( DEBUG5 ) << " - Second track : tanLambda   = " << tanLambdaSecond << std::endl;
-
   const float sigmaTanLambdaFirst = sqrt(first->getCovMatrix()[14]);
   const float sigmaTanLambdaSecond = sqrt(second->getCovMatrix()[14]);
-  streamlog_out( DEBUG5 ) << " - First track  :  sigmaTanLambda      = " << sigmaTanLambdaFirst << std::endl;
-  streamlog_out( DEBUG5 ) << " - Second track :  sigmaTanLambda      = " << sigmaTanLambdaSecond << std::endl;
 
   significance = calculateSignificance(tanLambdaFirst, tanLambdaSecond, sigmaTanLambdaFirst, sigmaTanLambdaSecond);
-  streamlog_out( DEBUG5 ) << " >> significance on tanLambda = " << significance << std::endl;
 
   return significance;
 
