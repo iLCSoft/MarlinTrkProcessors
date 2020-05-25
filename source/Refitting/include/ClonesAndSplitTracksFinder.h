@@ -2,7 +2,6 @@
 #define ClonesAndSplitTracksFinder_h 1
 
 #include <marlin/Processor.h>
-#include "TruthTrackFinder.h"
 
 #include <UTIL/BitField64.h>
 
