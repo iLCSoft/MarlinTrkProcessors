@@ -87,17 +87,17 @@ ClonesAndSplitTracksFinder::ClonesAndSplitTracksFinder() : Processor("ClonesAndS
   registerProcessorParameter("maxSignificanceTheta",
 			     "maximum significance separation in tanLambda",
 			     _maxSignificanceTheta,
-			     double(0.59));
+			     double(3.0));
 
   registerProcessorParameter("maxSignificancePhi",
 			     "maximum significance separation in phi",
 			     _maxSignificancePhi,
-			     double(0.99));
+			     double(3.0));
 
   registerProcessorParameter("maxSignificancePt",
 			     "maximum significance separation in pt",
 			     _maxSignificancePt,
-			     double(0.69));
+			     double(2.0));
 
   registerProcessorParameter("mergeSplitTracks",
 			     "if true, the merging of split tracks is performed",
@@ -379,26 +379,25 @@ void ClonesAndSplitTracksFinder::mergeSplitTracks(std::unique_ptr<LCCollectionVe
           double significancePhi = calculateSignificancePhi(track_i, track_j);
           double significancePt = calculateSignificancePt(track_i, track_j);
 
-	  streamlog_out( DEBUG2 ) << " -> tanLambda significance = " << significanceTanLambda << " with cut at " << _maxSignificanceTheta << std::endl;
+	  streamlog_out( DEBUG5 ) << " -> tanLambda significance = " << significanceTanLambda << " with cut at " << _maxSignificanceTheta << std::endl;
 	  if(significanceTanLambda < _maxSignificanceTheta){
 	    isCloseInTheta = true;
             streamlog_out( DEBUG5 ) << " Tracks are close in theta " << std::endl;
 	  }
 
-	  streamlog_out( DEBUG2 ) << " -> phi significance = " << significancePhi << " with cut at " << _maxSignificancePhi << std::endl;
+	  streamlog_out( DEBUG5 ) << " -> phi significance = " << significancePhi << " with cut at " << _maxSignificancePhi << std::endl;
 	  //Has to be fixed at some point as it doesn't work at phi ~ +- pi
 	  if(significancePhi < _maxSignificancePhi){
 	    isCloseInPhi = true;
             streamlog_out( DEBUG5 ) << " Tracks are close in phi " << std::endl;
 	  }
 
-	  streamlog_out( DEBUG2 ) << " -> pt significance = " << significancePt << " with cut at " << _maxSignificancePt << std::endl;
+	  streamlog_out( DEBUG5 ) << " -> pt significance = " << significancePt << " with cut at " << _maxSignificancePt << std::endl;
 	  if(significancePt < _maxSignificancePt){
 	    isCloseInPt = true;
             streamlog_out( DEBUG5 ) << " Tracks are close in pt  " << std::endl;
 	  }
 
-          // Print out the hits for track i
           // ERICA::FIX: Do it only if debug is on, therwise you just loose time!
           streamlog_out( DEBUG5 ) << " Track #" << iTrack << ": " << std::endl; 
           printHits(track_i);
@@ -610,18 +609,18 @@ void ClonesAndSplitTracksFinder::mergeAndFit(Track* track_i, Track* track_j, Tra
   EVENT::TrackerHitVec trkHits_j = track_j->getTrackerHits();
 
   EVENT::TrackerHitVec trkHits;
-
   for(UInt_t iHits=0; iHits<trkHits_i.size();iHits++){
     trkHits.push_back(trkHits_i.at(iHits));
   }
+  //Remove common hits while filling for the second track
   for(UInt_t jHits=0; jHits<trkHits_j.size();jHits++){
     if(std::find(trkHits.begin(), trkHits.end(), trkHits_j.at(jHits)) != trkHits.end() ){
       streamlog_out( DEBUG8 ) << " This hit is already in the track" << std::endl;
+      continue;
     } else {
       trkHits.push_back(trkHits_j.at(jHits));
     }
   }
-  //ERICA:FIXME: sorting functions are defined in TruthTrackFinder, maybe better moving them to a common place?
   std::sort(trkHits.begin(),trkHits.end(),sort_by_r);
   // ERICA::FIX: Do it only if debug is on, therwise you just loose time!
   streamlog_out( DEBUG8 ) << " Hits in track to be merged: " << std::endl;
@@ -683,29 +682,10 @@ void ClonesAndSplitTracksFinder::mergeAndFit(Track* track_i, Track* track_j, Tra
 
   streamlog_out(DEBUG4) << "processEvent: Hit numbers for track "
 			<< mergedTrack->id() << ":  " << std::endl;
-  // Get the hits
-  const TrackerHitVec& hitVector = mergedTrack->getTrackerHits();
-  int nHits = hitVector.size();
-  for(int itHit=0;itHit<nHits;itHit++){
-    // Get the tracker hit
-    TrackerHitPlane* hit = static_cast<TrackerHitPlane*>(hitVector.at(itHit));
-    streamlog_out( DEBUG8 ) << "  Hit #" << itHit 
-                            << ", (x,y,z) = (" << hit->getPosition()[0] << "," << hit->getPosition()[1] << "," << hit->getPosition()[2] << ")" << std::endl;
-  }
-/*
-  int detID = 0;
-  for (size_t ip = 0; ip < mergedTrack->subdetectorHitNumbers().size();
-       ip = ip + 2) {
-    detID++;
-    streamlog_out(DEBUG4)
-      << "  det id " << detID
-      << " , nhits in track = " << mergedTrack->subdetectorHitNumbers()[ip]
-      << " , nhits in fit = " << mergedTrack->subdetectorHitNumbers()[ip + 1]
-      << std::endl;
-    if (mergedTrack->subdetectorHitNumbers()[ip] > 0)
-      mergedTrack->setTypeBit(detID);
-  }
-*/
+  // ERICA::FIX: Do it only if debug is on, therwise you just loose time!
+  streamlog_out( DEBUG5 ) << " Merged track : " << std::endl; 
+  printHits(&*mergedTrack);
+
   lcioTrkPtr = mergedTrack.release();
 }
 
