@@ -1,4 +1,5 @@
 #include "ClonesAndSplitTracksFinder.h"
+#include "HitsSorterAndDebugger.h"
 
 #include <marlin/Exceptions.h>
 #include <marlin/Global.h>
@@ -28,9 +29,6 @@
 #include "DDRec/SurfaceManager.h"
 
 #include <algorithm>
-
-//CxxUtils
-#include "fpcompare.h"
 
 using namespace lcio;
 using namespace marlin;
@@ -105,22 +103,6 @@ ClonesAndSplitTracksFinder::ClonesAndSplitTracksFinder() : Processor("ClonesAndS
 			     bool(false));
 
 }
-
-bool sort_by_r(EVENT::TrackerHit* hit1, EVENT::TrackerHit* hit2){
-  double radius1 = sqrt((hit1->getPosition()[0])*(hit1->getPosition()[0]) + (hit1->getPosition()[1])*(hit1->getPosition()[1]));
-  double radius2 = sqrt((hit2->getPosition()[0])*(hit2->getPosition()[0]) + (hit2->getPosition()[1])*(hit2->getPosition()[1]));
-  //return (radius1 < radius2);
-  return CxxUtils::fpcompare::less(radius1, radius2);
-}
-
-//bool sort_by_z(EVENT::TrackerHit* hit1, EVENT::TrackerHit* hit2){
-//  // sorting by absolute value of Z so the hits are always sorted from close to
-//  // the IP outward. This works as long as all hits are either in positive or
-//  // negative side
-//  const double z1 = fabs(hit1->getPosition()[2]);
-//  const double z2 = fabs(hit2->getPosition()[2]);
-//  return CxxUtils::fpcompare::less(z1 , z2);
-//}
 
 void ClonesAndSplitTracksFinder::init() {
 
@@ -398,11 +380,12 @@ void ClonesAndSplitTracksFinder::mergeSplitTracks(std::unique_ptr<LCCollectionVe
             streamlog_out( DEBUG5 ) << " Tracks are close in pt  " << std::endl;
 	  }
 
-          // ERICA::FIX: Do it only if debug is on, therwise you just loose time!
-          streamlog_out( DEBUG5 ) << " Track #" << iTrack << ": " << std::endl; 
-          printHits(track_i);
-          streamlog_out( DEBUG5 ) << " Track #" << jTrack << ": " << std::endl; 
-          printHits(track_j);
+          if( streamlog::out.write< streamlog::DEBUG5 >() ){
+            streamlog_out( DEBUG5 ) << " Track #" << iTrack << ": " << std::endl; 
+            printHits(track_i);
+            streamlog_out( DEBUG5 ) << " Track #" << jTrack << ": " << std::endl; 
+            printHits(track_j);
+          }
 
 	  toBeMerged = isCloseInTheta && isCloseInPhi && isCloseInPt;
 
@@ -621,10 +604,11 @@ void ClonesAndSplitTracksFinder::mergeAndFit(Track* track_i, Track* track_j, Tra
       trkHits.push_back(trkHits_j.at(jHits));
     }
   }
-  std::sort(trkHits.begin(),trkHits.end(),sort_by_r);
-  // ERICA::FIX: Do it only if debug is on, therwise you just loose time!
-  streamlog_out( DEBUG8 ) << " Hits in track to be merged: " << std::endl;
-  printHits(trkHits);
+  std::sort(trkHits.begin(),trkHits.end(),sort_by_radius);
+  if( streamlog::out.write< streamlog::DEBUG5 >() ){
+    streamlog_out( DEBUG8 ) << " Hits in track to be merged: " << std::endl;
+    printHits(trkHits);
+  }
 
   auto mergedTrack = std::unique_ptr<TrackImpl>(new TrackImpl);
 
@@ -680,11 +664,10 @@ void ClonesAndSplitTracksFinder::mergeAndFit(Track* track_i, Track* track_j, Tra
   MarlinTrk::addHitNumbersToTrack(mergedTrack.get(), all_hits, false, encoder2);
   MarlinTrk::addHitNumbersToTrack(mergedTrack.get(), hits_in_fit, true, encoder2);
 
-  streamlog_out(DEBUG4) << "processEvent: Hit numbers for track "
-			<< mergedTrack->id() << ":  " << std::endl;
-  // ERICA::FIX: Do it only if debug is on, therwise you just loose time!
-  streamlog_out( DEBUG5 ) << " Merged track : " << std::endl; 
-  printHits(&*mergedTrack);
+  if( streamlog::out.write< streamlog::DEBUG5 >() ){
+    streamlog_out( DEBUG5 ) << " Merged track : " << std::endl; 
+    printHits(&*mergedTrack);
+  }
 
   lcioTrkPtr = mergedTrack.release();
 }
@@ -723,25 +706,6 @@ void ClonesAndSplitTracksFinder::bestInClones(Track* track_a, Track* track_b, in
   }
   else if(trackerHit_b_size < trackerHit_a_size){ // if the second track is shorter
     bestTrack = track_a;
-  }
-
-}
-
-void ClonesAndSplitTracksFinder::printHits(const Track* track){
-  // Print out the hits
-  const TrackerHitVec& hitVector = track->getTrackerHits();
-  printHits(hitVector);
-}
-
-void ClonesAndSplitTracksFinder::printHits(const TrackerHitVec& hitVector){
-  // Print out the hits
-  int nHits = hitVector.size();
-  for(int itHit=0;itHit<nHits;itHit++){
-    // Get the tracker hit and print global coordinates of the hit
-    TrackerHitPlane* hit = static_cast<TrackerHitPlane*>(hitVector.at(itHit));
-    streamlog_out( DEBUG5 ) << " Hit #" << itHit 
-                            << ", (x,y,z) = (" << hit->getPosition()[0] << "," << hit->getPosition()[1] 
-                            << "," << hit->getPosition()[2] << ")" << std::endl;
   }
 
 }

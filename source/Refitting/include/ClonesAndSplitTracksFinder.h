@@ -74,9 +74,6 @@ protected:
   // Contains the whole clone skimming procedure (calls bestInClones and filterClonesAndMergedTracks(bool true))
   void removeClones(EVENT::TrackVec&, LCCollection*&);
 
-  void printHits(const Track*);
-  void printHits(const TrackerHitVec&);
-
   lcio::LCCollection *GetCollection(lcio::LCEvent *evt, std::string colName);
 
   std::string _input_track_col_name;
@@ -109,8 +106,5 @@ protected:
   std::shared_ptr<UTIL::BitField64> _encoder{};
 
 };
-
-bool sort_by_r(EVENT::TrackerHit*, EVENT::TrackerHit*);
-//bool sort_by_z(EVENT::TrackerHit*, EVENT::TrackerHit*);
 
 #endif
