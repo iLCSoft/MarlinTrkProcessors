@@ -368,7 +368,6 @@ void ClonesAndSplitTracksFinder::mergeSplitTracks(std::unique_ptr<LCCollectionVe
 	  }
 
 	  streamlog_out( DEBUG5 ) << " -> phi significance = " << significancePhi << " with cut at " << _maxSignificancePhi << std::endl;
-	  //Has to be fixed at some point as it doesn't work at phi ~ +- pi
 	  if(significancePhi < _maxSignificancePhi){
 	    isCloseInPhi = true;
             streamlog_out( DEBUG5 ) << " Tracks are close in phi " << std::endl;
@@ -462,11 +461,12 @@ double ClonesAndSplitTracksFinder::calculateSignificancePhi(Track * first, Track
   double significance = 10E5;
   float phiFirst = first->getPhi();
   float phiSecond = second->getPhi();
+  float deltaPhi = (M_PI - std::abs(std::abs(phiFirst - phiSecond) - M_PI));
 
   const float sigmaPhiFirst = sqrt(first->getCovMatrix()[2]);
   const float sigmaPhiSecond = sqrt(second->getCovMatrix()[2]);
 
-  significance = calculateSignificance(phiFirst, phiSecond, sigmaPhiFirst, sigmaPhiSecond);
+  significance = calculateSignificance(deltaPhi, 0.0, sigmaPhiFirst, sigmaPhiSecond);
 
   return significance;
 
