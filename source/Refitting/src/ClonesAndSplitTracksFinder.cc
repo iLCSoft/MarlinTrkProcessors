@@ -436,9 +436,8 @@ void ClonesAndSplitTracksFinder::mergeSplitTracks(std::unique_ptr<LCCollectionVe
 
 }
 
-double ClonesAndSplitTracksFinder::calculateSignificancePt(Track * first, Track * second){
+double ClonesAndSplitTracksFinder::calculateSignificancePt(const Track * first, const Track * second){
 
-  double significance = 10E5;
   float omegaFirst = first->getOmega();
   float omegaSecond = second->getOmega();
 
@@ -450,15 +449,14 @@ double ClonesAndSplitTracksFinder::calculateSignificancePt(Track * first, Track 
   const float sigmaPtFirst = ptFirst*sigmaPOverPFirst;
   const float sigmaPtSecond = ptSecond*sigmaPOverPSecond;
 
-  significance = calculateSignificance(ptFirst, ptSecond, sigmaPtFirst, sigmaPtSecond);
+  const double significance = calculateSignificance(ptFirst, ptSecond, sigmaPtFirst, sigmaPtSecond);
 
   return significance;
 
 }
 
-double ClonesAndSplitTracksFinder::calculateSignificancePhi(Track * first, Track * second){
+double ClonesAndSplitTracksFinder::calculateSignificancePhi(const Track * first, const Track * second){
 
-  double significance = 10E5;
   float phiFirst = first->getPhi();
   float phiSecond = second->getPhi();
   float deltaPhi = (M_PI - std::abs(std::abs(phiFirst - phiSecond) - M_PI));
@@ -466,22 +464,21 @@ double ClonesAndSplitTracksFinder::calculateSignificancePhi(Track * first, Track
   const float sigmaPhiFirst = sqrt(first->getCovMatrix()[2]);
   const float sigmaPhiSecond = sqrt(second->getCovMatrix()[2]);
 
-  significance = calculateSignificance(deltaPhi, 0.0, sigmaPhiFirst, sigmaPhiSecond);
+  const double significance = calculateSignificance(deltaPhi, 0.0, sigmaPhiFirst, sigmaPhiSecond);
 
   return significance;
 
 }
 
-double ClonesAndSplitTracksFinder::calculateSignificanceTanLambda(Track * first, Track * second){
+double ClonesAndSplitTracksFinder::calculateSignificanceTanLambda(const Track * first, const Track * second){
 
-  double significance = 10E5;
   float tanLambdaFirst = first->getTanLambda();
   float tanLambdaSecond = second->getTanLambda();
 
   const float sigmaTanLambdaFirst = sqrt(first->getCovMatrix()[14]);
   const float sigmaTanLambdaSecond = sqrt(second->getCovMatrix()[14]);
 
-  significance = calculateSignificance(tanLambdaFirst, tanLambdaSecond, sigmaTanLambdaFirst, sigmaTanLambdaSecond);
+  const double significance = calculateSignificance(tanLambdaFirst, tanLambdaSecond, sigmaTanLambdaFirst, sigmaTanLambdaSecond);
 
   return significance;
 
@@ -489,7 +486,7 @@ double ClonesAndSplitTracksFinder::calculateSignificanceTanLambda(Track * first,
 
 double ClonesAndSplitTracksFinder::calculateSignificance(const double firstPar, const double secondPar, const double firstPar_sigma, const double secondPar_sigma ){
 
-  const float delta = fabs( firstPar- secondPar );
+  const float delta = fabs( firstPar - secondPar );
   const float sigmaDelta = sqrt( firstPar_sigma*firstPar_sigma + secondPar_sigma*secondPar_sigma );
 
   return delta/sigmaDelta;

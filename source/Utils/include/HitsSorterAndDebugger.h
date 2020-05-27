@@ -1,3 +1,6 @@
+#ifndef HitsSorterAndDebugger_h
+#define HitsSorterAndDebugger_h 1
+
 #include <EVENT/TrackerHit.h>
 #include <EVENT/Track.h>
 #include <IMPL/TrackerHitPlaneImpl.h>
@@ -41,3 +44,4 @@ inline void printHits(const Track* track){
   return;
 }
 
+#endif

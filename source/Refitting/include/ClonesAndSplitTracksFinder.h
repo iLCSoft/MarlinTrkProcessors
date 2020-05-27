@@ -60,13 +60,13 @@ protected:
   void mergeSplitTracks(std::unique_ptr<LCCollectionVec>&, LCCollection*&, EVENT::TrackVec&);
 
   // Calculate significance in pt for two candidate clones
-  double calculateSignificancePt(Track *, Track *);
+  double calculateSignificancePt(const Track *, const Track *);
 
   // Calculate significance in phi for two candidate clones
-  double calculateSignificancePhi(Track *, Track *);
+  double calculateSignificancePhi(const Track *, const Track *);
 
   // Calculate significance in tanLambda for two candidate clones
-  double calculateSignificanceTanLambda(Track *, Track *);
+  double calculateSignificanceTanLambda(const Track *, const Track *);
 
   // Calculate significance for two candidate clones
   double calculateSignificance(const double firstPar, const double secondPar, const double firstPar_sigma, const double secondPar_sigma );
