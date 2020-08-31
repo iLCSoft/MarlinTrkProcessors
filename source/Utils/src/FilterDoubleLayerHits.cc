@@ -4,17 +4,11 @@
 #include <string.h>
 
 #include <IMPL/LCCollectionVec.h>
-// #include <EVENT/SimTrackerHit.h>
 #include <EVENT/TrackerHitPlane.h>
-// #include <EVENT/SimCalorimeterHit.h>
-// #include <EVENT/CalorimeterHit.h>
 
 #include "marlin/AIDAProcessor.h"
 
 #include <UTIL/CellIDDecoder.h>
-// #include <UTIL/BitField64.h>
-// #include "UTIL/LCTrackerConf.h"
-// #include <UTIL/LCTOOLS.h>
 
 #include "DD4hep/DD4hepUnits.h"
 
@@ -124,14 +118,15 @@ void FilterDoubleLayerHits::init() {
   for(size_t iCut=0, nCuts=_dlCuts.size() ; iCut<nCuts ; ++iCut){
     const DoubleLayerCut& cut = _dlCuts.at(iCut);
     if (_fillHistos) {
+      // All hits
       sprintf(hname, "h_dX_layers_%d_%d", cut.layer0, cut.layer1);
-      _histos[ std::string(hname) ] = new TH1F( hname , ";dX [mm]; Hit pairs", 5000, -25, 25 );
+      _histos[ std::string(hname) ] = new TH1F( hname , ";dX [mm]; Hit pairs", 2000, -10, 10 );
       sprintf(hname, "h2_dX_dPhi_layers_%d_%d", cut.layer0, cut.layer1);
-      _histos[ std::string(hname) ] = new TH2F( hname , ";dX [mm]; d#phi [mrad]", 500, -5, 5, 200, -20, 20);
+      _histos[ std::string(hname) ] = new TH2F( hname , ";dX [mm]; d#phi [mrad]", 500, -5, 5, 500, 0, 50);
       sprintf(hname, "h_dTheta_layers_%d_%d", cut.layer0, cut.layer1);
-      _histos[ std::string(hname) ] = new TH1F( hname , ";d#theta [mrad]; Hit pairs", 5000, -10, 10 );
+      _histos[ std::string(hname) ] = new TH1F( hname , ";d#theta [mrad]; Hit pairs", 3000, -30, 30 );
       sprintf(hname, "h_dPhi_layers_%d_%d", cut.layer0, cut.layer1);
-      _histos[ std::string(hname) ] = new TH1F( hname , ";d#phi [mrad]; Hit pairs", 5000, -100, 100 );
+      _histos[ std::string(hname) ] = new TH1F( hname , ";|d#phi| [mrad]; Hit pairs", 1000, 0, 50 );
       sprintf(hname, "h_posU_layer%d", cut.layer0);
       _histos[ std::string(hname) ] = new TH1F( hname , ";U [mm]; Hits", 1000, -50, 50 );
       sprintf(hname, "h_posV_layer%d", cut.layer0);
@@ -194,22 +189,19 @@ void FilterDoubleLayerHits::processEvent( LCEvent * evt ) {
     unsigned int sideID = decoder(h)["side"];
     unsigned int ladderID = decoder(h)["module"];
     unsigned int moduleID = decoder(h)["sensor"];
-    streamlog_out( DEBUG0 ) << " Checking 1st hit at layer: " << layerID << "  ladder: " << ladderID << "  module: " << moduleID <<  std::endl ;
+    streamlog_out( DEBUG5 ) << " Checking 1st hit " << iHit << " / " << nHit << " at layer: " << layerID << "  ladder: " << ladderID << "  module: " << moduleID <<  std::endl ;
 
 
     // Checking if the hit is at the inner double layer to be filtered
     const DoubleLayerCut* dlCut(0);
     for(int iCut=0, nCuts=_dlCuts.size(); iCut<nCuts; ++iCut){
       const DoubleLayerCut& cut = _dlCuts.at(iCut);
-      if( ( layerID != cut.layer0 ) && ( layerID != cut.layer1 ) ) {
-        _hitAccepted[iHit] = true;
-        continue;
-      }
+      if( ( layerID != cut.layer0 ) && ( layerID != cut.layer1 ) ) continue;
       dlCut = &cut;
       break;
     }
 
-    // Accepting hit immediately if it's not affected by the double-layer cuts
+    // Accepting hit immediately if it's not affected by any double-layer cut
     if (!dlCut) {
       _hitAccepted[iHit] = true;
       continue;
@@ -231,9 +223,15 @@ void FilterDoubleLayerHits::processEvent( LCEvent * evt ) {
       _histos[hname]->Fill(posLocal.v());
     }
 
+    // Setting the values for closest hits
+    double dR_min(999);
+    double dX_closest(0);
+    double dTheta_closest(0);
+    double dPhi_closest(0);
+
     // Looking for the compliment hits in the 2nd sublayer
     size_t nCompatibleHits(0);
-    unsigned int cutLayerID = layerID == dlCut->layer0 ? dlCut->layer1 : dlCut->layer0;
+    unsigned int cutLayerID = dlCut->layer1;
     for(size_t iHit2 = 0; iHit2 < nHit; iHit2++){
       if (iHit2 == iHit) continue;
       TrackerHitPlane* h2 = (TrackerHitPlane*)col->getElementAt( iHit2 );
@@ -254,30 +252,39 @@ void FilterDoubleLayerHits::processEvent( LCEvent * evt ) {
       // Checking whether hit is close enough to the 1st one
       double dX = posLocal2.u() - posLocal.u();
       double dTheta = posGlobal2.theta() - posGlobal.theta();
-      double dPhi = posGlobal2.phi() - posGlobal.phi();
+      double dPhi = std::fabs(posGlobal2.phi() - posGlobal.phi());
+      if (dPhi > dd4hep::pi) dPhi = dd4hep::twopi - dPhi;
+      double dR = sqrt(dPhi*dPhi + dTheta*dTheta);
       streamlog_out( DEBUG0 ) << " Checking 2nd hit at layer: " << layerID2 << ";  dX: " << dX << ";  dTheta: " <<  dTheta << std::endl;
 
-      // Filling diagnostic histograms
-      if (_fillHistos) {
-        char hname[100];
-        sprintf(hname, "h_dX_layers_%d_%d", layerID, layerID2);
-        _histos[hname]->Fill(dX);
-        sprintf(hname, "h2_dX_dPhi_layers_%d_%d", layerID, layerID2);
-        _histos[hname]->Fill(dX, dPhi*1e3);
-        sprintf(hname, "h_dTheta_layers_%d_%d", layerID, layerID2);
-        _histos[hname]->Fill(dTheta*1e3);
-        sprintf(hname, "h_dPhi_layers_%d_%d", layerID, layerID2);
-        _histos[hname]->Fill(dPhi*1e3);
+      // Updating the minimal values
+      if (dR < dR_min) {
+        dR_min = dR;
+        dX_closest = dX;
+        dTheta_closest = dTheta;
+        dPhi_closest = dPhi;
       }
 
       // Skipping the hit if it's outside the cut window
-      if (fabs(dX) > dlCut->dX_max) continue;
-      if (fabs(dTheta) > dlCut->dTheta_max) continue;
+      if (std::fabs(dX) > dlCut->dX_max) continue;
+      if (std::fabs(dTheta) > dlCut->dTheta_max) continue;
 
       nCompatibleHits++;
       _hitAccepted[iHit2] = true;
       streamlog_out( DEBUG5 ) << " Accepted 2nd hit at layer: " << layerID2 << ";  dX: " << dX << ";  dTheta: " <<  dTheta << std::endl;
     }
+    // Filling diagnostic histograms
+    if (_fillHistos && dR_min < 998) {
+        char hname[100];
+        sprintf(hname, "h_dX_layers_%d_%d", dlCut->layer0, dlCut->layer1);
+        _histos[hname]->Fill(dX_closest);
+        sprintf(hname, "h2_dX_dPhi_layers_%d_%d", dlCut->layer0, dlCut->layer1);
+        _histos[hname]->Fill(dX_closest, dPhi_closest*1e3);
+        sprintf(hname, "h_dTheta_layers_%d_%d", dlCut->layer0, dlCut->layer1);
+        _histos[hname]->Fill(dTheta_closest*1e3);
+        sprintf(hname, "h_dPhi_layers_%d_%d", dlCut->layer0, dlCut->layer1);
+        _histos[hname]->Fill(dPhi_closest*1e3);
+      }
 
     // Accepting the first hit if it has at least one compatible pair
     if (nCompatibleHits > 0) {
