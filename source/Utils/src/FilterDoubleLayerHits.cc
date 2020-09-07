@@ -177,6 +177,24 @@ void FilterDoubleLayerHits::processEvent( LCEvent * evt ) {
   const size_t nHit = col->getNumberOfElements();
   memset(&_hitAccepted, false, nHit);
 
+  // Splitting hits by layers for faster association
+  for(size_t iHit = 0; iHit < nHit ; iHit++){
+
+    TrackerHitPlane* h = (TrackerHitPlane*)col->getElementAt( iHit );
+
+    unsigned int layerID = decoder(h)["layer"];
+    unsigned int sideID = decoder(h)["side"];
+    unsigned int ladderID = decoder(h)["module"];
+    unsigned int moduleID = decoder(h)["sensor"];
+
+    SensorPosition sensPos = {layerID, sideID, ladderID, moduleID};
+    if (_hitsGrouped.find(sensPos) == _hitsGrouped.end()) {
+      _hitsGrouped[sensPos] = std::vector<size_t>();
+      _hitsGrouped[sensPos].reserve(nHit);
+    }
+    _hitsGrouped[sensPos].push_back(iHit);
+  }
+
   //---- loop over hits
   for(size_t iHit = 0; iHit < nHit ; iHit++){
 
@@ -190,6 +208,8 @@ void FilterDoubleLayerHits::processEvent( LCEvent * evt ) {
     unsigned int ladderID = decoder(h)["module"];
     unsigned int moduleID = decoder(h)["sensor"];
     streamlog_out( DEBUG5 ) << " Checking 1st hit " << iHit << " / " << nHit << " at layer: " << layerID << "  ladder: " << ladderID << "  module: " << moduleID <<  std::endl ;
+
+    const SensorPosition sensPos = {layerID, sideID, ladderID, moduleID};
 
 
     // Checking if the hit is at the inner double layer to be filtered
@@ -231,19 +251,11 @@ void FilterDoubleLayerHits::processEvent( LCEvent * evt ) {
 
     // Looking for the compliment hits in the 2nd sublayer
     size_t nCompatibleHits(0);
-    unsigned int cutLayerID = dlCut->layer1;
-    for(size_t iHit2 = 0; iHit2 < nHit; iHit2++){
-      if (iHit2 == iHit) continue;
+    SensorPosition sensPos2 = sensPos;
+    sensPos2.layer = dlCut->layer1;
+    for(size_t iHit2 : _hitsGrouped.at(sensPos2)){
       TrackerHitPlane* h2 = (TrackerHitPlane*)col->getElementAt( iHit2 );
-
-      // Ensuring the hit is on the proper layer
       unsigned int layerID2 = decoder(h2)["layer"];
-      if (layerID2 != cutLayerID) continue;
-
-      // Ensuring the hit is on the same side, ladder and module as the first hit
-      if (decoder(h2)["side"] != sideID) continue;
-      if (decoder(h2)["module"] != ladderID) continue;
-      if (decoder(h2)["sensor"] != moduleID) continue;
 
       // Getting the local and global hit positions
       dd4hep::rec::Vector3D posGlobal2( h2->getPosition()[0], h2->getPosition()[1], h2->getPosition()[2] );

@@ -5,6 +5,7 @@
 #include "marlin/EventModifier.h"
 
 #include "DDRec/SurfaceManager.h"
+#include <EVENT/TrackerHitPlane.h>
 
 #include "lcio.h"
 #include <string>
@@ -35,7 +36,18 @@ protected:
 
   static const size_t NHITS_MAX = 10000000;
 
-  ///helper struct
+  struct SensorPosition{
+    unsigned int layer;
+    unsigned int side;
+    unsigned int ladder;
+    unsigned int module;
+
+    bool operator<(const SensorPosition& rhs) const {
+      return std::tie(layer, side, ladder, module) < std::tie(rhs.layer, rhs.side, rhs.ladder, rhs.module);
+    }
+  };
+
+  /// Double layer cut struct
   struct DoubleLayerCut{
     unsigned int layer0 ;
     unsigned int layer1 ;
@@ -43,14 +55,6 @@ protected:
     double dTheta_max ;
   };
 
-  /// Enum used for hit types
-  enum HitType{
-    SimTrackerHitType = 1,
-    TrackerHitType,
-    SimCalorimeterHitType,
-    CalorimeterHitType,
-    UnkownType
-  };
 
  public:
 
@@ -108,10 +112,11 @@ protected:
   const dd4hep::rec::SurfaceMap* _map ;
 
 
-  HitType _type ;
-
   ////Array of flags for hits to be accepted
   bool _hitAccepted[NHITS_MAX] ;
+
+  ////Map of vectors of hits grouped by position in the detector
+  std::map<SensorPosition, std::vector<size_t> > _hitsGrouped;
 
   ////Monitoring histograms
   std::map<std::string, TH1*> _histos ;
