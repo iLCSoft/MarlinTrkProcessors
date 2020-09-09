@@ -178,7 +178,8 @@ void FilterDoubleLayerHits::processEvent( LCEvent * evt ) {
   memset(&_hitAccepted, false, nHit);
 
   // Splitting hits by layers for faster association
-  for(size_t iHit = 0; iHit < nHit ; iHit++){
+  _hitsGrouped.clear();
+  for (size_t iHit = 0; iHit < nHit ; iHit++) {
 
     TrackerHitPlane* h = (TrackerHitPlane*)col->getElementAt( iHit );
 
@@ -196,7 +197,7 @@ void FilterDoubleLayerHits::processEvent( LCEvent * evt ) {
   }
 
   //---- loop over hits
-  for(size_t iHit = 0; iHit < nHit ; iHit++){
+  for (size_t iHit = 0; iHit < nHit ; iHit++) {
 
     // Skipping hits that are already accepted
     if (_hitAccepted[iHit]) continue;
@@ -211,10 +212,9 @@ void FilterDoubleLayerHits::processEvent( LCEvent * evt ) {
 
     const SensorPosition sensPos = {layerID, sideID, ladderID, moduleID};
 
-
     // Checking if the hit is at the inner double layer to be filtered
     const DoubleLayerCut* dlCut(0);
-    for(int iCut=0, nCuts=_dlCuts.size(); iCut<nCuts; ++iCut){
+    for (int iCut=0, nCuts=_dlCuts.size(); iCut<nCuts; ++iCut) {
       const DoubleLayerCut& cut = _dlCuts.at(iCut);
       if( ( layerID != cut.layer0 ) && ( layerID != cut.layer1 ) ) continue;
       dlCut = &cut;
@@ -253,7 +253,9 @@ void FilterDoubleLayerHits::processEvent( LCEvent * evt ) {
     size_t nCompatibleHits(0);
     SensorPosition sensPos2 = sensPos;
     sensPos2.layer = dlCut->layer1;
-    for(size_t iHit2 : _hitsGrouped.at(sensPos2)){
+    // Checking if there are any hits in the corresponding sensor at the other sublayer
+    if (_hitsGrouped.find(sensPos2) == _hitsGrouped.end()) continue;
+    for (size_t iHit2 : _hitsGrouped.at(sensPos2)) {
       TrackerHitPlane* h2 = (TrackerHitPlane*)col->getElementAt( iHit2 );
       unsigned int layerID2 = decoder(h2)["layer"];
 
@@ -307,7 +309,7 @@ void FilterDoubleLayerHits::processEvent( LCEvent * evt ) {
 
   // Adding accepted hits to the output collection
   size_t nHitsAccepted(0);
-  for(size_t iHit = 0; iHit < nHit; iHit++){
+  for (size_t iHit = 0; iHit < nHit; iHit++) {
     if (!_hitAccepted[iHit]) continue;
   	colOut->addElement( col->getElementAt( iHit ) );
     nHitsAccepted++;
