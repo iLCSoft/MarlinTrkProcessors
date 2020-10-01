@@ -59,7 +59,7 @@ FilterDoubleLayerHits::FilterDoubleLayerHits() : Processor("FilterDoubleLayerHit
   dlCutConfigsEx.push_back("0.05") ;
 
   registerProcessorParameter("DoubleLayerCuts" ,
-			     "Layer IDs and cuts to be applied: <layer 0> <layer 1> <dX> <dTheta>" ,
+			     "Layer IDs and cuts to be applied: <layer 0> <layer 1> <dU> <dTheta>" ,
 			     _dlCutConfigs ,
 			     dlCutConfigsEx
 			     );
@@ -68,17 +68,27 @@ FilterDoubleLayerHits::FilterDoubleLayerHits() : Processor("FilterDoubleLayerHit
 }
 
 
-dd4hep::rec::Vector2D FilterDoubleLayerHits::globalToLocal(long int cellID, const dd4hep::rec::Vector3D& posGlobal) {
-  // Finding the surface corresponding to  the cellID
-  dd4hep::rec::SurfaceMap::const_iterator surfIt = _map->find( cellID );
-  if( surfIt == _map->end() ){
-    std::stringstream err;
-    err << " FilterDoubleLayerHits::processEvent(): no surface found for cellID: " << cellID;
-    throw Exception ( err.str() );
+dd4hep::rec::Vector2D FilterDoubleLayerHits::globalToLocal(long int cellID, const dd4hep::rec::Vector3D& posGlobal, dd4hep::rec::ISurface** surfptr=nullptr) {
+  dd4hep::rec::ISurface* surf;
+  // Using directly the provided surface object if available
+  if (surfptr && *surfptr) {
+    surf = *surfptr;
+  } else {
+    // Finding the surface corresponding to the cellID
+    dd4hep::rec::SurfaceMap::const_iterator surfIt = _map->find( cellID );
+    if( surfIt == _map->end() ){
+      std::stringstream err;
+      err << " FilterDoubleLayerHits::processEvent(): no surface found for cellID: " << cellID;
+      throw Exception ( err.str() );
+    }
+    surf = surfIt->second;
+    // Saving the surface object outside the function to be reused for the same cellID
+    if (surfptr) *surfptr = surf;
   }
-  const dd4hep::rec::ISurface* surf = surfIt->second;
-  // Converting global position to local
-  return surf->globalToLocal(  posGlobal ) ;
+  // Converting global position to local in [cm]
+  dd4hep::rec::Vector2D posLocal = surf->globalToLocal(  dd4hep::mm * posGlobal );
+
+  return dd4hep::rec::Vector2D( posLocal.u() / dd4hep::mm, posLocal.v() / dd4hep::mm );
 }
 
 
@@ -94,7 +104,7 @@ void FilterDoubleLayerHits::init() {
   while( i < _dlCutConfigs.size() ){
     _dlCuts[index].layer0      = std::atoi( _dlCutConfigs[ i++ ].c_str() ) ;
     _dlCuts[index].layer1      = std::atoi( _dlCutConfigs[ i++ ].c_str() ) ;
-    _dlCuts[index].dX_max      = std::atof( _dlCutConfigs[ i++ ].c_str() ) ;
+    _dlCuts[index].dU_max      = std::atof( _dlCutConfigs[ i++ ].c_str() ) ;
     _dlCuts[index].dTheta_max  = std::atof( _dlCutConfigs[ i++ ].c_str() ) / 1e3 ;  // converting mrad -> rad
     ++index ;
   }
@@ -118,23 +128,25 @@ void FilterDoubleLayerHits::init() {
   for(size_t iCut=0, nCuts=_dlCuts.size() ; iCut<nCuts ; ++iCut){
     const DoubleLayerCut& cut = _dlCuts.at(iCut);
     if (_fillHistos) {
-      // All hits
-      sprintf(hname, "h_dX_layers_%d_%d", cut.layer0, cut.layer1);
-      _histos[ std::string(hname) ] = new TH1F( hname , ";dX [mm]; Hit pairs", 2000, -10, 10 );
-      sprintf(hname, "h2_dX_dPhi_layers_%d_%d", cut.layer0, cut.layer1);
-      _histos[ std::string(hname) ] = new TH2F( hname , ";dX [mm]; d#phi [mrad]", 500, -5, 5, 500, 0, 50);
+      // Properties of the closest hits across 2 sublayers
+      sprintf(hname, "h_dU_layers_%d_%d", cut.layer0, cut.layer1);
+      _histos[ std::string(hname) ] = new TH1F( hname , ";#DeltaU [mm]; Hit pairs", 2000, -5, 5 );
+      sprintf(hname, "h2_dU_dPhi_layers_%d_%d", cut.layer0, cut.layer1);
+      _histos[ std::string(hname) ] = new TH2F( hname , ";#DeltaU [mm]; #Delta#phi [mrad]", 500, -5, 5, 500, 0, 50);
       sprintf(hname, "h_dTheta_layers_%d_%d", cut.layer0, cut.layer1);
-      _histos[ std::string(hname) ] = new TH1F( hname , ";d#theta [mrad]; Hit pairs", 3000, -30, 30 );
+      _histos[ std::string(hname) ] = new TH1F( hname , ";#Delta#Theta [mrad]; Hit pairs", 3000, -30, 30 );
       sprintf(hname, "h_dPhi_layers_%d_%d", cut.layer0, cut.layer1);
-      _histos[ std::string(hname) ] = new TH1F( hname , ";|d#phi| [mrad]; Hit pairs", 1000, 0, 50 );
-      sprintf(hname, "h_posU_layer%d", cut.layer0);
-      _histos[ std::string(hname) ] = new TH1F( hname , ";U [mm]; Hits", 1000, -50, 50 );
-      sprintf(hname, "h_posV_layer%d", cut.layer0);
-      _histos[ std::string(hname) ] = new TH1F( hname , ";V [mm]; Hits", 1000, -200, 200 );
+      _histos[ std::string(hname) ] = new TH1F( hname , ";|#Delta#phi| [mrad]; Hit pairs", 1000, 0, 50 );
+      // Hit properties for each individual layer
+      std::vector<unsigned int> layers{cut.layer0, cut.layer1};
+      for (auto layer : layers) {
+        sprintf(hname, "h2_posUV_rejected_layer_%d", layer);
+        _histos[ std::string(hname) ] = new TH2F( hname , ";U [mm]; V [mm]", 500, -100, 100, 1000, -200, 200 );
+      }
     }
     // Printing the configured cut
-    streamlog_out( DEBUG5 ) <<  iCut << ". layers: " << cut.layer0 << " >> " << cut.layer1 << ";  dX: "
-    << cut.dX_max << " mm;  dTheta: " << cut.dTheta_max << " rad" << std::endl;
+    streamlog_out( DEBUG5 ) <<  iCut << ". layers: " << cut.layer0 << " >> " << cut.layer1 << ";  dU: "
+    << cut.dU_max << " mm;  dTheta: " << cut.dTheta_max << " rad" << std::endl;
   }
 
   _nRun = 0 ;
@@ -177,7 +189,7 @@ void FilterDoubleLayerHits::processEvent( LCEvent * evt ) {
   const size_t nHit = col->getNumberOfElements();
   memset(&_hitAccepted, false, nHit);
 
-  // Splitting hits by layers for faster association
+  // Splitting hits by sensor ids for faster association
   _hitsGrouped.clear();
   for (size_t iHit = 0; iHit < nHit ; iHit++) {
 
@@ -234,18 +246,9 @@ void FilterDoubleLayerHits::processEvent( LCEvent * evt ) {
     dd4hep::rec::Vector3D posGlobal( h->getPosition()[0], h->getPosition()[1], h->getPosition()[2] );
     dd4hep::rec::Vector2D posLocal = globalToLocal( decoder( h ).getValue(), posGlobal );
 
-    // Filling diagnostic histograms
-    if (_fillHistos) {
-      char hname[100];
-      sprintf(hname, "h_posU_layer%d", layerID);
-      _histos[hname]->Fill(posLocal.u());
-      sprintf(hname, "h_posV_layer%d", layerID);
-      _histos[hname]->Fill(posLocal.v());
-    }
-
     // Setting the values for closest hits
     double dR_min(999);
-    double dX_closest(0);
+    double dU_closest(0);
     double dTheta_closest(0);
     double dPhi_closest(0);
 
@@ -253,6 +256,7 @@ void FilterDoubleLayerHits::processEvent( LCEvent * evt ) {
     size_t nCompatibleHits(0);
     SensorPosition sensPos2 = sensPos;
     sensPos2.layer = dlCut->layer1;
+    dd4hep::rec::ISurface* surf=nullptr;
     // Checking if there are any hits in the corresponding sensor at the other sublayer
     if (_hitsGrouped.find(sensPos2) == _hitsGrouped.end()) continue;
     for (size_t iHit2 : _hitsGrouped.at(sensPos2)) {
@@ -261,39 +265,39 @@ void FilterDoubleLayerHits::processEvent( LCEvent * evt ) {
 
       // Getting the local and global hit positions
       dd4hep::rec::Vector3D posGlobal2( h2->getPosition()[0], h2->getPosition()[1], h2->getPosition()[2] );
-      dd4hep::rec::Vector2D posLocal2 = globalToLocal( decoder( h2 ).getValue(), posGlobal2 );
+      dd4hep::rec::Vector2D posLocal2 = globalToLocal( decoder( h2 ).getValue(), posGlobal2, &surf );
 
       // Checking whether hit is close enough to the 1st one
-      double dX = posLocal2.u() - posLocal.u();
+      double dU = posLocal2.u() - posLocal.u();
       double dTheta = posGlobal2.theta() - posGlobal.theta();
       double dPhi = std::fabs(posGlobal2.phi() - posGlobal.phi());
       if (dPhi > dd4hep::pi) dPhi = dd4hep::twopi - dPhi;
       double dR = sqrt(dPhi*dPhi + dTheta*dTheta);
-      streamlog_out( DEBUG0 ) << " Checking 2nd hit at layer: " << layerID2 << ";  dX: " << dX << ";  dTheta: " <<  dTheta << std::endl;
+      streamlog_out( DEBUG0 ) << " Checking 2nd hit at layer: " << layerID2 << ";  dU: " << dU << ";  dTheta: " <<  dTheta << std::endl;
 
       // Updating the minimal values
       if (dR < dR_min) {
         dR_min = dR;
-        dX_closest = dX;
+        dU_closest = dU;
         dTheta_closest = dTheta;
         dPhi_closest = dPhi;
       }
 
       // Skipping the hit if it's outside the cut window
-      if (std::fabs(dX) > dlCut->dX_max) continue;
+      if (std::fabs(dU) > dlCut->dU_max) continue;
       if (std::fabs(dTheta) > dlCut->dTheta_max) continue;
 
       nCompatibleHits++;
       _hitAccepted[iHit2] = true;
-      streamlog_out( DEBUG5 ) << " Accepted 2nd hit at layer: " << layerID2 << ";  dX: " << dX << ";  dTheta: " <<  dTheta << std::endl;
+      streamlog_out( DEBUG5 ) << " Accepted 2nd hit at layer: " << layerID2 << ";  dU: " << dU << ";  dTheta: " <<  dTheta << std::endl;
     }
     // Filling diagnostic histograms
     if (_fillHistos && dR_min < 998) {
         char hname[100];
-        sprintf(hname, "h_dX_layers_%d_%d", dlCut->layer0, dlCut->layer1);
-        _histos[hname]->Fill(dX_closest);
-        sprintf(hname, "h2_dX_dPhi_layers_%d_%d", dlCut->layer0, dlCut->layer1);
-        _histos[hname]->Fill(dX_closest, dPhi_closest*1e3);
+        sprintf(hname, "h_dU_layers_%d_%d", dlCut->layer0, dlCut->layer1);
+        _histos[hname]->Fill(dU_closest);
+        sprintf(hname, "h2_dU_dPhi_layers_%d_%d", dlCut->layer0, dlCut->layer1);
+        _histos[hname]->Fill(dU_closest, dPhi_closest*1e3);
         sprintf(hname, "h_dTheta_layers_%d_%d", dlCut->layer0, dlCut->layer1);
         _histos[hname]->Fill(dTheta_closest*1e3);
         sprintf(hname, "h_dPhi_layers_%d_%d", dlCut->layer0, dlCut->layer1);
@@ -310,7 +314,22 @@ void FilterDoubleLayerHits::processEvent( LCEvent * evt ) {
   // Adding accepted hits to the output collection
   size_t nHitsAccepted(0);
   for (size_t iHit = 0; iHit < nHit; iHit++) {
-    if (!_hitAccepted[iHit]) continue;
+    if (!_hitAccepted[iHit]) {
+      // Filling the positions of rejected hits
+      if (_fillHistos) {
+        TrackerHitPlane* h = (TrackerHitPlane*)col->getElementAt( iHit );
+        unsigned int layerID = decoder(h)["layer"];
+
+        // Getting local hit position
+        dd4hep::rec::Vector3D posGlobal( h->getPosition()[0], h->getPosition()[1], h->getPosition()[2] );
+        dd4hep::rec::Vector2D posLocal = globalToLocal( decoder( h ).getValue(), posGlobal );
+
+        char hname[100];
+        sprintf(hname, "h2_posUV_rejected_layer_%d", layerID);
+        _histos[hname]->Fill(posLocal.u(), posLocal.v());
+      }
+      continue;
+    }
   	colOut->addElement( col->getElementAt( iHit ) );
     nHitsAccepted++;
   }

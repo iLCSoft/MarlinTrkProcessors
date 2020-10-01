@@ -51,7 +51,7 @@ protected:
   struct DoubleLayerCut{
     unsigned int layer0 ;
     unsigned int layer1 ;
-    double dX_max ;
+    double dU_max ;
     double dTheta_max ;
   };
 
@@ -89,7 +89,7 @@ protected:
 
  protected:
 
-  dd4hep::rec::Vector2D globalToLocal(long int cellID, const dd4hep::rec::Vector3D& posGlobal) ;
+  dd4hep::rec::Vector2D globalToLocal(long int cellID, const dd4hep::rec::Vector3D& posGlobal, dd4hep::rec::ISurface** surf) ;
 
   ////Input collection name.
   std::string _inColName ;
