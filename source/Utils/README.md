@@ -23,7 +23,7 @@ Hits from layers not included in the cuts are kept in the output collection.
       4 5 1.0 0.27
       6 7 1.0 0.21
   </parameter>
-  <!-- Name of the corresponding detector in the geometry -->
+  <!-- Whether to fill diagnostic histograms about affected hits -->
   <parameter name="FillHistograms" type="bool" value="true" />
   <!-- Verbosity level ("DEBUG0-9,MESSAGE0-4,WARNING0-4,ERROR0-4,SILENT") -->
   <parameter name="Verbosity" type="string"> MESSAGE </parameter>
