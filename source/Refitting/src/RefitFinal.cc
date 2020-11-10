@@ -59,6 +59,18 @@ RefitFinal::RefitFinal() : Processor("RefitFinal") {
 
   registerProcessorParameter("EnergyLossOn", "Use Energy Loss in Fit", _ElossOn,
                              bool(true));
+//Laura----------------------------
+  registerProcessorParameter("ChisquarecutOn", "Cut on the reduced chi square", _ChiSquareCutsOn,
+                             double(3.));
+  registerProcessorParameter("NhitsVXDcutsOn", "Cut on the number of VXD hits", _NhitsVXDCutsOn,
+                             int(2));
+  registerProcessorParameter("NhitsITcutsOn", "Cut on the number of IT hits", _NhitsITCutsOn,
+                             int(2));
+  registerProcessorParameter("NhitsOTcutsOn", "Cut on the number of OT hits", _NhitsOTCutsOn,
+                             int(2));
+  registerProcessorParameter("DoCutsOnChiSquareNhits", "Use cuts on the reduced ChiSquare and Nhits", _DoCutsOnChiSquareNhits,
+                             bool(false));
+//end------------------------------
 
   registerProcessorParameter("SmoothOn", "Smooth All Mesurement Sites in Fit",
                              _SmoothOn, bool(false));
@@ -151,7 +163,7 @@ void RefitFinal::processEvent(LCEvent *evt) {
 
   const int nTracks = input_track_col->getNumberOfElements();
 
-  streamlog_out(DEBUG4) << " Number of Tracks " << nTracks << std::endl;
+  streamlog_out(MESSAGE4) << " Number of Tracks " << nTracks << std::endl;
 
   // loop over the input tracks and refit
   for (int iTrack = 0; iTrack < nTracks; ++iTrack) {
@@ -256,8 +268,30 @@ void RefitFinal::processEvent(LCEvent *evt) {
     }
 
     auto lcioTrkPtr = lcio_trk.release();
-    trackVec->addElement(lcioTrkPtr);
+    
+//Laura----------------------------
+    // counts hit in VXD, IT and OT
+    int nhvdx = lcioTrkPtr->subdetectorHitNumbers()[0]+lcioTrkPtr->subdetectorHitNumbers()[2];
+    int nhit = lcioTrkPtr->subdetectorHitNumbers()[4]+lcioTrkPtr->subdetectorHitNumbers()[6];
+    int nhot = lcioTrkPtr->subdetectorHitNumbers()[8]+lcioTrkPtr->subdetectorHitNumbers()[10];
 
+    if ( (_DoCutsOnChiSquareNhits==false) || 
+            ( _DoCutsOnChiSquareNhits==true && 
+             (lcioTrkPtr->getChi2()/lcioTrkPtr->getNdf()) <= _ChiSquareCutsOn && 
+             nhvdx >= _NhitsVXDCutsOn &&
+             nhit >= _NhitsITCutsOn &&
+             nhot >= _NhitsOTCutsOn ) ) {
+      trackVec->addElement(lcioTrkPtr);
+    } else {
+      streamlog_out(DEBUG4) << "Skip track " << lcioTrkPtr->id() << ": "
+                            << " Chi2/ndof " <<  lcioTrkPtr->getChi2()/lcioTrkPtr->getNdf()
+                            << " VXD hits " << nhvdx
+                            << " IT hits " << nhit
+                            << " OT hits " << nhot
+                            << std::endl;
+      continue;
+    }
+//end----------------------------
     if (input_rel_col) {
       auto mcParticleVec = relation->getRelatedToObjects(track);
       auto weightVec = relation->getRelatedToWeights(track);
@@ -269,6 +303,8 @@ void RefitFinal::processEvent(LCEvent *evt) {
     }
 
   } // for loop to the tracks
+  streamlog_out(MESSAGE4) << " Final number of tracks " << trackVec->getNumberOfElements() << std::endl;
+
 
   evt->addCollection(trackVec, _output_track_col_name);
   if (input_rel_col) {

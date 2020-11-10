@@ -73,6 +73,15 @@ protected:
 
   bool _MSOn = true;
   bool _ElossOn = true;
+
+//Laura----------------------------
+  double _ChiSquareCutsOn;
+  int _NhitsVXDCutsOn;
+  int _NhitsITCutsOn;
+  int _NhitsOTCutsOn;
+  bool _DoCutsOnChiSquareNhits = true; 
+//end---------------------------------
+
   bool _SmoothOn = false;
   double _Max_Chi2_Incr = DBL_MAX;
   int _refPoint = -1;
