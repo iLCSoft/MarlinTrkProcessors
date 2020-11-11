@@ -12,14 +12,11 @@
 #include <IMPL/LCCollectionVec.h>
 #include <IMPL/LCFlagImpl.h>
 #include <IMPL/LCRelationImpl.h>
-#include <IMPL/TrackImpl.h>
 #include <IMPL/TrackStateImpl.h>
 #include <UTIL/BitField64.h>
 #include <UTIL/LCRelationNavigator.h>
 #include <UTIL/LCTrackerConf.h>
 #include <UTIL/Operators.h>
-
-#include "DD4hep/Detector.h"
 
 #include <algorithm>
 
@@ -61,18 +58,19 @@ RefitFinal::RefitFinal() : Processor("RefitFinal") {
 
   registerProcessorParameter("EnergyLossOn", "Use Energy Loss in Fit", _ElossOn,
                              bool(true));
-//------- Extra cuts ---------------------
-  registerProcessorParameter("ChisquarecutOn", "Cut on the reduced chi square", _ChiSquareCutsOn,
-                             double(3.));
-  registerProcessorParameter("NhitsVXDcutsOn", "Cut on the number of VXD hits", _NhitsVXDCutsOn,
-                             int(2));
-  registerProcessorParameter("NhitsITcutsOn", "Cut on the number of IT hits", _NhitsITCutsOn,
-                             int(2));
-  registerProcessorParameter("NhitsOTcutsOn", "Cut on the number of OT hits", _NhitsOTCutsOn,
-                             int(2));
-  registerProcessorParameter("DoCutsOnChiSquareNhits", "Use cuts on the reduced ChiSquare and Nhits", _DoCutsOnChiSquareNhits,
+//---- Extra cuts -------------------------
+
+  StringVec defaultNHitsCuts ;
+  defaultNHitsCuts.push_back("0,1") ;
+  defaultNHitsCuts.push_back("0") ;
+
+  registerProcessorParameter("DoCutsOnRedChi2Nhits", "Add extra cuts on the reduced ChiSquare and Nhits", _DoCutsOnRedChi2Nhits,
                              bool(false));
-//----- end ------------------------------
+  registerProcessorParameter("ReducedChi2Cut", "Cut on the reduced chi square", _ReducedChi2Cut,
+                             double(3.));
+  registerProcessorParameter("NHitsCuts", "Cuts on Nhits: <detID>,<detID>,... <lower threshold> ", _NHitsCuts,
+                             defaultNHitsCuts);
+//---- end -------------------------------
 
   registerProcessorParameter("SmoothOn", "Smooth All Mesurement Sites in Fit",
                              _SmoothOn, bool(false));
@@ -102,14 +100,15 @@ void RefitFinal::init() {
   // usually a good idea to
   printParameters();
 
-  // get ID of the needed detectors  
-  dd4hep::Detector& theDetector = dd4hep::Detector::getInstance();
-  vxdbarrel = theDetector.detector("VertexBarrel").id();
-  vxdendcap = theDetector.detector("VertexEndcap").id();
-  itbarrel  = theDetector.detector("InnerTrackerBarrel").id();
-  itendcap  = theDetector.detector("InnerTrackerEndcap").id();
-  otbarrel  = theDetector.detector("OuterTrackerBarrel").id();
-  otendcap  = theDetector.detector("OuterTrackerEndcap").id();
+  // Extracting nhits cuts 
+  _CutsOnHit.resize( _NHitsCuts.size() / 2  ) ;
+
+  unsigned i=0, index=0 ;
+  while( i < _NHitsCuts.size() ) {
+    _CutsOnHit[index].detIDs   = _NHitsCuts[ i++ ].c_str() ;
+    _CutsOnHit[index].thr      = std::atoi( _NHitsCuts[ i++ ].c_str() ) ;
+    ++index ;
+  }
 
   _trksystem =
       MarlinTrk::Factory::createMarlinTrkSystem("DDKalTest", nullptr, "");
@@ -280,29 +279,34 @@ void RefitFinal::processEvent(LCEvent *evt) {
 
     auto lcioTrkPtr = lcio_trk.release();
     
-// Extra cuts on Chi2/ndof and on number of hits
-    // counts hits in VXD, IT and OT subdetectors
-    int nhvdx = lcioTrkPtr->subdetectorHitNumbers()[(vxdbarrel-1)*2] + lcioTrkPtr->subdetectorHitNumbers()[(vxdendcap-1)*2];
-    int nhit  = lcioTrkPtr->subdetectorHitNumbers()[(itbarrel-1)*2]  + lcioTrkPtr->subdetectorHitNumbers()[(itendcap-1)*2];
-    int nhot  = lcioTrkPtr->subdetectorHitNumbers()[(otbarrel-1)*2]  + lcioTrkPtr->subdetectorHitNumbers()[(otendcap-1)*2];
+//---- Extra cuts on ReducedChi2 and hits ------------------------
 
-    if ( (_DoCutsOnChiSquareNhits==false) || 
-            ( _DoCutsOnChiSquareNhits==true && 
-             (lcioTrkPtr->getChi2()/lcioTrkPtr->getNdf()) <= _ChiSquareCutsOn && 
-             nhvdx >= _NhitsVXDCutsOn &&
-             nhit >= _NhitsITCutsOn &&
-             nhot >= _NhitsOTCutsOn ) ) {
+    if ( _DoCutsOnRedChi2Nhits==false ) // do not apply cuts 
       trackVec->addElement(lcioTrkPtr);
-    } else {
-      streamlog_out(DEBUG4) << "Skip track " << lcioTrkPtr->id() << ": "
-                            << " Chi2/ndof " <<  lcioTrkPtr->getChi2()/lcioTrkPtr->getNdf()
-                            << " VXD hits " << nhvdx
-                            << " IT hits " << nhit
-                            << " OT hits " << nhot
-                            << std::endl;
-      continue;
+    else { // cut on reduced chi square
+      if ( lcioTrkPtr->getChi2()/lcioTrkPtr->getNdf() > _ReducedChi2Cut ) {
+        streamlog_out(DEBUG4) << "Skip track " << lcioTrkPtr->id() << ": "
+                              << "Chi2/ndof " <<  lcioTrkPtr->getChi2()/lcioTrkPtr->getNdf()
+                              << std::endl;
+        continue;
+      } else { // cut on number of hits
+        bool notSkipped = true;
+        for (size_t iCut=0, nCuts=_CutsOnHit.size() ; iCut<nCuts && notSkipped ; ++iCut) {
+          const NHitsCut& cut = _CutsOnHit.at(iCut);
+          int totHits = CountHitOntrack(cut.detIDs, lcioTrkPtr);
+          if (totHits < cut.thr) {
+            streamlog_out(DEBUG4) << "Skip track " << lcioTrkPtr->id() << ": "
+                              << " hits on detectors: " << cut.detIDs << " are " << totHits
+                              << std::endl;
+            notSkipped = false;
+          }  
+        }
+        if ( notSkipped )
+         trackVec->addElement(lcioTrkPtr);
+      }
     }
-// end ----------------------------
+//---- end ---------------------------------------------------
+
     if (input_rel_col) {
       auto mcParticleVec = relation->getRelatedToObjects(track);
       auto weightVec = relation->getRelatedToWeights(track);
@@ -371,3 +375,14 @@ int RefitFinal::FitInit2(Track *track, MarlinTrk::IMarlinTrack *marlinTrk) {
 
   return MarlinTrk::IMarlinTrack::success;
 }
+
+int RefitFinal::CountHitOntrack(const std::string& dIDlist, IMPL::TrackImpl *trk) {
+   int numHits = 0;
+   std::string split;
+   std::istringstream ss(dIDlist);
+   while ( std::getline(ss, split, ',') )
+      numHits += trk->subdetectorHitNumbers()[ (std::atoi(split.c_str())-1)*2 ];
+
+   return numHits;
+}
+

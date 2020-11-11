@@ -6,7 +6,7 @@
 #include <UTIL/BitField64.h>
 
 #include <EVENT/Track.h>
-
+#include <IMPL/TrackImpl.h>
 #include <cfloat>
 
 namespace MarlinTrk {
@@ -15,6 +15,12 @@ class IMarlinTrack;
 }
 
 class RefitFinal : public marlin::Processor {
+
+  /// Nhits cut struct
+  struct NHitsCut{
+    std::string detIDs ; // comma separated list of detectors IDs
+    int thr ; // lower threshold 
+  };
 
 public:
   virtual marlin::Processor *newProcessor() { return new RefitFinal; }
@@ -44,7 +50,7 @@ public:
 
 protected:
   int FitInit2(Track *track, MarlinTrk::IMarlinTrack *_marlinTrk);
-
+  int CountHitOntrack(const std::string& dIDlist, IMPL::TrackImpl *trk);
   /* helper function to get collection using try catch block */
   lcio::LCCollection *GetCollection(lcio::LCEvent *evt, std::string colName);
 
@@ -74,22 +80,12 @@ protected:
   bool _MSOn = true;
   bool _ElossOn = true;
 
-//------ Extra cuts ------------------
-  // ID of the detectors
-  int vxdbarrel;
-  int vxdendcap;  
-  int itbarrel;
-  int itendcap;  
-  int otbarrel;
-  int otendcap;  
-  // thresholds of the cuts
-  double _ChiSquareCutsOn;
-  int _NhitsVXDCutsOn;
-  int _NhitsITCutsOn;
-  int _NhitsOTCutsOn;
-  // use extra filters?
-  bool _DoCutsOnChiSquareNhits = false; 
-//end---------------------------------
+//---- Extra cuts ------------------------
+  StringVec  _NHitsCuts ;
+  std::vector<NHitsCut> _CutsOnHit ;
+  double _ReducedChi2Cut = 3.0;
+  bool _DoCutsOnRedChi2Nhits = false; 
+//---- end -------------------------------
 
   bool _SmoothOn = false;
   double _Max_Chi2_Incr = DBL_MAX;
