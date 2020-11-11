@@ -74,12 +74,21 @@ protected:
   bool _MSOn = true;
   bool _ElossOn = true;
 
-//Laura----------------------------
+//------ Extra cuts ------------------
+  // ID of the detectors
+  int vxdbarrel;
+  int vxdendcap;  
+  int itbarrel;
+  int itendcap;  
+  int otbarrel;
+  int otendcap;  
+  // thresholds of the cuts
   double _ChiSquareCutsOn;
   int _NhitsVXDCutsOn;
   int _NhitsITCutsOn;
   int _NhitsOTCutsOn;
-  bool _DoCutsOnChiSquareNhits = true; 
+  // use extra filters?
+  bool _DoCutsOnChiSquareNhits = false; 
 //end---------------------------------
 
   bool _SmoothOn = false;

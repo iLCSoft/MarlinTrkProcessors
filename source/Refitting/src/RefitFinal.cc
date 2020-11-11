@@ -19,6 +19,8 @@
 #include <UTIL/LCTrackerConf.h>
 #include <UTIL/Operators.h>
 
+#include "DD4hep/Detector.h"
+
 #include <algorithm>
 
 using namespace lcio;
@@ -59,7 +61,7 @@ RefitFinal::RefitFinal() : Processor("RefitFinal") {
 
   registerProcessorParameter("EnergyLossOn", "Use Energy Loss in Fit", _ElossOn,
                              bool(true));
-//Laura----------------------------
+//------- Extra cuts ---------------------
   registerProcessorParameter("ChisquarecutOn", "Cut on the reduced chi square", _ChiSquareCutsOn,
                              double(3.));
   registerProcessorParameter("NhitsVXDcutsOn", "Cut on the number of VXD hits", _NhitsVXDCutsOn,
@@ -70,7 +72,7 @@ RefitFinal::RefitFinal() : Processor("RefitFinal") {
                              int(2));
   registerProcessorParameter("DoCutsOnChiSquareNhits", "Use cuts on the reduced ChiSquare and Nhits", _DoCutsOnChiSquareNhits,
                              bool(false));
-//end------------------------------
+//----- end ------------------------------
 
   registerProcessorParameter("SmoothOn", "Smooth All Mesurement Sites in Fit",
                              _SmoothOn, bool(false));
@@ -99,6 +101,15 @@ void RefitFinal::init() {
 
   // usually a good idea to
   printParameters();
+
+  // get ID of the needed detectors  
+  dd4hep::Detector& theDetector = dd4hep::Detector::getInstance();
+  vxdbarrel = theDetector.detector("VertexBarrel").id();
+  vxdendcap = theDetector.detector("VertexEndcap").id();
+  itbarrel  = theDetector.detector("InnerTrackerBarrel").id();
+  itendcap  = theDetector.detector("InnerTrackerEndcap").id();
+  otbarrel  = theDetector.detector("OuterTrackerBarrel").id();
+  otendcap  = theDetector.detector("OuterTrackerEndcap").id();
 
   _trksystem =
       MarlinTrk::Factory::createMarlinTrkSystem("DDKalTest", nullptr, "");
@@ -259,7 +270,7 @@ void RefitFinal::processEvent(LCEvent *evt) {
          ip = ip + 2) {
       detID++;
       streamlog_out(DEBUG4)
-          << "  det id " << detID
+          << "  det id " << detID 
           << " , nhits in track = " << lcio_trk->subdetectorHitNumbers()[ip]
           << " , nhits in fit = " << lcio_trk->subdetectorHitNumbers()[ip + 1]
           << std::endl;
@@ -269,11 +280,11 @@ void RefitFinal::processEvent(LCEvent *evt) {
 
     auto lcioTrkPtr = lcio_trk.release();
     
-//Laura----------------------------
-    // counts hit in VXD, IT and OT
-    int nhvdx = lcioTrkPtr->subdetectorHitNumbers()[0]+lcioTrkPtr->subdetectorHitNumbers()[2];
-    int nhit = lcioTrkPtr->subdetectorHitNumbers()[4]+lcioTrkPtr->subdetectorHitNumbers()[6];
-    int nhot = lcioTrkPtr->subdetectorHitNumbers()[8]+lcioTrkPtr->subdetectorHitNumbers()[10];
+// Extra cuts on Chi2/ndof and on number of hits
+    // counts hits in VXD, IT and OT subdetectors
+    int nhvdx = lcioTrkPtr->subdetectorHitNumbers()[(vxdbarrel-1)*2] + lcioTrkPtr->subdetectorHitNumbers()[(vxdendcap-1)*2];
+    int nhit  = lcioTrkPtr->subdetectorHitNumbers()[(itbarrel-1)*2]  + lcioTrkPtr->subdetectorHitNumbers()[(itendcap-1)*2];
+    int nhot  = lcioTrkPtr->subdetectorHitNumbers()[(otbarrel-1)*2]  + lcioTrkPtr->subdetectorHitNumbers()[(otendcap-1)*2];
 
     if ( (_DoCutsOnChiSquareNhits==false) || 
             ( _DoCutsOnChiSquareNhits==true && 
@@ -291,7 +302,7 @@ void RefitFinal::processEvent(LCEvent *evt) {
                             << std::endl;
       continue;
     }
-//end----------------------------
+// end ----------------------------
     if (input_rel_col) {
       auto mcParticleVec = relation->getRelatedToObjects(track);
       auto weightVec = relation->getRelatedToWeights(track);
