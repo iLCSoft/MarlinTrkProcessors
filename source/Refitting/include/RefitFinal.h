@@ -18,8 +18,8 @@ class RefitFinal : public marlin::Processor {
 
   /// Nhits cut struct
   struct NHitsCut{
-    std::string detIDs ; // comma separated list of detectors IDs
-    int thr ; // lower threshold 
+    std::vector<int> detIDs ; // list of detectors IDs from which hits will be summed
+    int nHits_min ; // minimum number of hits
   };
 
 public:
@@ -50,7 +50,6 @@ public:
 
 protected:
   int FitInit2(Track *track, MarlinTrk::IMarlinTrack *_marlinTrk);
-  int CountHitOntrack(const std::string& dIDlist, IMPL::TrackImpl *trk);
   /* helper function to get collection using try catch block */
   lcio::LCCollection *GetCollection(lcio::LCEvent *evt, std::string colName);
 
@@ -80,12 +79,9 @@ protected:
   bool _MSOn = true;
   bool _ElossOn = true;
 
-//---- Extra cuts ------------------------
-  StringVec  _NHitsCuts ;
-  std::vector<NHitsCut> _CutsOnHit ;
-  double _ReducedChi2Cut = 3.0;
-  bool _DoCutsOnRedChi2Nhits = false; 
-//---- end -------------------------------
+  StringVec  _NHitsCutsStr ;
+  std::vector<NHitsCut> _NHitsCuts ;
+  double _ReducedChi2Cut = -1.0;
 
   bool _SmoothOn = false;
   double _Max_Chi2_Incr = DBL_MAX;
