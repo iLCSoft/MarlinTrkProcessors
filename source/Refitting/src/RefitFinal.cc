@@ -302,12 +302,14 @@ void RefitFinal::processEvent(LCEvent *evt) {
         if (nHits < cut.nHits_min) {
           streamlog_out(DEBUG5) << "Skip track " << lcioTrkPtr->id() << ": "
                                 << " not enough detector hits: " << nHits << "/" << cut.nHits_min << std::endl;
-        }
         skipTrack = true;
         break;
+        }
       }
       if (skipTrack) continue;
     }
+
+    trackVec->addElement(lcioTrkPtr);
 
     if (input_rel_col) {
       auto mcParticleVec = relation->getRelatedToObjects(track);
