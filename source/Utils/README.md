@@ -29,3 +29,74 @@ Hits from layers not included in the cuts are kept in the output collection.
   <parameter name="Verbosity" type="string"> MESSAGE </parameter>
 </processor>
 ```
+
+
+### FilterConeHits
+A filter processor for particle gun samples overlaid to the beam-induced background. The processor selects and saves the tracker hits that are included in a cone around the MC particle trajectory along with the corresponding sim hits and the reco-sim relations.
+
+#### Example configuration:
+
+```xml
+<processor name="FilterCone" type="FilterConeHits">
+  <!-- Name of the input MC particle collection -->
+  <parameter name="MCParticleCollection" type="string" value="MCParticle" />
+  <!-- Name of the input hit collections -->
+  <parameter name="TrackerHitInputCollections" type="StringVec">
+    VBTrackerHits
+    VETrackerHits
+    IBTrackerHits
+    IETrackerHits
+    OBTrackerHits
+    OETrackerHits
+  </parameter>
+  <!-- Name of the input simhit collections -->
+  <parameter name="TrackerSimHitInputCollections" type="StringVec">
+    VertexBarrelCollection
+    VertexEndcapCollection
+    InnerTrackerBarrelCollection
+    InnerTrackerEndcapCollection
+    OuterTrackerBarrelCollection
+    OuterTrackerEndcapCollection
+  </parameter>
+  <!-- Name of the input hit relation collections -->
+  <parameter name="TrackerHitInputRelations" type="StringVec">
+    VBTrackerHitsRelations
+    VETrackerHitsRelations
+    IBTrackerHitsRelations
+    IETrackerHitsRelations
+    OBTrackerHitsRelations
+    OETrackerHitsRelations
+  </parameter>
+  <!-- Name of the output filtered hit collection -->
+  <parameter name="TrackerHitOutputCollections" type="StringVec">
+    VBTrackerHits_Cone
+    VETrackerHits_Cone
+    IBTrackerHits_Cone
+    IETrackerHits_Cone
+    OBTrackerHits_Cone
+    OETrackerHits_Cone
+  </parameter>
+  <!-- Name of the output filtered simhit collection -->
+  <parameter name="TrackerSimHitOutputCollections" type="StringVec">
+    VBTrackerSimHits_Cone
+    VETrackerSimHits_Cone
+    IBTrackerSimHits_Cone
+    IETrackerSimHits_Cone
+    OBTrackerSimHits_Cone
+    OETrackerSimHits_Cone
+  </parameter>
+  <!-- Name of the output filtered hit relation collection -->
+  <parameter name="TrackerHitOutputRelations" type="StringVec">
+    VBTrackerRel_Cone
+    VETrackerRel_Cone
+    IBTrackerRel_Cone
+    IETrackerRel_Cone
+    OBTrackerRel_Cone
+    OETrackerRel_Cone
+  </parameter>
+  <!-- Angular distance between the hits and the particle direction -->
+  <parameter name="DeltaRCut" type="float" value="0.05" />
+  <parameter name="FillHistograms" type="bool" value="true" />
+  <parameter name="Verbosity" type="string"> MESSAGE0 </parameter>
+</processor>
+```
