@@ -11,8 +11,10 @@
 #include <IMPL/LCRelationImpl.h>
 #include <IMPL/LCFlagImpl.h>
 
-#include "marlin/AIDAProcessor.h"
+#include <marlin/AIDAProcessor.h>
+#include <marlinutil/GeometryUtil.h>
 
+#include "HelixClass_double.h"
 
 using namespace lcio ;
 using namespace marlin ;
@@ -85,18 +87,31 @@ void FilterConeHits::init() {
   streamlog_out(DEBUG) << "   init called  " << std::endl ;
   
   // --- Print the processor parameters:
+
   printParameters() ;
+
+
+  // --- Get the value of the magnetic field
+
+  m_magneticField = MarlinUtil::getBzAtOrigin();
+
   
   // --- Initialize the run and event counters:
+
   _nRun = 0 ;
   _nEvt = 0 ;
+
 
   // --- Initialize the AIDAProcessor and book the diagnostic histograms: 
 
   AIDAProcessor::histogramFactory(this);
 
-  m_deltaR  = new TH1F("m_deltaR", "#DeltaR(hit,MCparticle);#Delta R",
-		       1000, 0., 1.);
+  m_distXY = new TH1F("m_distXY", "hit-to-helix XY distance;d_{XY} [mm]", 1000, 0., 1000.);
+  m_distZ  = new TH1F("m_distZ", "hit-to-helix Z distance;d_{Z} [mm]", 1000, 0., 1000.);
+  m_dist3D = new TH1F("m_dist3D", "hit-to-helix 3D distance;d_{3D} [mm]", 1000, 0., 1000.);
+  m_angle  = new TH1F("m_angle", "angle between hit and particle;angle [rad]", 1000, 0., 1.);
+  m_time   = new TH1F("m_time","time at the point of closest approach;T [mm/GeV]", 1000, 0., 2000.);
+  m_pathLength = new TH1F("m_pathLength","pathlength at the point of closest approach;L [mm]", 1000, 0., 12000.);
 
 }
 
@@ -114,7 +129,7 @@ void FilterConeHits::processEvent( LCEvent * evt ) {
   // --- Check whether the number of input and output collections match
 
   if ( m_inputTrackerHitsCollNames.size() != m_inputTrackerSimHitsCollNames.size() ||
-       m_inputTrackerHitsCollNames.size() != m_inputTrackerHitRelNames.size()  ){
+       m_inputTrackerHitsCollNames.size() != m_inputTrackerHitRelNames.size()      ){
 
     std::stringstream err_msg;
     err_msg << "Mismatch between the reco and sim hits input collections"
@@ -125,7 +140,7 @@ void FilterConeHits::processEvent( LCEvent * evt ) {
   }
 
   if ( m_outputTrackerHitsCollNames.size() != m_outputTrackerSimHitsCollNames.size() ||
-       m_outputTrackerHitsCollNames.size() != m_outputTrackerHitRelNames.size()  ){
+       m_outputTrackerHitsCollNames.size() != m_outputTrackerHitRelNames.size()      ){
 
     std::stringstream err_msg;
     err_msg << "Mismatch between the reco and sim hits output collections"
@@ -148,7 +163,7 @@ void FilterConeHits::processEvent( LCEvent * evt ) {
   }
 
 
-  // --- Get the input hit collections and create the output collections:
+  // --- Get the input hit collections and create the corresponding output collections:
 
   const unsigned int nTrackerHitCol = m_inputTrackerHitsCollNames.size();
   std::vector<LCCollection*> inputHitColls(nTrackerHitCol);
@@ -191,7 +206,7 @@ void FilterConeHits::processEvent( LCEvent * evt ) {
       continue;
     }
 
-    // reco hit output collection
+    // reco hit output collections
     std::string encoderString = inputHitColls[icol]->getParameters().getStringVal( "CellIDEncoding" );
     outputTrackerHitColls[icol] = new LCCollectionVec( inputHitColls[icol]->getTypeName() );
     outputTrackerHitColls[icol]->parameters().setValue( "CellIDEncoding", encoderString );
@@ -219,16 +234,24 @@ void FilterConeHits::processEvent( LCEvent * evt ) {
   for (int ipart=0; ipart<m_inputMCParticles->getNumberOfElements(); ++ipart){
 
     MCParticle* part = dynamic_cast<MCParticle*>( m_inputMCParticles->getElementAt(ipart) );
-    
+
+    // --- Keep only the generator-level particles:
     if ( part->getGeneratorStatus() != 1 ) continue;
 
-    double part_pt  = sqrt(part->getMomentum()[0]*part->getMomentum()[0]+
-			   part->getMomentum()[1]*part->getMomentum()[1]);
-    double part_phi = atan2(part->getMomentum()[1],part->getMomentum()[0]);
-    double part_theta = atan2(part_pt,part->getMomentum()[2]);
+    double part_p = sqrt( part->getMomentum()[0]*part->getMomentum()[0] +
+			  part->getMomentum()[1]*part->getMomentum()[1] +
+			  part->getMomentum()[2]*part->getMomentum()[2] );
+
+    HelixClass_double helix;
+    helix.Initialize_VP( (double*) part->getVertex(), (double*) part->getMomentum(),
+			 (double) part->getCharge(), m_magneticField );
+
+    // --- Get the intersection point with the barrel outer cylinder
+    double intersectionPoint[3] = {0., 0., 0.};
+    double intersectionTime = helix.getPointOnCircle(trackerOuterRadius,(double*) part->getVertex(), intersectionPoint);
 
 
-    // --- Loop over the tracker hits and selects hits inside the cone:
+    // --- Loop over the tracker hits and select hits inside a cone around the particle trajectory:
 
     for (unsigned int icol=0; icol<inputHitColls.size(); ++icol){
 
@@ -239,22 +262,36 @@ void FilterConeHits::processEvent( LCEvent * evt ) {
 
 	TrackerHitPlane* hit = dynamic_cast<TrackerHitPlane*>(hit_col->getElementAt(ihit));
 
-    	double hit_rho = sqrt( (hit->getPosition()[0]-part->getVertex()[0])*
-			       (hit->getPosition()[0]-part->getVertex()[0])+
-			       (hit->getPosition()[1]-part->getVertex()[1])*
-			       (hit->getPosition()[1]-part->getVertex()[1]) );
-    	double hit_phi = atan2( hit->getPosition()[1]-part->getVertex()[1],
-				hit->getPosition()[0]-part->getVertex()[0] );
-    	double hit_theta = atan2( hit_rho,hit->getPosition()[2]-part->getVertex()[2]);
-    	
-	double deltaR = sqrt( (hit_phi-part_phi)*(hit_phi-part_phi) +
-			      (hit_theta-part_theta)*(hit_theta-part_theta) );
+	// --- Skip hits that are in the opposite hemisphere w.r.t. the MC particle
+	if ( ( hit->getPosition()[0]*part->getMomentum()[0] +
+	       hit->getPosition()[1]*part->getMomentum()[1] +
+	       hit->getPosition()[2]*part->getMomentum()[2] ) < 0. ) continue;
 
-	if ( m_fillHistos )
-	  m_deltaR->Fill(deltaR);
 
+	// --- Get the distance between the hit and the particle trajectory
+	double hit_distance[3] = {0.,0.,0.};
+	double timeAtPCA = helix.getDistanceToPoint((double*) hit->getPosition(), hit_distance);
+
+	// --- This is to exclude the opposite side of the helix w.r.t. the production vertex 
+	//     and to avoid that the helix reenter the tracker
+	if ( timeAtPCA<0. || timeAtPCA>intersectionTime ) continue;
+
+	double pathLength = part_p*timeAtPCA;
+	double hit_angle = atan2(hit_distance[2], pathLength);
+
+
+	if ( m_fillHistos ){
+
+	  m_distXY->Fill(hit_distance[0]);
+	  m_distZ->Fill(hit_distance[1]);
+	  m_dist3D->Fill(hit_distance[2]);
+	  m_angle->Fill(hit_angle);
+	  m_time->Fill(timeAtPCA);
+	  m_pathLength->Fill(pathLength);
+
+	}
 	
-	if ( deltaR < m_deltaRCut )
+	if ( hit_angle < m_deltaRCut )
 	  hits_to_save[icol].insert(ihit);
 	
       } // ihit loop

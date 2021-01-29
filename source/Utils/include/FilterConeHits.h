@@ -62,13 +62,22 @@ class FilterConeHits : public Processor {
   std::vector<std::string> m_outputTrackerSimHitsCollNames{} ;
   std::vector<std::string> m_outputTrackerHitRelNames{} ;
 
+
   // --- Processor parameters:
   bool m_fillHistos{} ;
   double m_deltaRCut{} ;
 
   // --- Diagnostic histograms:
-  TH1F* m_deltaR = nullptr ;
+  TH1F* m_distXY = nullptr ;
+  TH1F* m_distZ  = nullptr ;
+  TH1F* m_dist3D = nullptr ;
+  TH1F* m_angle  = nullptr ;
+  TH1F* m_pathLength  = nullptr ;
+  TH1F* m_time   = nullptr ;
 
+  // --- Magneti field value
+  double m_magneticField{} ;
+  const double trackerOuterRadius = 1500.; // mm
   
   // --- Run and event counters:
   int _nRun{} ;
