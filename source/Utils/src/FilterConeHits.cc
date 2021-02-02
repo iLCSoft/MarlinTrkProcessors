@@ -246,7 +246,11 @@ void FilterConeHits::processEvent( LCEvent * evt ) {
     helix.Initialize_VP( (double*) part->getVertex(), (double*) part->getMomentum(),
 			 (double) part->getCharge(), m_magneticField );
 
-    // --- Get the intersection point with the barrel outer cylinder
+
+    // --- Get the intersection point with the barrel outer cylinder.
+    //     N.B.: If the particle spirals and doesn't reach the tracker outer cylinder,
+    //           getPointOnCircle returns -1e20.
+
     double intersectionPoint[3] = {0., 0., 0.};
     double intersectionTime = helix.getPointOnCircle(trackerOuterRadius,(double*) part->getVertex(), intersectionPoint);
 
@@ -262,19 +266,21 @@ void FilterConeHits::processEvent( LCEvent * evt ) {
 
 	TrackerHitPlane* hit = dynamic_cast<TrackerHitPlane*>(hit_col->getElementAt(ihit));
 
-	// --- Skip hits that are in the opposite hemisphere w.r.t. the MC particle
+	// --- Skip hits that are in the opposite hemisphere w.r.t. the MC particle direction
 	if ( ( hit->getPosition()[0]*part->getMomentum()[0] +
 	       hit->getPosition()[1]*part->getMomentum()[1] +
 	       hit->getPosition()[2]*part->getMomentum()[2] ) < 0. ) continue;
 
 
-	// --- Get the distance between the hit and the particle trajectory
+	// --- Get the distance between the hit and the particle trajectory:
 	double hit_distance[3] = {0.,0.,0.};
 	double timeAtPCA = helix.getDistanceToPoint((double*) hit->getPosition(), hit_distance);
 
-	// --- This is to exclude the opposite side of the helix w.r.t. the production vertex 
-	//     and to avoid that the helix reenter the tracker
-	if ( timeAtPCA<0. || timeAtPCA>intersectionTime ) continue;
+	// --- Exclude the opposite side of the helix w.r.t. the production vertex :
+	if ( timeAtPCA < 0. ) continue;
+
+	// --- This is to avoid that the helix of central trajectories reenter the tracker:
+	if ( timeAtPCA > intersectionTime && intersectionTime != -1.e20 ) continue;
 
 	double pathLength = part_p*timeAtPCA;
 	double hit_angle = atan2(hit_distance[2], pathLength);
