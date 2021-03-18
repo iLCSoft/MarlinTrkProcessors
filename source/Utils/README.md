@@ -100,3 +100,73 @@ A filter processor for particle gun samples overlaid to the beam-induced backgro
   <parameter name="Verbosity" type="string"> MESSAGE0 </parameter>
 </processor>
 ```
+
+
+### SplitCollectionByPolarAngle
+A filter processor for particle gun samples overlaid to the beam-induced background. The processor selects and saves the tracker hits with a polar angle within a certain range, defined by the lower and upper limits, along with the corresponding sim hits and the reco-sim relations.
+
+#### Example configuration:
+
+```xml
+<processor name="SplitByPolarAngle" type="SplitCollectionByPolarAngle">
+  <!-- Name of the input hit collections -->
+  <parameter name="TrackerHitInputCollections" type="StringVec">
+    VBTrackerHits
+    VETrackerHits
+    IBTrackerHits
+    IETrackerHits
+    OBTrackerHits
+    OETrackerHits
+    </parameter>
+  <!-- Name of the input simhit collections -->
+  <parameter name="TrackerSimHitInputCollections" type="StringVec">
+    VertexBarrelCollection
+    VertexEndcapCollection
+    InnerTrackerBarrelCollection
+    InnerTrackerEndcapCollection
+    OuterTrackerBarrelCollection
+    OuterTrackerEndcapCollection
+    </parameter>
+  <!-- Name of the input hit relation collections -->
+  <parameter name="TrackerHitInputRelations" type="StringVec">
+    VBTrackerHitsRelations
+    VETrackerHitsRelations
+    IBTrackerHitsRelations
+    IETrackerHitsRelations
+    OBTrackerHitsRelations
+    OETrackerHitsRelations
+  </parameter>
+  <!-- Name of the output filtered hit collection -->
+  <parameter name="TrackerHitOutputCollections" type="StringVec">
+    VBTrackerHits_SplittedByPolarAngle
+    VETrackerHits_SplittedByPolarAngle
+    IBTrackerHits_SplittedByPolarAngle
+    IETrackerHits_SplittedByPolarAngle
+    OBTrackerHits_SplittedByPolarAngle
+    OETrackerHits_SplittedByPolarAngle
+  </parameter>
+  <!-- Name of the output filtered simhit collection -->
+  <parameter name="TrackerSimHitOutputCollections" type="StringVec">
+    VBTrackerSimHits_SplittedByPolarAngle
+    VETrackerSimHits_SplittedByPolarAngle
+    IBTrackerSimHits_SplittedByPolarAngle
+    IETrackerSimHits_SplittedByPolarAngle
+    OBTrackerSimHits_SplittedByPolarAngle
+    OETrackerSimHits_SplittedByPolarAngle
+  </parameter>
+  <!-- Name of the output filtered hit relation collection -->
+  <parameter name="TrackerHitOutputRelations" type="StringVec">
+    VBTrackerRel_SplittedByPolarAngle
+    VETrackerRel_SplittedByPolarAngle
+    IBTrackerRel_SplittedByPolarAngle
+    IETrackerRel_SplittedByPolarAngle
+    OBTrackerRel_SplittedByPolarAngle
+    OETrackerRel_SplittedByPolarAngle
+  </parameter>
+  <!-- Lower limit and upper limit on the hit polar angle [deg] -->
+    <parameter name="PolarAngleLowerLimit" type="double" value="50.0" />
+    <parameter name="PolarAngleUpperLimit" type="double" value="130.0" />
+    <parameter name="FillHistograms" type="bool" value="true" />
+    <parameter name="Verbosity" type="string"> MESSAGE0 </parameter>
+ </processor>
+```

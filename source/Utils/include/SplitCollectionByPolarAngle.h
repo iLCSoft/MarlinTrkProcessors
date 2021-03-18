@@ -2,62 +2,79 @@
 #define SplitCollectionByPolarAngle_h 1
 
 #include "marlin/Processor.h"
-
 #include "lcio.h"
-#include <map>
+#include <string>
 #include <vector>
 
-#include <EVENT/LCCollection.h>
+#include <TH1F.h>
 
-using namespace lcio;
-using namespace marlin;
+using namespace lcio ;
+using namespace marlin ;
 
-/**  Hit filtering processor for marlin.
- * 
- * @param TrackerHitCollectionName Name of the input hit collection
- * @param SplitHitCollection Base name of the output hit collections
- * 
- * @author F. Meloni, DESY; R. Simoniello, CERN
- * @version $Id: SplitCollectionByPolarAngle.h,v 0.1 2020-09-27 11:24:21 fmeloni Exp $ 
+
+/** Utility processor that selects and saves the tracker hits with a polar angle
+ *  within a given range (defined by the lower and upper limit), along with
+ *  the corresponding sim hits and the reco-sim relations.
+ *
+ *  @parameter MCParticleCollection name of the MCParticle collection
+ *  @parameter TrackerHitInputCollections name of the tracker hit input collections
+ *  @parameter TrackerSimHitInputCollections name of the tracker simhit input collections
+ *  @parameter TrackerHitInputRelations name of the tracker hit relation input collections
+ *  @parameter TrackerHitOutputCollections name of the tracker hit output collections
+ *  @parameter TrackerSimHitOutputCollections name of the tracker simhit output collections
+ *  @parameter TrackerHitOutputRelations name of the tracker hit relation output collections
+ *  @parameter DeltaRCut maximum angular distance between the hits and the particle direction
+ *  @parameter FillHistograms flag to fill the diagnostic histograms
+ *
+ * @author F. Meloni, DESY; R. Simoniello, CERN; A. Montella, Università degli studi di Trieste/INFN Trieste
+ * @date  18 March 2021
+ * @version $Id: SplitCollectionByPolarAngle.h,v 0.2 2021-03-18 17:00:00 amontella Exp $
  */
 
-class SplitCollectionByPolarAngle : public Processor
-{
+class SplitCollectionByPolarAngle : public Processor {
 
 public:
-  virtual Processor *newProcessor() { return new SplitCollectionByPolarAngle; }
 
-  SplitCollectionByPolarAngle();
+  virtual Processor*  newProcessor() { return new SplitCollectionByPolarAngle ; }
 
-  /** Called at the begin of the job before anything is read.
-   * Use to initialize the processor, e.g. book histograms.
-   */
-  virtual void init();
 
-  /** Called for every run.
-   */
-  virtual void processRunHeader(LCRunHeader *run);
+  SplitCollectionByPolarAngle() ;
 
-  /** Called for every event - the working horse.
-   */
-  virtual void processEvent(LCEvent *evt);
+  virtual void init() ;
 
-  virtual void check(LCEvent *evt);
+  virtual void processRunHeader( LCRunHeader* run ) ;
 
-  /** Called after data processing for clean up.
-   */
-  virtual void end();
+  virtual void processEvent( LCEvent * evt ) ;
 
-  // Call to get collections
-  void getCollection(LCCollection *&, std::string, LCEvent *);
+  virtual void check( LCEvent * evt ) ;
+
+  virtual void end() ;
+
 
 protected:
-  // Collection names for (in/out)put
-  std::string m_inputHitCollection = "";
-  std::string m_outputHitCollection = "";
 
-  int _nRun{};
-  int _nEvt{};
-};
+  // --- Input/output collection names:
+  std::vector<std::string> m_inputTrackerHitsCollNames{} ;
+  std::vector<std::string> m_inputTrackerSimHitsCollNames{} ;
+  std::vector<std::string> m_inputTrackerHitRelNames{} ;
+  std::vector<std::string> m_outputTrackerHitsCollNames{} ;
+  std::vector<std::string> m_outputTrackerSimHitsCollNames{} ;
+  std::vector<std::string> m_outputTrackerHitRelNames{} ;
+
+
+  // --- Processor parameters:
+  bool m_fillHistos{} ;
+  double m_theta_min{} ;
+  double m_theta_max{} ;
+
+  // --- Diagnostic histograms:
+  TH1F* m_theta   = nullptr ;
+
+
+  // --- Run and event counters:
+  int _nRun{} ;
+  int _nEvt{} ;
+
+} ;
 
 #endif
