@@ -6,7 +6,7 @@
 #include <UTIL/BitField64.h>
 
 #include <EVENT/Track.h>
-
+#include <IMPL/TrackImpl.h>
 #include <cfloat>
 
 namespace MarlinTrk {
@@ -15,6 +15,12 @@ class IMarlinTrack;
 }
 
 class RefitFinal : public marlin::Processor {
+
+  /// Nhits cut struct
+  struct NHitsCut{
+    std::vector<int> detIDs ; // list of detectors IDs from which hits will be summed
+    int nHits_min ; // minimum number of hits
+  };
 
 public:
   virtual marlin::Processor *newProcessor() { return new RefitFinal; }
@@ -44,7 +50,6 @@ public:
 
 protected:
   int FitInit2(Track *track, MarlinTrk::IMarlinTrack *_marlinTrk);
-
   /* helper function to get collection using try catch block */
   lcio::LCCollection *GetCollection(lcio::LCEvent *evt, std::string colName);
 
@@ -73,6 +78,11 @@ protected:
 
   bool _MSOn = true;
   bool _ElossOn = true;
+
+  StringVec  _NHitsCutsStr ;
+  std::vector<NHitsCut> _NHitsCuts ;
+  double _ReducedChi2Cut = -1.0;
+
   bool _SmoothOn = false;
   double _Max_Chi2_Incr = DBL_MAX;
   int _refPoint = -1;

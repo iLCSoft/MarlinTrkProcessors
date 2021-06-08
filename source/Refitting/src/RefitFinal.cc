@@ -12,7 +12,6 @@
 #include <IMPL/LCCollectionVec.h>
 #include <IMPL/LCFlagImpl.h>
 #include <IMPL/LCRelationImpl.h>
-#include <IMPL/TrackImpl.h>
 #include <IMPL/TrackStateImpl.h>
 #include <UTIL/BitField64.h>
 #include <UTIL/LCRelationNavigator.h>
@@ -60,13 +59,13 @@ RefitFinal::RefitFinal() : Processor("RefitFinal") {
   registerProcessorParameter("EnergyLossOn", "Use Energy Loss in Fit", _ElossOn,
                              bool(true));
 
+
   registerProcessorParameter("SmoothOn", "Smooth All Mesurement Sites in Fit",
                              _SmoothOn, bool(false));
 
-  registerProcessorParameter(
-      "Max_Chi2_Incr",
-      "maximum allowable chi2 increment when moving from one site to another",
-      _Max_Chi2_Incr, _Max_Chi2_Incr);
+  registerProcessorParameter("Max_Chi2_Incr",
+                             "maximum allowable chi2 increment when moving from one site to another",
+                             _Max_Chi2_Incr, _Max_Chi2_Incr);
 
   registerProcessorParameter("ReferencePoint",
                              "Identifier of the reference point to use for the "
@@ -81,12 +80,39 @@ RefitFinal::RefitFinal() : Processor("RefitFinal") {
   registerProcessorParameter("MinClustersOnTrackAfterFit", "Final minimum number of track clusters",
                              _minClustersOnTrackAfterFit, int(4));
 
+  registerProcessorParameter("ReducedChi2Cut", "Cut on the reduced chi square", _ReducedChi2Cut,
+                             double(-1.));
+
+  registerProcessorParameter("NHitsCuts", "Cuts on Nhits: <detID>,<detID>,... <N hits min> ", _NHitsCutsStr,
+                             StringVec(0));
+
 }
 
 void RefitFinal::init() {
 
   // usually a good idea to
   printParameters();
+
+  // Extracting nHits cuts
+  _NHitsCuts.resize( _NHitsCutsStr.size() / 2  ) ;
+
+  unsigned i=0, index=0 ;
+  while( i < _NHitsCutsStr.size() ) {
+    std::vector<int> detIds;
+    // Extracting the comma-separated list of detector IDs
+    std::string split;
+    std::istringstream ss(_NHitsCutsStr[ i++ ].c_str());
+    while ( std::getline(ss, split, ',') )
+      _NHitsCuts[index].detIDs.push_back(std::atoi(split.c_str()));
+    // Storing the nHits value
+    _NHitsCuts[index].nHits_min = std::atoi( _NHitsCutsStr[ i++ ].c_str() );
+
+    streamlog_out(DEBUG9) << "nHits cut " << index << ":  " << _NHitsCuts[index].nHits_min << " from detIds: ";
+    for (int detId : _NHitsCuts[index].detIDs) streamlog_out(DEBUG9) << " " << detId;
+    streamlog_out(DEBUG9) << std::endl;
+
+    ++index ;
+  }
 
   _trksystem =
       MarlinTrk::Factory::createMarlinTrkSystem("DDKalTest", nullptr, "");
@@ -115,7 +141,7 @@ void RefitFinal::processRunHeader(LCRunHeader *) { ++_n_run; }
 
 void RefitFinal::processEvent(LCEvent *evt) {
 
-  // set the correct configuration for the tracking system for this event 
+  // set the correct configuration for the tracking system for this event
   MarlinTrk::TrkSysConfig< MarlinTrk::IMarlinTrkSystem::CFG::useQMS>       mson( _trksystem,  _MSOn ) ;
   MarlinTrk::TrkSysConfig< MarlinTrk::IMarlinTrkSystem::CFG::usedEdx>      elosson( _trksystem,_ElossOn) ;
   MarlinTrk::TrkSysConfig< MarlinTrk::IMarlinTrkSystem::CFG::useSmoothing> smoothon( _trksystem,_SmoothOn) ;
@@ -151,7 +177,7 @@ void RefitFinal::processEvent(LCEvent *evt) {
 
   const int nTracks = input_track_col->getNumberOfElements();
 
-  streamlog_out(DEBUG4) << " Number of Tracks " << nTracks << std::endl;
+  streamlog_out(MESSAGE4) << " Number of Tracks " << nTracks << std::endl;
 
   // loop over the input tracks and refit
   for (int iTrack = 0; iTrack < nTracks; ++iTrack) {
@@ -215,7 +241,7 @@ void RefitFinal::processEvent(LCEvent *evt) {
     marlin_trk->getHitsInFit(hits_in_fit);
 
     if (int(hits_in_fit.size()) < _minClustersOnTrackAfterFit) {
-      streamlog_out(DEBUG3) << "Less than " << _minClustersOnTrackAfterFit << " hits in fit: Track "
+      streamlog_out(DEBUG5) << "Less than " << _minClustersOnTrackAfterFit << " hits in fit: Track "
                                "Discarded. Number of hits =  "
                             << trkHits.size() << std::endl;
       continue;
@@ -256,6 +282,33 @@ void RefitFinal::processEvent(LCEvent *evt) {
     }
 
     auto lcioTrkPtr = lcio_trk.release();
+
+    if (_ReducedChi2Cut > 0. && lcioTrkPtr->getChi2()/lcioTrkPtr->getNdf() > _ReducedChi2Cut) {
+      streamlog_out(DEBUG5) << "Skip track " << lcioTrkPtr->id() << ": "
+                            << "Chi2/ndof " << lcioTrkPtr->getChi2()/lcioTrkPtr->getNdf() << std::endl;
+      continue;
+    }
+
+    // Checking numbers of hits in subdetectors
+    if (_NHitsCuts.size() > 0) {
+      bool skipTrack(false);
+      for (const NHitsCut& cut : _NHitsCuts) {
+        // Summing the number of hits from each detector
+        int nHits = 0;
+        for (int detId : cut.detIDs) {
+          nHits += lcioTrkPtr->subdetectorHitNumbers()[ (detId - 1) * 2 ];
+        }
+        // Checking if the cut is satisfied
+        if (nHits < cut.nHits_min) {
+          streamlog_out(DEBUG5) << "Skip track " << lcioTrkPtr->id() << ": "
+                                << " not enough detector hits: " << nHits << "/" << cut.nHits_min << std::endl;
+        skipTrack = true;
+        break;
+        }
+      }
+      if (skipTrack) continue;
+    }
+
     trackVec->addElement(lcioTrkPtr);
 
     if (input_rel_col) {
@@ -269,6 +322,8 @@ void RefitFinal::processEvent(LCEvent *evt) {
     }
 
   } // for loop to the tracks
+  streamlog_out(MESSAGE4) << " Final number of tracks " << trackVec->getNumberOfElements() << std::endl;
+
 
   evt->addCollection(trackVec, _output_track_col_name);
   if (input_rel_col) {
@@ -324,3 +379,4 @@ int RefitFinal::FitInit2(Track *track, MarlinTrk::IMarlinTrack *marlinTrk) {
 
   return MarlinTrk::IMarlinTrack::success;
 }
+

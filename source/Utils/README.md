@@ -30,7 +30,6 @@ Hits from layers not included in the cuts are kept in the output collection.
 </processor>
 ```
 
-
 ### FilterConeHits
 A filter processor for particle gun samples overlaid to the beam-induced background. The processor selects and saves the tracker hits that are included in a cone around the MC particle trajectory along with the corresponding sim hits and the reco-sim relations.
 

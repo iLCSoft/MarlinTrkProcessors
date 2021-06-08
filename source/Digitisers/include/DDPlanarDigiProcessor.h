@@ -100,6 +100,7 @@ protected:
   
   FloatVec _resU ;
   FloatVec _resV ;
+  FloatVec _resT ;
   
   bool _isStrip;
   
@@ -109,6 +110,11 @@ protected:
 
   bool _forceHitsOntoSurface  ;
   double _minEnergy ;
+
+  bool _useTimeWindow ;
+  bool _correctTimesForPropagation ;
+  FloatVec _timeWindow_min ;
+  FloatVec _timeWindow_max ;
 
   std::vector<TH1F*> _h ;
   
