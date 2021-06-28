@@ -6,6 +6,9 @@
 #include <string>
 #include <vector>
 
+#include "DDRec/Surface.h"
+#include "DDRec/SurfaceManager.h"
+
 #include <TH1F.h>
 #include <TMath.h>
 
@@ -23,8 +26,8 @@ using namespace marlin;
  *  @parameter TrackerSimHitOutputCollections name of the tracker simhit output collections
  *  @parameter TrackerHitOutputRelations name of the tracker hit relation output collections
  *  @parameter TargetBeta target beta=v/c for hit time of flight correction
- *  @parameter TimeLowerLimit lower limit on the corrected hit time in ps
- *  @parameter TimeUpperLimit upper limit on the corrected hit time in ps
+ *  @parameter TimeLowerLimit lower limit on the corrected hit time in ns
+ *  @parameter TimeUpperLimit upper limit on the corrected hit time in ns
  *  @parameter FillHistograms flag to fill the diagnostic histograms
  *
  * @author F. Meloni, DESY

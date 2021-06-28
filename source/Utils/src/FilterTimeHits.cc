@@ -9,6 +9,9 @@
 #include <IMPL/LCRelationImpl.h>
 #include <IMPL/LCFlagImpl.h>
 
+#include "DD4hep/Detector.h"
+#include "DD4hep/DD4hepUnits.h"
+
 #include <marlin/AIDAProcessor.h>
 
 using namespace lcio;
@@ -18,7 +21,6 @@ FilterTimeHits aFilterTimeHits;
 
 FilterTimeHits::FilterTimeHits() : Processor("FilterTimeHits")
 {
-
     // --- Processor description:
 
     _description = "FilterTimeHits selects tracker hits based on their time corrected for the time of flight";
@@ -61,12 +63,12 @@ FilterTimeHits::FilterTimeHits() : Processor("FilterTimeHits")
                                double(1.0));
 
     registerProcessorParameter("TimeLowerLimit",
-                               "Lower limit on the corrected hit time in ps",
+                               "Lower limit on the corrected hit time in ns",
                                m_time_min,
                                double(-90.0));
 
     registerProcessorParameter("TimeUpperLimit",
-                               "Upper limit on the corrected hit time in ps",
+                               "Upper limit on the corrected hit time in ns",
                                m_time_max,
                                double(90.0));
 
@@ -99,12 +101,14 @@ void FilterTimeHits::init()
 
 void FilterTimeHits::processRunHeader(LCRunHeader *run)
 {
-
     _nRun++;
 }
 
 void FilterTimeHits::processEvent(LCEvent *evt)
 {
+
+    streamlog_out(DEBUG) << "   processing event: " << evt->getEventNumber()
+                         << "   in run:  " << evt->getRunNumber() << std::endl;
 
     // --- Check whether the number of input and output collections match
 
@@ -129,6 +133,8 @@ void FilterTimeHits::processEvent(LCEvent *evt)
 
         throw EVENT::Exception(err_msg.str());
     }
+
+    streamlog_out(DEBUG) << "   passed container size checks" << std::endl;
 
     // --- Get the input hit collections and create the corresponding output collections:
 
@@ -200,7 +206,6 @@ void FilterTimeHits::processEvent(LCEvent *evt)
     }
 
     // --- Loop over the tracker hits and select hits inside the chosen time window:
-
     std::vector<std::set<int>> hits_to_save(nTrackerHitCol);
 
     for (unsigned int icol = 0; icol < inputHitColls.size(); ++icol)
@@ -213,28 +218,30 @@ void FilterTimeHits::processEvent(LCEvent *evt)
         for (int ihit = 0; ihit < hit_col->getNumberOfElements(); ++ihit)
         {
 
-            TrackerHitPlane *hit = dynamic_cast<TrackerHitPlane *>(hit_col->getElementAt(ihit));
+            if (TrackerHitPlane *hit = dynamic_cast<TrackerHitPlane *>(hit_col->getElementAt(ihit))){
+                // Skipping the hit if its time is outside the acceptance time window
+                double hitT = hit->getTime();
 
-            // Skipping the hit if its time is outside the acceptance time window
-            double hitT = hit->getTime();
-            double hitR = sqrt(hit->getPosition()[0] * hit->getPosition()[0] + hit->getPosition()[1] * hit->getPosition()[1] + hit->getPosition()[2] * hit->getPosition()[2]);
+                dd4hep::rec::Vector3D pos = hit->getPosition();
+                double hitR = pos.r();
 
-            // Correcting for the propagation time
-            double dt = hitR / (TMath::C() * m_beta / 1e6);
-            hitT -= dt;
-            streamlog_out(DEBUG3) << "corrected hit at R: " << hitR << " mm by propagation time: " << dt << " ns to T: " << hitT << " ns" << std::endl;
+                // Correcting for the propagation time
+                double dt = hitR / (TMath::C() * m_beta / 1e6);
+                hitT -= dt;
+                streamlog_out(DEBUG3) << "corrected hit at R: " << hitR << " mm by propagation time: " << dt << " ns to T: " << hitT << " ns" << std::endl;
 
-            //Apply time window selection (converting in ps)
-            if (hitT * 1e3 < m_time_min || hitT * 1e3 > m_time_max)
-            {
-                streamlog_out(DEBUG4) << "hit at T: " << hitT << " ns is rejected by timing cuts" << std::endl;
-                continue;
+                //Apply time window selection
+                if (hitT < m_time_min || hitT > m_time_max)
+                {
+                    streamlog_out(DEBUG4) << "hit at T: " << hitT << " ns is rejected by timing cuts" << std::endl;
+                    continue;
+                }
+
+                hits_to_save[icol].insert(ihit);
+
+                if (m_fillHistos)
+                    m_corrected_time->Fill(hitT);
             }
-
-            hits_to_save[icol].insert(ihit);
-
-            if (m_fillHistos)
-                m_corrected_time->Fill(hitT);
 
         } // ihit loop
 
@@ -314,8 +321,7 @@ void FilterTimeHits::processEvent(LCEvent *evt)
 
     } // icol loop
 
-    streamlog_out(DEBUG) << "   processing event: " << evt->getEventNumber()
-                         << "   in run:  " << evt->getRunNumber() << std::endl;
+    streamlog_out(DEBUG) << "   Event processed " << std::endl;
 
     _nEvt++;
 }
