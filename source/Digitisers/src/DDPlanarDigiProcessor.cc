@@ -12,6 +12,7 @@
 #include "UTIL/LCTrackerConf.h"
 #include <UTIL/ILDConf.h>
 #include <UTIL/BitSet32.h>
+#include <UTIL/LCRelationNavigator.h>
 
 
 #include "DD4hep/Detector.h"
@@ -216,14 +217,11 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
     
     CellIDEncoder<TrackerHitPlaneImpl> cellid_encoder( lcio::LCTrackerCellID::encoding_string() , trkhitVec ) ;
 
-    LCCollectionVec* relCol = new LCCollectionVec(LCIO::LCRELATION);
-    // to store the weights
-    LCFlagImpl lcFlag(0) ;
-    lcFlag.setBit( LCIO::LCREL_WEIGHTED ) ;
-    relCol->setFlag( lcFlag.getFlag()  ) ;
-    
+    // Relation collection TrackerHit, SimTrackerHit
+    LCCollection* thsthcol  = 0;
+
     CellIDDecoder<SimTrackerHit> cellid_decoder( STHcol) ;
-    
+
     
     int nSimHits = STHcol->getNumberOfElements()  ;
     
@@ -438,14 +436,12 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
       //**************************************************************************
       // Set Relation to SimTrackerHit
       //**************************************************************************    
-         
-      LCRelationImpl* rel = new LCRelationImpl;
 
-      rel->setFrom (trkHit);
-      rel->setTo (simTHit);
-      rel->setWeight( 1.0 );
-      relCol->addElement(rel);
+      // Set relation with LCRelationNavigator
+      UTIL::LCRelationNavigator thitNav = UTIL::LCRelationNavigator( LCIO::TRACKERHIT, LCIO::SIMTRACKERHIT );
+      thitNav.addRelation(trkHit, simTHit);
 
+      thsthcol = thitNav.createLCCollection();
       
       //**************************************************************************
       // Add hit to collection
@@ -465,7 +461,7 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
     //**************************************************************************    
     
     evt->addCollection( trkhitVec , _outColName ) ;
-    evt->addCollection( relCol , _outRelColName ) ;
+    evt->addCollection( thsthcol , _outRelColName ) ;
     
     streamlog_out(DEBUG4) << "Created " << nCreatedHits << " hits, " << nDismissedHits << " hits  dismissed as not on sensitive element\n";
     
