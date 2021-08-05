@@ -219,6 +219,7 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
 
     // Relation collection TrackerHit, SimTrackerHit
     LCCollection* thsthcol  = 0;
+    UTIL::LCRelationNavigator thitNav = UTIL::LCRelationNavigator( LCIO::TRACKERHIT, LCIO::SIMTRACKERHIT );
 
     CellIDDecoder<SimTrackerHit> cellid_decoder( STHcol) ;
 
@@ -438,10 +439,7 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
       //**************************************************************************    
 
       // Set relation with LCRelationNavigator
-      UTIL::LCRelationNavigator thitNav = UTIL::LCRelationNavigator( LCIO::TRACKERHIT, LCIO::SIMTRACKERHIT );
       thitNav.addRelation(trkHit, simTHit);
-
-      thsthcol = thitNav.createLCCollection();
       
       //**************************************************************************
       // Add hit to collection
@@ -454,7 +452,9 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
       streamlog_out(DEBUG3) << "-------------------------------------------------------" << std::endl;
       
     }      
-    
+
+    // Create relation collection
+    thsthcol = thitNav.createLCCollection();
     
     //**************************************************************************
     // Add collection to event
