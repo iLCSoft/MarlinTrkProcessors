@@ -71,7 +71,7 @@ DDPlanarDigiProcessor::DDPlanarDigiProcessor() : Processor("DDPlanarDigiProcesso
                               resVEx );
 
   FloatVec resTEx ;
-  resTEx.push_back( 0.0 ) ;
+  resTEx.push_back( -1 ) ;
 
   registerProcessorParameter( "ResolutionT" , 
                               "resolution of time - either one per layer or one for all layers " ,
