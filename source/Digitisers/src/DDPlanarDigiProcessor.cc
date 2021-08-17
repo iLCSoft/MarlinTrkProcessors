@@ -364,10 +364,7 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
       hitT += tSmear;
       streamlog_out(DEBUG3) << "smeared hit at T: " << simTHit->getTime() << " ns to T: " << hitT << " ns according to resolution: " << resT << " ns" << std::endl;
       }
-      
-      float timeWindow_min = _timeWindow_min.size() > 1 ? _timeWindow_min.at(layer) : _timeWindow_min.at(0);
-      float timeWindow_max = _timeWindow_max.size() > 1 ? _timeWindow_max.at(layer) : _timeWindow_max.at(0);
-
+     
       // Correcting for the propagation time
       if (_correctTimesForPropagation) {
         double dt = oldPos.r() / ( TMath::C() / 1e6 );
@@ -375,9 +372,14 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
         streamlog_out(DEBUG3) << "corrected hit at R: " << oldPos.r() << " mm by propagation time: " << dt << " ns to T: " << hitT << " ns" << std::endl;
       }
       
-      if (_useTimeWindow && ( hitT < timeWindow_min || hitT > timeWindow_max) ) {
-        streamlog_out(DEBUG4) << "hit at T: " << hitT << " smeared to: " << hitT << " is outside the time window: hit dropped"  << std::endl;
+      // Skipping the hit if its time is outside the acceptance time window
+      if (_useTimeWindow) {
+        float timeWindow_min = _timeWindow_min.size() > 1 ? _timeWindow_min.at(layer) : _timeWindow_min.at(0);
+        float timeWindow_max = _timeWindow_max.size() > 1 ? _timeWindow_max.at(layer) : _timeWindow_max.at(0);
+        if ( hitT < timeWindow_min || hitT > timeWindow_max ) {
+        streamlog_out(DEBUG4) << "hit at T: " << simTHit->getTime() << " smeared to: " << hitT << " is outside the time window: hit dropped"  << std::endl;
         ++nDismissedHits;
+        }
         continue; 
       }
 
