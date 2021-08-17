@@ -74,7 +74,7 @@ DDPlanarDigiProcessor::DDPlanarDigiProcessor() : Processor("DDPlanarDigiProcesso
   resTEx.push_back( -1 ) ;
 
   registerProcessorParameter( "ResolutionT" , 
-                              "resolution of time - either one per layer or one for all layers " ,
+                              "resolution of time - either one per layer or one for all layers. if the single entry is negative, disable time smearing. " ,
                               _resT ,
                               resTEx );
 
@@ -352,15 +352,18 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
       // Smear time of the hit and apply the time window cut if needed
       //***************************************************************
       
+      double hitT = simTHit->getTime();
+      
       // Smearing time of the hit
+      if (_resT.size() and _resT[0] > 0.0) {
       float resT = _resT.size() > 1 ? _resT.at(layer) : _resT.at(0); 
-      double tSmear  = resT == 0.0 ? 0.0 : gsl_ran_gaussian( _rng, resT );
-      _h[hT]->Fill( resT == 0.0 ? 0.0 : tSmear / resT );
+      double tSmear  = resT > 0.0 ? gsl_ran_gaussian( _rng, resT ) : 0.0;
+      _h[hT]->Fill( resT > 0.0 ? tSmear / resT : 0.0 );
       _h[diffT]->Fill( tSmear );
 
-      // Skipping the hit if its time is outside the acceptance time window
-      double hitT = simTHit->getTime() + tSmear;
+      hitT += tSmear;
       streamlog_out(DEBUG3) << "smeared hit at T: " << simTHit->getTime() << " ns to T: " << hitT << " ns according to resolution: " << resT << " ns" << std::endl;
+      }
       
       float timeWindow_min = _timeWindow_min.size() > 1 ? _timeWindow_min.at(layer) : _timeWindow_min.at(0);
       float timeWindow_max = _timeWindow_max.size() > 1 ? _timeWindow_max.at(layer) : _timeWindow_max.at(0);
