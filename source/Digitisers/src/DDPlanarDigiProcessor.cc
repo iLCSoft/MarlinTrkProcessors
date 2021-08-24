@@ -219,7 +219,7 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
 
     // Relation collection TrackerHit, SimTrackerHit
     LCCollection* thsthcol  = 0;
-    UTIL::LCRelationNavigator thitNav = UTIL::LCRelationNavigator( LCIO::TRACKERHIT, LCIO::SIMTRACKERHIT );
+    UTIL::LCRelationNavigator thitNav = UTIL::LCRelationNavigator( LCIO::TRACKERHITPLANE, LCIO::SIMTRACKERHIT );
 
     CellIDDecoder<SimTrackerHit> cellid_decoder( STHcol) ;
 
