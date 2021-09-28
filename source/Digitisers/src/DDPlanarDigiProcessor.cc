@@ -342,11 +342,26 @@ void DDPlanarDigiProcessor::processEvent( LCEvent * evt ) {
         // dd4hep::rec::Vector3D newPosTmp = oldPos +  uSmear * u ;  
         // if( ! _isStrip )  newPosTmp = newPosTmp +  vSmear * v ;  
         
-        
-        dd4hep::rec::Vector3D newPosTmp = 1./dd4hep::mm  * ( ! _isStrip  ? 
-                                                            surf->localToGlobal( dd4hep::rec::Vector2D (  ( uL + uSmear ) * dd4hep::mm, ( vL + vSmear )  *dd4hep::mm ) )  :
-                                                            surf->localToGlobal( dd4hep::rec::Vector2D (  ( uL + uSmear ) * dd4hep::mm,          0.                  ) ) 
-                                                            ) ;
+        double xStripPos, yStripPos, zStripPos;
+        if ( _subDetName == "SET" && _isStrip){
+            //Find intersection of the strip with the z=centerOfSensor plane to set it as the center of the SET strip
+            dd4hep::rec::Vector3D simHitPosSmeared = (1./dd4hep::mm) * ( surf->localToGlobal( dd4hep::rec::Vector2D( (uL+uSmear)*dd4hep::mm, 0.) ) );
+            zStripPos = surf->origin()[2] / dd4hep::mm ;
+            double lineParam = (zStripPos - simHitPosSmeared[2])/v[2];
+            xStripPos = simHitPosSmeared[0] + lineParam*v[0];
+            yStripPos = simHitPosSmeared[1] + lineParam*v[1];
+        }
+
+        dd4hep::rec::Vector3D newPosTmp;
+        if (! _isStrip){
+            newPosTmp = (1./dd4hep::mm) * ( surf->localToGlobal( dd4hep::rec::Vector2D( (uL+uSmear)*dd4hep::mm, (vL+vSmear)*dd4hep::mm ) ) );
+        }
+        else if (_subDetName == "SET"){
+            newPosTmp = dd4hep::rec::Vector3D(xStripPos, yStripPos, zStripPos);
+        }
+        else{
+            newPosTmp = (1./dd4hep::mm) * ( surf->localToGlobal( dd4hep::rec::Vector2D( (uL+uSmear)*dd4hep::mm, 0. ) ) );
+        }
 
         streamlog_out( DEBUG1 ) << " hit at    : " << oldPos 
                                 << " smeared to: " << newPosTmp
