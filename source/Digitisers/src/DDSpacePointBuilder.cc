@@ -64,24 +64,7 @@ DDSpacePointBuilder::DDSpacePointBuilder() : Processor("DDSpacePointBuilder") {
                             "Name of the SpacePoint SimTrackerHit relation collection",
                             _relColName,
                             std::string("FTDSimHitSpacepointRelations"));
-    
-   
-  registerProcessorParameter("NominalVertexX",
-                             "The global x coordinate of the nominal vertex used for calculation of strip hit intersections",
-                             _nominal_vertex_x,
-                             float(0.0));
 
-  
-  registerProcessorParameter("NominalVertexY",
-                             "The global x coordinate of the nominal vertex used for calculation of strip hit intersections",
-                             _nominal_vertex_y,
-                             float(0.0));
-
-  
-  registerProcessorParameter("NominalVertexZ",
-                             "The global x coordinate of the nominal vertex used for calculation of strip hit intersections",
-                             _nominal_vertex_z,
-                             float(0.0));
    
   // YV added
   registerProcessorParameter("StripLength",
@@ -115,8 +98,6 @@ void DDSpacePointBuilder::init() {
 
   _nRun = 0 ;
   _nEvt = 0 ;
-
-  _nominal_vertex.set(_nominal_vertex_x, _nominal_vertex_y, _nominal_vertex_z);
   
   MarlinTrk::IMarlinTrkSystem* trksystem =  MarlinTrk::Factory::createMarlinTrkSystem( "DDKalTest" , 0, "" ) ;
   
