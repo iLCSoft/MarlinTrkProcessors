@@ -511,10 +511,20 @@ TrackerHitImpl* DDSpacePointBuilder::createSpacePoint( TrackerHitPlane* a , Trac
   //streamlog_out(DEBUG3) << " L1 = " << L1 << std::endl;
   //streamlog_out(DEBUG3) << " L2 = " << L2 << std::endl;
 
-  dd4hep::rec::Vector2D ddSL1( L1.u(),(-stripLength * dd4hep::mm)/2.0 );
-  dd4hep::rec::Vector2D ddEL1( L1.u(),(stripLength * dd4hep::mm)/2.0 );
-  dd4hep::rec::Vector2D ddSL2( L2.u(),(-stripLength * dd4hep::mm)/2.0 );
-  dd4hep::rec::Vector2D ddEL2( L2.u(),(stripLength * dd4hep::mm)/2.0 );
+  dd4hep::rec::Vector2D ddSL1, ddEL1, ddSL2, ddEL2;
+  if (_subDetName == "SET"){
+      ddSL1 = dd4hep::rec::Vector2D( L1.u(), L1.v() + (-stripLength * dd4hep::mm)/2.0 );
+      ddEL1 = dd4hep::rec::Vector2D( L1.u(), L1.v() + (stripLength * dd4hep::mm)/2.0 );
+      ddSL2 = dd4hep::rec::Vector2D( L2.u(), L2.v() + (-stripLength * dd4hep::mm)/2.0 );
+      ddEL2 = dd4hep::rec::Vector2D( L2.u(), L2.v() + (stripLength * dd4hep::mm)/2.0 );
+  }
+  else{
+      ddSL1 = dd4hep::rec::Vector2D( L1.u(), (-stripLength * dd4hep::mm)/2.0 );
+      ddEL1 = dd4hep::rec::Vector2D( L1.u(), (stripLength * dd4hep::mm)/2.0 );
+      ddSL2 = dd4hep::rec::Vector2D( L2.u(), (-stripLength * dd4hep::mm)/2.0 );
+      ddEL2 = dd4hep::rec::Vector2D( L2.u(), (stripLength * dd4hep::mm)/2.0 );        
+  }
+
   //L1.setY(-stripLength/2.0);
   //CLHEP::Hep3Vector SL1 = L1;
   //L1.setY( stripLength/2.0);
@@ -898,6 +908,3 @@ std::string DDSpacePointBuilder::getCellID0Info( int cellID0 ){
   return s.str();
   
 }
-
-
-
