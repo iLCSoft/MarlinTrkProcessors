@@ -1,3 +1,8 @@
+# v02-12-01
+
+* 2022-06-28 Thomas Madlener ([PR#61](https://github.com/iLCSoft/MarlinTrkProcessors/pull/61))
+  - Make doxygen cmake config work with newer cmakes
+
 # v02-12
 
 * 2021-11-05 Bohdan Dudar ([PR#55](https://github.com/iLCSoft/MarlinTrkProcessors/pull/55))
