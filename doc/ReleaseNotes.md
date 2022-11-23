@@ -1,3 +1,8 @@
+# v02-12-02
+
+* 2022-11-23 Thomas Madlener ([PR#62](https://github.com/iLCSoft/MarlinTrkProcessors/pull/62))
+  - Make sure that the `_histos` pointer is at least initialized to a `nullptr` to avoid a spurious seg fault when trying to delete it uninitialized.
+
 # v02-12-01
 
 * 2022-06-28 Thomas Madlener ([PR#61](https://github.com/iLCSoft/MarlinTrkProcessors/pull/61))
