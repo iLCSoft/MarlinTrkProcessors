@@ -8,8 +8,8 @@ namespace TrackPerf
 
 /** Utility processor that removes tracks based on different track properties.
  *
- *  @parameter InputTrackCollection Name of the input collection
- *  @parameter OutputTrackCollection Name of output collection
+ *  @parameter InputTrackCollectionName Name of the input collection
+ *  @parameter OutputTrackCollectionName Name of output collection
  *
  *  @parameter BarrelOnly Keep tracks with only barrel hits.
  *  @parameter NHitsTotal Minimum number of hits on track
