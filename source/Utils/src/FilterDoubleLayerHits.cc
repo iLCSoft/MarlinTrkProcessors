@@ -23,7 +23,7 @@ using namespace marlin ;
 FilterDoubleLayerHits aFilterDoubleLayerHits ;
 
 FilterDoubleLayerHits::FilterDoubleLayerHits() : Processor("FilterDoubleLayerHits") ,
-			   _nRun(0), _nEvt(0) {
+			   _dtMax(-1.0), _nRun(0), _nEvt(0) {
 
   // modify processor description
   _description = "remove hits in double layers if they don't have a corresponding close-by hit in the other sublayer" ;
@@ -52,6 +52,11 @@ FilterDoubleLayerHits::FilterDoubleLayerHits() : Processor("FilterDoubleLayerHit
                              _fillHistos ,
                              false );
 
+  registerProcessorParameter( "DeltaTimeMax" ,
+                             "Maximum time difference between hits in a doublet [ns]" ,
+                             _dtMax ,
+                             -1.0 );
+
   StringVec dlCutConfigsEx ;
   dlCutConfigsEx.push_back("0") ;
   dlCutConfigsEx.push_back("1") ;
@@ -59,7 +64,7 @@ FilterDoubleLayerHits::FilterDoubleLayerHits() : Processor("FilterDoubleLayerHit
   dlCutConfigsEx.push_back("0.05") ;
 
   registerProcessorParameter("DoubleLayerCuts" ,
-			     "Layer IDs and cuts to be applied: <layer 0> <layer 1> <dU> <dTheta>" ,
+			     "Layer IDs and angular cuts [mrad] to be applied: <layer 0> <layer 1> <dPhi> <dTheta>" ,
 			     _dlCutConfigs ,
 			     dlCutConfigsEx
 			     );
@@ -104,7 +109,7 @@ void FilterDoubleLayerHits::init() {
   while( i < _dlCutConfigs.size() ){
     _dlCuts[index].layer0      = std::atoi( _dlCutConfigs[ i++ ].c_str() ) ;
     _dlCuts[index].layer1      = std::atoi( _dlCutConfigs[ i++ ].c_str() ) ;
-    _dlCuts[index].dU_max      = std::atof( _dlCutConfigs[ i++ ].c_str() ) ;
+    _dlCuts[index].dPhi_max    = std::atof( _dlCutConfigs[ i++ ].c_str() ) / 1e3 ;  // converting mrad -> rad
     _dlCuts[index].dTheta_max  = std::atof( _dlCutConfigs[ i++ ].c_str() ) / 1e3 ;  // converting mrad -> rad
     ++index ;
   }
@@ -137,6 +142,8 @@ void FilterDoubleLayerHits::init() {
       _histos[ std::string(hname) ] = new TH1F( hname , ";#Delta#Theta [mrad]; Hit pairs", 3000, -30, 30 );
       sprintf(hname, "h_dPhi_layers_%d_%d", cut.layer0, cut.layer1);
       _histos[ std::string(hname) ] = new TH1F( hname , ";|#Delta#phi| [mrad]; Hit pairs", 1000, 0, 50 );
+      sprintf(hname, "h_dt_layers_%d_%d", cut.layer0, cut.layer1);
+      _histos[ std::string(hname) ] = new TH1F( hname , ";|#Deltat| [ns]; Hit pairs", 2000, -10, 10 );
       // Hit properties for each individual layer
       std::vector<unsigned int> layers{cut.layer0, cut.layer1};
       for (auto layer : layers) {
@@ -145,8 +152,8 @@ void FilterDoubleLayerHits::init() {
       }
     }
     // Printing the configured cut
-    streamlog_out( DEBUG5 ) <<  iCut << ". layers: " << cut.layer0 << " >> " << cut.layer1 << ";  dU: "
-    << cut.dU_max << " mm;  dTheta: " << cut.dTheta_max << " rad" << std::endl;
+    streamlog_out( DEBUG5 ) <<  iCut << ". layers: " << cut.layer0 << " >> " << cut.layer1 << ";  dPhi: "
+    << cut.dPhi_max << " rad;  dTheta: " << cut.dTheta_max << " rad" << std::endl;
   }
 
   _nRun = 0 ;
@@ -195,8 +202,8 @@ void FilterDoubleLayerHits::processEvent( LCEvent * evt ) {
 
     TrackerHitPlane* h = (TrackerHitPlane*)col->getElementAt( iHit );
 
-    unsigned int layerID = decoder(h)["layer"];
-    unsigned int sideID = decoder(h)["side"];
+    unsigned int layerID  = decoder(h)["layer"];
+    unsigned int sideID   = decoder(h)["side"];
     unsigned int ladderID = decoder(h)["module"];
     unsigned int moduleID = decoder(h)["sensor"];
 
@@ -216,8 +223,8 @@ void FilterDoubleLayerHits::processEvent( LCEvent * evt ) {
 
     TrackerHitPlane* h = (TrackerHitPlane*)col->getElementAt( iHit );
 
-    unsigned int layerID = decoder(h)["layer"];
-    unsigned int sideID = decoder(h)["side"];
+    unsigned int layerID  = decoder(h)["layer"];
+    unsigned int sideID   = decoder(h)["side"];
     unsigned int ladderID = decoder(h)["module"];
     unsigned int moduleID = decoder(h)["sensor"];
     streamlog_out( DEBUG5 ) << " Checking 1st hit " << iHit << " / " << nHit << " at layer: " << layerID << "  ladder: " << ladderID << "  module: " << moduleID <<  std::endl ;
@@ -247,10 +254,11 @@ void FilterDoubleLayerHits::processEvent( LCEvent * evt ) {
     dd4hep::rec::Vector2D posLocal = globalToLocal( decoder( h ).getValue(), posGlobal );
 
     // Setting the values for closest hits
-    double dR_min(999);
-    double dU_closest(0);
-    double dTheta_closest(0);
-    double dPhi_closest(0);
+    double dR_min(999.0);
+    double dU_closest(0.0);
+    double dTheta_closest(0.0);
+    double dPhi_closest(0.0);
+    double dt_closest(0.0);
 
     // Looking for the compliment hits in the 2nd sublayer
     size_t nCompatibleHits(0);
@@ -263,6 +271,10 @@ void FilterDoubleLayerHits::processEvent( LCEvent * evt ) {
       TrackerHitPlane* h2 = (TrackerHitPlane*)col->getElementAt( iHit2 );
       unsigned int layerID2 = decoder(h2)["layer"];
 
+      // Checking whether hit is in the time acceptance window
+      double dt = h2->getTime() - h->getTime();
+      if (_dtMax >= 0.0 && std::fabs(dt) > _dtMax) continue;
+
       // Getting the local and global hit positions
       dd4hep::rec::Vector3D posGlobal2( h2->getPosition()[0], h2->getPosition()[1], h2->getPosition()[2] );
       dd4hep::rec::Vector2D posLocal2 = globalToLocal( decoder( h2 ).getValue(), posGlobal2, &surf );
@@ -273,7 +285,7 @@ void FilterDoubleLayerHits::processEvent( LCEvent * evt ) {
       double dPhi = std::fabs(posGlobal2.phi() - posGlobal.phi());
       if (dPhi > dd4hep::pi) dPhi = dd4hep::twopi - dPhi;
       double dR = sqrt(dPhi*dPhi + dTheta*dTheta);
-      streamlog_out( DEBUG0 ) << " Checking 2nd hit at layer: " << layerID2 << ";  dU: " << dU << ";  dTheta: " <<  dTheta << std::endl;
+      streamlog_out( DEBUG0 ) << " Checking 2nd hit at layer: " << layerID2 << ";  dPhi: " << dPhi << ";  dTheta: " <<  dTheta << std::endl;
 
       // Updating the minimal values
       if (dR < dR_min) {
@@ -281,15 +293,16 @@ void FilterDoubleLayerHits::processEvent( LCEvent * evt ) {
         dU_closest = dU;
         dTheta_closest = dTheta;
         dPhi_closest = dPhi;
+        dt_closest = dt;
       }
 
-      // Skipping the hit if it's outside the cut window
-      if (std::fabs(dU) > dlCut->dU_max) continue;
+      // Skipping if the hit is outside the cut window
+      if (std::fabs(dPhi) > dlCut->dPhi_max) continue;
       if (std::fabs(dTheta) > dlCut->dTheta_max) continue;
 
       nCompatibleHits++;
       _hitAccepted[iHit2] = true;
-      streamlog_out( DEBUG5 ) << " Accepted 2nd hit at layer: " << layerID2 << ";  dU: " << dU << ";  dTheta: " <<  dTheta << std::endl;
+      streamlog_out( DEBUG5 ) << " Accepted 2nd hit at layer: " << layerID2 << ";  dPhi: " << dPhi << ";  dTheta: " <<  dTheta << std::endl;
     }
     // Filling diagnostic histograms
     if (_fillHistos && dR_min < 998) {
@@ -302,6 +315,8 @@ void FilterDoubleLayerHits::processEvent( LCEvent * evt ) {
         _histos[hname]->Fill(dTheta_closest*1e3);
         sprintf(hname, "h_dPhi_layers_%d_%d", dlCut->layer0, dlCut->layer1);
         _histos[hname]->Fill(dPhi_closest*1e3);
+        sprintf(hname, "h_dt_layers_%d_%d", dlCut->layer0, dlCut->layer1);
+        _histos[hname]->Fill(dt_closest);
       }
 
     // Accepting the first hit if it has at least one compatible pair

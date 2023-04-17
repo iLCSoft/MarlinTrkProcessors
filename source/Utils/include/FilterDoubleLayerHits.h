@@ -51,7 +51,7 @@ protected:
   struct DoubleLayerCut{
     unsigned int layer0 ;
     unsigned int layer1 ;
-    double dU_max ;
+    double dPhi_max ;
     double dTheta_max ;
   };
 
@@ -96,6 +96,9 @@ protected:
 
   ////Output collection name.
   std::string _outColName ;
+
+  ////Maximum time difference between hits in a doublet
+  double _dtMax ;
 
   ////Double layer cuts configuration
   StringVec  _dlCutConfigs ;
