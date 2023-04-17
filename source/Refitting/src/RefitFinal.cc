@@ -157,7 +157,8 @@ void RefitFinal::processEvent(LCEvent *evt) {
 
   // establish the track collection that will be created
   LCCollectionVec *trackVec = new LCCollectionVec(LCIO::TRACK);
-  _encoder->reset();
+  UTIL::BitField64 encoder(lcio::LCTrackerCellID::encoding_string());
+  encoder.reset(); // reset to 0
   // if we want to point back to the hits we need to set the flag
   LCFlagImpl trkFlag(0);
   trkFlag.setBit(LCIO::TRBIT_HITS);
@@ -179,6 +180,8 @@ void RefitFinal::processEvent(LCEvent *evt) {
 
   streamlog_out(MESSAGE4) << " Number of Tracks " << nTracks << std::endl;
 
+  int counter = 0;
+  std::map<int, int> hitInSubDet;
   // loop over the input tracks and refit
   for (int iTrack = 0; iTrack < nTracks; ++iTrack) {
 
@@ -193,8 +196,12 @@ void RefitFinal::processEvent(LCEvent *evt) {
 
     const int nHitsTrack = trkHits.size();
 
+    hitInSubDet.clear();
+
     for (int iHit = 0; iHit < nHitsTrack && iHit < nHitsTrack; ++iHit) {
       marlin_trk->addHit(trkHits[iHit]);
+      encoder.setValue(trkHits[iHit]->getCellID0()) ;
+      ++hitInSubDet[encoder[UTIL::LCTrackerCellID::subdet()]];      
     }
 
     int init_status = FitInit2(track, marlin_trk.get());
@@ -202,6 +209,27 @@ void RefitFinal::processEvent(LCEvent *evt) {
     if (init_status != 0) {
       continue;
     }
+
+    // Checking numbers of hits in subdetectors
+    if (_NHitsCuts.size() > 0) {
+      bool skipTrack(false);
+      for (const NHitsCut& cut : _NHitsCuts) {
+        // Summing the number of hits from each detector
+        int nHits = 0;
+        for (int detId : cut.detIDs) {
+          nHits += hitInSubDet[detId];
+        }
+        // Checking if the cut is satisfied _before_ the fit
+        if (nHits < cut.nHits_min) {
+          streamlog_out(DEBUG5) << "Skip track " << track->id() << ": "
+                                << " not enough detector hits: " << nHits << "/" << cut.nHits_min << std::endl;
+        skipTrack = true;
+        counter++;
+        break;
+        }
+      }
+      if (skipTrack) continue;
+    } 
 
     streamlog_out(DEBUG4) << "Refit: Trackstate after initialisation\n"
                           << marlin_trk->toString() << std::endl;
@@ -283,30 +311,12 @@ void RefitFinal::processEvent(LCEvent *evt) {
 
     auto lcioTrkPtr = lcio_trk.release();
 
+    // if required apply the ReducedChi2 cut
     if (_ReducedChi2Cut > 0. && lcioTrkPtr->getChi2()/lcioTrkPtr->getNdf() > _ReducedChi2Cut) {
       streamlog_out(DEBUG5) << "Skip track " << lcioTrkPtr->id() << ": "
                             << "Chi2/ndof " << lcioTrkPtr->getChi2()/lcioTrkPtr->getNdf() << std::endl;
+      counter++; 
       continue;
-    }
-
-    // Checking numbers of hits in subdetectors
-    if (_NHitsCuts.size() > 0) {
-      bool skipTrack(false);
-      for (const NHitsCut& cut : _NHitsCuts) {
-        // Summing the number of hits from each detector
-        int nHits = 0;
-        for (int detId : cut.detIDs) {
-          nHits += lcioTrkPtr->subdetectorHitNumbers()[ (detId - 1) * 2 ];
-        }
-        // Checking if the cut is satisfied
-        if (nHits < cut.nHits_min) {
-          streamlog_out(DEBUG5) << "Skip track " << lcioTrkPtr->id() << ": "
-                                << " not enough detector hits: " << nHits << "/" << cut.nHits_min << std::endl;
-        skipTrack = true;
-        break;
-        }
-      }
-      if (skipTrack) continue;
     }
 
     trackVec->addElement(lcioTrkPtr);
@@ -322,7 +332,8 @@ void RefitFinal::processEvent(LCEvent *evt) {
     }
 
   } // for loop to the tracks
-  streamlog_out(MESSAGE4) << " Final number of tracks " << trackVec->getNumberOfElements() << std::endl;
+  streamlog_out(MESSAGE4) << " Final number of tracks " << trackVec->getNumberOfElements() 
+                          << " Skipped tracks: " << counter << std::endl;
 
 
   evt->addCollection(trackVec, _output_track_col_name);
