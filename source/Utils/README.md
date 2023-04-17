@@ -15,14 +15,16 @@ Hits from layers not included in the cuts are kept in the output collection.
   <parameter name="InputCollection" type="string" value="VXDBTrackerHits" />
   <!-- Name of the output filtered hit collection -->
   <parameter name="OutputCollection" type="string" value="VXDBTrackerHits_DL" />
-  <!-- Configuration of the maximum allowed dU and dTheta between a pair of hits at the inner and outer layer -->
-  <!-- 4 numbers per double-layer: <inner layer ID>  <outer layer ID>  <dU max [mm]>  <dTheta max [mrad]> -->
+  <!-- Configuration of the maximum angular distance between a pair of hits in a double layer -->
+  <!-- 4 numbers per double-layer: <inner layer ID>  <outer layer ID>  <dPhi max [mrad]>  <dTheta max [mrad]> -->
   <parameter name="DoubleLayerCuts" type="StringVec">
-      0 1 1.0 0.6
-      2 3 1.0 0.33
-      4 5 1.0 0.27
-      6 7 1.0 0.21
+      0 1 0.6 0.35
+      2 3 0.6 0.33
+      4 5 0.5 0.27
+      6 7 0.4 0.21
   </parameter>
+  <!-- Maximum time difference between 2 hits to form a stub candidate -->
+  <parameter name="DeltaTimeMax" type="float"> 0.18 </parameter>
   <!-- Whether to fill diagnostic histograms about affected hits -->
   <parameter name="FillHistograms" type="bool" value="true" />
   <!-- Verbosity level ("DEBUG0-9,MESSAGE0-4,WARNING0-4,ERROR0-4,SILENT") -->
