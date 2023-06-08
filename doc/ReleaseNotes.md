@@ -1,3 +1,8 @@
+# v02-12-03
+
+* 2022-12-02 Thomas Madlener ([PR#64](https://github.com/iLCSoft/MarlinTrkProcessors/pull/64))
+  - Remove the obsolote gcc8 based workflow and update github actions to the latest versions
+
 # v02-12-02
 
 * 2022-11-23 Thomas Madlener ([PR#62](https://github.com/iLCSoft/MarlinTrkProcessors/pull/62))
