@@ -718,7 +718,7 @@ void ExtrToTracker::getCellID0AndPositionInfo(LCCollection*& col ){
   for (int i=0; i<col->getNumberOfElements(); i++){    
     TrackerHitPlane* trackerHit = dynamic_cast<TrackerHitPlane*>( col->getElementAt(i) ) ;
 
-    dd4hep::long64 id = trackerHit->getCellID0() ;
+    const dd4hep::CellID id = trackerHit->getCellID0() ;
     cellid_decoder.setValue( id ) ;
 
     int subdet = cellid_decoder[UTIL::LCTrackerCellID::subdet()];
@@ -816,7 +816,7 @@ TrackerHitPlane* ExtrToTracker::getSiHit(std::vector<TrackerHitPlane* >& hitsOnD
 
 
 
-TrackerHitPlane* ExtrToTracker::getSiHit(std::vector<dd4hep::long64 >& vecElID, std::map<int , std::vector<TrackerHitPlane* > >& mapElHits, MarlinTrk::IMarlinTrack*& marlin_trk){
+TrackerHitPlane* ExtrToTracker::getSiHit(std::vector< dd4hep::CellID >& vecElID, std::map<int , std::vector<TrackerHitPlane* > >& mapElHits, MarlinTrk::IMarlinTrack*& marlin_trk){
   
   double min = 9999999.;
   double testChi2=0.;
@@ -1035,7 +1035,7 @@ void  ExtrToTracker::FindAndAddHit(size_t& idet, int& elID, MarlinTrk::IMarlinTr
 		      
     bool isSuccessfulFit = false; 
 
-    std::vector<dd4hep::long64 > vecIDs;
+    std::vector<dd4hep::CellID > vecIDs;
     vecIDs = _vecMapNeighbours.at(idet)->find(elID)->second;
 
     vecIDs.insert( std::begin(vecIDs), elID );

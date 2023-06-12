@@ -110,7 +110,7 @@ public:
   
   TrackerHitPlane* getSiHit(std::vector<TrackerHitPlane* >& hitsOnDetEl, MarlinTrk::IMarlinTrack*& marlin_trk);
 
-  TrackerHitPlane* getSiHit(std::vector<dd4hep::long64 >& vecElID, std::map<int , std::vector<TrackerHitPlane* > >& mapElHits, MarlinTrk::IMarlinTrack*& marlin_trk);
+  TrackerHitPlane* getSiHit(std::vector<dd4hep::CellID >& vecElID, std::map<int , std::vector<TrackerHitPlane* > >& mapElHits, MarlinTrk::IMarlinTrack*& marlin_trk);
 
   /* void getNeighbours(int elID, std::vector<int >& vecIDs, std::string cellIDEcoding, std::map<int , int > mapLayerNModules); */
 
@@ -192,7 +192,7 @@ protected:
   std::vector<int > _vecSubdetNLayers;
   std::vector<int > _vecSubdetID;
   std::vector<LCCollection* > _vecDigiHitsCol;
-  std::vector<std::map<dd4hep::long64 , std::vector<dd4hep::long64 > >* >  _vecMapNeighbours;
+  std::vector<std::map<dd4hep::CellID , std::vector<dd4hep::CellID > >* >  _vecMapNeighbours;
 
   std::vector<std::map<int , std::vector<TrackerHitPlane* > > > _vecMapsElHits;
 
