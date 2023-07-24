@@ -1,3 +1,13 @@
+# v02-12-04
+
+* 2023-06-12 tmadlener ([PR#66](https://github.com/iLCSoft/MarlinTrkProcessors/pull/66))
+  - Switch from `dd4hep::long64` to the more appropriate `dd4hep::CellID` after [AIDASoft/DD4hep#1125](https://github.com/AIDASoft/DD4hep/pull/1125)
+  - Update CI
+    - Switch to latest versions of github actions
+    - Remove gcc8 based workflows
+    - Add key4hep based workflow
+  - Remove unused and deprecated usage of `std::binary_function`
+
 # v02-12-03
 
 * 2022-12-02 Thomas Madlener ([PR#64](https://github.com/iLCSoft/MarlinTrkProcessors/pull/64))
