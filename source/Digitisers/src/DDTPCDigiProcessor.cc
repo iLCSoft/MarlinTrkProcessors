@@ -32,6 +32,7 @@
 //
 #include "UTIL/LCTrackerConf.h"
 #include <UTIL/ILDConf.h>
+#include <UTIL/LCRelationNavigator.h>
 
 // --- DD4hep ---
 #include "DD4hep/Detector.h"
@@ -500,12 +501,8 @@ void DDTPCDigiProcessor::processEvent( LCEvent * evt )
   
   // created the collection which will be written out 
   _trkhitVec = new LCCollectionVec( LCIO::TRACKERHIT )  ;
-  _relCol = new LCCollectionVec(LCIO::LCRELATION);
-
-  // to store the weights
-  LCFlagImpl lcFlag(0) ;
-  lcFlag.setBit( LCIO::LCREL_WEIGHTED ) ;
-  _relCol->setFlag( lcFlag.getFlag()  ) ;
+  // relations from created trackerhits to the SimTrackerHits that caused them
+  auto hitSimHitNav = UTIL::LCRelationNavigator(LCIO::TRACKERHIT, LCIO::SIMTRACKERHIT);
 
   _cellid_encoder =  new CellIDEncoder<TrackerHitImpl>( lcio::LCTrackerCellID::encoding_string() , _trkhitVec ) ;
   
@@ -1017,7 +1014,7 @@ void DDTPCDigiProcessor::processEvent( LCEvent * evt )
       }
       
       if(seed_hit->getNumberOfAdjacent()==0){ // no adjacent hits so smear and write to hit collection
-        writeVoxelToHit(seed_hit);        
+        writeVoxelToHit(seed_hit, hitSimHitNav);
       }
       
       else if(seed_hit->getNumberOfAdjacent() < (_maxMerge)){ // potential 3-hit cluster, can use simple average merge. 
@@ -1028,7 +1025,7 @@ void DDTPCDigiProcessor::processEvent( LCEvent * evt )
         
         if( clusterSize <= _maxMerge ){ // merge cluster
           seed_hit->setIsMerged();
-          writeMergedVoxelsToHit(hitsToMerge);  
+          writeMergedVoxelsToHit(hitsToMerge, hitSimHitNav);
         }
         delete hitsToMerge;
       } 
@@ -1074,7 +1071,8 @@ void DDTPCDigiProcessor::processEvent( LCEvent * evt )
   
   // add the collection to the event
   evt->addCollection( _trkhitVec , _TPCTrackerHitsCol ) ;
-  evt->addCollection( _relCol , _outRelColName ) ;
+  auto relCol = hitSimHitNav.createLCCollection();
+  evt->addCollection( relCol , _outRelColName ) ;
 
   // delete voxels
   for (unsigned int i = 0; i<_tpcRowHits.size(); ++i){
@@ -1149,7 +1147,7 @@ void DDTPCDigiProcessor::end()
   //  
 }
 
-void DDTPCDigiProcessor::writeVoxelToHit( Voxel_tpc* aVoxel){
+void DDTPCDigiProcessor::writeVoxelToHit( Voxel_tpc* aVoxel, UTIL::LCRelationNavigator& hitSimHitNav){
   
   
   Voxel_tpc* seed_hit  = aVoxel;
@@ -1261,13 +1259,8 @@ void DDTPCDigiProcessor::writeVoxelToHit( Voxel_tpc* aVoxel){
       trkHit->rawHits().push_back( _tpcHitMap[seed_hit] );
     }                        
 
-    LCRelationImpl* rel = new LCRelationImpl;
-    
-    rel->setFrom (trkHit);
-    rel->setTo (_tpcHitMap[seed_hit]);
-    rel->setWeight( 1.0 );
-    _relCol->addElement(rel);
-    
+    hitSimHitNav.addRelation(trkHit, _tpcHitMap[seed_hit], 1.0);
+
     _trkhitVec->addElement( trkHit ); 
     _NRecTPCHits++;
   }
@@ -1298,7 +1291,7 @@ void DDTPCDigiProcessor::writeVoxelToHit( Voxel_tpc* aVoxel){
 #endif
 }
 
-void DDTPCDigiProcessor::writeMergedVoxelsToHit( vector <Voxel_tpc*>* hitsToMerge){
+void DDTPCDigiProcessor::writeMergedVoxelsToHit( vector <Voxel_tpc*>* hitsToMerge, UTIL::LCRelationNavigator& hitSimHitNav){
   
   
   TrackerHitImpl* trkHit = new TrackerHitImpl ;
@@ -1324,13 +1317,9 @@ void DDTPCDigiProcessor::writeMergedVoxelsToHit( vector <Voxel_tpc*>* hitsToMerg
       trkHit->rawHits().push_back( _tpcHitMap[hitsToMerge->at(ihitCluster)] );
     }                        
 
-    LCRelationImpl* rel = new LCRelationImpl;
-    
-    rel->setFrom (trkHit);
-    rel->setTo (_tpcHitMap[ hitsToMerge->at(ihitCluster) ]);
-    rel->setWeight( float(1.0/number_of_hits_to_merge) );
-    _relCol->addElement(rel);
-    
+    hitSimHitNav.addRelation(trkHit,
+                             _tpcHitMap[hitsToMerge->at(ihitCluster)],
+                             float(1.0/number_of_hits_to_merge));
   }
   
   double avgZ = sumZ/(hitsToMerge->size());
