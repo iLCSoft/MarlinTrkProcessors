@@ -9,6 +9,8 @@
 
 #include <EVENT/TrackerHit.h>
 
+#include <memory>
+
 namespace MarlinTrk{
   class IMarlinTrkSystem ;
 }
@@ -79,7 +81,7 @@ protected:
   lcio::LCCollection* GetCollection( lcio::LCEvent * evt, std::string colName ) ;
   
   /* helper function to get relations using try catch block */
-  lcio::LCRelationNavigator* GetRelations(lcio::LCEvent * evt, std::string RelName ) ;
+  std::unique_ptr<lcio::LCRelationNavigator> GetRelations(lcio::LCEvent * evt, std::string RelName ) ;
   
   /** Input track collection name for refitting.
    */

@@ -195,7 +195,7 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
   // get input collection and relations 
   LCCollection* input_track_col = this->GetCollection( evt, _input_track_col_name ) ;
   
-  LCRelationNavigator* input_track_rels = this->GetRelations( evt, _input_track_rel_name ) ;
+  auto input_track_rels = this->GetRelations( evt, _input_track_rel_name ) ;
   
   if( input_track_col != 0 ){
     
@@ -207,12 +207,11 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
     LCFlagImpl trkFlag(0) ;
     trkFlag.setBit( LCIO::TRBIT_HITS ) ;
     trackVec->setFlag( trkFlag.getFlag()  ) ;
-    
-    // establish the track relations collection that will be created 
-    LCCollectionVec* trackRelVec = new LCCollectionVec( LCIO::LCRELATION )  ;
-    
+
+    // establish the track relations collection that will be created
+    auto trackRelNav = UTIL::LCRelationNavigator(LCIO::TRACK, LCIO::MCPARTICLE);
+
     int nTracks = input_track_col->getNumberOfElements()  ;
-    
     streamlog_out(DEBUG4) << "Processing input collection " << _input_track_col_name << " with " << nTracks << " tracks\n";
     
     // loop over the input tacks and refit using KalTest    
@@ -394,28 +393,18 @@ void RefitProcessor::processEvent( LCEvent * evt ) {
       
       // assign the relations previously assigned to the input tracks  
       if(input_track_rels){
-        LCObjectVec objVec = input_track_rels->getRelatedToObjects( track_to_refit );
-        FloatVec weights   = input_track_rels->getRelatedToWeights( track_to_refit );
+        const auto& objVec = input_track_rels->getRelatedToObjects( track_to_refit );
+        const auto& weights   = input_track_rels->getRelatedToWeights( track_to_refit );
         
         for( unsigned int irel=0 ; irel < objVec.size() ; ++irel ){
-          
-          LCRelationImpl* rel = new LCRelationImpl ;
-          rel->setFrom (refittedTrack) ;
-          rel->setTo ( objVec[irel] ) ;
-          rel->setWeight(weights[irel]) ;
-          trackRelVec->addElement( rel );
-          
+          trackRelNav.addRelation(refittedTrack, objVec[irel], weights[irel]);
         }
       }
-      
-      
-      
-    } 
+    }
     
     evt->addCollection( trackVec , _output_track_col_name) ;
+    auto trackRelVec = trackRelNav.createLCCollection();
     evt->addCollection( trackRelVec , _output_track_rel_name) ;
-    delete input_track_rels; input_track_rels = 0;
-
   }
   ++_n_evt ;
 }
@@ -452,13 +441,13 @@ LCCollection* RefitProcessor::GetCollection( LCEvent * evt, std::string colName 
   
 }
 
-LCRelationNavigator* RefitProcessor::GetRelations(LCEvent * evt , std::string RelName ) {
+std::unique_ptr<LCRelationNavigator> RefitProcessor::GetRelations(LCEvent * evt , std::string RelName ) {
   
-  LCRelationNavigator* nav = 0 ;
+  std::unique_ptr<UTIL::LCRelationNavigator> nav = nullptr;
   
   try{
-    nav = new LCRelationNavigator(evt->getCollection( RelName.c_str() ));
-    streamlog_out( DEBUG2 ) << "RefitProcessor --> " << RelName << " track relation collection in event = " << nav << std::endl;
+    nav.reset(new LCRelationNavigator(evt->getCollection( RelName.c_str() )));
+    streamlog_out( DEBUG2 ) << "RefitProcessor --> " << RelName << " track relation collection in event = " << nav.get() << std::endl;
   }
   catch(DataNotAvailableException &e){
     streamlog_out( DEBUG2 ) << "RefitProcessor --> " << RelName.c_str() << " track relation collection absent in event" << std::endl;     

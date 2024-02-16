@@ -58,6 +58,10 @@ class Voxel_tpc;
 
 class TPCModularEndplate ;
 
+namespace UTIL {
+  class LCRelationNavigator;
+}
+
 /** ====== DDTPCDigiProcessor ====== <br>
  *
  * This Processor depends on Circle.h from MarlinUtil
@@ -138,8 +142,8 @@ public:
    */
   virtual void end() ;
   
-  void writeVoxelToHit( Voxel_tpc* aVoxel) ;  
-  void writeMergedVoxelsToHit( std::vector <Voxel_tpc*>* hitList ) ;  
+  void writeVoxelToHit( Voxel_tpc* aVoxel, UTIL::LCRelationNavigator& hitSimHitNav) ;
+  void writeMergedVoxelsToHit( std::vector <Voxel_tpc*>* hitList, UTIL::LCRelationNavigator& hitSimHitNav ) ;
   void plotHelixHitResidual(MCParticle *mcp, CLHEP::Hep3Vector *thisPointRPhi);
   double getPadPhi( CLHEP::Hep3Vector* thisPointRPhi, CLHEP::Hep3Vector* firstPointRPhi, CLHEP::Hep3Vector* middlePointRPhi, CLHEP::Hep3Vector* lastPointRPhi);
   double getPadTheta( CLHEP::Hep3Vector* firstPointRPhi, CLHEP::Hep3Vector* middlePointRPhi, CLHEP::Hep3Vector* lastPointRPhi );
@@ -204,7 +208,6 @@ protected:
   int lenpos{};
 
   LCCollectionVec* _trkhitVec{};
-  LCCollectionVec* _relCol{};  
   CellIDEncoder<TrackerHitImpl>* _cellid_encoder {};
 
   int  _NSimTPCHits{};
