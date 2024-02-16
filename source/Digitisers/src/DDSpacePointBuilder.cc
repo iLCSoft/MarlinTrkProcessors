@@ -176,14 +176,10 @@ void DDSpacePointBuilder::processEvent( LCEvent * evt ) {
     
     
     LCCollectionVec * spCol = new LCCollectionVec(LCIO::TRACKERHIT);    // output spacepoint collection
-    LCCollectionVec* relCol = new LCCollectionVec(LCIO::LCRELATION);    // outpur relation collection
-    
-    // to store the weights
-    LCFlagImpl lcFlag(0) ;
-    lcFlag.setBit( LCIO::LCREL_WEIGHTED ) ;
-    relCol->setFlag( lcFlag.getFlag()  ) ;
-    
-    
+
+    // Relation navigator for creating SpacePoint - SimTrackerHit relations
+    auto spSimHitNav = UTIL::LCRelationNavigator(LCIO::TRACKERHIT, LCIO::SIMTRACKERHIT);
+
     unsigned nHits = col->getNumberOfElements()  ;
     
     streamlog_out(DEBUG3) << "Number of hits: " << nHits <<"\n";
@@ -304,38 +300,22 @@ void DDSpacePointBuilder::processEvent( LCEvent * evt ) {
               
               ///////////////////////////////
               // make the relations
-              
               if( simHitsFront.size() == 1 ){
                 
                 SimTrackerHit* simHit = dynamic_cast< SimTrackerHit* >( simHitsFront[0] );
                 
                 if( simHit != NULL ){
-                  LCRelationImpl* rel = new LCRelationImpl;
-                  rel->setFrom (spacePoint);
-                  rel->setTo  (simHit);
-                  rel->setWeight( 0.5 );
-                  relCol->addElement(rel);
+                  spSimHitNav.addRelation(spacePoint, simHit, 0.5);
                 }
               }
-              
-
-              
               if( simHitsBack.size() == 1 ){
                 
                 SimTrackerHit* simHit = dynamic_cast< SimTrackerHit* >( simHitsBack[0] );
                 
                 if( simHit != NULL ){
-                  LCRelationImpl* rel = new LCRelationImpl;
-                  rel->setFrom (spacePoint);
-                  rel->setTo  (simHit);
-                  rel->setWeight( 0.5 );
-                  relCol->addElement(rel);
+                  spSimHitNav.addRelation(spacePoint, simHit, 0.5);
                 }
               }
-             
-              
-
-
             } else {
                  
               if ( ghost_hit == true ) {
@@ -356,6 +336,7 @@ void DDSpacePointBuilder::processEvent( LCEvent * evt ) {
     }
     
     evt->addCollection( spCol, _SpacePointsCollection);
+    auto* relCol = spSimHitNav.createLCCollection();
     evt->addCollection( relCol , _relColName ) ;
     
     streamlog_out(DEBUG3)<< "\nCreated " << createdSpacePoints
