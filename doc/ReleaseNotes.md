@@ -1,3 +1,13 @@
+# v02-12-05
+
+* 2024-02-16 tmadlener ([PR#69](https://github.com/iLCSoft/MarlinTrkProcessors/pull/69))
+  - Use the `LCRelationNavigator` to create output relation collections with the necessary type information.
+    - This is necessary for automatic conversion from LCIO to EDM4hep when used within the MarlinWrapper and Gaudi.
+
+* 2024-02-16 tmadlener ([PR#68](https://github.com/iLCSoft/MarlinTrkProcessors/pull/68))
+  - Switch to the `key4hep-build` github action for building against key4hep stacks
+  - Update the clicdp nightlies based workflow to the latest available version of the nightlies
+
 # v02-12-04
 
 * 2023-06-12 tmadlener ([PR#66](https://github.com/iLCSoft/MarlinTrkProcessors/pull/66))
