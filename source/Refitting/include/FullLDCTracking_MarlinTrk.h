@@ -334,6 +334,8 @@ protected:
 
   std::string _LDCTrackCollection{};
 
+  std::string m_vtxDetName{};
+
   TrackExtendedVec _allSiTracks{};
   TrackExtendedVec _allTPCTracks{};
   TrackExtendedVec _allCombinedTracks{};
