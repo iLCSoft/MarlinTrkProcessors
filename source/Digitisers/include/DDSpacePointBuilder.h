@@ -71,6 +71,9 @@ class DDSpacePointBuilder : public Processor {
   
   
   DDSpacePointBuilder() ;
+
+  DDSpacePointBuilder(const DDSpacePointBuilder&) = delete;
+  DDSpacePointBuilder& operator=(const DDSpacePointBuilder&) = delete;
   
   /** Called at the begin of the job before anything is read.
    * Use to initialize the processor, e.g. book histograms.
@@ -102,19 +105,19 @@ class DDSpacePointBuilder : public Processor {
 
   /** Input collection name.
   */
-  std::string _TrackerHitCollection;
+  std::string _TrackerHitCollection{};
 
   /** Input relation collection name.
    */
-  std::string _TrackerHitSimHitRelCollection;
+  std::string _TrackerHitSimHitRelCollection{};
   
   /** Output collection name.
   */
-  std::string _SpacePointsCollection;
+  std::string _SpacePointsCollection{};
   
   /** Output relations collection name.
    */
-  std::string _relColName;
+  std::string _relColName{};
 
   /** Calculates the 2 dimensional crossing point of two lines.
    * Each line is specified by a point (x,y) and a direction vector (ex,ey).
@@ -196,26 +199,26 @@ class DDSpacePointBuilder : public Processor {
   std::string getCellID0Info( int cellID0 );
  
 
-  int _nRun ;
-  int _nEvt ;
+  int _nRun {};
+  int _nEvt {};
 
-  unsigned _nOutOfBoundary;
-  unsigned _nStripsTooParallel;
-  unsigned _nPlanesNotParallel;
+  unsigned _nOutOfBoundary{};
+  unsigned _nStripsTooParallel{};
+  unsigned _nPlanesNotParallel{};
 
-  float _nominal_vertex_x;
-  float _nominal_vertex_y;
-  float _nominal_vertex_z;
+  float _nominal_vertex_x{};
+  float _nominal_vertex_y{};
+  float _nominal_vertex_z{};
 
-  CLHEP::Hep3Vector _nominal_vertex;
+  CLHEP::Hep3Vector _nominal_vertex{};
 
-  float _striplength_tolerance;
+  float _striplength_tolerance{};
 
-  double _striplength ;
-  std::string _subDetName ;
+  double _striplength {};
+  std::string _subDetName {};
 
   //dd4hep::Detector& lcdd;
-  const dd4hep::rec::SurfaceMap* surfMap ;
+  const dd4hep::rec::SurfaceMap* surfMap {nullptr};
   
 } ;
 

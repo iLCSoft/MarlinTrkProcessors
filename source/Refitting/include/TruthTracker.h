@@ -80,6 +80,8 @@ public:
   
   
   TruthTracker() ;
+  TruthTracker(const TruthTracker&) = delete ;
+  TruthTracker& operator=(const TruthTracker&) = delete ;
   
   /** Called at the begin of the job before anything is read.
    * Use to initialize the processor, e.g. book histograms.
@@ -124,7 +126,7 @@ protected:
   
   const LCObjectVec* getSimHits( TrackerHit* trkhit, const FloatVec* weights = NULL);
   
-  UTIL::BitField64* _encoder;
+  UTIL::BitField64* _encoder{nullptr};
   int getDetectorID(TrackerHit* hit) { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::subdet()]; }
   int getSideID(TrackerHit* hit)     { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::side()]; };
   int getLayerID(TrackerHit* hit)    { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::layer()]; };
@@ -152,86 +154,86 @@ protected:
   
   /** input MCParticle collection
    */
-  std::string  _colNameMCParticles;
+  std::string  _colNameMCParticles{};
   
   /** input TrackerHit collections
    */
-  std::vector< std::string > _colNamesTrackerHits;
+  std::vector< std::string > _colNamesTrackerHits{};
  
   /** input relation collections 
    */
-  std::vector< std::string > _colNamesTrackerHitRelations;
+  std::vector< std::string > _colNamesTrackerHitRelations{};
 
-  std::vector< LCCollection* > _colTrackerHits;
-  std::vector< LCRelationNavigator* > _navTrackerHitRel;
+  std::vector< LCCollection* > _colTrackerHits{};
+  std::vector< LCRelationNavigator* > _navTrackerHitRel{};
   
   /** output track collection 
    */
-  std::string _output_track_col_name ;
-  LCCollectionVec* _trackVec;
+  std::string _output_track_col_name {};
+  LCCollectionVec* _trackVec{nullptr};
   
   /** Output track relations
    */
-  std::string _output_track_rel_name ;
-  LCCollectionVec* _trackRelVec;
+  std::string _output_track_rel_name {};
+  LCCollectionVec* _trackRelVec{nullptr};
 
   
   /** output track segments collection, used for tracks which cannot be formed from a single fit 
    */
-  std::string _output_track_segments_col_name ;
-  LCCollectionVec* _trackSegmentsVec;
+  std::string _output_track_segments_col_name {};
+  LCCollectionVec* _trackSegmentsVec{nullptr};
   
   /** Output track segments relations, used for tracks which cannot be formed from a single fit
    */
-  std::string _output_track_segment_rel_name ;
-  LCCollectionVec* _trackSegmentsRelVec;
+  std::string _output_track_segment_rel_name {};
+  LCCollectionVec* _trackSegmentsRelVec{nullptr};
   
-  int _nMCP;
+  int _nMCP{};
   
-  int _n_run ;
-  int _n_evt ;
+  int _n_run {};
+  int _n_evt {};
   
-  float _MCpThreshold ;
+  float _MCpThreshold {};
 
-  bool _useMCParticleParametersFotInitOfFit;
+  bool _useMCParticleParametersFotInitOfFit{};
   
   /** pointer to the IMarlinTrkSystem instance 
    */
-  MarlinTrk::IMarlinTrkSystem* _trksystem ;
-  bool _runMarlinTrkDiagnostics;
-  std::string _MarlinTrkDiagnosticsName;
+  MarlinTrk::IMarlinTrkSystem* _trksystem {nullptr};
+  bool _runMarlinTrkDiagnostics{};
+  std::string _MarlinTrkDiagnosticsName{};
 
-  bool _FitTracksWithMarlinTrk;
-  bool _create_prefit_using_MarlinTrk;
+  bool _FitTracksWithMarlinTrk{};
+  bool _create_prefit_using_MarlinTrk{};
     
-  bool _MSOn ;
-  bool _ElossOn ;
-  bool _SmoothOn ;
+  bool _MSOn {};
+  bool _ElossOn {};
+  bool _SmoothOn {};
 
-  float _initialTrackError_d0;
-  float _initialTrackError_phi0;
-  float _initialTrackError_omega;
-  float _initialTrackError_z0;
-  float _initialTrackError_tanL;
+  float _initialTrackError_d0{};
+  float _initialTrackError_phi0{};
+  float _initialTrackError_omega{};
+  float _initialTrackError_z0{};
+  float _initialTrackError_tanL{};
 
-  bool  _UseIterativeFitting;
-  bool  _UseEventDisplay;
+  bool  _UseIterativeFitting{};
+  bool  _UseEventDisplay{};
   
-  double _maxChi2PerHit;
+  double _maxChi2PerHit{};
     
-  double _Bz;
+  double _Bz{};
 
-  unsigned _nCreatedTracks;
+  unsigned _nCreatedTracks{};
   
-  EVENT::LCEvent* _current_event;
+  EVENT::LCEvent* _current_event{nullptr};
   
-  int _detector_model_for_drawing;
-  std::vector<int> _colours;  
-  float     _helix_max_r;
+  int _detector_model_for_drawing{};
+  std::vector<int> _colours{};
+  float     _helix_max_r{};
   
-  std::string _trkSystemName ;
+  std::string _trkSystemName {};
 
-  int _fitDirection ;
+  int _fitDirection {};
 } ;
 
 #endif

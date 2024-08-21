@@ -29,7 +29,8 @@ public:
 
   /// no default c'tor
   TPCModularEndplate() = delete ;
-  
+  TPCModularEndplate(const TPCModularEndplate&) = delete;
+  TPCModularEndplate& operator=(const TPCModularEndplate&) = delete;
 
   /// intitialize for the gice TPC data
   TPCModularEndplate( const dd4hep::rec::FixedPadSizeTPCData* tpc ) ;

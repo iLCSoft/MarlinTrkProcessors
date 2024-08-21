@@ -57,6 +57,8 @@ class TrackSubsetProcessor : public Processor {
   
   
   TrackSubsetProcessor() ;
+  TrackSubsetProcessor(const TrackSubsetProcessor&) = delete ;
+  TrackSubsetProcessor& operator=(const TrackSubsetProcessor&) = delete ;
   
   /** Called at the begin of the job before anything is read.
    * Use to initialize the processor, e.g. book histograms.
@@ -89,34 +91,34 @@ class TrackSubsetProcessor : public Processor {
   
   
   /** Input collection names */
-  std::vector< std::string > _trackInputColNames;
+  std::vector< std::string > _trackInputColNames{};
   
   /** Output collection name */
-  std::string _trackOutputColName;
+  std::string _trackOutputColName{};
   
-  MarlinTrk::IMarlinTrkSystem* _trkSystem;
-  std::string _trkSystemName ;
+  MarlinTrk::IMarlinTrkSystem* _trkSystem{nullptr};
+  std::string _trkSystemName {};
   
-  bool _MSOn ;
-  bool _ElossOn ;
-  bool _SmoothOn ;
-  bool _removeShortTracks ;
+  bool _MSOn {};
+  bool _ElossOn {};
+  bool _SmoothOn {};
+  bool _removeShortTracks {};
 
 
-  float _initialTrackError_d0;
-  float _initialTrackError_phi0;
-  float _initialTrackError_omega;
-  float _initialTrackError_z0;
-  float _initialTrackError_tanL;
+  float _initialTrackError_d0{};
+  float _initialTrackError_phi0{};
+  float _initialTrackError_omega{};
+  float _initialTrackError_z0{};
+  float _initialTrackError_tanL{};
   
-  double _maxChi2PerHit;
+  double _maxChi2PerHit{};
   
-  float _bField;
+  float _bField{};
   
-  int _nRun ;
-  int _nEvt ;
+  int _nRun {};
+  int _nEvt {};
   
-  double _omega;
+  double _omega{};
   
 } ;
 
@@ -171,7 +173,7 @@ public:
   
 protected:
   
-  MarlinTrk::IMarlinTrkSystem* _trkSystem;
+  MarlinTrk::IMarlinTrkSystem* _trkSystem{nullptr};
     
 };
 

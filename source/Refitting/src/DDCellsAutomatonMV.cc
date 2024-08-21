@@ -560,7 +560,7 @@ void DDCellsAutomatonMV::processEvent( LCEvent * evt ) {
 	streamlog_out( DEBUG2 ) << "Keeping track because of good helix fit: chi2/ndf = " << chi2OverNdf << "\n";
       }
     }
-    catch( VXDHelixFitterException e ){
+    catch( VXDHelixFitterException& e ){
       
       
       streamlog_out( DEBUG2 ) << "Track rejected, because fit failed: " <<  e.what() << "\n";
@@ -610,7 +610,7 @@ void DDCellsAutomatonMV::processEvent( LCEvent * evt ) {
       
       
     }
-    catch( FitterException e ){
+    catch( FitterException& e ){
       
       streamlog_out( DEBUG4 ) << "Track rejected, because fit failed: " <<  e.what() << "\n";
       delete trackCand;
@@ -737,7 +737,7 @@ void DDCellsAutomatonMV::processEvent( LCEvent * evt ) {
 	  }
 	}
 	
-	catch( FitterException e ){
+	catch( FitterException& e ){
 	  
 	  streamlog_out( DEBUG4 ) << "DDCellsAutomatonMV: track couldn't be finalized due to fitter error: " << e.what() << "\n";
 	  delete trackImpl;

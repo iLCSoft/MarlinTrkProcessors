@@ -69,6 +69,8 @@ public:
   virtual marlin::Processor*  newProcessor() { return new ExtrToTracker ; }
   
   ExtrToTracker() ;
+  ExtrToTracker(const ExtrToTracker&) = delete;
+  ExtrToTracker& operator=(const ExtrToTracker&) = delete;
 
   /** Called at the begin of the job before anything is read.
    * Use to initialize the processor, e.g. book histograms.
@@ -140,63 +142,63 @@ protected:
   
   /** Input track collection name for refitting.
    */
-  std::string _input_track_col_name ;
+  std::string _input_track_col_name {};
   
 
   /** output collection name for the not used hits.
    */
-  std::string _output_not_used_col_name ;
+  std::string _output_not_used_col_name {};
   
   /** output track collection name.
    */
-  std::string _output_track_col_name ;
+  std::string _output_track_col_name {};
   
   /** Output track relations name for refitting.
    */
-  std::string _output_track_rel_name ;
+  std::string _output_track_rel_name {};
   
   /** pointer to the IMarlinTrkSystem instance 
    */
-  MarlinTrk::IMarlinTrkSystem* _trksystem ;
+  MarlinTrk::IMarlinTrkSystem* _trksystem {nullptr};
   
   /* std::string _mcParticleCollectionName ; */
 
-  bool _MSOn ;
-  bool _ElossOn ;
-  bool _SmoothOn ;
-  double _Max_Chi2_Incr ;
-  double _searchSigma ;
+  bool _MSOn {};
+  bool _ElossOn {};
+  bool _SmoothOn {};
+  double _Max_Chi2_Incr {};
+  double _searchSigma {};
   
-  int _n_run ;
-  int _n_evt ;
-  int SITHitsFitted ;
-  int SITHitsNonFitted ;
-  int TotalSITHits ;
-  int _nHitsChi2 ;
+  int _n_run {};
+  int _n_evt {};
+  int SITHitsFitted {};
+  int SITHitsNonFitted {};
+  int TotalSITHits {};
+  int _nHitsChi2 {};
 
-  float _bField;
+  float _bField{};
 
-  bool _performFinalRefit ;
+  bool _performFinalRefit {};
  
-  bool _extrapolateForward;
+  bool _extrapolateForward{};
 
-  const dd4hep::rec::SurfaceMap* _map ;
+  const dd4hep::rec::SurfaceMap* _map {nullptr};
 
   
 
   //processor parameters
 
-  StringVec _vecDigiHits;
-  StringVec _vecSubdetName;
-  std::vector<bool > _vecSubdetIsBarrel;
-  std::vector<int > _vecSubdetNLayers;
-  std::vector<int > _vecSubdetID;
-  std::vector<LCCollection* > _vecDigiHitsCol;
-  std::vector<std::map<dd4hep::CellID , std::vector<dd4hep::CellID > >* >  _vecMapNeighbours;
+  StringVec _vecDigiHits{};
+  StringVec _vecSubdetName{};
+  std::vector<bool > _vecSubdetIsBarrel{};
+  std::vector<int > _vecSubdetNLayers{};
+  std::vector<int > _vecSubdetID{};
+  std::vector<LCCollection* > _vecDigiHitsCol{};
+  std::vector<std::map<dd4hep::CellID , std::vector<dd4hep::CellID > >* >  _vecMapNeighbours{};
 
-  std::vector<std::map<int , std::vector<TrackerHitPlane* > > > _vecMapsElHits;
+  std::vector<std::map<int , std::vector<TrackerHitPlane* > > > _vecMapsElHits{};
 
-  std::vector<std::vector<TrackerHitPlane* > > _vecvecHitsInCol;
+  std::vector<std::vector<TrackerHitPlane* > > _vecvecHitsInCol{};
  
  
 } ;

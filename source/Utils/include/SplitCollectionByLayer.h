@@ -30,10 +30,10 @@ protected:
 
   ///helper struct
   struct OutColInfo{
-    std::string name ;
-    unsigned layer0 ;
-    unsigned layer1 ;
-    LCCollection* collection ;
+    std::string name {};
+    unsigned layer0 {};
+    unsigned layer1 {};
+    LCCollection* collection {nullptr};
   };
   
   /// Enum used for hit types
@@ -51,6 +51,8 @@ protected:
   
   
   SplitCollectionByLayer() ;
+  SplitCollectionByLayer(const SplitCollectionByLayer&) = delete ;
+  SplitCollectionByLayer& operator=(const SplitCollectionByLayer&) = delete ;
   
   virtual const std::string & name() const { return Processor::name() ; }
  
@@ -79,17 +81,17 @@ protected:
  protected:
 
   ////Input collection name.
-  std::string _colName ;
+  std::string _colName {};
 
   /// Output collections and layers:
-  StringVec  _outColAndLayers ;
+  StringVec  _outColAndLayers {};
 
-  std::vector<OutColInfo> _outCols ;
+  std::vector<OutColInfo> _outCols {};
 
-  HitType _type ;
+  HitType _type {};
 
-  int _nRun ;
-  int _nEvt ;
+  int _nRun {};
+  int _nEvt {};
 } ;
 
 #endif

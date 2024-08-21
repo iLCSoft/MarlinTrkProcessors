@@ -61,6 +61,8 @@ public:
   
   
   DDPlanarDigiProcessor() ;
+  DDPlanarDigiProcessor(const DDPlanarDigiProcessor&) = delete;
+  DDPlanarDigiProcessor& operator=(const DDPlanarDigiProcessor&) = delete;
   
   /** Called at the begin of the job before anything is read.
    * Use to initialize the processor, e.g. book histograms.
@@ -88,35 +90,35 @@ public:
   
 protected:
   
-  std::string _inColName ;
+  std::string _inColName {};
   
-  std::string _outColName ;
-  std::string _outRelColName ;
+  std::string _outColName {};
+  std::string _outRelColName {};
  
-  std::string _subDetName ;
+  std::string _subDetName {};
   
-  int _nRun ;
-  int _nEvt ;
+  int _nRun {};
+  int _nEvt {};
   
-  FloatVec _resU ;
-  FloatVec _resV ;
-  FloatVec _resT ;
+  FloatVec _resU {};
+  FloatVec _resV {};
+  FloatVec _resT {};
   
-  bool _isStrip;
+  bool _isStrip{};
   
-  gsl_rng* _rng ;
+  gsl_rng* _rng {nullptr};
   
-  const dd4hep::rec::SurfaceMap* _map ;
+  const dd4hep::rec::SurfaceMap* _map {nullptr};
 
-  bool _forceHitsOntoSurface  ;
-  double _minEnergy ;
+  bool _forceHitsOntoSurface {};
+  double _minEnergy {};
 
-  bool _useTimeWindow ;
-  bool _correctTimesForPropagation ;
-  FloatVec _timeWindow_min ;
-  FloatVec _timeWindow_max ;
+  bool _useTimeWindow {};
+  bool _correctTimesForPropagation {};
+  FloatVec _timeWindow_min {};
+  FloatVec _timeWindow_max {};
 
-  std::vector<TH1F*> _h ;
+  std::vector<TH1F*> _h {};
   
 } ;
 

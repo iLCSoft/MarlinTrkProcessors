@@ -145,8 +145,8 @@ namespace DiagnosticsHistograms {
     
   protected:
     
-    std::vector<TH1*> _h1D;
-    std::vector<TH2*> _h2D;
+    std::vector<TH1*> _h1D{};
+    std::vector<TH2*> _h2D{};
 
   };
   
@@ -2296,9 +2296,9 @@ void SiliconTracking_MarlinTrk::CreateTrack(TrackExtended * trackAR ) {
 
 	  trackAR->ClearTrackerHitExtendedVec();
 	  for (int i=0;i<nHits;++i) {
-	    int iopt = 2;
+	    int i_opt = 2;
 	    TrackerHitExtended * trkHit = hitVec[i];
-	    AttachHitToTrack(trackOld, trkHit, iopt );
+	    AttachHitToTrack(trackOld, trkHit, i_opt );
 	  }
 
 	} else { // backward compatible

@@ -190,6 +190,8 @@ public:
   
   
   SiliconTracking_MarlinTrk() ;
+  SiliconTracking_MarlinTrk(const SiliconTracking_MarlinTrk&) = delete ;
+  SiliconTracking_MarlinTrk& operator=(const SiliconTracking_MarlinTrk&) = delete ;
   
   /**  
    * Initialization
@@ -215,53 +217,53 @@ public:
   
 protected:
   
-  int _nRun ;
-  int _nEvt ;
-  EVENT::LCEvent* _current_event;
+  int _nRun {};
+  int _nEvt {};
+  EVENT::LCEvent* _current_event{nullptr};
   
-  int _nDivisionsInPhi;
-  int _nDivisionsInTheta;
-  int _nLayers;
+  int _nDivisionsInPhi{};
+  int _nDivisionsInTheta{};
+  int _nLayers{};
   
-  MarlinTrk::HelixFit* _fastfitter;
+  MarlinTrk::HelixFit* _fastfitter{nullptr};
   
   /** pointer to the IMarlinTrkSystem instance 
    */
-  MarlinTrk::IMarlinTrkSystem* _trksystem ;
-  bool _runMarlinTrkDiagnostics;
-  std::string _MarlinTrkDiagnosticsName;
+  MarlinTrk::IMarlinTrkSystem* _trksystem {nullptr};
+  bool _runMarlinTrkDiagnostics{};
+  std::string _MarlinTrkDiagnosticsName{};
   
-  bool _MSOn, _ElossOn, _SmoothOn ;
+  bool _MSOn{}, _ElossOn{}, _SmoothOn {};
 
   /** switches: False for backward compatible (default).
                 True to apply new methods.
    */
-  bool _useSimpleUpdatedCoreBin;
-  bool _useSimpleAttachHitToTrack;
+  bool _useSimpleUpdatedCoreBin{};
+  bool _useSimpleAttachHitToTrack{};
 
-  float _initialTrackError_d0;
-  float _initialTrackError_phi0;
-  float _initialTrackError_omega;
-  float _initialTrackError_z0;
-  float _initialTrackError_tanL;
+  float _initialTrackError_d0{};
+  float _initialTrackError_phi0{};
+  float _initialTrackError_omega{};
+  float _initialTrackError_z0{};
+  float _initialTrackError_tanL{};
   
-  double _maxChi2PerHit;  
+  double _maxChi2PerHit{};  
   
-  bool  _UseEventDisplay;
-  int _detector_model_for_drawing;
-  std::vector<int> _colours;  
-  float     _helix_max_r;
+  bool  _UseEventDisplay{};
+  int _detector_model_for_drawing{};
+  std::vector<int> _colours{};  
+  float     _helix_max_r{};
   
   void drawEvent();
   
   
   // histogram member variables
   
-  bool  _createDiagnosticsHistograms;
+  bool  _createDiagnosticsHistograms{};
   DiagnosticsHistograms::Histograms* _histos{nullptr};
 
   
-  int _ntriplets, _ntriplets_good, _ntriplets_2MCP, _ntriplets_3MCP, _ntriplets_1MCP_Bad, _ntriplets_bad;
+  int _ntriplets{}, _ntriplets_good{}, _ntriplets_2MCP{}, _ntriplets_3MCP{}, _ntriplets_1MCP_Bad{}, _ntriplets_bad{};
   
   
   /** helper function to get collection using try catch block */
@@ -272,8 +274,8 @@ protected:
   
   /** input MCParticle collection and threshold used for Drawing
    */
-  std::string  _colNameMCParticles;
-  float _MCpThreshold ;
+  std::string  _colNameMCParticles{};
+  float _MCpThreshold {};
   
   
   /// Compare tracks according to their chi2/ndf
@@ -286,17 +288,17 @@ protected:
   };
   
   
-  std::string _VTXHitCollection;
-  std::string _FTDPixelHitCollection;
-  std::string _FTDSpacePointCollection;
-  std::string _SITHitCollection;
-  std::string _siTrkCollection;
+  std::string _VTXHitCollection{};
+  std::string _FTDPixelHitCollection{};
+  std::string _FTDSpacePointCollection{};
+  std::string _SITHitCollection{};
+  std::string _siTrkCollection{};
   
-  std::vector< LCCollection* > _colTrackerHits;
-  std::map< LCCollection*, std::string > _colNamesTrackerHits;
+  std::vector< LCCollection* > _colTrackerHits{};
+  std::map< LCCollection*, std::string > _colNamesTrackerHits{};
   
-  std::vector<TrackerHitExtendedVec> _sectors;
-  std::vector<TrackerHitExtendedVec> _sectorsFTD;
+  std::vector<TrackerHitExtendedVec> _sectors{};
+  std::vector<TrackerHitExtendedVec> _sectorsFTD{};
   
   /**
    * A helper class to allow good code readability by accessing tracks with N hits.
@@ -329,11 +331,11 @@ protected:
     }
     
   protected:
-    std::vector< TrackExtendedVec > _tracksNHits;
-    size_t _maxIndex; /// local cache variable to avoid calculation overhead
+    std::vector< TrackExtendedVec > _tracksNHits{};
+    size_t _maxIndex{}; /// local cache variable to avoid calculation overhead
   };
   
-  TracksWithNHitsContainer _tracksWithNHitsContainer;
+  TracksWithNHitsContainer _tracksWithNHitsContainer{};
   
   int InitialiseVTX(LCEvent * evt);
   int InitialiseFTD(LCEvent * evt);
@@ -365,69 +367,69 @@ protected:
   
   void FinalRefit(LCCollectionVec* trk_col, LCCollectionVec* rel_col);
   
-  float _bField;
-  float _chi2WRPhiTriplet;
-  float _chi2WRPhiQuartet;
-  float _chi2WRPhiSeptet;
-  float _chi2WZTriplet;
-  float _chi2WZQuartet;
-  float _chi2WZSeptet;
-  float _minDistCutAttach;
-  int _minimalLayerToAttach;
+  float _bField{};
+  float _chi2WRPhiTriplet{};
+  float _chi2WRPhiQuartet{};
+  float _chi2WRPhiSeptet{};
+  float _chi2WZTriplet{};
+  float _chi2WZQuartet{};
+  float _chi2WZSeptet{};
+  float _minDistCutAttach{};
+  int _minimalLayerToAttach{};
   
   // two pi is not a constant in cmath. Calculate it, once!
   static const double TWOPI;
   
-  double _dPhi;
-  double _dTheta;
-  double _dPhiFTD;
+  double _dPhi{};
+  double _dTheta{};
+  double _dPhiFTD{};
   
 
   
-  std::vector<int> _Combinations;
-  std::vector<int> _CombinationsFTD;
+  std::vector<int> _Combinations{};
+  std::vector<int> _CombinationsFTD{};
   
-  float _resolutionRPhiVTX;
-  float _resolutionZVTX;
+  float _resolutionRPhiVTX{};
+  float _resolutionZVTX{};
   
-  float _resolutionRPhiFTD;
-  float _resolutionZFTD;
+  float _resolutionRPhiFTD{};
+  float _resolutionZFTD{};
   
-  float _resolutionRPhiSIT;
-  float _resolutionZSIT;
+  float _resolutionRPhiSIT{};
+  float _resolutionZSIT{};
   
-  float _phiCutForMerging;
-  float _tanlambdaCutForMerging;
-  float _angleCutForMerging;
+  float _phiCutForMerging{};
+  float _tanlambdaCutForMerging{};
+  float _angleCutForMerging{};
   
-  int _print;
-  int _checkForDelta;
-  float _minDistToDelta;
+  int _print{};
+  int _checkForDelta{};
+  float _minDistToDelta{};
   
-  float _distRPhi;
-  float _distZ;
-  float _chi2FitCut;
-  
-  
-  TrackExtendedVec _trackImplVec;
+  float _distRPhi{};
+  float _distZ{};
+  float _chi2FitCut{};
   
   
-  float _cutOnD0, _cutOnZ0, _cutOnOmega, _cutOnPt;
+  TrackExtendedVec _trackImplVec{};
   
-  int _minimalHits;
-  int _nHitsChi2;
-  int _attachFast;
   
-  int _max_hits_per_sector;
+  float _cutOnD0{}, _cutOnZ0{}, _cutOnOmega{}, _cutOnPt{};
   
-  int _nTotalVTXHits,_nTotalFTDHits,_nTotalSITHits;
-  int _useSIT;
+  int _minimalHits{};
+  int _nHitsChi2{};
+  int _attachFast{};
+  
+  int _max_hits_per_sector{};
+  
+  int _nTotalVTXHits{},_nTotalFTDHits{},_nTotalSITHits{};
+  int _useSIT{};
 
-  std::string _trkSystemName ;
+  std::string _trkSystemName {};
   
   //  int _createMap;
   
-  UTIL::BitField64* _encoder;
+  UTIL::BitField64* _encoder{nullptr};
   int getDetectorID(TrackerHit* hit) { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::subdet()]; }
   int getSideID(TrackerHit* hit)     { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::side()]; };
   int getLayerID(TrackerHit* hit)    { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::layer()]; };
@@ -437,18 +439,18 @@ protected:
   void setupGeom(const dd4hep::Detector& theDetector);
   
   
-  unsigned int _nLayersVTX;
+  unsigned int _nLayersVTX{};
   
-  unsigned int _nLayersSIT;
+  unsigned int _nLayersSIT{};
   
   
-  std::vector<float> _zLayerFTD;
+  std::vector<float> _zLayerFTD{};
   
-  unsigned int _nlayersFTD;
-  bool _petalBasedFTDWithOverlaps;
-  int _nPhiFTD; 
+  unsigned int _nlayersFTD{};
+  bool _petalBasedFTDWithOverlaps{};
+  int _nPhiFTD{};
 
-  int _output_track_col_quality;
+  int _output_track_col_quality{};
   static const int _output_track_col_quality_GOOD;
   static const int _output_track_col_quality_FAIR;
   static const int _output_track_col_quality_POOR;

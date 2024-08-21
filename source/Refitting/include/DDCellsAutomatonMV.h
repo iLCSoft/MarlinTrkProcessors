@@ -87,6 +87,8 @@ class DDCellsAutomatonMV : public Processor {
   
   
   DDCellsAutomatonMV() ;
+  DDCellsAutomatonMV(const DDCellsAutomatonMV&) = delete ;
+  DDCellsAutomatonMV& operator=(const DDCellsAutomatonMV&) = delete ;
   
   /** Called at the begin of the job before anything is read.
    * Use to initialize the processor, e.g. book histograms.
@@ -113,29 +115,30 @@ class DDCellsAutomatonMV : public Processor {
 
 
  protected:
+  int nEvt{};
 
-  int nEvt;
+  int _nDivisionsInPhi{};
+  int _nDivisionsInTheta{};
+  int _nDivisionsInPhiMV{};
+  int _nDivisionsInThetaMV{};
+  int _nLayers{};
 
-  int _nDivisionsInPhi;
-  int _nDivisionsInTheta;
-  int _nDivisionsInPhiMV;
-  int _nDivisionsInThetaMV;
-  int _nLayers;
-
-  float _bField;
+  float _bField{};
 
   // two pi is not a constant in cmath. Calculate it, once!
   static const double TWOPI;
-  double _dPhi;
-  double _dTheta;
-
-  UTIL::BitField64* _encoder;
+  UTIL::BitField64* _encoder{nullptr};
   int getDetectorID(TrackerHit* hit) { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::subdet()]; }
   int getSideID(TrackerHit* hit)     { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::side()]; };
   int getLayerID(TrackerHit* hit)    { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::layer()]; };
   int getModuleID(TrackerHit* hit)   { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::module()]; };
   int getSensorID(TrackerHit* hit)   { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::sensor()]; };
   
+  double _dPhi{};
+  double _dTheta{};
+
+  unsigned int _nLayersVTX{};
+  unsigned int _nLayersSIT{};
 
   void InitialiseVTX(LCEvent * evt, EVENT::TrackerHitVec HitsTemp);
   void setupGeom() ;
@@ -148,107 +151,100 @@ class DDCellsAutomatonMV : public Processor {
   bool thetaAgreementImproved( EVENT::TrackerHit *toHit, EVENT::TrackerHit *fromHit, int layer ) ;
   double Dist( EVENT::TrackerHit *toHit, EVENT::TrackerHit *fromHit ) ;
 
-  unsigned int _nLayersVTX;
-  unsigned int _nLayersSIT;
-  
   /** A map to store the hits according to their sectors */
-  std::map< int , EVENT::TrackerHitVec > _map_sector_spacepoints;
-  std::map< int , std::vector< IHit* > > _map_sector_hits;
-  
-  /** Names of the used criteria */
-  std::vector< std::string > _criteriaNames;
-   
-  /** Map containing the name of a criterion and a vector of the minimum cut offs for it */
-  std::map< std::string , std::vector<float> > _critMinima;
-  
-  /** Map containing the name of a criterion and a vector of the maximum cut offs for it */
-  std::map< std::string , std::vector<float> > _critMaxima;
-  
-  /** Minimum number of hits a track has to have in order to be stored */
-  int _hitsPerTrackMin;
-  
-  /** A vector of criteria for 2 hits (2 1-hit segments) */
-  std::vector <ICriterion*> _crit2Vec;
-  
-  /** A vector of criteria for 3 hits (2 2-hit segments) */
-  std::vector <ICriterion*> _crit3Vec;
-  
-  /** A vector of criteria for 4 hits (2 3-hit segments) */
-  std::vector <ICriterion*> _crit4Vec;
+  std::map<int, EVENT::TrackerHitVec> _map_sector_spacepoints{};
+  std::map<int, std::vector<IHit*>> _map_sector_hits{};
 
-  std::vector< IHit* > MiniVectorsTemp;
-  std::vector< IHit* > TestMiniVectorsTemp;
+  /** Names of the used criteria */
+  std::vector<std::string> _criteriaNames{};
+
+  /** Map containing the name of a criterion and a vector of the minimum cut offs for it */
+  std::map<std::string, std::vector<float>> _critMinima{};
+
+  /** Map containing the name of a criterion and a vector of the maximum cut offs for it */
+  std::map<std::string, std::vector<float>> _critMaxima{};
+
+  /** Minimum number of hits a track has to have in order to be stored */
+  int _hitsPerTrackMin{};
+
+  /** A vector of criteria for 2 hits (2 1-hit segments) */
+  std::vector<ICriterion*> _crit2Vec{};
+
+  /** A vector of criteria for 3 hits (2 2-hit segments) */
+  std::vector<ICriterion*> _crit3Vec{};
+
+  /** A vector of criteria for 4 hits (2 3-hit segments) */
+  std::vector<ICriterion*> _crit4Vec{};
+
+  std::vector<IHit*> MiniVectorsTemp{};
+  std::vector<IHit*> TestMiniVectorsTemp{};
 
   /** Cut for the Kalman Fit (the chi squared probability) */
-  double _chi2ProbCut;  
+  double _chi2ProbCut{};
 
-  double _helixFitMax ;
+  double _helixFitMax{};
 
-  double _chi2OverNdfCut ;
+  double _chi2OverNdfCut{};
 
-  const SectorSystemVXD * _sectorSystemVXD;
-   
+  const SectorSystemVXD* _sectorSystemVXD{nullptr};
+
   /** the maximum number of connections that are allowed in the automaton, if this value is surpassed, rerun
    * the automaton with tighter cuts or stop it entirely. */
-  int _maxConnectionsAutomaton;
-  
-  MarlinTrk::IMarlinTrkSystem* _trkSystem;
-  
-  bool _MSOn, _ElossOn, _SmoothOn, _middleLayer ;
+  int _maxConnectionsAutomaton{};
 
-  int _useSIT ;
+  MarlinTrk::IMarlinTrkSystem* _trkSystem{nullptr};
 
-  int _layerStepMax ;
+  bool _MSOn{}, _ElossOn{}, _SmoothOn{}, _middleLayer{};
 
-  int _lastLayerToIP ;
+  int _useSIT{};
 
-  int _nHitsChi2 ;
+  int _layerStepMax{};
 
-  int MiniVectors_sectors ;
-  int MiniVectors_CutSelection ;
+  int _lastLayerToIP{};
 
-  FloatVec _resU ;
+  int _nHitsChi2{};
 
-  double _maxDist ;
-  double _hitPairThDiff ;
-  double _hitPairThDiffInner ;
-  
-  //std::vector< MarlinTrk::IMarlinTrack* > GoodTracks;
-  //std::vector< MarlinTrk::IMarlinTrack* > RejectedTracks;
+  int MiniVectors_sectors{};
+  int MiniVectors_CutSelection{};
 
+  FloatVec _resU{};
 
-  
-  float _initialTrackError_d0;
-  float _initialTrackError_phi0;
-  float _initialTrackError_omega;
-  float _initialTrackError_z0;
-  float _initialTrackError_tanL;
-  float _maxChi2PerHit;
+  double _maxDist{};
+  double _hitPairThDiff{};
+  double _hitPairThDiffInner{};
 
-  int _maxHitsPerSector ;
-  
+  // std::vector< MarlinTrk::IMarlinTrack* > GoodTracks;
+  // std::vector< MarlinTrk::IMarlinTrack* > RejectedTracks;
+
+  float _initialTrackError_d0{};
+  float _initialTrackError_phi0{};
+  float _initialTrackError_omega{};
+  float _initialTrackError_z0{};
+  float _initialTrackError_tanL{};
+  float _maxChi2PerHit{};
+
+  int _maxHitsPerSector{};
+
   /** Input collection name.
    */
-  std::string _VTXHitCollection;
-  std::string _SITHitCollection;
-  std::string _CATrackCollection;
+  std::string _VTXHitCollection{};
+  std::string _SITHitCollection{};
+  std::string _CATrackCollection{};
 
-  std::string _detElVXDName;
-  std::string _detElITName;
-  std::string _detElOTName;
+  std::string _detElVXDName{};
+  std::string _detElITName{};
+  std::string _detElOTName{};
 
-  
-  std::map< LCCollection*, std::string > _colNamesTrackerHits;
-  
-  std::string _bestSubsetFinder;
+  std::map<LCCollection*, std::string> _colNamesTrackerHits{};
 
-   /** The quality of the output track collection */
-   int _output_track_col_quality ; 
-  
-   static const int _output_track_col_quality_GOOD;
-   static const int _output_track_col_quality_FAIR;
-   static const int _output_track_col_quality_POOR;
+  /** The quality of the output track collection */
+  int _output_track_col_quality{};
 
+  static const int _output_track_col_quality_GOOD;
+  static const int _output_track_col_quality_FAIR;
+  static const int _output_track_col_quality_POOR;
+
+  std::string _bestSubsetFinder{};
 
 } ;
 

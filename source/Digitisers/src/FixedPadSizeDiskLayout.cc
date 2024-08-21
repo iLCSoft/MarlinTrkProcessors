@@ -147,7 +147,7 @@ double FixedPadSizeDiskLayout::getPadWidth(int padIndex) const {
     return _padWidth / _rows.at( rowNum ).RCenter ;
 
   }
-  catch(std::out_of_range){
+  catch(std::out_of_range&){
     return 0. ;
   }
 }
@@ -162,7 +162,7 @@ double FixedPadSizeDiskLayout::getPadPitch(int padIndex) const {
     return _rows.at( rowNum ).PhiPad;
 
   }
-  catch(std::out_of_range){
+  catch(std::out_of_range&){
     return 0. ;
   }
 }

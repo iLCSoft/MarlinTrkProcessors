@@ -57,6 +57,8 @@ public:
   virtual marlin::Processor*  newProcessor() { return new ExtrToSIT ; }
   
   ExtrToSIT() ;
+  ExtrToSIT(const ExtrToSIT&) = delete;
+  ExtrToSIT& operator=(const ExtrToSIT&) = delete;
   
   /** Called at the begin of the job before anything is read.
    * Use to initialize the processor, e.g. book histograms.
@@ -106,35 +108,35 @@ protected:
   
   /** Input track collection name for refitting.
    */
-  std::string _input_track_col_name ;
+  std::string _input_track_col_name {};
   
   /** Input track relations name for refitting.
    */
-  std::string _input_track_rel_name ;
+  std::string _input_track_rel_name {};
 
   /** Input SIT tracker summer hit collection.
    */
-  std::string _sitColName ;
+  std::string _sitColName {};
 
   /** Input VXD tracker summer hit collection.
    */
-  std::string _vxdColName ;
+  std::string _vxdColName {};
   
   /** refitted track collection name.
    */
-  std::string _output_track_col_name ;
+  std::string _output_track_col_name {};
   
   /** Output track relations name for refitting.
    */
-  std::string _output_track_rel_name ;
+  std::string _output_track_rel_name {};
 
   /** Output silicon track collection.
    */
-  std::string _siTrkColName ;
+  std::string _siTrkColName {};
   
   /** pointer to the IMarlinTrkSystem instance 
    */
-  MarlinTrk::IMarlinTrkSystem* _trksystem{} ;
+  MarlinTrk::IMarlinTrkSystem* _trksystem{nullptr} ;
   std::string _trkSystemName{} ;
   
   std::string _mcParticleCollectionName{} ;

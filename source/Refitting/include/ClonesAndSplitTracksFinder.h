@@ -75,8 +75,8 @@ protected:
 
   lcio::LCCollection* GetCollection(lcio::LCEvent* evt, std::string colName);
 
-  std::string _input_track_col_name;
-  std::string _output_track_col_name;
+  std::string _input_track_col_name{};
+  std::string _output_track_col_name{};
 
   MarlinTrk::IMarlinTrkSystem* _trksystem = nullptr;
 
@@ -95,12 +95,12 @@ protected:
   bool _mergeSplitTracks = false;
 
   // Track fit parameters
-  double _initialTrackError_d0;
-  double _initialTrackError_phi0;
-  double _initialTrackError_omega;
-  double _initialTrackError_z0;
-  double _initialTrackError_tanL;
-  double _maxChi2perHit;
+  double _initialTrackError_d0{};
+  double _initialTrackError_phi0{};
+  double _initialTrackError_omega{};
+  double _initialTrackError_z0{};
+  double _initialTrackError_tanL{};
+  double _maxChi2perHit{};
 
   std::shared_ptr<UTIL::BitField64> _encoder{};
 };
