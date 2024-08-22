@@ -12,16 +12,15 @@
 namespace MarlinTrk {
 class IMarlinTrkSystem;
 class IMarlinTrack;
-}
+} // namespace MarlinTrk
 
 class RefitFinal : public marlin::Processor {
-
 public:
-  virtual marlin::Processor *newProcessor() { return new RefitFinal; }
+  virtual marlin::Processor* newProcessor() { return new RefitFinal; }
 
   RefitFinal();
-  RefitFinal(const RefitFinal &) = delete;
-  RefitFinal &operator=(const RefitFinal &) = delete;
+  RefitFinal(const RefitFinal&) = delete;
+  RefitFinal& operator=(const RefitFinal&) = delete;
 
   /** Called at the begin of the job before anything is read.
    * Use to initialize the processor, e.g. book histograms.
@@ -30,23 +29,23 @@ public:
 
   /** Called for every run.
    */
-  virtual void processRunHeader(lcio::LCRunHeader *run);
+  virtual void processRunHeader(lcio::LCRunHeader* run);
 
   /** Called for every event - the working horse.
    */
-  virtual void processEvent(lcio::LCEvent *evt);
+  virtual void processEvent(lcio::LCEvent* evt);
 
-  virtual void check(lcio::LCEvent *evt);
+  virtual void check(lcio::LCEvent* evt);
 
   /** Called after data processing for clean up.
    */
   virtual void end();
 
 protected:
-  int FitInit2(Track *track, MarlinTrk::IMarlinTrack *_marlinTrk);
+  int FitInit2(Track* track, MarlinTrk::IMarlinTrack* _marlinTrk);
 
   /* helper function to get collection using try catch block */
-  lcio::LCCollection *GetCollection(lcio::LCEvent *evt, std::string colName);
+  lcio::LCCollection* GetCollection(lcio::LCEvent* evt, std::string colName);
 
   /** Input track collection name for refitting.
    */
@@ -66,7 +65,7 @@ protected:
 
   /** pointer to the IMarlinTrkSystem instance
    */
-  MarlinTrk::IMarlinTrkSystem *_trksystem = nullptr;
+  MarlinTrk::IMarlinTrkSystem* _trksystem = nullptr;
 
   int _n_run = -1;
   int _n_evt = -1;
