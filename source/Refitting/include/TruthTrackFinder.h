@@ -29,6 +29,8 @@ class TruthTrackFinder : public Processor {
   virtual Processor*  newProcessor() { return new TruthTrackFinder ; }
 	
   TruthTrackFinder() ;
+  TruthTrackFinder(const TruthTrackFinder&) = delete ;
+  TruthTrackFinder& operator=(const TruthTrackFinder&) = delete ;
 	
   // Initialisation - run at the beginning to start histograms, etc.
   virtual void init() ;
@@ -52,7 +54,7 @@ class TruthTrackFinder : public Processor {
  protected:
 	
   // Encoder
-  UTIL::BitField64* m_encoder;
+  UTIL::BitField64* m_encoder{nullptr};
 
   // Get the subdetector ID from a hit
   int getSubdetector(const TrackerHit* hit){ m_encoder->setValue(hit->getCellID0()); return (*m_encoder)[lcio::LCTrackerCellID::subdet()]; } 
@@ -66,31 +68,31 @@ class TruthTrackFinder : public Processor {
 
 
   // Collection names for (in/out)put
-  std::vector<std::string> m_inputTrackerHitCollections ;
-  std::vector<std::string> m_inputTrackerHitRelationCollections ;
-  std::string m_inputParticleCollection ;
-  std::string m_outputTrackCollection ;
-  std::string m_outputTrackRelationCollection;
+  std::vector<std::string> m_inputTrackerHitCollections {};
+  std::vector<std::string> m_inputTrackerHitRelationCollections {};
+  std::string m_inputParticleCollection {};
+  std::string m_outputTrackCollection {};
+  std::string m_outputTrackRelationCollection{};
 
-  bool m_useTruthInPrefit;
-  bool m_fitForward;
+  bool m_useTruthInPrefit{};
+  bool m_fitForward{};
  	
   // Run and event counters
-  int m_eventNumber ;
-  int m_runNumber ;
+  int m_eventNumber {};
+  int m_runNumber {};
   
   // Track fit factory
-  MarlinTrk::IMarlinTrkSystem* trackFactory;
+  MarlinTrk::IMarlinTrkSystem* trackFactory{nullptr};
 
   // Track fit parameters
-  double m_initialTrackError_d0;
-  double m_initialTrackError_phi0;
-  double m_initialTrackError_omega;
-  double m_initialTrackError_z0;
-  double m_initialTrackError_tanL;
-  double m_maxChi2perHit;
-  double m_magneticField;
-  int m_fitFails;
+  double m_initialTrackError_d0{};
+  double m_initialTrackError_phi0{};
+  double m_initialTrackError_omega{};
+  double m_initialTrackError_z0{};
+  double m_initialTrackError_tanL{};
+  double m_maxChi2perHit{};
+  double m_magneticField{};
+  int m_fitFails{};
 
 		
 } ;

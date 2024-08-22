@@ -119,6 +119,9 @@ public:
   
   DDTPCDigiProcessor() ;
 
+  DDTPCDigiProcessor(const DDTPCDigiProcessor&) = delete;
+  DDTPCDigiProcessor& operator=(const DDTPCDigiProcessor&) = delete;
+
   ~DDTPCDigiProcessor() ;
   
   /** Called at the begin of the job before anything is read.

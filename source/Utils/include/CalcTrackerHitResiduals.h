@@ -64,6 +64,8 @@ public:
   
   
   CalcTrackerHitResiduals() ;
+  CalcTrackerHitResiduals(const CalcTrackerHitResiduals&) = delete ;
+  CalcTrackerHitResiduals& operator=(const CalcTrackerHitResiduals&) = delete ;
   
   /** Called at the begin of the job before anything is read.
    * Use to initialize the processor, e.g. book histograms.
@@ -100,7 +102,7 @@ protected:
   
 
   
-  UTIL::BitField64* _encoder;
+  UTIL::BitField64* _encoder{nullptr};
   int getDetectorID(TrackerHit* hit) { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::subdet()]; }
   int getSideID(TrackerHit* hit)     { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::side()]; };
   int getLayerID(TrackerHit* hit)    { _encoder->setValue(hit->getCellID0()); return (*_encoder)[lcio::LCTrackerCellID::layer()]; };
@@ -120,29 +122,29 @@ protected:
     
   /** input TrackerHit collections
    */
-  std::vector< std::string > _colNamesTrackerHits;
+  std::vector< std::string > _colNamesTrackerHits{};
  
   /** input relation collections 
    */
-  std::vector< std::string > _colNamesTrackerHitRelations;
+  std::vector< std::string > _colNamesTrackerHitRelations{};
   
   
 //   int _nEventPrintout ;
-  int _n_run ;
-  int _n_evt ;
-  int _current_evt_number ;
+  int _n_run {};
+  int _n_evt {};
+  int _current_evt_number {};
   
   
-  std::vector< LCCollection* > _colTrackerHits;
-  std::vector< LCRelationNavigator* > _navTrackerHitRel;
+  std::vector< LCCollection* > _colTrackerHits{};
+  std::vector< LCRelationNavigator* > _navTrackerHitRel{};
     
   
-  TFile* _root_file;
+  TFile* _root_file{nullptr};
   
-  std::map<std::string, TH1F*> _histo_map;
-  std::map<std::string, TH1F*>::iterator _histo_map_it;
+  std::map<std::string, TH1F*> _histo_map{};
+  std::map<std::string, TH1F*>::iterator _histo_map_it{};
   
-  std::map<std::string, std::list<float>*> _histo_buffer_map;
+  std::map<std::string, std::list<float>*> _histo_buffer_map{};
   
   
   dd4hep::rec::SurfaceMap _surfMap{} ;
