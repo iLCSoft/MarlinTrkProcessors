@@ -335,6 +335,10 @@ protected:
   std::string _LDCTrackCollection{};
 
   std::string m_vtxDetName{};
+  std::string m_forwardTrackerDetName{};
+  std::string m_innerBarrelTrackerDetName{};
+  std::string m_vertexEndcapDetName{};
+  std::string m_siliconExternalTrackerDetName{};
 
   TrackExtendedVec _allSiTracks{};
   TrackExtendedVec _allTPCTracks{};

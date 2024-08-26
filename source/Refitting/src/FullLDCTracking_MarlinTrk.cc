@@ -1,4 +1,5 @@
 #include "FullLDCTracking_MarlinTrk.h"
+
 #include <EVENT/LCCollection.h>
 #include <EVENT/LCObject.h>
 #include <EVENT/MCParticle.h>
@@ -10,43 +11,39 @@
 #include <IMPL/LCFlagImpl.h>
 #include <IMPL/LCRelationImpl.h>
 #include <IMPL/TrackImpl.h>
-#include <algorithm>
-#include <iostream>
-#include <memory>
-
-#include "ClusterShapes.h"
-#include <map>
+#include <UTIL/LCRelationNavigator.h>
+#include <UTIL/LCTOOLS.h>
 #include <marlin/Global.h>
 #include <math.h>
 
+#include <algorithm>
+#include <iostream>
+#include <map>
+#include <memory>
+
+#include "ClusterShapes.h"
 #include "DD4hep/DD4hepUnits.h"
 #include "DD4hep/Detector.h"
 #include "DDRec/DetectorData.h"
-
-#include <UTIL/LCRelationNavigator.h>
-#include <UTIL/LCTOOLS.h>
-
 #include "MarlinTrk/Factory.h"
 #include "MarlinTrk/HelixFit.h"
 #include "MarlinTrk/HelixTrack.h"
 #include "MarlinTrk/IMarlinTrack.h"
-#include "MarlinTrk/MarlinTrkUtils.h"
-
 #include "MarlinTrk/LCIOTrackPropagators.h"
-
 #include "MarlinTrk/MarlinTrkDiagnostics.h"
+#include "MarlinTrk/MarlinTrkUtils.h"
 
 #ifdef MARLINTRK_DIAGNOSTICS_ON
 #include "MarlinTrk/DiagnosticsController.h"
 #endif
 
-#include "UTIL/LCTrackerConf.h"
 #include <UTIL/BitField64.h>
 #include <UTIL/ILDConf.h>
 
 #include <climits>
 #include <cmath>
 
+#include "UTIL/LCTrackerConf.h"
 #include "gsl/gsl_cdf.h"
 #include "gsl/gsl_randist.h"
 
@@ -132,8 +129,21 @@ FullLDCTracking_MarlinTrk::FullLDCTracking_MarlinTrk() : Processor("FullLDCTrack
                            std::string("LDCTracks"));
 
   // steering parameters
-  registerProcessorParameter("VertexDetectorName", "Name of the vertex (barrel) detector in the geometry", m_vtxDetName,
-                             std::string("VXD"));
+  registerProcessorParameter("VertexDetectorName", "Name of the vertex (barrel) tracking detector in the geometry",
+                             m_vtxDetName, std::string("VXD"));
+
+  registerProcessorParameter("ForwardTrackerDetectorName", "Name of the forward tracking detector in the geometry",
+                             m_forwardTrackerDetName, std::string("FTD"));
+
+  registerProcessorParameter("InnerTrackerDetectorName", "Name of the inner (barrel) tracking detector in the geometry",
+                             m_innerBarrelTrackerDetName, std::string("SIT"));
+
+  registerProcessorParameter("VertexEndcapDetectorName", "Name of the vertex endcap tracking detector in the geometry",
+                             m_vertexEndcapDetName, std::string("VertexEndcap"));
+
+  registerProcessorParameter("SiliconExternalDetectorName",
+                             "Name of the silicon external tracking detector in the geometry",
+                             m_siliconExternalTrackerDetName, std::string("SET"));
 
   registerProcessorParameter("D0CutForMerging", "Cut on D0 difference for merging of Si and TPC segments",
                              _d0CutForMerging, float(500.0));
@@ -181,15 +191,15 @@ FullLDCTracking_MarlinTrk::FullLDCTracking_MarlinTrk() : Processor("FullLDCTrack
   registerProcessorParameter("PtCutToMergeTPCSegments", "Cut on Pt of tracks for merging TPC segments",
                              _PtCutToMergeTPC, float(1.2));
 
-  registerProcessorParameter(
-      "cosThetaCutHighPtMerge",
-      "Cut on cos theta between the two momentum vectors when considering merger of high Pt tracks",
-      _cosThetaCutHighPtMerge, float(0.99));
+  registerProcessorParameter("cosThetaCutHighPtMerge",
+                             "Cut on cos theta between the two momentum vectors when considering "
+                             "merger of high Pt tracks",
+                             _cosThetaCutHighPtMerge, float(0.99));
 
-  registerProcessorParameter(
-      "cosThetaCutSoftHighPtMerge",
-      "cut on cos theta between the two momentum vectors when considering merger of high Pt tracks for softer dp/p cut",
-      _cosThetaCutSoftHighPtMerge, float(0.998));
+  registerProcessorParameter("cosThetaCutSoftHighPtMerge",
+                             "cut on cos theta between the two momentum vectors when considering "
+                             "merger of high Pt tracks for softer dp/p cut",
+                             _cosThetaCutSoftHighPtMerge, float(0.998));
 
   registerProcessorParameter("momDiffCutHighPtMerge", "cut on dp/p when considering merger of high Pt tracks",
                              _momDiffCutHighPtMerge, float(0.01));
@@ -198,18 +208,19 @@ FullLDCTracking_MarlinTrk::FullLDCTracking_MarlinTrk() : Processor("FullLDCTrack
                              "softer cut on dp/p when considering merger of high Pt tracks", _momDiffCutSoftHighPtMerge,
                              float(0.25));
 
-  registerProcessorParameter(
-      "hitDistanceCutHighPtMerge",
-      "cut on 3D distance between hit and helix extrapolation when considering merger of high Pt tracks",
-      _hitDistanceCutHighPtMerge, float(25.0));
+  registerProcessorParameter("hitDistanceCutHighPtMerge",
+                             "cut on 3D distance between hit and helix extrapolation when considering "
+                             "merger of high Pt tracks",
+                             _hitDistanceCutHighPtMerge, float(25.0));
 
-  registerProcessorParameter(
-      "maxHitDistanceCutHighPtMerge",
-      "cut for max 3D distance between any hit and helix extrapolation when considering merger of high Pt tracks",
-      _maxHitDistanceCutHighPtMerge, float(50.0));
+  registerProcessorParameter("maxHitDistanceCutHighPtMerge",
+                             "cut for max 3D distance between any hit and helix extrapolation when "
+                             "considering merger of high Pt tracks",
+                             _maxHitDistanceCutHighPtMerge, float(50.0));
 
   registerProcessorParameter("maxFractionOfOutliersCutHighPtMerge",
-                             "cut on maximum fraction of outliers when considering merger of high Pt tracks",
+                             "cut on maximum fraction of outliers when "
+                             "considering merger of high Pt tracks",
                              _maxFractionOfOutliersCutHighPtMerge, float(0.95));
 
   registerProcessorParameter("CutOnTPCHits", "Cut on the number of the TPC hits for tracks with no Si hits",
@@ -259,7 +270,8 @@ FullLDCTracking_MarlinTrk::FullLDCTracking_MarlinTrk() : Processor("FullLDCTrack
                              _forbidOverlapInZTPC, int(0));
 
   registerProcessorParameter("ForbidOverlapInZComb",
-                             "Forbid overlap in Z for combining TPC segments with tracks having Si hits",
+                             "Forbid overlap in Z for combining TPC segments "
+                             "with tracks having Si hits",
                              _forbidOverlapInZComb, int(0));
 
   registerProcessorParameter("MultipleScatteringOn", "Use MultipleScattering in Fit", _MSOn, bool(true));
@@ -304,15 +316,16 @@ FullLDCTracking_MarlinTrk::FullLDCTracking_MarlinTrk() : Processor("FullLDCTrack
                              float(0.05));
 
   registerProcessorParameter("TrackSystemName",
-                             "Name of the track fitting system to be used (KalTest, DDKalTest, aidaTT, ... )",
+                             "Name of the track fitting system to be used "
+                             "(KalTest, DDKalTest, aidaTT, ... )",
                              _trkSystemName, std::string("KalTest"));
 
 #ifdef MARLINTRK_DIAGNOSTICS_ON
 
-  registerOptionalParameter(
-      "RunMarlinTrkDiagnostics",
-      "Run MarlinTrk Diagnostics. MarlinTrk must be compiled with MARLINTRK_DIAGNOSTICS_ON defined",
-      _runMarlinTrkDiagnostics, bool(false));
+  registerOptionalParameter("RunMarlinTrkDiagnostics",
+                            "Run MarlinTrk Diagnostics. MarlinTrk must be "
+                            "compiled with MARLINTRK_DIAGNOSTICS_ON defined",
+                            _runMarlinTrkDiagnostics, bool(false));
 
   registerOptionalParameter("DiagnosticsName", "Name of the root file and root tree if running Diagnostics",
                             _MarlinTrkDiagnosticsName, std::string("FullLDCTrackingDiagnostics"));
@@ -389,10 +402,12 @@ void FullLDCTracking_MarlinTrk::processEvent(LCEvent* evt) {
   Sorting(_allCombinedTracks);
   streamlog_out(DEBUG5) << "************************************Sorting by Chi2/NDF done ..." << std::endl;
 
-  streamlog_out(DEBUG5) << "************************************Selection of all 2 track combininations ..."
+  streamlog_out(DEBUG5) << "************************************Selection of "
+                           "all 2 track combininations ..."
                         << std::endl;
   SelectCombinedTracks();
-  streamlog_out(DEBUG5) << "************************************Selection of all 2 track combininations done ..."
+  streamlog_out(DEBUG5) << "************************************Selection of "
+                           "all 2 track combininations done ..."
                         << std::endl;
 
   streamlog_out(DEBUG5) << "************************************Trying non combined tracks ..." << std::endl;
@@ -433,8 +448,9 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent* evt, TrackExtendedVec&
   float pyTot = 0.0;
   float pzTot = 0.0;
 
-  // SJA:FIXME: So here we are going to do one final refit. This can certainly be optimised, but rather than worry about
-  // the mememory management right now lets make it work, and optimise it later ...
+  // SJA:FIXME: So here we are going to do one final refit. This can certainly
+  // be optimised, but rather than worry about the mememory management right now
+  // lets make it work, and optimise it later ...
 
   for (int iTRK = 0; iTRK < nTrkCand; ++iTRK) {
     TrackExtended* trkCand = trkVec[iTRK];
@@ -460,14 +476,15 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent* evt, TrackExtendedVec&
       if (trkHit) {
         trkHits.push_back(trkHit);
       } else {
-        throw EVENT::Exception(std::string("FullLDCTracking_MarlinTrk::AddTrackColToEvt: TrackerHit pointer == NULL "));
+        throw EVENT::Exception(std::string("FullLDCTracking_MarlinTrk::AddTrackColToEvt: "
+                                           "TrackerHit pointer == NULL "));
       }
     }
 
     if (trkHits.size() < 3) {
-      streamlog_out(DEBUG3)
-          << "FullLDCTracking_MarlinTrk::AddTrackColToEvt: Cannot fit less than 3 hits. Number of hits =  "
-          << trkHits.size() << std::endl;
+      streamlog_out(DEBUG3) << "FullLDCTracking_MarlinTrk::AddTrackColToEvt: "
+                               "Cannot fit less than 3 hits. Number of hits =  "
+                            << trkHits.size() << std::endl;
       continue;
     }
 
@@ -569,7 +586,6 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent* evt, TrackExtendedVec&
     try {
       error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, trkHits, Track, fit_backwards, &ts_initial, _bField,
                                                   _maxChi2PerHit);
-
     } catch (...) {
       //      delete Track;
       //      delete marlinTrk;
@@ -693,7 +709,6 @@ void FullLDCTracking_MarlinTrk::AddTrackColToEvt(LCEvent* evt, TrackExtendedVec&
                             << " rejectTrackonImpactParameters " << rejectTrackonImpactParameters << std::endl;
 
       delete Track;
-
     } else {
       float omega = trkStateIP->getOmega();
       float tanLambda = trkStateIP->getTanLambda();
@@ -958,14 +973,12 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent* event) {
                "SPACEPOINTS must be use instead. \n\n  exit(1) called from file "
             << __FILE__ << " and line " << __LINE__ << std::endl;
         exit(1);
-
       }
       // most likely case: COMPOSITE_SPACEPOINT hits formed from stereo strip hits
       else if (BitSet32(trkhit->getType())[UTIL::ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT]) {
         // SJA:FIXME: fudge for now by a factor of two and ignore covariance
         drphi = 2 * sqrt(trkhit->getCovMatrix()[0] + trkhit->getCovMatrix()[2]);
         dz = sqrt(trkhit->getCovMatrix()[5]);
-
       }
       // or a PIXEL based SIT, using 2D TrackerHitPlane like the VXD above
       else if ((trkhit_P = dynamic_cast<TrackerHitPlane*>(hitCollection->getElementAt(ielem)))) {
@@ -993,13 +1006,11 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent* event) {
 
         drphi = trkhit_P->getdU();
         dz = trkhit_P->getdV();
-
       }
       // or a simple cylindrical design, as used in the LOI
       else if ((trkhit_C = dynamic_cast<TrackerHitZCylinder*>(hitCollection->getElementAt(ielem)))) {
         drphi = trkhit_C->getdRPhi();
         dz = trkhit_C->getdZ();
-
       }
       // this would be very unlikely, but who knows ... just an ordinary TrackerHit, which is not a COMPOSITE_SPACEPOINT
       else {
@@ -1035,7 +1046,6 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent* event) {
                             << " drphi " << hitExt->getResolutionRPhi() << " dz " << hitExt->getResolutionZ()
                             << "  layer = " << layer << std::endl;
     }
-
   } catch (DataNotAvailableException& e) {
     streamlog_out(DEBUG4) << " collection not found : " << _SITTrackerHitCollection.c_str() << std::endl;
   }
@@ -1082,14 +1092,12 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent* event) {
                "SPACEPOINTS must be use instead. \n\n  exit(1) called from file "
             << __FILE__ << " and line " << __LINE__ << std::endl;
         exit(1);
-
       }
       // most likely case: COMPOSITE_SPACEPOINT hits formed from stereo strip hits
       else if (BitSet32(trkhit->getType())[UTIL::ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT]) {
         // SJA:FIXME: fudge for now by a factor of two and ignore covariance
         drphi = 2 * sqrt(trkhit->getCovMatrix()[0] + trkhit->getCovMatrix()[2]);
         dz = sqrt(trkhit->getCovMatrix()[5]);
-
       }
       // or a PIXEL based SET, using 2D TrackerHitPlane like the VXD above
       else if ((trkhit_P = dynamic_cast<TrackerHitPlane*>(hitCollection->getElementAt(ielem)))) {
@@ -1117,13 +1125,11 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent* event) {
 
         drphi = trkhit_P->getdU();
         dz = trkhit_P->getdV();
-
       }
       // or a simple cylindrical design, as used in the LOI
       else if ((trkhit_C = dynamic_cast<TrackerHitZCylinder*>(hitCollection->getElementAt(ielem)))) {
         drphi = trkhit_C->getdRPhi();
         dz = trkhit_C->getdZ();
-
       }
       // this would be very unlikely, but who knows ... just an ordinary TrackerHit, which is not a COMPOSITE_SPACEPOINT
       else {
@@ -1159,7 +1165,6 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent* event) {
                             << " drphi " << hitExt->getResolutionRPhi() << " dz " << hitExt->getResolutionZ()
                             << "  layer = " << layer << std::endl;
     }
-
   } catch (DataNotAvailableException& e) {
     streamlog_out(DEBUG4) << " collection not found : " << _SETTrackerHitCollection.c_str() << std::endl;
   }
@@ -1198,7 +1203,6 @@ void FullLDCTracking_MarlinTrk::prepareVectors(LCEvent* event) {
                             << " drphi " << hitExt->getResolutionRPhi() << " dz " << hitExt->getResolutionZ()
                             << "  layer = " << layer << std::endl;
     }
-
   } catch (DataNotAvailableException& e) {
     streamlog_out(DEBUG4) << _VTXTrackerHitCollection.c_str() << " collection is unavailable" << std::endl;
   }
@@ -1496,7 +1500,6 @@ void FullLDCTracking_MarlinTrk::MergeTPCandSiTracks() {
             int iopt = 1;
             PrintOutMerging(tpcTrackExt, siTrackExt, iopt);
           }
-
         } else {
           if (_debug >= 3) {
             int iopt = 6;
@@ -2009,7 +2012,6 @@ void FullLDCTracking_MarlinTrk::SelectCombinedTracks() {
           PrintOutMerging(secondTrack, firstTrack, iopt);
         }
       }
-
     } else { // if(nTracks>2)
 
       streamlog_out(DEBUG2) << " *****************  SelectCombinedTracks: MORE THAN TWO TRACKS " << nCombTrk
@@ -3025,7 +3027,6 @@ float FullLDCTracking_MarlinTrk::CompareTrk(TrackExtended* first, TrackExtended*
         den = momSecond;
 
       result = nom / den;
-
     }
 
     else {
@@ -3863,8 +3864,8 @@ void FullLDCTracking_MarlinTrk::AssignTPCHitsToTracks(TrackerHitExtendedVec hitV
           }
         }
       } // loop over leftover TPC hits
-    }   // groups in tracks
-  }     // loop over all tracks
+    } // groups in tracks
+  } // loop over all tracks
 
   for (int iH = 0; iH < nHits; ++iH) {
     TrackerHitExtended* trkHitExt = hitVec[iH];
@@ -4397,7 +4398,6 @@ void FullLDCTracking_MarlinTrk::PrintOutMerging(TrackExtended* firstTrackExt, Tr
                             << " veto = " << VetoMerge(firstTrackExt, secondTrackExt) << std::endl;
 
       streamlog_out(DEBUG4) << std::endl;
-
     }
 
     // ... or if it was an incorrect TPC to TPC rejection ...
@@ -4453,7 +4453,6 @@ void FullLDCTracking_MarlinTrk::PrintOutMerging(TrackExtended* firstTrackExt, Tr
                             << " veto = " << VetoMerge(firstTrackExt, secondTrackExt) << std::endl;
 
       streamlog_out(DEBUG4) << std::endl;
-
     }
 
     // ... or if it was an incorrect TPC to Si rejection ...
@@ -4515,7 +4514,6 @@ void FullLDCTracking_MarlinTrk::PrintOutMerging(TrackExtended* firstTrackExt, Tr
       streamlog_out(DEBUG4) << " Overlap = " << SegmentRadialOverlap(firstTrackExt, secondTrackExt)
                             << " veto = " << VetoMerge(firstTrackExt, secondTrackExt) << std::endl;
       streamlog_out(DEBUG4) << std::endl;
-
     }
     // ... or if it was an correct merger ...
     else if (firstMCP == secondMCP && iopt < 6 && _debug > 3) {
@@ -4724,7 +4722,6 @@ bool FullLDCTracking_MarlinTrk::VetoMerge(TrackExtended* firstTrackExt, TrackExt
 
     delete combinedTrack->getGroupTracks();
     delete combinedTrack;
-
   } else {
     streamlog_out(DEBUG1)
         << "FullLDCTracking_MarlinTrk::VetoMerge fails CombineTracks(firstTrackExt,secondTrackExt,true) test"
@@ -4755,57 +4752,49 @@ void FullLDCTracking_MarlinTrk::setupGeom(const dd4hep::Detector& theDetector) {
   // const std::string nameVertexBarrelDetector = "VertexBarrel";
 
   try {
-    streamlog_out(DEBUG9) << " filling " << m_vtxDetName << " parameters " << std::endl;
+    streamlog_out(DEBUG9) << " filling " << m_vtxDetName << " parameters " << '\n';
 
     dd4hep::DetElement vtxDE = theDetector.detector(m_vtxDetName);
     dd4hep::rec::ZPlanarData* vtx = vtxDE.extension<dd4hep::rec::ZPlanarData>();
     _nLayersVTX = vtx->layers.size();
   } catch (std::runtime_error& e) {
-    streamlog_out(ERROR) << " " << m_vtxDetName << " detector Not Present in Compact File" << std::endl;
+    streamlog_out(ERROR) << " " << m_vtxDetName << " detector Not Present in Compact File" << '\n';
   }
 
   //-- SIT Parameters--
   _nLayersSIT = 0;
 
-  const std::string nameInnerTrackerBarrelDetector = "InnerTrackerBarrel";
-
   try {
-    streamlog_out(DEBUG9) << " filling " << nameInnerTrackerBarrelDetector << " parameters  " << std::endl;
+    streamlog_out(DEBUG9) << " filling " << m_innerBarrelTrackerDetName << " parameters  " << '\n';
 
-    dd4hep::DetElement sitDE = theDetector.detector(nameInnerTrackerBarrelDetector);
+    dd4hep::DetElement sitDE = theDetector.detector(m_innerBarrelTrackerDetName);
     dd4hep::rec::ZPlanarData* sit = sitDE.extension<dd4hep::rec::ZPlanarData>();
     _nLayersSIT = sit->layers.size();
   } catch (std::runtime_error& e) {
-    streamlog_out(ERROR) << " " << nameInnerTrackerBarrelDetector << " detector Not Present in Compact File "
-                         << std::endl;
+    streamlog_out(ERROR) << " " << m_innerBarrelTrackerDetName << " detector Not Present in Compact File " << '\n';
   }
 
   //-- SET Parameters--
   _nLayersSET = 0;
 
-  const std::string nameSiliconExternalTrackDetector = "SET";
-
   try {
-    streamlog_out(DEBUG9) << " filling " << nameSiliconExternalTrackDetector << " parameters " << std::endl;
+    streamlog_out(DEBUG9) << " filling " << m_siliconExternalTrackerDetName << " parameters " << '\n';
 
-    dd4hep::DetElement setDE = theDetector.detector(nameSiliconExternalTrackDetector);
+    dd4hep::DetElement setDE = theDetector.detector(m_siliconExternalTrackerDetName);
     dd4hep::rec::ZPlanarData* set = setDE.extension<dd4hep::rec::ZPlanarData>();
     _nLayersSET = set->layers.size();
   } catch (std::runtime_error& e) {
-    streamlog_out(WARNING) << " " << nameSiliconExternalTrackDetector << " detector Not Present in Compact File "
-                           << std::endl;
+    streamlog_out(ERROR) << " " << m_siliconExternalTrackerDetName << " detector Not Present in Compact File " << '\n';
   }
 
   //-- FTD Parameters--
   _petalBasedFTDWithOverlaps = false;
   _nLayersFTD = 0;
 
-  const std::string ftdName = "FTD";
-
   try {
-    streamlog_out(DEBUG9) << " filling " << ftdName << " parameters " << std::endl;
+    streamlog_out(DEBUG9) << " filling " << m_forwardTrackerDetName << " parameters " << '\n';
 
-    dd4hep::DetElement ftdDE = theDetector.detector(ftdName);
+    dd4hep::DetElement ftdDE = theDetector.detector(m_forwardTrackerDetName);
     dd4hep::rec::ZDiskPetalsData* ftd = ftdDE.extension<dd4hep::rec::ZDiskPetalsData>();
 
     _nLayersFTD = ftd->layers.size();
@@ -4820,6 +4809,6 @@ void FullLDCTracking_MarlinTrk::setupGeom(const dd4hep::Detector& theDetector) {
     _nLayersFTD = _zLayerFTD.size();
 
   } catch (std::runtime_error& e) {
-    streamlog_out(WARNING) << " " << ftdName << " detector Not Present in Compact File" << std::endl;
+    streamlog_out(ERROR) << " " << m_forwardTrackerDetName << " detector Not Present in Compact File" << '\n';
   }
 }
