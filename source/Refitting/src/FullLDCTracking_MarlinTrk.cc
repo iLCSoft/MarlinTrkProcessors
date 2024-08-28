@@ -14,7 +14,6 @@
 #include <UTIL/LCRelationNavigator.h>
 #include <UTIL/LCTOOLS.h>
 #include <marlin/Global.h>
-#include <math.h>
 
 #include <algorithm>
 #include <iostream>
