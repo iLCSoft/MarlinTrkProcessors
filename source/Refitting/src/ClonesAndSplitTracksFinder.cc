@@ -233,6 +233,7 @@ void ClonesAndSplitTracksFinder::fromTrackToTrackImpl(const Track* track, TrackI
   trackFinal->setNdf(track->getNdf());
   trackFinal->setdEdx(track->getdEdx());
   trackFinal->setdEdxError(track->getdEdxError());
+  trackFinal->subdetectorHitNumbers() = track->getSubdetectorHitNumbers();
 }
 
 void ClonesAndSplitTracksFinder::removeClones(EVENT::TrackVec& tracksWithoutClones, LCCollection*& input_track_col) {
