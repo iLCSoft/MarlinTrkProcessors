@@ -1,3 +1,8 @@
+# v02-12-07
+
+* 2025-03-21 jmcarcell ([PR#73](https://github.com/iLCSoft/MarlinTrkProcessors/pull/73))
+  - Set the subdetectorHitNumbers in ClonesAndSplitTracksFinder that was not being set (defaulted to 0) when `mergeSplitTracks` is false.
+
 # v02-12-06
 
 * 2024-08-28 Victor Schwan ([PR#72](https://github.com/iLCSoft/MarlinTrkProcessors/pull/72))
