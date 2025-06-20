@@ -455,7 +455,7 @@ void ExtrToTracker::processEvent(LCEvent* evt) {
             delete marlinTrk;
 
         } // good fit status
-      }   // good initialisation status
+      } // good initialisation status
 
       delete marlin_trk;
 
@@ -484,8 +484,8 @@ void ExtrToTracker::processEvent(LCEvent* evt) {
         for (size_t iHitOnEl = 0; iHitOnEl < vecHits.size(); iHitOnEl++) {
           notUsedHitsVec->addElement(vecHits.at(iHitOnEl));
         } // end loop on hits on each det element
-      }   // end loop on map detEl <--> vector of hits on the detEl
-    }     // end loops on vector of maps - one for each subdetector
+      } // end loop on map detEl <--> vector of hits on the detEl
+    } // end loops on vector of maps - one for each subdetector
 
     evt->addCollection(notUsedHitsVec, _output_not_used_col_name);
 
@@ -638,7 +638,7 @@ TrackerHitPlane* ExtrToTracker::getSiHit(std::vector<TrackerHitPlane*>& hitsOnDe
       min = testChi2;
       index = i;
     } // end min chi2
-  }   // end loop on hits on same detector element
+  } // end loop on hits on same detector element
 
   streamlog_out(DEBUG2) << "-- index of the selected hit: " << index << std::endl;
 

@@ -1399,15 +1399,15 @@ void SiliconTracking_MarlinTrk::ProcessOneSector(int iPhi, int iTheta) {
                           counter++;
                         }
                       } // endloop over hits in the inner sector
-                    }   // endloop over hits in the middle sector
-                  }     // endloop over hits in the outer sector
-                }       // endif nHitsInner > 0
-              }         // endloop over theta in the Inner
-            }           // endloop over phi in the Inner
-          }             // endif nHitsMiddle > 0
-        }               // endloop over theta in the Middle
-      }                 // endloop over phi in the Middle
-    }                   // endif nHitsOuter > 0
+                    } // endloop over hits in the middle sector
+                  } // endloop over hits in the outer sector
+                } // endif nHitsInner > 0
+              } // endloop over theta in the Inner
+            } // endloop over phi in the Inner
+          } // endif nHitsMiddle > 0
+        } // endloop over theta in the Middle
+      } // endloop over phi in the Middle
+    } // endif nHitsOuter > 0
 
   } // endloop over triplets
 
@@ -1456,9 +1456,9 @@ TrackExtended* SiliconTracking_MarlinTrk::TestTriplet(TrackerHitExtended* outerH
           }
 
         } // for inner
-      }   // for outer
-    }     // for middle
-  }       // if all vectors are not empty
+      } // for outer
+    } // for middle
+  } // if all vectors are not empty
 
   //    float dZ = FastTripletCheck(innerHit, middleHit, outerHit);
 
@@ -1805,8 +1805,8 @@ int SiliconTracking_MarlinTrk::BuildTrack(TrackerHitExtended* /*outerHit*/, Trac
             }
           }
         } // endloop over hits in the Inner sector
-      }   // endloop over theta in the Inner region
-    }     // endloop over phi in the Inner region
+      } // endloop over theta in the Inner region
+    } // endloop over phi in the Inner region
 
     // check if closest hit fulfills the min distance cut
     if (distMin < _minDistCutAttach) {
