@@ -3988,8 +3988,8 @@ void FPCCDFullLDCTracking_MarlinTrk::AssignTPCHitsToTracks(TrackerHitExtendedVec
           }
         }
       } // loop over leftover TPC hits
-    }   // groups in tracks
-  }     // loop over all tracks
+    } // groups in tracks
+  } // loop over all tracks
 
   for (int iH = 0; iH < nHits; ++iH) {
     TrackerHitExtended* trkHitExt = hitVec[iH];

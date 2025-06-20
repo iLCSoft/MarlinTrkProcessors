@@ -646,9 +646,9 @@ void ExtrToSIT::processEvent(LCEvent* evt) {
                   refittedTrack); // trackCandidates vector stores all the candidate tracks of the event
 
             } // end of the creation of the refitted track collection
-          }   // good fit status
-        }     // good initialisation status
-      }       // minimum acceptable TPC hits
+          } // good fit status
+        } // good initialisation status
+      } // minimum acceptable TPC hits
 
       delete marlin_trk;
 
