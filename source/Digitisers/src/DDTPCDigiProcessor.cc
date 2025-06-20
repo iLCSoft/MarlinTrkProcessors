@@ -391,9 +391,9 @@ void DDTPCDigiProcessor::processEvent(LCEvent* evt) {
   } catch (DataNotAvailableException& e) {
   }
 
-  FixedPadSizeDiskLayout padLayout(_tpc);
-  double TPCPadPlaneRMin = _tpc->rMinReadout / dd4hep::mm;
-  double TPCPadPlaneRMax = _tpc->rMaxReadout / dd4hep::mm;
+  const FixedPadSizeDiskLayout padLayout(_tpc);
+  const double TPCPadPlaneRMin = _tpc->rMinReadout / dd4hep::mm;
+  const double TPCPadPlaneRMax = _tpc->rMaxReadout / dd4hep::mm;
 
   float edep0 = 0.0;
   if (STHcol != 0) {
