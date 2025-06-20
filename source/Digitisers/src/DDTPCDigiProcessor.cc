@@ -391,6 +391,10 @@ void DDTPCDigiProcessor::processEvent(LCEvent* evt) {
   } catch (DataNotAvailableException& e) {
   }
 
+  const FixedPadSizeDiskLayout padLayout(_tpc);
+  const double TPCPadPlaneRMin = _tpc->rMinReadout / dd4hep::mm;
+  const double TPCPadPlaneRMax = _tpc->rMaxReadout / dd4hep::mm;
+
   float edep0 = 0.0;
   if (STHcol != 0) {
     int n_sim_hits = STHcol->getNumberOfElements();
@@ -638,11 +642,7 @@ void DDTPCDigiProcessor::processEvent(LCEvent* evt) {
       double tpcZRes =
           sqrt((_pointResoZ0 * _pointResoZ0) + (_diffZ * _diffZ) * (driftLength / 10.0)); // driftLength in cm
 
-      FixedPadSizeDiskLayout padLayout(_tpc);
       int padIndex = padLayout.getNearestPad(thisPoint.perp(), thisPoint.phi());
-
-      double TPCPadPlaneRMin = _tpc->rMinReadout / dd4hep::mm;
-      double TPCPadPlaneRMax = _tpc->rMaxReadout / dd4hep::mm;
 
       int iRowHit = padLayout.getRowNumber(padIndex);
       int iPhiHit = padLayout.getPadNumber(padIndex);
@@ -716,11 +716,6 @@ void DDTPCDigiProcessor::processEvent(LCEvent* evt) {
       _SimTHit = dynamic_cast<SimTrackerHit*>(STHcolLowPt->getElementAt(i));
 
       CLHEP::Hep3Vector thisPoint(_SimTHit->getPosition()[0], _SimTHit->getPosition()[1], _SimTHit->getPosition()[2]);
-
-      FixedPadSizeDiskLayout padLayout(_tpc);
-      const std::vector<double>& planeExt = padLayout.getPlaneExtent();
-      double TPCPadPlaneRMin = planeExt[0];
-      double TPCPadPlaneRMax = planeExt[1];
 
       int NBinsZ = (int)((2.0 * _tpc->driftLength / dd4hep::mm) / _binningZ);
 
@@ -1308,7 +1303,7 @@ void DDTPCDigiProcessor::plotHelixHitResidual(MCParticle* mcp, CLHEP::Hep3Vector
     int row = padLayout.getRowNumber(padLayout.getNearestPad(thisPoint->perp(), thisPoint->phi()));
     int pad = padLayout.getNearestPad(thisPoint->perp(), thisPoint->phi());
 
-    double rHit_diff = thisPoint->perp() - padLayout.getPlaneExtent()[0] - ((row + 0.5) * _tpc->padHeight / dd4hep::mm);
+    double rHit_diff = thisPoint->perp() - TPCPadPlaneRMin - ((row + 0.5) * _tpc->padHeight / dd4hep::mm);
 
     _radiusCheckHisto->fill(rHit_diff);
 
