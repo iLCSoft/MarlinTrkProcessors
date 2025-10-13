@@ -1,3 +1,13 @@
+# v02-12-08
+
+* 2025-06-20 Thomas Madlener ([PR#76](https://github.com/iLCSoft/MarlinTrkProcessors/pull/76))
+  - Remove the clicdp nightlies based workflows since it's no longer regularly built and misses some fixes for Marlin
+  - Update the Key4hep workflows to the latest available nightlies and releases
+  - Make formatting comply to updated clang-format-20
+
+* 2025-06-20 Daniel Jeans ([PR#75](https://github.com/iLCSoft/MarlinTrkProcessors/pull/75))
+  - increase efficiency: don't create FixedPadSizeDiskLayout more than once per event (previously once per hit, in the lowpt collection)
+
 # v02-12-07
 
 * 2025-03-21 jmcarcell ([PR#73](https://github.com/iLCSoft/MarlinTrkProcessors/pull/73))
