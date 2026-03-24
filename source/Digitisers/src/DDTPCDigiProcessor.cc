@@ -1400,30 +1400,19 @@ double DDTPCDigiProcessor::getPadTheta(CLHEP::Hep3Vector* firstPoint, CLHEP::Hep
   }
 
   Circle theCircle(&firstPointRPhi, &middlePointRPhi, &lastPointRPhi);
+  double D = 2.0 * theCircle.GetRadius();
 
-  double pathlength1 =
-      2.0 *
-      asin((sqrt((middlePointRPhi.x() - firstPointRPhi.x()) * (middlePointRPhi.x() - firstPointRPhi.x()) +
-                 (middlePointRPhi.y() - firstPointRPhi.y()) * (middlePointRPhi.y() - firstPointRPhi.y())) /
-            2.0) /
-           theCircle.GetRadius()) *
-      theCircle.GetRadius();
+  double dx12 = middlePointRPhi.x() - firstPointRPhi.x();
+  double dy12 = middlePointRPhi.y() - firstPointRPhi.y();
+  double dr12 = std::sqrt(dx12*dx12 + dy12*dy12);
+  double pathlength1 = dr12/D < 1.0 ? D * std::asin(dr12/D) : D * std::asin(1.0);
 
-  double pathlength2 =
-      ((sqrt((lastPointRPhi.x() - middlePointRPhi.x()) * (lastPointRPhi.x() - middlePointRPhi.x()) +
-             (lastPointRPhi.y() - middlePointRPhi.y()) * (lastPointRPhi.y() - middlePointRPhi.y())) /
-        2.0) /
-           theCircle.GetRadius() >=
-       1.0)
-          ? (2.0 * asin(1.0) * theCircle.GetRadius())
-          : (2.0 *
-             asin((sqrt((lastPointRPhi.x() - middlePointRPhi.x()) * (lastPointRPhi.x() - middlePointRPhi.x()) +
-                        (lastPointRPhi.y() - middlePointRPhi.y()) * (lastPointRPhi.y() - middlePointRPhi.y())) /
-                   2.0) /
-                  theCircle.GetRadius()) *
-             theCircle.GetRadius());
+  double dx23 = lastPointRPhi.x() - middlePointRPhi.x();
+  double dy23 = lastPointRPhi.y() - middlePointRPhi.y();
+  double dr23 = std::sqrt(dx23*dx23 + dy23*dy23);
+  double pathlength2 = dr23/D < 1.0 ? D * std::asin(dr23/D) : D * std::asin(1.0);
 
-  double padTheta = atan((fabs(pathlength1 + pathlength2)) / (fabs(lastPoint->z() - firstPoint->z())));
+  double padTheta = std::atan((std::fabs(pathlength1 + pathlength2)) / (std::fabs(lastPoint->z() - firstPoint->z())));
 
   if (std::isnan(padTheta) || std::isinf(padTheta)) {
     return twopi / 4.0; // use fallback value
