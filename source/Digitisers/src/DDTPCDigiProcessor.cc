@@ -1401,12 +1401,6 @@ double DDTPCDigiProcessor::getPadTheta(CLHEP::Hep3Vector* firstPoint, CLHEP::Hep
 
   Circle theCircle(&firstPointRPhi, &middlePointRPhi, &lastPointRPhi);
 
-  double deltaPhi = firstPoint->deltaPhi(*lastPoint);
-
-  double pathlength = fabs(deltaPhi) * theCircle.GetRadius();
-
-  double padTheta = atan(pathlength / fabs(lastPoint->z() - firstPoint->z()));
-
   double pathlength1 =
       2.0 *
       asin((sqrt((middlePointRPhi.x() - firstPointRPhi.x()) * (middlePointRPhi.x() - firstPointRPhi.x()) +
@@ -1429,7 +1423,7 @@ double DDTPCDigiProcessor::getPadTheta(CLHEP::Hep3Vector* firstPoint, CLHEP::Hep
                   theCircle.GetRadius()) *
              theCircle.GetRadius());
 
-  padTheta = atan((fabs(pathlength1 + pathlength2)) / (fabs(lastPoint->z() - firstPoint->z())));
+  double padTheta = atan((fabs(pathlength1 + pathlength2)) / (fabs(lastPoint->z() - firstPoint->z())));
 
   if (std::isnan(padTheta) || std::isinf(padTheta)) {
     return twopi / 4.0; // use fallback value
