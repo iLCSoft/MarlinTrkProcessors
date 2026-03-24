@@ -1404,13 +1404,13 @@ double DDTPCDigiProcessor::getPadTheta(CLHEP::Hep3Vector* firstPoint, CLHEP::Hep
 
   double dx12 = middlePointRPhi.x() - firstPointRPhi.x();
   double dy12 = middlePointRPhi.y() - firstPointRPhi.y();
-  double dr12 = std::sqrt(dx12*dx12 + dy12*dy12);
-  double pathlength1 = dr12/D < 1.0 ? D * std::asin(dr12/D) : D * std::asin(1.0);
+  double dr12 = std::sqrt(dx12 * dx12 + dy12 * dy12);
+  double pathlength1 = dr12 / D < 1.0 ? D * std::asin(dr12 / D) : D * std::asin(1.0);
 
   double dx23 = lastPointRPhi.x() - middlePointRPhi.x();
   double dy23 = lastPointRPhi.y() - middlePointRPhi.y();
-  double dr23 = std::sqrt(dx23*dx23 + dy23*dy23);
-  double pathlength2 = dr23/D < 1.0 ? D * std::asin(dr23/D) : D * std::asin(1.0);
+  double dr23 = std::sqrt(dx23 * dx23 + dy23 * dy23);
+  double pathlength2 = dr23 / D < 1.0 ? D * std::asin(dr23 / D) : D * std::asin(1.0);
 
   double padTheta = std::atan((std::fabs(pathlength1 + pathlength2)) / (std::fabs(lastPoint->z() - firstPoint->z())));
 
