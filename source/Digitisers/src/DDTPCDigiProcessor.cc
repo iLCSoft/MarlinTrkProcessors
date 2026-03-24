@@ -1367,12 +1367,8 @@ double DDTPCDigiProcessor::getPadPhi(CLHEP::Hep3Vector* thisPoint, CLHEP::Hep3Ve
 
   double padPhi = fabs(pointPhi - localPhi);
 
-  // check that the value returned is reasonable
   if (std::isnan(padPhi) || std::isinf(padPhi)) {
-    std::stringstream errorMsg;
-    errorMsg << "\nProcessor: DDTPCDigiProcessor \n"
-             << "padPhi = " << padPhi << "\n";
-    throw Exception(errorMsg.str());
+    return twopi / 4.0; // use fallback value
   }
 
   return padPhi;
@@ -1435,12 +1431,8 @@ double DDTPCDigiProcessor::getPadTheta(CLHEP::Hep3Vector* firstPoint, CLHEP::Hep
 
   padTheta = atan((fabs(pathlength1 + pathlength2)) / (fabs(lastPoint->z() - firstPoint->z())));
 
-  // check that the value returned is reasonable
   if (std::isnan(padTheta) || std::isinf(padTheta)) {
-    std::stringstream errorMsg;
-    errorMsg << "\nProcessor: DDTPCDigiProcessor \n"
-             << "padTheta = " << padTheta << "\n";
-    throw Exception(errorMsg.str());
+    return twopi / 4.0; // use fallback value
   }
 
   return padTheta;
