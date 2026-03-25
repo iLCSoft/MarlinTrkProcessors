@@ -1368,7 +1368,8 @@ double DDTPCDigiProcessor::getPadPhi(CLHEP::Hep3Vector* thisPoint, CLHEP::Hep3Ve
   double padPhi = fabs(pointPhi - localPhi);
 
   if (std::isnan(padPhi) || std::isinf(padPhi)) {
-    return twopi / 4.0; // use fallback value
+    streamlog_out(WARNING) << "Failed to calculate theta. Setting the default value of pi/2." << std::endl;
+    return twopi / 4.0;
   }
 
   return padPhi;
@@ -1415,7 +1416,8 @@ double DDTPCDigiProcessor::getPadTheta(CLHEP::Hep3Vector* firstPoint, CLHEP::Hep
   double padTheta = std::atan((std::fabs(pathlength1 + pathlength2)) / (std::fabs(lastPoint->z() - firstPoint->z())));
 
   if (std::isnan(padTheta) || std::isinf(padTheta)) {
-    return twopi / 4.0; // use fallback value
+    streamlog_out(WARNING) << "Failed to calculate theta. Setting the default value of pi/2." << std::endl;
+    return twopi / 4.0;
   }
 
   return padTheta;
