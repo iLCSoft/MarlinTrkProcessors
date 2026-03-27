@@ -1367,12 +1367,9 @@ double DDTPCDigiProcessor::getPadPhi(CLHEP::Hep3Vector* thisPoint, CLHEP::Hep3Ve
 
   double padPhi = fabs(pointPhi - localPhi);
 
-  // check that the value returned is reasonable
   if (std::isnan(padPhi) || std::isinf(padPhi)) {
-    std::stringstream errorMsg;
-    errorMsg << "\nProcessor: DDTPCDigiProcessor \n"
-             << "padPhi = " << padPhi << "\n";
-    throw Exception(errorMsg.str());
+    streamlog_out(WARNING) << "Failed to calculate theta. Setting the default value of pi/2." << std::endl;
+    return twopi / 4.0;
   }
 
   return padPhi;
@@ -1404,43 +1401,23 @@ double DDTPCDigiProcessor::getPadTheta(CLHEP::Hep3Vector* firstPoint, CLHEP::Hep
   }
 
   Circle theCircle(&firstPointRPhi, &middlePointRPhi, &lastPointRPhi);
+  double D = 2.0 * theCircle.GetRadius();
 
-  double deltaPhi = firstPoint->deltaPhi(*lastPoint);
+  double dx12 = middlePointRPhi.x() - firstPointRPhi.x();
+  double dy12 = middlePointRPhi.y() - firstPointRPhi.y();
+  double dr12 = std::sqrt(dx12 * dx12 + dy12 * dy12);
+  double pathlength1 = dr12 / D < 1.0 ? D * std::asin(dr12 / D) : D * std::asin(1.0);
 
-  double pathlength = fabs(deltaPhi) * theCircle.GetRadius();
+  double dx23 = lastPointRPhi.x() - middlePointRPhi.x();
+  double dy23 = lastPointRPhi.y() - middlePointRPhi.y();
+  double dr23 = std::sqrt(dx23 * dx23 + dy23 * dy23);
+  double pathlength2 = dr23 / D < 1.0 ? D * std::asin(dr23 / D) : D * std::asin(1.0);
 
-  double padTheta = atan(pathlength / fabs(lastPoint->z() - firstPoint->z()));
+  double padTheta = std::atan((std::fabs(pathlength1 + pathlength2)) / (std::fabs(lastPoint->z() - firstPoint->z())));
 
-  double pathlength1 =
-      2.0 *
-      asin((sqrt((middlePointRPhi.x() - firstPointRPhi.x()) * (middlePointRPhi.x() - firstPointRPhi.x()) +
-                 (middlePointRPhi.y() - firstPointRPhi.y()) * (middlePointRPhi.y() - firstPointRPhi.y())) /
-            2.0) /
-           theCircle.GetRadius()) *
-      theCircle.GetRadius();
-
-  double pathlength2 =
-      ((sqrt((lastPointRPhi.x() - middlePointRPhi.x()) * (lastPointRPhi.x() - middlePointRPhi.x()) +
-             (lastPointRPhi.y() - middlePointRPhi.y()) * (lastPointRPhi.y() - middlePointRPhi.y())) /
-        2.0) /
-           theCircle.GetRadius() >=
-       1.0)
-          ? (2.0 * asin(1.0) * theCircle.GetRadius())
-          : (2.0 *
-             asin((sqrt((lastPointRPhi.x() - middlePointRPhi.x()) * (lastPointRPhi.x() - middlePointRPhi.x()) +
-                        (lastPointRPhi.y() - middlePointRPhi.y()) * (lastPointRPhi.y() - middlePointRPhi.y())) /
-                   2.0) /
-                  theCircle.GetRadius()) *
-             theCircle.GetRadius());
-
-  padTheta = atan((fabs(pathlength1 + pathlength2)) / (fabs(lastPoint->z() - firstPoint->z())));
-
-  // check that the value returned is reasonable
   if (std::isnan(padTheta) || std::isinf(padTheta)) {
-    std::stringstream errorMsg;
-    errorMsg << "\nProcessor: DDTPCDigiProcessor \n"
-             << "padTheta = " << padTheta << "\n";
-    throw Exception(errorMsg.str());
+    streamlog_out(WARNING) << "Failed to calculate theta. Setting the default value of pi/2." << std::endl;
+    return twopi / 4.0;
   }
 
   return padTheta;
