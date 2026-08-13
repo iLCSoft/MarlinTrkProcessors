@@ -14,7 +14,6 @@
 
 #include "UTIL/LCTrackerConf.h"
 #include <UTIL/BitField64.h>
-#include <UTIL/ILDConf.h>
 #include <UTIL/Operators.h>
 
 #include "DD4hep/DD4hepUnits.h"
@@ -106,6 +105,13 @@ void RefitProcessor::init() {
   double bFieldVec[3];
   theDetector.field().magneticField({0, 0, 0}, bFieldVec); // get the magnetic field vector from DD4hep
   _bField = bFieldVec[2] / dd4hep::tesla;                  // z component at (0,0,0)
+
+  // look up the subdetector IDs by name from the geometry
+  _vxdID = GetSubDetID(theDetector, "VXD");
+  _ftdID = GetSubDetID(theDetector, "FTD");
+  _sitID = GetSubDetID(theDetector, "SIT");
+  _tpcID = GetSubDetID(theDetector, "TPC");
+  _setID = GetSubDetID(theDetector, "SET");
 
   //----
   // set up the geometery needed for tracking
@@ -293,11 +299,16 @@ void RefitProcessor::processEvent(LCEvent* evt) {
 
       delete marlinTrk;
 
-      int nhits_in_vxd = refittedTrack->subdetectorHitNumbers()[2 * lcio::ILDDetID::VXD - 1];
-      int nhits_in_ftd = refittedTrack->subdetectorHitNumbers()[2 * lcio::ILDDetID::FTD - 1];
-      int nhits_in_sit = refittedTrack->subdetectorHitNumbers()[2 * lcio::ILDDetID::SIT - 1];
-      int nhits_in_tpc = refittedTrack->subdetectorHitNumbers()[2 * lcio::ILDDetID::TPC - 1];
-      int nhits_in_set = refittedTrack->subdetectorHitNumbers()[2 * lcio::ILDDetID::SET - 1];
+      // helper: subdetector ID 0 means "not found in geometry" (see GetSubDetID) - treat as no hits
+      auto getNHits = [&refittedTrack](int detID) -> int {
+        return (detID > 0) ? refittedTrack->subdetectorHitNumbers()[2 * detID - 1] : 0;
+      };
+
+      int nhits_in_vxd = getNHits(_vxdID);
+      int nhits_in_ftd = getNHits(_ftdID);
+      int nhits_in_sit = getNHits(_sitID);
+      int nhits_in_tpc = getNHits(_tpcID);
+      int nhits_in_set = getNHits(_setID);
 
       streamlog_out(DEBUG3) << " Hit numbers for Track " << refittedTrack->id() << ": "
                             << " vxd hits = " << nhits_in_vxd << " ftd hits = " << nhits_in_ftd
@@ -305,15 +316,15 @@ void RefitProcessor::processEvent(LCEvent* evt) {
                             << " set hits = " << nhits_in_set << std::endl;
 
       if (nhits_in_vxd > 0)
-        refittedTrack->setTypeBit(lcio::ILDDetID::VXD);
+        refittedTrack->setTypeBit(_vxdID);
       if (nhits_in_ftd > 0)
-        refittedTrack->setTypeBit(lcio::ILDDetID::FTD);
+        refittedTrack->setTypeBit(_ftdID);
       if (nhits_in_sit > 0)
-        refittedTrack->setTypeBit(lcio::ILDDetID::SIT);
+        refittedTrack->setTypeBit(_sitID);
       if (nhits_in_tpc > 0)
-        refittedTrack->setTypeBit(lcio::ILDDetID::TPC);
+        refittedTrack->setTypeBit(_tpcID);
       if (nhits_in_set > 0)
-        refittedTrack->setTypeBit(lcio::ILDDetID::SET);
+        refittedTrack->setTypeBit(_setID);
 
       trackVec->addElement(refittedTrack);
 
@@ -356,6 +367,19 @@ LCCollection* RefitProcessor::GetCollection(LCEvent* evt, std::string colName) {
   }
 
   return col;
+}
+
+int RefitProcessor::GetSubDetID(dd4hep::Detector& detector, const std::string& detName) {
+  try {
+    int id = detector.detector(detName).id();
+    streamlog_out(DEBUG4) << "RefitProcessor --> subdetector \"" << detName << "\" has ID " << id << std::endl;
+    return id;
+  } catch (std::exception& e) {
+    streamlog_out(WARNING) << "RefitProcessor --> could not find subdetector \"" << detName
+                           << "\" in the geometry - hits in this subdetector will not be counted ( " << e.what() << " )"
+                           << std::endl;
+    return 0;
+  }
 }
 
 std::unique_ptr<LCRelationNavigator> RefitProcessor::GetRelations(LCEvent* evt, std::string RelName) {

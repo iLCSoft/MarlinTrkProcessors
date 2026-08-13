@@ -15,6 +15,10 @@ namespace MarlinTrk {
 class IMarlinTrkSystem;
 }
 
+namespace dd4hep {
+class Detector;
+}
+
 /**  Track Refitter processor for marlin. Refits an input track collection, producing a new collection of tracks
  *
 
@@ -75,6 +79,11 @@ protected:
   /* helper function to get relations using try catch block */
   std::unique_ptr<lcio::LCRelationNavigator> GetRelations(lcio::LCEvent* evt, std::string RelName);
 
+  /* helper function to look up a subdetector's ID by name from the DD4hep geometry.
+   * Returns 0 (i.e. "not used") and prints a warning if no subdetector with that name exists.
+   */
+  int GetSubDetID(dd4hep::Detector& detector, const std::string& detName);
+
   /** Input track collection name for refitting.
    */
   std::string _input_track_col_name{};
@@ -116,6 +125,14 @@ protected:
   std::string _trkSystemName{};
 
   float _bField{};
+
+  /** subdetector IDs, looked up by name from the DD4hep geometry
+   */
+  int _vxdID{};
+  int _ftdID{};
+  int _sitID{};
+  int _tpcID{};
+  int _setID{};
 };
 
 #endif
