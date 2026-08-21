@@ -80,12 +80,9 @@ protected:
   /* helper function to get relations using try catch block */
   std::unique_ptr<lcio::LCRelationNavigator> GetRelations(lcio::LCEvent* evt, std::string RelName);
 
-  /* helper function to look up a subdetector's ID by name from the DD4hep geometry.
-   * Returns 0 (i.e. "not used") and prints a warning if no subdetector with that name exists.
+  /* helper function to look up subdetector IDs by name from the DD4hep geometry.
+   * Each entry is 0 (i.e. "not used") with a warning printed if no subdetector with that name exists.
    */
-  int GetSubDetID(dd4hep::Detector& detector, const std::string& detName);
-
-  // convenience overload of GetSubDetID for a list of subdetector names
   std::vector<int> GetSubDetIDs(dd4hep::Detector& detector, const std::vector<std::string>& detNames);
 
   // helper function to identify ILD@FCC-ee detector models

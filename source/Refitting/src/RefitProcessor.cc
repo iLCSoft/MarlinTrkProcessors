@@ -310,7 +310,7 @@ void RefitProcessor::processEvent(LCEvent* evt) {
       delete marlinTrk;
 
       // helper: sums hits across all IDs contributing to a category (see GetSubDetIDs), skipping
-      // any ID of 0 (i.e. "not found in geometry" - see GetSubDetID), and sets the track type bit
+      // any ID of 0 (i.e. "not found in geometry"), and sets the track type bit
       // for each individual subdetector ID that contributed at least one hit.
       auto processCategory = [&refittedTrack](const std::vector<int>& detIDs) -> int {
         int total = 0;
@@ -379,25 +379,21 @@ LCCollection* RefitProcessor::GetCollection(LCEvent* evt, std::string colName) {
   return col;
 }
 
-int RefitProcessor::GetSubDetID(dd4hep::Detector& detector, const std::string& detName) {
-  try {
-    int id = detector.detector(detName).id();
-    streamlog_out(DEBUG4) << "RefitProcessor --> subdetector \"" << detName << "\" has ID " << id << std::endl;
-    return id;
-  } catch (std::exception& e) {
-    streamlog_out(WARNING) << "RefitProcessor --> could not find subdetector \"" << detName
-                           << "\" in the geometry - hits in this subdetector will not be counted ( " << e.what() << " )"
-                           << std::endl;
-    return 0;
-  }
-}
-
 std::vector<int> RefitProcessor::GetSubDetIDs(dd4hep::Detector& detector, const std::vector<std::string>& detNames) {
   std::vector<int> ids;
   ids.reserve(detNames.size());
 
   for (const auto& detName : detNames) {
-    ids.push_back(GetSubDetID(detector, detName));
+    try {
+      int id = detector.detector(detName).id();
+      streamlog_out(DEBUG4) << "RefitProcessor --> subdetector \"" << detName << "\" has ID " << id << std::endl;
+      ids.push_back(id);
+    } catch (std::exception& e) {
+      streamlog_out(WARNING) << "RefitProcessor --> could not find subdetector \"" << detName
+                             << "\" in the geometry - hits in this subdetector will not be counted ( " << e.what()
+                             << " )" << std::endl;
+      ids.push_back(0);
+    }
   }
 
   return ids;
