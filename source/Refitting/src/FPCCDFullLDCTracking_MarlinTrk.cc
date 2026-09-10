@@ -3214,8 +3214,6 @@ float FPCCDFullLDCTracking_MarlinTrk::CompareTrk(TrackExtended* first, TrackExte
           if (fabs(z) > zmaxFirst)
             zmaxFirst = fabs(z);
 
-          float r = sqrt(x * x + y * y);
-
           hitxyz[0] = x;
           hitxyz[1] = y;
           hitxyz[2] = z;
@@ -3240,8 +3238,6 @@ float FPCCDFullLDCTracking_MarlinTrk::CompareTrk(TrackExtended* first, TrackExte
             zminSecond = fabs(z);
           if (fabs(z) > zmaxSecond)
             zmaxSecond = fabs(z);
-
-          float r = sqrt(x * x + y * y);
 
           hitxyz[0] = x;
           hitxyz[1] = y;
