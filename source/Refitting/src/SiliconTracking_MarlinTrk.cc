@@ -1231,8 +1231,6 @@ void SiliconTracking_MarlinTrk::end() {
 }
 
 void SiliconTracking_MarlinTrk::ProcessOneSector(int iPhi, int iTheta) {
-  int counter = 0;
-
   int iPhi_Up = iPhi + 1;
   int iPhi_Low = iPhi - 1;
   int iTheta_Up = iTheta + 1;
@@ -1395,8 +1393,6 @@ void SiliconTracking_MarlinTrk::ProcessOneSector(int iPhi, int iTheta) {
                                                  iPhiUpInner, iThetaLowInner, iThetaUpInner, trackAR);
 
                           _tracksWithNHitsContainer.getTracksWithNHitsVec(nHits).push_back(trackAR);
-
-                          counter++;
                         }
                       } // endloop over hits in the inner sector
                     } // endloop over hits in the middle sector
@@ -2956,12 +2952,10 @@ void SiliconTracking_MarlinTrk::FinalRefit(LCCollectionVec* trk_col, LCCollectio
       EVENT::TrackerHitVec trkHits;
       EVENT::TrackerHitVec trkHits_used_inFit;
 
-      int nFit = 0;
       for (int i = 0; i < nHits; ++i) {
         // check if the hit has been rejected as being on the same layer and further from the helix lh==0
         if (lh[i] == 1) {
           TrackerHit* trkHit = hitVec[i]->getTrackerHit();
-          nFit++;
           if (trkHit) {
             trkHits.push_back(trkHit);
           } else {

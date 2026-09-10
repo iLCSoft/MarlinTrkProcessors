@@ -2227,8 +2227,6 @@ void FullLDCTracking_MarlinTrk::AddNotCombinedTracks() {
     std::vector<GroupTracks*> TPCSegments;
     TPCSegments.clear();
 
-    int nNonAssignedTPCSeg = 0;
-
     // loop over all TPC Tracks
     for (int i = 0; i < nTPCTrk; ++i) {
       TrackExtended* trkExt = _allTPCTracks[i];
@@ -2254,8 +2252,6 @@ void FullLDCTracking_MarlinTrk::AddNotCombinedTracks() {
           if (zpos > zmax)
             zmax = zpos;
         }
-
-        nNonAssignedTPCSeg++;
 
         // current number of TPC segment groupings
         int nGroups = int(TPCSegments.size());
@@ -2719,24 +2715,6 @@ void FullLDCTracking_MarlinTrk::CheckTracks() {
         // float chi2Sig =  (combinedTrack->getChi2() - combinedTrack->getNDF());
         // chi2Sig = chi2Sig/sqrt(combinedTrack->getNDF()*2);
 
-        int nTpcFirst(0);
-        int nUsedFirst(0);
-        for (unsigned int ihit = 0; ihit < firstHitVec.size(); ihit++) {
-          if (getDetectorID(firstHitVec[ihit]->getTrackerHit()) == lcio::ILDDetID::TPC)
-            nTpcFirst++;
-
-          if (firstHitVec[ihit]->getUsedInFit() == true)
-            nUsedFirst++;
-        }
-
-        int nTpcSecond(0);
-        int nUsedSecond(0);
-        for (unsigned int ihit = 0; ihit < secondHitVec.size(); ihit++) {
-          if (getDetectorID(secondHitVec[ihit]->getTrackerHit()) == lcio::ILDDetID::TPC)
-            ++nTpcSecond;
-          if (secondHitVec[ihit]->getUsedInFit() == true)
-            ++nUsedSecond;
-        }
         delete combinedTrack->getGroupTracks();
         delete combinedTrack;
       }
@@ -3092,8 +3070,6 @@ float FullLDCTracking_MarlinTrk::CompareTrk(TrackExtended* first, TrackExtended*
         // for non-looping tracks
         int nhitsFirst = (int)hitvecFirst.size();
         int nhitsSecond = (int)hitvecSecond.size();
-        int ntpcFirst = 0;
-        int ntpcSecond = 0;
         float hitxyz[3];
         float dist[3];
         float maxdistFirst = 0;
@@ -3116,10 +3092,6 @@ float FullLDCTracking_MarlinTrk::CompareTrk(TrackExtended* first, TrackExtended*
             zmaxFirst = fabs(z);
 
           float r = sqrt(x * x + y * y);
-
-          // count the number of hits in the TPC for the first Track
-          if (r > _tpc_inner_r)
-            ntpcFirst++;
 
           hitxyz[0] = x;
           hitxyz[1] = y;
@@ -3147,10 +3119,6 @@ float FullLDCTracking_MarlinTrk::CompareTrk(TrackExtended* first, TrackExtended*
             zmaxSecond = fabs(z);
 
           float r = sqrt(x * x + y * y);
-
-          // count the number of hits in the TPC for the second Track
-          if (r > _tpc_inner_r)
-            ntpcSecond++;
 
           hitxyz[0] = x;
           hitxyz[1] = y;
@@ -3514,17 +3482,6 @@ void FullLDCTracking_MarlinTrk::AssignOuterHitsToTracks(TrackerHitExtendedVec hi
           TrackerHitExtendedVec hitsInTrack = trkExt->getTrackerHitExtendedVec();
 
           int nTotH = int(hitsInTrack.size());
-          int nHitsInFit = 0;
-
-          for (int iTH = 0; iTH < nTotH; ++iTH) {
-            // count the number of hits used in the fit
-            TrackerHitExtended* hitInTrack = hitsInTrack[iTH];
-            if (hitInTrack->getUsedInFit()) {
-              nHitsInFit++;
-            }
-          }
-
-          int iHitInFit = 0;
 
           // add the previously used hits from the track to the vectors
 
@@ -3534,7 +3491,6 @@ void FullLDCTracking_MarlinTrk::AssignOuterHitsToTracks(TrackerHitExtendedVec hi
             TrackerHitExtended* hitInTrack = hitsInTrack[iHit];
             if (hitInTrack->getUsedInFit()) {
               TrackerHit* hit = hitInTrack->getTrackerHit();
-              iHitInFit++;
               if (hit) {
                 trkHits.push_back(hit);
               } else {
@@ -3546,7 +3502,6 @@ void FullLDCTracking_MarlinTrk::AssignOuterHitsToTracks(TrackerHitExtendedVec hi
 
           // add the hit to be attached to the vectors
           TrackerHit* remainHit = trkHitExt->getTrackerHit();
-          iHitInFit++;
           trkHits.push_back(remainHit);
 
           double chi2_D;
@@ -4014,18 +3969,6 @@ void FullLDCTracking_MarlinTrk::AssignSiHitsToTracks(TrackerHitExtendedVec hitVe
         TrackerHitExtendedVec hitsInTrack = trkExt->getTrackerHitExtendedVec();
 
         int nTotH = int(hitsInTrack.size());
-        int nHitsInFit = 0;
-
-        for (int iTH = 0; iTH < nTotH; ++iTH) {
-          TrackerHitExtended* hitInTrack = hitsInTrack[iTH];
-
-          // count the number of hits used in the fit
-          if (hitInTrack->getUsedInFit()) {
-            nHitsInFit++;
-          }
-        }
-
-        int iHitInFit = 0;
 
         // add the previously used hits from the track to the vectors
 
@@ -4035,7 +3978,6 @@ void FullLDCTracking_MarlinTrk::AssignSiHitsToTracks(TrackerHitExtendedVec hitVe
           TrackerHitExtended* hitInTrack = hitsInTrack[iHit];
           if (hitInTrack->getUsedInFit()) {
             TrackerHit* hit = hitInTrack->getTrackerHit();
-            iHitInFit++;
             if (hit) {
               trkHits.push_back(hit);
             } else {
@@ -4047,7 +3989,6 @@ void FullLDCTracking_MarlinTrk::AssignSiHitsToTracks(TrackerHitExtendedVec hitVe
 
         // add the hit to be attached to the vectors
         TrackerHit* remainHit = trkHitExt->getTrackerHit();
-        iHitInFit++;
         trkHits.push_back(remainHit);
 
         double chi2_D;
