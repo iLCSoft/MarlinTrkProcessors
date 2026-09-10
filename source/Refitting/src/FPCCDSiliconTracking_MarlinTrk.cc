@@ -1221,8 +1221,6 @@ void FPCCDSiliconTracking_MarlinTrk::end() {
 }
 
 void FPCCDSiliconTracking_MarlinTrk::ProcessOneSector(int iPhi, int iTheta) {
-  int counter = 0;
-
   int nComb = int(_Combinations.size() / 3); // number of triplet combinations
   //  std::cout << iPhi << " " << iTheta << " " << _nEvt << std::endl;
   int iNC = 0;
@@ -1350,7 +1348,6 @@ void FPCCDSiliconTracking_MarlinTrk::ProcessOneSector(int iPhi, int iTheta) {
                             _timer2Build.Stop();
 
                           _tracksWithNHitsContainer.getTracksWithNHitsVec(nHits).push_back(trackAR);
-                          counter++;
                         }
                       } // endloop over hits in the inner sector
                     } // endloop over hits in the middle sector
@@ -1486,13 +1483,10 @@ TrackExtended* FPCCDSiliconTracking_MarlinTrk::TestTriplet(TrackerHitExtended* o
   std::vector<MCParticle*> mcp_s;
   //  int nmcps   = 0;
   //  int nbadHits = 0;
-  int triplet_code = 0;
 
   // Check if track satisfies all conditions
 
   bool failed = false;
-
-  int quality_code = triplet_code * 10;
 
   if (std::isnormal(d0) == false) {
     if (std::isinf(d0) == true) {
@@ -1503,7 +1497,6 @@ TrackExtended* FPCCDSiliconTracking_MarlinTrk::TestTriplet(TrackerHitExtended* o
       streamlog_out(DEBUG1) << "Something is wrong with d0" << std::endl;
     }
     failed = true;
-    quality_code += 10;
   } else if (std::isnormal(z0) == false) {
     if (std::isinf(z0)) {
       streamlog_out(DEBUG1) << "z0 is inf" << std::endl;
@@ -1513,7 +1506,6 @@ TrackExtended* FPCCDSiliconTracking_MarlinTrk::TestTriplet(TrackerHitExtended* o
       streamlog_out(DEBUG1) << "Something is wrong with z0" << std::endl;
     }
     failed = true;
-    quality_code += 100;
   } else if (std::isnormal(omega) == false) {
     if (std::isinf(omega)) {
       streamlog_out(DEBUG1) << "omega is inf" << std::endl;
@@ -1523,7 +1515,6 @@ TrackExtended* FPCCDSiliconTracking_MarlinTrk::TestTriplet(TrackerHitExtended* o
       streamlog_out(DEBUG1) << "Something is wrong with omega" << std::endl;
     }
     failed = true;
-    quality_code += 1000;
   } else if (std::isnormal(phi0) == false) {
     if (std::isinf(phi0)) {
       streamlog_out(DEBUG1) << "phi0 is inf" << std::endl;
@@ -1533,7 +1524,6 @@ TrackExtended* FPCCDSiliconTracking_MarlinTrk::TestTriplet(TrackerHitExtended* o
       streamlog_out(DEBUG1) << "Something is wrong with phi0" << std::endl;
     }
     failed = true;
-    quality_code += 10000;
   } else if (std::isnormal(tanlambda) == false) {
     if (std::isinf(tanlambda)) {
       streamlog_out(DEBUG1) << "tanlambda is inf" << std::endl;
@@ -1543,34 +1533,27 @@ TrackExtended* FPCCDSiliconTracking_MarlinTrk::TestTriplet(TrackerHitExtended* o
       streamlog_out(DEBUG1) << "Something is wrong with tanlambda" << std::endl;
     }
     failed = true;
-    quality_code += 100000;
   }
 
   if (failed == false) {
     if (Chi2 / float(ndf) > _chi2FitCut) {
       streamlog_out(DEBUG1) << "Chi2/ndf = " << Chi2 / float(ndf) << " , cut = " << _chi2FitCut << std::endl;
       failed = true;
-      quality_code += 1;
     } else if (Chi2 / float(ndf) < 0) {
       streamlog_out(DEBUG1) << "Chi2/ndf = " << Chi2 / float(ndf) << " , cut = " << _chi2FitCut << std::endl;
       failed = true;
-      quality_code += 5;
     } else if (fabs(d0) > _cutOnD0) {
       streamlog_out(DEBUG1) << "d0 = " << d0 << " , cut = " << _cutOnD0 << std::endl;
       failed = true;
-      quality_code += 2;
     } else if (fabs(z0) > _cutOnZ0) {
       streamlog_out(DEBUG1) << "z0 = " << z0 << " , cut = " << _cutOnZ0 << std::endl;
       failed = true;
-      quality_code += 3;
     } else if (omegamode == 0 && fabs(omega) > _cutOnOmegaVXD) {
       streamlog_out(DEBUG1) << "omega = " << omega << " , cut = " << _cutOnOmegaVXD << std::endl;
       failed = true;
-      quality_code += 4;
     } else if (omegamode == 1 && fabs(omega) > _cutOnOmegaFTD) {
       streamlog_out(DEBUG1) << "omega = " << omega << " , cut = " << _cutOnOmegaFTD << std::endl;
       failed = true;
-      quality_code += 4;
     } else {
       streamlog_out(DEBUG1) << "Success !!!!!!!" << std::endl;
     }
@@ -3235,12 +3218,10 @@ void FPCCDSiliconTracking_MarlinTrk::FinalRefit(LCCollectionVec* trk_col, LCColl
       EVENT::TrackerHitVec trkHits;
       EVENT::TrackerHitVec trkHits_used_inFit;
 
-      int nFit = 0;
       for (int i = 0; i < nHits; ++i) {
         // check if the hit has been rejected as being on the same layer and further from the helix lh==0
         if (lh[i] == 1) {
           TrackerHit* trkHit = hitVec[i]->getTrackerHit();
-          nFit++;
           if (trkHit) {
             trkHits.push_back(trkHit);
           } else {
