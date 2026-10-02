@@ -1,3 +1,15 @@
+# v02-12-10
+
+* 2026-09-10 Thomas Madlener ([PR#83](https://github.com/ilcsoft/marlintrkprocessors/pull/83))
+  - Fix gcc16 `-Werror=unused-but-set-variable` build failures in FullLDCTracking_MarlinTrk.cc, FPCCDFullLDCTracking_MarlinTrk.cc, FPCCDSiliconTracking_MarlinTrk.cc and SiliconTracking_MarlinTrk.cc by removing dead counters/quality-code bookkeeping variables that were written but never read
+
+* 2026-08-21 Thomas Madlener ([PR#82](https://github.com/ilcsoft/marlintrkprocessors/pull/82))
+  - Switch to the latest version of the Key4hep build workflow
+
+* 2026-08-21 Victor Schwan ([PR#81](https://github.com/ilcsoft/marlintrkprocessors/pull/81))
+  - RefitProc: Queries the `subDetIDs` from `dd4hep` detmod instead of relying on hardcoded onces
+  - RefitProc: Supports different silicon tracking system of ILD@FCC models
+
 # v02-12-09
 
 * 2026-03-27 Bohdan Dudar ([PR#79](https://github.com/iLCSoft/MarlinTrkProcessors/pull/79))
