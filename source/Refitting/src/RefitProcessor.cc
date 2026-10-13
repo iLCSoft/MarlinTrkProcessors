@@ -90,6 +90,11 @@ RefitProcessor::RefitProcessor() : Processor("RefitProcessor") {
   registerProcessorParameter("FitDirection", "Fit direction: -1: backward [default], +1: forward", _fitDirection,
                              int(-1));
 
+  registerProcessorParameter("SkipFailedFits",
+                             "Do not write tracks whose refit failed (error or ndf < 0) to the output collection. "
+                             "Keep false if the output has to stay index-aligned with the input collection.",
+                             _skipFailedFits, bool(false));
+
   registerProcessorParameter("ParticleMass",
                              "particle mass that is used in the fit - default is the pion mass: 0.13957018 )", _mass,
                              double(0.13957018));
@@ -228,6 +233,8 @@ void RefitProcessor::processEvent(LCEvent* evt) {
 
       TrackImpl* refittedTrack = new TrackImpl;
 
+      bool fitFailed = false;
+
       try {
         int error = 0;
 
@@ -259,6 +266,7 @@ void RefitProcessor::processEvent(LCEvent* evt) {
         }
 
         if (error != IMarlinTrack::success || refittedTrack->getNdf() < 0) {
+          fitFailed = true;
           streamlog_out(DEBUG6) << "in event << " << evt->getEventNumber() << " >> track refit returns error code "
                                 << error << "; NDF = " << refittedTrack->getNdf()
                                 << ". Number of hits = " << trkHits.size() << std::endl;
@@ -271,6 +279,16 @@ void RefitProcessor::processEvent(LCEvent* evt) {
         delete refittedTrack;
 
         throw;
+      }
+
+      // a failed fit leaves the track incomplete, e.g. without hits and track states
+      if (fitFailed && _skipFailedFits) {
+        ++_n_skipped;
+        streamlog_out(DEBUG6) << "in event << " << evt->getEventNumber() << " >> skipping track " << i << " of "
+                              << _input_track_col_name << " with failed refit" << std::endl;
+        delete refittedTrack;
+        delete marlinTrk;
+        continue;
       }
 
       // fitting finished get hit in the fit
@@ -363,6 +381,10 @@ void RefitProcessor::check(LCEvent*) {
 void RefitProcessor::end() {
   streamlog_out(DEBUG) << "RefitProcessor::end()  " << name() << " processed " << _n_evt << " events in " << _n_run
                        << " runs " << std::endl;
+  if (_skipFailedFits) {
+    streamlog_out(MESSAGE) << name() << ": skipped " << _n_skipped << " tracks of " << _input_track_col_name
+                           << " with failed refit" << std::endl;
+  }
 }
 
 LCCollection* RefitProcessor::GetCollection(LCEvent* evt, std::string colName) {

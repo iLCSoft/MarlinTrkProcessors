@@ -111,6 +111,7 @@ protected:
   bool _MSOn{};
   bool _ElossOn{};
   bool _SmoothOn{};
+  bool _skipFailedFits{};
 
   float _initialTrackError_d0{};
   float _initialTrackError_phi0{};
@@ -122,6 +123,7 @@ protected:
 
   int _n_run{};
   int _n_evt{};
+  int _n_skipped{};
 
   int _initialTrackState{};
   int _fitDirection{};
