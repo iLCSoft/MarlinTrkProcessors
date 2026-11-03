@@ -1,3 +1,11 @@
+# v02-12-11
+
+* 2026-10-13 Victor Schwan ([PR#84](https://github.com/ilcsoft/MarlinTrkProcessors/pull/84))
+  - Failed refits were written to the output as tracks without hits and track states
+  - New bool parameter `SkipFailedFits` drops such tracks and their relations from the output
+  - Default `false` keeps output index-aligned with input, as e.g. `CreateRefitPFO` requires
+  - `end()` reports the number of skipped tracks
+
 # v02-12-10
 
 * 2026-09-10 Thomas Madlener ([PR#83](https://github.com/ilcsoft/marlintrkprocessors/pull/83))
