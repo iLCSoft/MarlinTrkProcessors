@@ -1,3 +1,8 @@
+# v02-13
+
+* 2026-11-12 Juan Miguel Carceller ([PR#85](https://github.com/iLCSoft/MarlinTrkProcessors/pull/85))
+  - Fix CMake 4 compatibility by raising the minimum required CMake version from 2.6 to 3.10.
+
 # v02-12-11
 
 * 2026-10-13 Victor Schwan ([PR#84](https://github.com/ilcsoft/MarlinTrkProcessors/pull/84))
