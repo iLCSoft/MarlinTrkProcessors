@@ -16,6 +16,7 @@
 
 #include "DD4hep/DD4hepUnits.h"
 #include "DD4hep/Detector.h"
+#include <Parsers/Primitives.h>
 
 #include <TMath.h>
 
@@ -222,12 +223,14 @@ void DDPlanarDigiProcessor::processEvent(LCEvent* evt) {
       }
 
       const int cellID0 = simTHit->getCellID0();
+      const int cellID1 = simTHit->getCellID1();
+      const dd4hep::CellID cellID = (dd4hep::CellID(cellID0) & 0xffffffff) | (dd4hep::CellID(cellID1) << 32);
 
       //***********************************************************
       // get the measurement surface for this hit using the CellID
       //***********************************************************
 
-      dd4hep::rec::SurfaceMap::const_iterator sI = _map->find(cellID0);
+      dd4hep::rec::SurfaceMap::const_iterator sI = _map->find(cellID);
 
       if (sI == _map->end()) {
         std::cout << " DDPlanarDigiProcessor::processEvent(): no surface found for cellID : "
@@ -400,7 +403,6 @@ void DDPlanarDigiProcessor::processEvent(LCEvent* evt) {
 
       TrackerHitPlaneImpl* trkHit = new TrackerHitPlaneImpl;
 
-      const int cellID1 = simTHit->getCellID1();
       trkHit->setCellID0(cellID0);
       trkHit->setCellID1(cellID1);
 
